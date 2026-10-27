@@ -8,7 +8,7 @@ import type * as SourcesModule from "../sources"
 const { integrations, ticker, cacheCalls, loadSource } = vi.hoisted(() => ({
   integrations: { current: {} as Record<string, unknown> },
   ticker: { current: {} as Record<string, unknown> },
-  cacheCalls: [] as { keys: string[]; options: { revalidate: number; tags: string[] } }[],
+  cacheCalls: [] as { keys: string[]; options: { revalidate?: number; tags: string[] } }[],
   loadSource: vi.fn(),
 }))
 
@@ -17,7 +17,7 @@ vi.mock("next/cache", () => ({
   unstable_cache: (
     fn: (...args: unknown[]) => unknown,
     keys: string[],
-    options: { revalidate: number; tags: string[] },
+    options: { revalidate?: number; tags: string[] },
   ) => {
     cacheCalls.push({ keys, options })
     return fn
@@ -27,17 +27,23 @@ vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<typeof ReactModule>()),
   cache: <T>(fn: T) => fn,
 }))
-vi.mock("@/utilities/getGlobals", () => ({
-  getCachedGlobal: (slug: string) => async () =>
-    slug === "integrations" ? integrations.current : slug === "ticker" ? ticker.current : {},
+vi.mock("@/data/globals", () => ({
+  getGlobal: async (slug: string) => (slug === "integrations" ? integrations.current : {}),
+}))
+vi.mock("@/data/payload", () => ({
+  getPayloadClient: async () => ({
+    findGlobal: async ({ slug }: { slug: string }) =>
+      slug === "header" ? { ticker: ticker.current } : {},
+  }),
 }))
 vi.mock("../sources", async (importOriginal) => ({
   ...(await importOriginal<typeof SourcesModule>()),
   loadSource,
 }))
 
-const { getTickerFeed } = await import("../getTickerFeed")
+const { getTickerFeed, getTickerPostLists } = await import("../getTickerFeed")
 const { broadcastSource, postSources } = await import("../sources")
+const { TICKER_SETTINGS_TAG } = await import("../items")
 
 const post = (id: string, createdAt: string): TickerPost => ({
   id,
@@ -58,10 +64,12 @@ describe("getTickerFeed", () => {
   it("caches each source for its own period under the ticker tag", () => {
     expect(cacheCalls.map((call) => call.keys)).toEqual([
       ["ticker", "broadcast"],
+      ["ticker", "settings"],
       ...postSources.map((source) => ["ticker", source.integration.id]),
     ])
     expect(cacheCalls.map((call) => call.options)).toEqual([
       { revalidate: broadcastSource.revalidate, tags: ["ticker"] },
+      { tags: [TICKER_SETTINGS_TAG] },
       ...postSources.map((source) => ({ revalidate: source.revalidate, tags: ["ticker"] })),
     ])
   })
@@ -72,10 +80,12 @@ describe("getTickerFeed", () => {
       bluesky: { handles: [{ handle: "admin.bsky.social" }, { handle: "other.bsky.social" }] },
       x: { usernames: [{ username: "AdminPick" }] },
     }
+    ticker.current = { upcomingHours: 6 }
     loadSource.mockImplementation(async (_source, fallback) => fallback)
     await getTickerFeed()
     const settings = {
       youtubeChannelIds: ["UC1", "UC2"],
+      youtubeUpcomingHours: 6,
       blueskyHandles: ["admin.bsky.social", "other.bsky.social"],
       xUsernames: ["AdminPick"],
     }
@@ -91,6 +101,7 @@ describe("getTickerFeed", () => {
     await getTickerFeed()
     expect(loadSource).toHaveBeenCalledWith(broadcastSource, null, {
       youtubeChannelIds: undefined,
+      youtubeUpcomingHours: undefined,
       blueskyHandles: undefined,
       xUsernames: undefined,
     })
@@ -117,5 +128,28 @@ describe("getTickerFeed", () => {
       source === broadcastSource ? null : source === postSources[0] ? [hidden, kept] : [],
     )
     expect((await getTickerFeed()).posts).toEqual([kept])
+  })
+
+  it("leaves out posts that link to our own site, for readers and the admin alike", async () => {
+    const ours = { ...post("ours", "2026-10-08T12:00:00Z"), text: "https://pragmaticpapers.com/a" }
+    const kept = post("kept", "2026-10-08T10:00:00Z")
+    loadSource.mockImplementation(async (source) =>
+      source === broadcastSource ? null : source === postSources[0] ? [ours, kept] : [],
+    )
+    expect((await getTickerFeed()).posts).toEqual([kept])
+    expect((await getTickerPostLists())[0]).toEqual([kept])
+  })
+
+  it("lists every source's posts for the admin, hidden ones included", async () => {
+    const hidden = { ...post("hidden", "2026-10-08T12:00:00Z"), url: "https://x.com/P/status/9" }
+    const kept = post("kept", "2026-10-08T10:00:00Z")
+    ticker.current = { hidden: [{ url: hidden.url }] }
+    loadSource.mockImplementation(async (source) =>
+      source === broadcastSource ? null : source === postSources[0] ? [hidden, kept] : [],
+    )
+    expect(await getTickerPostLists()).toEqual([
+      [hidden, kept],
+      ...postSources.slice(1).map(() => []),
+    ])
   })
 })

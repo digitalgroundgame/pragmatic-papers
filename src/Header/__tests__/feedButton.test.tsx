@@ -11,12 +11,12 @@ const { experiment } = vi.hoisted(() => ({ experiment: { feed: false } }))
 vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
   isExperimentEnabled: async (name: string) => name === "feed" && experiment.feed,
 }))
-vi.mock("@/utilities/getGlobals", () => ({
-  getCachedGlobal: (slug: string) => async () =>
+vi.mock("@/data/globals", () => ({
+  getGlobal: async (slug: string) =>
     slug === "header" ? { navItems: [], actions: [] } : { socials: [] },
 }))
 
-const { Header } = await import("../Component")
+const { DefaultHeader: Header } = await import("../Component")
 
 /** Every element in the tree Header returns, without rendering its children. */
 function elements(node: React.ReactNode): React.ReactElement<Record<string, unknown>>[] {

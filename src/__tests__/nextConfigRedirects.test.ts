@@ -19,6 +19,13 @@ const redirectFor = async (path: string) => {
 }
 
 describe("next.config.ts redirects", () => {
+  it("permanently redirects /home to the site root, its prerendered route", async () => {
+    const rule = await redirectFor("/home")
+    expect(rule?.destination).toBe("/")
+    expect(rule?.permanent).toBe(true)
+    expect(await redirectFor("/homework")).toBeUndefined()
+  })
+
   // #1046: the RSS feeds moved under the section they list.
   it.each([
     ["/feed.articles", "/articles/feed.xml"],

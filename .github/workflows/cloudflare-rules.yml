@@ -93,8 +93,11 @@ jobs:
     runs-on: ubuntu-latest
     # Its `main`-only branch rule is what keeps PRs from the Edit token. GitHub creates
     # a missing environment without one, so add the rule before the token
-    # (cloudflare/README.md → Secrets).
-    environment: cloudflare
+    # (cloudflare/README.md → Secrets). `deployment: false` keeps the secret and
+    # the branch rule but records no Deployment: applying rules deploys no site.
+    environment:
+      name: cloudflare
+      deployment: false
     env:
       CLOUDFLARE_RULES_TOKEN: ${{ secrets.CLOUDFLARE_RULES_TOKEN }}
       CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}

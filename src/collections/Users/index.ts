@@ -54,37 +54,48 @@ export const Users: CollectionConfig = {
       },
     },
     {
-      name: "name",
-      type: "text",
-    },
-    {
-      name: "affiliation",
-      type: "text",
-      required: false,
-      admin: {
-        condition: userExists,
-      },
-    },
-    {
-      name: "biography",
-      type: "richText",
-      editor: lexicalEditor({
-        features: ({ rootFeatures }) => {
-          return [
-            ...rootFeatures,
-            HeadingFeature({ enabledHeadingSizes: ["h2", "h3", "h4"] }),
-            FixedToolbarFeature(),
-            InlineToolbarFeature(),
-            OrderedListFeature(),
-            UnorderedListFeature(),
-            IndentFeature(),
-          ]
+      // Unnamed, so the fields keep their columns. The SSO plugin adds a Connections tab.
+      type: "tabs",
+      tabs: [
+        {
+          label: "Profile",
+          fields: [
+            {
+              name: "name",
+              type: "text",
+            },
+            {
+              name: "affiliation",
+              type: "text",
+              required: false,
+              admin: {
+                condition: userExists,
+              },
+            },
+            {
+              name: "biography",
+              type: "richText",
+              editor: lexicalEditor({
+                features: ({ rootFeatures }) => {
+                  return [
+                    ...rootFeatures,
+                    HeadingFeature({ enabledHeadingSizes: ["h2", "h3", "h4"] }),
+                    FixedToolbarFeature(),
+                    InlineToolbarFeature(),
+                    OrderedListFeature(),
+                    UnorderedListFeature(),
+                    IndentFeature(),
+                  ]
+                },
+              }),
+              required: false,
+              admin: {
+                condition: userExists,
+              },
+            },
+          ],
         },
-      }),
-      required: false,
-      admin: {
-        condition: userExists,
-      },
+      ],
     },
     slugField({
       useAsSlug: "name",

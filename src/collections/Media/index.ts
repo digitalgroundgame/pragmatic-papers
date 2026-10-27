@@ -17,8 +17,10 @@ import { regenerateBlurHandler } from "./endpoints/regenerateBlur"
 import { detachHandler } from "./endpoints/detach"
 import { referencesHandler } from "./endpoints/references"
 import { generateBlurDataUrl } from "./hooks/generateBlurDataUrl"
+import { revalidateMediaUsers } from "./hooks/revalidateMediaUsers"
 import { attributeUnsplashPhoto } from "./hooks/attributeUnsplashPhoto"
 import { unsplashFileHandler, unsplashSearchHandler } from "./endpoints/unsplash"
+import { validateAlt } from "./validateAlt"
 import { grantPublicProfile } from "@/collections/Users/hooks/grantPublicProfile"
 
 const filename = fileURLToPath(import.meta.url)
@@ -73,6 +75,12 @@ export const Media: CollectionConfig = {
             {
               name: "alt",
               type: "text",
+              label: "Alt text",
+              validate: validateAlt,
+              admin: {
+                description:
+                  "What the image shows, for readers who can't see it. Required for images.",
+              },
             },
             {
               name: "caption",
@@ -179,6 +187,7 @@ export const Media: CollectionConfig = {
   ],
   hooks: {
     beforeDelete: [protectPublishedMedia],
+    beforeValidate: [attributeUnsplashPhoto],
     beforeChange: [
       (args: Parameters<CollectionBeforeChangeHook<MediaType>>[0]): Partial<MediaType> | void => {
         const { req, operation, data } = args
@@ -190,9 +199,8 @@ export const Media: CollectionConfig = {
         }
       },
       generateBlurDataUrl,
-      attributeUnsplashPhoto,
     ],
-    afterChange: [grantPublicProfile<MediaType>((doc) => doc.narrator)],
+    afterChange: [grantPublicProfile<MediaType>((doc) => doc.narrator), revalidateMediaUsers],
   },
   upload: {
     admin: {

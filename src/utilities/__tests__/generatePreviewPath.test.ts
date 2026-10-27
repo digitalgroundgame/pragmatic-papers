@@ -45,6 +45,10 @@ describe("generatePreviewPath", () => {
     expect(params("pages", "")).toMatchObject({ slug: "", path: "/" })
   })
 
+  it("previews the page slugged home at /, where it's served", () => {
+    expect(params("pages", "home")).toMatchObject({ slug: "home", path: "/" })
+  })
+
   it("returns null when there is no slug", () => {
     for (const slug of [undefined, null]) {
       expect(

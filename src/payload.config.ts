@@ -15,7 +15,9 @@ import { defaultLexical } from "@/fields/defaultLexical"
 import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
 import { Integrations } from "@/globals/Integrations/config"
-import { Ticker } from "@/globals/Ticker/config"
+import { Newsletter } from "@/globals/Newsletter/config"
+import { Plugins } from "@/globals/Plugins/config"
+import { pluginSwitches } from "@/globals/Plugins/pluginSwitches"
 import { SiteSettings } from "@/globals/SiteSettings/config"
 import { Header } from "@/Header/config"
 import { canRunJobs } from "@/jobs/access"
@@ -24,8 +26,14 @@ import { syncShopifyProductsTask } from "@/jobs/syncShopifyProducts"
 import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
-import { sentryPayloadPlugin, skipPluginErrorsInPino } from "@/sentryPayload"
-import { getServerSideURL } from "@/utilities/getURL"
+import { ssoAfterSchemaInit } from "@/plugins/sso"
+import {
+  restorePayloadErrorNames,
+  sentryPayloadPlugin,
+  skipPluginErrorsInPino,
+} from "@/sentryPayload"
+import { getSiteURL } from "@/utilities/getURL"
+import { describePlugin } from "@/utilities/registerPlugin"
 import { migrations } from "@/migrations"
 import { type PostgresAdapter, postgresAdapter } from "@payloadcms/db-postgres"
 import path from "path"
@@ -36,6 +44,8 @@ import { fileURLToPath } from "url"
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
+
+restorePayloadErrorNames()
 
 export default buildConfig({
   logger: {
@@ -116,6 +126,11 @@ export default buildConfig({
       // A Cloudflare Worker can't reuse a socket opened during another request, so in one,
       // give each query a fresh connection (Hyperdrive pools them for us).
       ...(globalThis.navigator?.userAgent === "Cloudflare-Workers" && { maxUses: 1 }),
+      // `next build` prerenders pages in several workers, each with its own pool, while
+      // the live container keeps its connections. Production's database sits behind
+      // Supabase's session-mode pooler, which refuses clients past its pool size, so cap
+      // each build worker at a few connections rather than node-postgres's default 10.
+      ...(process.env.NEXT_PHASE === "phase-production-build" && { max: 3 }),
     },
     // prevent schema push in prod/test for static schema determinism and noise reduction
     push: process.env.NODE_ENV === "development",
@@ -123,7 +138,7 @@ export default buildConfig({
     // touch the real database while building, so they migrate when Payload starts (Payload
     // only does under NODE_ENV=production). Coolify's builds run `payload migrate` instead.
     prodMigrations: process.env.BUILT_WITHOUT_DATABASE === "true" ? migrations : undefined,
-    afterSchemaInit: [searchVectorAfterSchemaInit],
+    afterSchemaInit: [searchVectorAfterSchemaInit, ssoAfterSchemaInit()],
   }),
   /**
    * The admin saves a document as multipart, and busboy — which parses it — truncates any
@@ -160,13 +175,33 @@ export default buildConfig({
     Webhooks,
     Categories,
   ],
-  cors: [getServerSideURL()].filter(Boolean),
-  globals: [Header, Footer, Ticker, SiteSettings, Integrations, ArticleRecommendations],
+  cors: [getSiteURL()].filter(Boolean),
+  globals: [
+    Header,
+    Footer,
+    SiteSettings,
+    Integrations,
+    Newsletter,
+    Plugins,
+    ArticleRecommendations,
+  ],
   // Nothing here reads Payload's GraphQL API (the site and admin use the Local and REST
   // APIs), and its errors reach `afterError` with their status nested on `originalError`,
   // which the Sentry plugin reads as a 500: anyone could fill Sentry from /api/graphql.
   graphQL: { disable: true },
-  plugins: [...plugins, sentryPayloadPlugin],
+  plugins: [
+    ...plugins,
+    describePlugin(sentryPayloadPlugin, {
+      slug: "plugin-sentry",
+      manifest: {
+        name: "Sentry",
+        source: "@payloadcms/plugin-sentry",
+        description:
+          "Reports the errors Payload answers with a 5xx to Sentry, with the signed-in user.",
+      },
+    }),
+    pluginSwitches(),
+  ],
   secret: process.env.PAYLOAD_SECRET,
   sharp: sharp as unknown as SharpDependency,
   typescript: {

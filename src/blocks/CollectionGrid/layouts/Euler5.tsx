@@ -24,7 +24,7 @@ export const Euler5: LayoutDefinition = {
 export const Euler5Layout: React.FC<LayoutProps> = ({
   className,
   slots,
-  priority,
+  preload,
   loading,
   ...props
 }) => {
@@ -40,7 +40,7 @@ export const Euler5Layout: React.FC<LayoutProps> = ({
         <CollectionTile
           key={slot?.id ?? index}
           tile={slot}
-          priority={index === 0 ? priority : undefined}
+          preload={index === 0 ? preload : undefined}
           loading={index === 0 ? undefined : loading}
           sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 250px"
           variant="medium"

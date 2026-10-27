@@ -1,7 +1,10 @@
 import type { PayloadRequest } from "payload"
 
+import { isStaff } from "@/access/roles"
+import type { User } from "@/payload-types"
+
 /**
- * Who may call Payload's `POST /api/payload-jobs/run`: any logged-in user, or a
+ * Who may call Payload's `POST /api/payload-jobs/run`: a logged-in staff member, or a
  * caller sending `Authorization: Bearer <CRON_SECRET>`.
  *
  * The jobs themselves run in-process on `jobs.autoRun`, so nothing in this repo
@@ -11,7 +14,7 @@ import type { PayloadRequest } from "payload"
  * sending `Authorization: Bearer undefined` in.
  */
 export function canRunJobs({ req }: { req: PayloadRequest }): boolean {
-  if (req.user) return true
+  if (isStaff(req.user as User | null)) return true
 
   const secret = process.env.CRON_SECRET
   if (!secret) return false

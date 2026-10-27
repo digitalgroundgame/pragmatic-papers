@@ -1,13 +1,16 @@
-import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
+import { getGlobal } from "@/data/globals"
 
-import { getTickerFeed } from "./getTickerFeed"
-import { TickerView } from "./TickerView"
+import { TickerLoader } from "./TickerLoader"
 
 /**
- * The ticker, when the `ticker` experiment is on. Renders nothing when it's off, or
- * when no source has anything to show.
+ * The ticker, when it's switched on in the Header global. Renders nothing when it's off.
+ * Its posts and broadcast are fetched in the browser (`TickerLoader`) rather than read here:
+ * read while the page renders, its sources' five-minute caches would cut every page's own
+ * cache down to five minutes.
  */
 export async function Ticker(): Promise<React.ReactNode> {
-  if (!(await isExperimentEnabled("ticker"))) return null
-  return <TickerView {...await getTickerFeed()} />
+  // The depth the header reads it at, so they share one cache entry.
+  const { ticker } = await getGlobal("header", 1)
+  if (ticker?.enabled !== true) return null
+  return <TickerLoader />
 }

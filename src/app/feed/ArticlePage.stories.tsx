@@ -32,7 +32,6 @@ const meta = {
   parameters: { layout: "centered" },
   decorators: [phoneFrame],
   args: {
-    article,
     page: firstProse as ArticlePageItem,
     topInset: FEED_TOP_INSET,
     isLast: false,
@@ -67,7 +66,9 @@ export const LastPage: Story = {
 
 /** Media fills the page, scaled to the viewport, as the lightbox shows it. */
 export const Media: Story = {
-  render: (args) => <ArticleBlockPage {...args} page={blockPage(mediaBlockNode, "mediaBlock")} />,
+  render: (args) => (
+    <ArticleBlockPage {...args} article={article} page={blockPage(mediaBlockNode, "mediaBlock")} />
+  ),
   play: async ({ canvasElement }) => {
     await expect(await within(canvasElement).findByRole("img")).toBeVisible()
   },
@@ -76,7 +77,11 @@ export const Media: Story = {
 /** A table reflows into one card per row, labelled from the header row. */
 export const Table: Story = {
   render: (args) => (
-    <ArticleBlockPage {...args} page={blockPage(turnoutTable, "table", headingNode)} />
+    <ArticleBlockPage
+      {...args}
+      article={article}
+      page={blockPage(turnoutTable, "table", headingNode)}
+    />
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -94,7 +99,9 @@ export const Table: Story = {
 
 /** A form waits behind a button, and opens in a dialog over the feed. */
 export const Form: Story = {
-  render: (args) => <ArticleBlockPage {...args} page={blockPage(formBlockNode, "formBlock")} />,
+  render: (args) => (
+    <ArticleBlockPage {...args} article={article} page={blockPage(formBlockNode, "formBlock")} />
+  ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await waitFor(() => expect(canvas.getByText("Pitch the editors")).toBeVisible())
@@ -111,6 +118,7 @@ export const Form: Story = {
 export const FallbackBlock: Story = {
   render: (args) => (
     <ArticleBlockPage
+      article={article}
       {...args}
       page={blockPage(
         {

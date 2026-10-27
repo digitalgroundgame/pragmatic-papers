@@ -1,5 +1,5 @@
 import type { OEmbedRequestQuery, OEmbedResponse } from "@/blocks/SocialEmbed/helpers/oEmbed"
-import type { Result } from "@/utilities/results"
+import type { Result } from "@/utilities/result"
 
 /**
  * Abstract base class for social media platform adapters.

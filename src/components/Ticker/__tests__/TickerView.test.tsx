@@ -1,13 +1,25 @@
 import { render, screen, within } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { liveBroadcast, tickerPosts, upcomingBroadcast } from "@/stories/fixtures/ticker"
-import { TickerView } from "../TickerView"
+import {
+  fewTickerPosts,
+  liveBroadcast,
+  tickerPosts,
+  upcomingBroadcast,
+} from "@/stories/fixtures/ticker"
+import { loopRounds } from "../items"
+import { TICKER_PAUSED_KEY } from "../pause"
+import { TICKER_EMPTY, TickerView } from "../TickerView"
 
 describe("TickerView", () => {
-  it("renders nothing when there is nothing to show", () => {
-    const { container } = render(<TickerView broadcast={null} posts={[]} />)
-    expect(container).toBeEmptyDOMElement()
+  it("keeps its strip and says there's nothing new when there is nothing to show", () => {
+    render(<TickerView broadcast={null} posts={[]} />)
+    const ticker = screen.getByRole("region", { name: "Live and latest" })
+    expect(ticker).toHaveTextContent("Latest")
+    expect(ticker).toHaveTextContent(TICKER_EMPTY)
+    // Nothing scrolls, so there's nothing to pause, and it doesn't stick under the header.
+    expect(within(ticker).queryByRole("checkbox")).not.toBeInTheDocument()
+    expect(within(ticker).queryByRole("link")).not.toBeInTheDocument()
   })
 
   it("links the live broadcast first, then each post once for assistive tech", () => {
@@ -22,6 +34,24 @@ describe("TickerView", () => {
     expect(links).toHaveLength(1 + tickerPosts.length + postLinks)
     expect(within(ticker).getByRole("list", { name: "Latest posts" })).toBeInTheDocument()
     expect(within(ticker).getByRole("checkbox", { name: "Pause ticker" })).not.toBeChecked()
+  })
+
+  it("repeats a few posts to fill the strip, announcing each one once", () => {
+    const rounds = loopRounds(fewTickerPosts)
+    expect(rounds).toBeGreaterThan(1)
+    render(<TickerView broadcast={null} posts={fewTickerPosts} />)
+
+    const list = screen.getByRole("list", { name: "Latest posts" })
+    expect(within(list).getAllByRole("listitem")).toHaveLength(fewTickerPosts.length)
+    expect(within(list).getAllByRole("link")).toHaveLength(fewTickerPosts.length)
+
+    const items = list.querySelectorAll("li")
+    expect(items).toHaveLength(rounds * fewTickerPosts.length)
+    for (const repeat of Array.from(items).slice(fewTickerPosts.length)) {
+      expect(repeat).toHaveAttribute("aria-hidden", "true")
+      expect(repeat).toHaveAttribute("inert")
+      expect(repeat).toHaveClass("motion-reduce:hidden")
+    }
   })
 
   it("names each post's source and opens it in a new tab", () => {
@@ -45,11 +75,14 @@ describe("TickerView", () => {
     expect(link.querySelector("svg")).toHaveAttribute("aria-hidden", "true")
   })
 
-  it("puts the script that remembers a pause right after the switch", () => {
-    render(<TickerView broadcast={null} posts={tickerPosts} />)
-    const pause = screen.getByRole("checkbox", { name: "Pause ticker" })
-    expect(pause.nextElementSibling?.tagName).toBe("SCRIPT")
-    expect(pause.nextElementSibling).toHaveTextContent("pp:ticker-paused")
+  it("mounts paused for a reader who paused it on an earlier page", () => {
+    localStorage.setItem(TICKER_PAUSED_KEY, "1")
+    try {
+      render(<TickerView broadcast={null} posts={tickerPosts} />)
+      expect(screen.getByRole("checkbox", { name: "Pause ticker" })).toBeChecked()
+    } finally {
+      localStorage.clear()
+    }
   })
 
   it("marks a live broadcast, and lets the reader pause it with no posts beside it", () => {
@@ -60,7 +93,13 @@ describe("TickerView", () => {
   })
 
   it("shows an upcoming broadcast with its start time in the paper's zone", () => {
-    render(<TickerView broadcast={upcomingBroadcast} posts={[]} />)
+    render(
+      <TickerView
+        broadcast={upcomingBroadcast}
+        posts={[]}
+        now={new Date("2026-10-07T16:00:00Z")}
+      />,
+    )
     const link = screen.getByRole("link")
     expect(link).toHaveTextContent("Upcoming")
     expect(within(link).getByText("7:00 p.m. ET")).toHaveAttribute(
@@ -69,5 +108,19 @@ describe("TickerView", () => {
     )
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
     expect(screen.getByRole("region")).not.toHaveAttribute("data-live")
+  })
+
+  it("puts the weekday before the start time when the broadcast isn't today", () => {
+    render(
+      <TickerView
+        broadcast={upcomingBroadcast}
+        posts={[]}
+        now={new Date("2026-10-05T16:00:00Z")}
+      />,
+    )
+    expect(screen.getByText("Wednesday 7:00 p.m. ET")).toHaveAttribute(
+      "dateTime",
+      upcomingBroadcast.startsAt,
+    )
   })
 })

@@ -9,13 +9,13 @@ vi.mock("../../CollectionTile", () => ({
     tile,
     imagePosition,
     variant,
-    priority,
+    preload,
     loading,
   }: {
     tile?: { id?: string | null }
     imagePosition?: string
     variant?: string
-    priority?: boolean
+    preload?: boolean
     loading?: string
   }) =>
     tile ? (
@@ -23,7 +23,7 @@ vi.mock("../../CollectionTile", () => ({
         data-testid={`tile-${tile.id}`}
         data-image-position={imagePosition}
         data-variant={variant}
-        data-priority={priority}
+        data-preload={preload}
         data-loading={loading}
       >
         {tile.id}
@@ -187,18 +187,18 @@ describe("Gauss10Layout", () => {
   })
 
   describe("image loading", () => {
-    it("marks only the featured slot as priority", () => {
-      render(<Gauss10Layout slots={makeSlots(allIds)} priority />)
+    it("marks only the featured slot as preload", () => {
+      render(<Gauss10Layout slots={makeSlots(allIds)} preload />)
 
-      expect(screen.getByTestId("tile-featured").dataset.priority).toBe("true")
+      expect(screen.getByTestId("tile-featured").dataset.preload).toBe("true")
       for (const id of allIds.filter((slotId) => slotId !== "featured")) {
-        expect(screen.getByTestId(`tile-${id}`).dataset.priority).toBeUndefined()
+        expect(screen.getByTestId(`tile-${id}`).dataset.preload).toBeUndefined()
       }
     })
 
-    it("leaves priority unset when the prop is not passed", () => {
+    it("leaves preload unset when the prop is not passed", () => {
       render(<Gauss10Layout slots={makeSlots(requiredIds)} />)
-      expect(screen.getByTestId("tile-featured").dataset.priority).toBeUndefined()
+      expect(screen.getByTestId("tile-featured").dataset.preload).toBeUndefined()
     })
 
     it("forwards loading to every image-bearing slot except Featured", () => {
@@ -208,7 +208,7 @@ describe("Gauss10Layout", () => {
         expect(screen.getByTestId(`tile-${id}`).dataset.loading).toBe("lazy")
       }
 
-      // Featured opts into `priority` instead; the two are mutually exclusive.
+      // Featured opts into `preload` instead; the two are mutually exclusive.
       expect(screen.getByTestId("tile-featured").dataset.loading).toBeUndefined()
     })
 

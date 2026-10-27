@@ -183,13 +183,22 @@ export interface Config {
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
+    docs: Doc;
+    comments: Comment;
+    'comment-violations': CommentViolation;
+    achievements: Achievement;
+    awards: Award;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
   };
-  collectionsJoins: {};
+  collectionsJoins: {
+    users: {
+      awards: 'awards';
+    };
+  };
   collectionsSelect: {
     articles: ArticlesSelect<false> | ArticlesSelect<true>;
     volumes: VolumesSelect<false> | VolumesSelect<true>;
@@ -207,6 +216,11 @@ export interface Config {
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
+    docs: DocsSelect<false> | DocsSelect<true>;
+    comments: CommentsSelect<false> | CommentsSelect<true>;
+    'comment-violations': CommentViolationsSelect<false> | CommentViolationsSelect<true>;
+    achievements: AchievementsSelect<false> | AchievementsSelect<true>;
+    awards: AwardsSelect<false> | AwardsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -220,19 +234,23 @@ export interface Config {
   globals: {
     header: Header;
     footer: Footer;
-    ticker: TickerGlobal;
     'site-settings': SiteSetting;
     integrations: IntegrationSettings;
+    newsletter: Newsletter;
+    plugins: Plugin;
     'article-recommendations': ArticleRecommendation;
+    'comment-settings': CommentSetting;
     'payload-jobs-stats': PayloadJobsStat;
   };
   globalsSelect: {
     header: HeaderSelect<false> | HeaderSelect<true>;
     footer: FooterSelect<false> | FooterSelect<true>;
-    ticker: TickerSelect<false> | TickerSelect<true>;
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
     integrations: IntegrationsSelect<false> | IntegrationsSelect<true>;
+    newsletter: NewsletterSelect<false> | NewsletterSelect<true>;
+    plugins: PluginsSelect<false> | PluginsSelect<true>;
     'article-recommendations': ArticleRecommendationsSelect<false> | ArticleRecommendationsSelect<true>;
+    'comment-settings': CommentSettingsSelect<false> | CommentSettingsSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
   locale: null;
@@ -393,6 +411,7 @@ export interface Page {
     | TimelineBlock
     | VolumeView
     | FormBlock
+    | FeedsListBlock
   )[];
   meta?: {
     title?: string | null;
@@ -418,6 +437,9 @@ export interface Page {
  */
 export interface Media {
   id: number;
+  /**
+   * What the image shows, for readers who can't see it. Required for images.
+   */
   alt?: string | null;
   caption?: {
     root: {
@@ -554,6 +576,17 @@ export interface User {
    * Keeps /contributors/<slug> public whatever the roles. Turned on when an article or narration credits this user.
    */
   publicProfile?: boolean | null;
+  emailVerified?: boolean | null;
+  avatarUrl?: string | null;
+  ssoConnections?: boolean | null;
+  /**
+   * Give an achievement that's given by hand with Add new, or open one to revoke it. Verified isn't listed until it's revoked: add a row for it with Revoked ticked.
+   */
+  awards?: {
+    docs?: (number | Award)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -573,6 +606,57 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "awards".
+ */
+export interface Award {
+  id: number;
+  /**
+   * Empty once the account is deleted: the row keeps its place in the count.
+   */
+  user?: (number | null) | User;
+  achievement: number | Achievement;
+  /**
+   * When it was earned or given. Empty on a revocation of Verified.
+   */
+  earnedAt?: string | null;
+  /**
+   * Takes the achievement away. Untick it to give it back.
+   */
+  revoked?: boolean | null;
+  revokedReason?: string | null;
+  revokedAt?: string | null;
+  revokedBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Readers' achievements. Drag them into order: of the badges someone holds, the highest shows beside their name. Give or revoke one from a user's record.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "achievements".
+ */
+export interface Achievement {
+  id: number;
+  _order?: string | null;
+  name: string;
+  /**
+   * What it means, on the reader's account page.
+   */
+  description?: string | null;
+  /**
+   * Fixed once it's made. Given by hand: Moderators give it from a user's record. First members: The first readers to make an account, in sign-up order, up to the limit. Verified email: Readers whose sign-in provider verified their email address.
+   */
+  rule: 'manual' | 'firstMembers' | 'verified';
+  /**
+   * Raising it awards it to the next members in sign-up order; lowering it takes nothing away.
+   */
+  limit?: number | null;
+  badge?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1095,6 +1179,21 @@ export interface Form {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FeedsListBlock".
+ */
+export interface FeedsListBlock {
+  /**
+   * Which links to show. They're kept up to date by the site itself: you only write the heading and introduction.
+   */
+  list: 'feeds' | 'sitemaps';
+  title?: string | null;
+  description?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'feedsList';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "topics".
  */
 export interface Topic {
@@ -1363,7 +1462,7 @@ export interface Search {
 export interface Redirect {
   id: number;
   /**
-   * You will need to rebuild the website when changing this field.
+   * The old path, starting with a slash, e.g. /articles/old-slug.
    */
   from: string;
   to?: {
@@ -1400,6 +1499,117 @@ export interface FormSubmission {
         id?: string | null;
       }[]
     | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "docs".
+ */
+export interface Doc {
+  id: number;
+  _order?: string | null;
+  title: string;
+  /**
+   * A short name for the docs sidebar, like "Footnotes". Left empty, the sidebar shows the title.
+   */
+  navTitle?: string | null;
+  /**
+   * One or two sentences. The help bell shows it under the title.
+   */
+  summary: string;
+  content: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  /**
+   * Shown above the doc's title, beside it in the help bell, and in link previews. Optional.
+   */
+  heroImage?: (number | null) | Media;
+  /**
+   * The day the feature reaches the live site. Newest docs list first.
+   */
+  publishedAt: string;
+  /**
+   * The day the doc last changed in a way readers should know about, shown beside its date. The bell still lists it under the published date.
+   */
+  revisedAt?: string | null;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  parent?: (number | null) | Doc;
+  /**
+   * Who the help bell tells. Empty means all staff; admins see every doc.
+   */
+  audience?: ('admin' | 'chief-editor' | 'editor' | 'writer' | 'narrator')[] | null;
+  /**
+   * Auto-generates a navigable list of headings (and any resolver-matched blocks). Readers see it only while the table of contents experiment is on in Settings.
+   */
+  showTableOfContents?: boolean | null;
+  /**
+   * A guided tour of the feature, offered as Show me in the help bell and on the doc. One of: articles.
+   */
+  tour?: string | null;
+  /**
+   * Seeded from src/docs/ by a deploy. Edits here are kept: when the repo's copy changes, a deploy saves it as a new draft for you to publish, edit or discard, and never changes the published doc.
+   */
+  sourceHash?: string | null;
+  breadcrumbs?:
+    | {
+        doc?: (number | null) | Doc;
+        url?: string | null;
+        label?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * Hide a comment to take it off the page and count it against its author; replies to it stay. Publish a held or hidden one to restore it and reverse its violation. Deleting a comment deletes its replies too.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comments".
+ */
+export interface Comment {
+  id: number;
+  body?: string | null;
+  target: number | Article;
+  author?: (number | null) | User;
+  parent?: (number | null) | Comment;
+  depth: number;
+  status: 'published' | 'auto-hidden' | 'hidden' | 'deleted';
+  moderationReason?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Too many recent violations stop an account commenting (Comment settings says how many). Tick Reversed to lift one. Add a Block to stop someone at once, until it's reversed.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comment-violations".
+ */
+export interface CommentViolation {
+  id: number;
+  author: number | User;
+  source: 'check' | 'moderator' | 'block';
+  reason: string;
+  comment?: (number | null) | Comment;
+  reversed?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1593,6 +1803,26 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'form-submissions';
         value: number | FormSubmission;
+      } | null)
+    | ({
+        relationTo: 'docs';
+        value: number | Doc;
+      } | null)
+    | ({
+        relationTo: 'comments';
+        value: number | Comment;
+      } | null)
+    | ({
+        relationTo: 'comment-violations';
+        value: number | CommentViolation;
+      } | null)
+    | ({
+        relationTo: 'achievements';
+        value: number | Achievement;
+      } | null)
+    | ({
+        relationTo: 'awards';
+        value: number | Award;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -1858,6 +2088,7 @@ export interface PagesSelect<T extends boolean = true> {
         timeline?: T | TimelineBlockSelect<T>;
         volumeView?: T | VolumeViewSelect<T>;
         formBlock?: T | FormBlockSelect<T>;
+        feedsList?: T | FeedsListBlockSelect<T>;
       };
   meta?:
     | T
@@ -2026,6 +2257,17 @@ export interface FormBlockSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "FeedsListBlock_select".
+ */
+export interface FeedsListBlockSelect<T extends boolean = true> {
+  list?: T;
+  title?: T;
+  description?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "interactives_select".
  */
 export interface InteractivesSelect<T extends boolean = true> {
@@ -2143,6 +2385,10 @@ export interface UsersSelect<T extends boolean = true> {
   socials?: T | MenuFieldSelect<T>;
   roles?: T;
   publicProfile?: T;
+  emailVerified?: T;
+  avatarUrl?: T;
+  ssoConnections?: T;
+  awards?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -2383,6 +2629,95 @@ export interface FormSubmissionsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "docs_select".
+ */
+export interface DocsSelect<T extends boolean = true> {
+  _order?: T;
+  title?: T;
+  navTitle?: T;
+  summary?: T;
+  content?: T;
+  heroImage?: T;
+  publishedAt?: T;
+  revisedAt?: T;
+  generateSlug?: T;
+  slug?: T;
+  parent?: T;
+  audience?: T;
+  showTableOfContents?: T;
+  tour?: T;
+  sourceHash?: T;
+  breadcrumbs?:
+    | T
+    | {
+        doc?: T;
+        url?: T;
+        label?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comments_select".
+ */
+export interface CommentsSelect<T extends boolean = true> {
+  body?: T;
+  target?: T;
+  author?: T;
+  parent?: T;
+  depth?: T;
+  status?: T;
+  moderationReason?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comment-violations_select".
+ */
+export interface CommentViolationsSelect<T extends boolean = true> {
+  author?: T;
+  source?: T;
+  reason?: T;
+  comment?: T;
+  reversed?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "achievements_select".
+ */
+export interface AchievementsSelect<T extends boolean = true> {
+  _order?: T;
+  name?: T;
+  description?: T;
+  rule?: T;
+  limit?: T;
+  badge?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "awards_select".
+ */
+export interface AwardsSelect<T extends boolean = true> {
+  user?: T;
+  achievement?: T;
+  earnedAt?: T;
+  revoked?: T;
+  revokedReason?: T;
+  revokedAt?: T;
+  revokedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv_select".
  */
 export interface PayloadKvSelect<T extends boolean = true> {
@@ -2461,6 +2796,25 @@ export interface Header {
   id: number;
   navItems?: MenuField;
   actions?: MenuField;
+  ticker?: {
+    /**
+     * The strip under the header on every page: a broadcast when one of our YouTube channels is live, and our latest posts from Bluesky and X.
+     */
+    enabled?: boolean | null;
+    /**
+     * How many hours before a scheduled YouTube stream starts that the ticker shows it. 0 shows only streams that are live.
+     */
+    upcomingHours?: number | null;
+    /**
+     * Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky or X. It's gone from the ticker as soon as you save.
+     */
+    hidden?:
+      | {
+          url: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -2474,26 +2828,6 @@ export interface Footer {
   navItems?: MenuField;
   socials?: MenuField;
   copyright?: LinkField;
-  updatedAt?: string | null;
-  createdAt?: string | null;
-}
-/**
- * The strip under the header with our live broadcasts and latest posts.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ticker".
- */
-export interface TickerGlobal {
-  id: number;
-  /**
-   * Posts the ticker leaves out. Paste the post's link from Bluesky or X; it's gone from the ticker as soon as you save.
-   */
-  hidden?:
-    | {
-        url: string;
-        id?: string | null;
-      }[]
-    | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -2516,9 +2850,21 @@ export interface SiteSetting {
      */
     interactives?: boolean | null;
     /**
-     * The strip under the header on every page: a broadcast when one of our YouTube channels is live, and our latest posts from Bluesky and X.
+     * The help docs at /docs, their sitemap, and their items in the notifications bell. Staff can write docs in the admin either way.
      */
-    ticker?: boolean | null;
+    docs?: boolean | null;
+    /**
+     * The bell beside the avatar in the admin header.
+     */
+    notifications?: boolean | null;
+    /**
+     * Guided tours of the admin, and the Show me buttons that start them in the bell and on help docs.
+     */
+    tours?: boolean | null;
+    /**
+     * “Sign in with Google” and “Sign in with Discord” on the admin's login page, for people who already have an account here. Each provider also needs its credentials (System → Integrations).
+     */
+    sso?: boolean | null;
     /**
      * The table of contents in an article's sidebar and its hero button, on articles with “Show table of contents” ticked.
      */
@@ -2585,6 +2931,50 @@ export interface IntegrationSettings {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "newsletter".
+ */
+export interface Newsletter {
+  id: number;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "plugins".
+ */
+export interface Plugin {
+  id: number;
+  switches?: {
+    /**
+     * The help docs at /docs, their sitemap, and their items in the notifications bell. Staff can write docs in the admin either way.
+     */
+    docs?: boolean | null;
+    /**
+     * The bell beside the avatar in the admin header.
+     */
+    notifications?: boolean | null;
+    /**
+     * Guided tours of the admin, and the Show me buttons that start them in the bell and on help docs.
+     */
+    tours?: boolean | null;
+    /**
+     * “Sign in with Google”, “Sign in with Discord” and “Sign in with Destiny.gg” on the admin's login page, for people who already have an account here, the Connections tab that links them, and members' sign-ins on the site. Each provider also needs its credentials (System → Integrations).
+     */
+    sso?: boolean | null;
+    /**
+     * The Comments section under each article, and sign-ups: readers make an account by signing in to comment. Needs Single sign-on on too.
+     */
+    comments?: boolean | null;
+    /**
+     * Badges beside readers' names on comments, and achievements on their account page. First-members achievements are still awarded while it's off.
+     */
+    achievements?: boolean | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "article-recommendations".
  */
 export interface ArticleRecommendation {
@@ -2603,6 +2993,36 @@ export interface ArticleRecommendation {
         id?: string | null;
       }[]
     | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comment-settings".
+ */
+export interface CommentSetting {
+  id: number;
+  /**
+   * How many levels of replies can sit below a top-level comment. 0 allows no replies. Lowering it never removes replies already posted; it only stops new ones past the limit.
+   */
+  maxDepth: number;
+  /**
+   * An account with this many active violations can't comment until enough of them expire or are reversed.
+   */
+  violationThreshold: number;
+  violationWindowDays: number;
+  /**
+   * A comment with more links than this is held for a moderator.
+   */
+  maxLinks: number;
+  /**
+   * Hold a comment its author already posted, word for word, in the past day.
+   */
+  blockDuplicates?: boolean | null;
+  /**
+   * Off, anyone signed in can comment. On, only people whose sign-in provider verified their address can, and staff.
+   */
+  requireVerifiedEmail?: boolean | null;
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -2631,6 +3051,18 @@ export interface PayloadJobsStat {
 export interface HeaderSelect<T extends boolean = true> {
   navItems?: T | MenuFieldSelect<T>;
   actions?: T | MenuFieldSelect<T>;
+  ticker?:
+    | T
+    | {
+        enabled?: T;
+        upcomingHours?: T;
+        hidden?:
+          | T
+          | {
+              url?: T;
+              id?: T;
+            };
+      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;
@@ -2654,21 +3086,6 @@ export interface FooterSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "ticker_select".
- */
-export interface TickerSelect<T extends boolean = true> {
-  hidden?:
-    | T
-    | {
-        url?: T;
-        id?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
-  globalType?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site-settings_select".
  */
 export interface SiteSettingsSelect<T extends boolean = true> {
@@ -2677,7 +3094,10 @@ export interface SiteSettingsSelect<T extends boolean = true> {
     | {
         feed?: T;
         interactives?: T;
-        ticker?: T;
+        docs?: T;
+        notifications?: T;
+        tours?: T;
+        sso?: T;
         tableOfContents?: T;
       };
   updatedAt?: T;
@@ -2725,6 +3145,34 @@ export interface IntegrationsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "newsletter_select".
+ */
+export interface NewsletterSelect<T extends boolean = true> {
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "plugins_select".
+ */
+export interface PluginsSelect<T extends boolean = true> {
+  switches?:
+    | T
+    | {
+        docs?: T;
+        notifications?: T;
+        tours?: T;
+        sso?: T;
+        comments?: T;
+        achievements?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "article-recommendations_select".
  */
 export interface ArticleRecommendationsSelect<T extends boolean = true> {
@@ -2736,6 +3184,21 @@ export interface ArticleRecommendationsSelect<T extends boolean = true> {
         engagementScore?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comment-settings_select".
+ */
+export interface CommentSettingsSelect<T extends boolean = true> {
+  maxDepth?: T;
+  violationThreshold?: T;
+  violationWindowDays?: T;
+  maxLinks?: T;
+  blockDuplicates?: T;
+  requireVerifiedEmail?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

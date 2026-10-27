@@ -76,12 +76,12 @@ describe("revalidateUser", () => {
     )
   })
 
-  it("refreshes only the author pages for someone with no articles", async () => {
+  it("refreshes only the author pages and home (which can list contributors) for someone with no articles", async () => {
     const author = await createUser("writer")
 
     const renamed = await rename(author, author.name!)
 
-    expect(paths()).toEqual([`/contributors/${renamed.slug}`, "/contributors"])
+    expect(paths()).toEqual([`/contributors/${renamed.slug}`, "/contributors", "/"])
   })
 
   it("refreshes no volume when the author's articles aren't in one", async () => {

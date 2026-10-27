@@ -2,10 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type * as Integrations from "@/integrations"
 
-const { mockPurge, mockRevalidateAll } = vi.hoisted(() => ({
+const { mockPurge, mockRevalidateAll, mockWarmWorkerSoon } = vi.hoisted(() => ({
   mockPurge: vi.fn(),
   mockRevalidateAll: vi.fn(),
+  mockWarmWorkerSoon: vi.fn(),
 }))
+
+vi.mock("../warmWorker", () => ({ warmWorkerSoon: mockWarmWorkerSoon }))
 
 vi.mock("@/integrations", async (importOriginal) => {
   const actual = await importOriginal<typeof Integrations>()
@@ -35,6 +38,7 @@ beforeEach(() => {
   vi.stubEnv("WORKER_URL", "")
   mockPurge.mockReset().mockResolvedValue(undefined)
   mockRevalidateAll.mockReset().mockResolvedValue(undefined)
+  mockWarmWorkerSoon.mockReset()
   logger.info.mockClear()
   logger.warn.mockClear()
 })
@@ -126,7 +130,7 @@ describe("purgeEdgeCache", () => {
       expect(mockRevalidateAll).toHaveBeenCalledTimes(1)
       expect(mockPurge).not.toHaveBeenCalled()
       expect(logger.info).toHaveBeenCalledWith(
-        "Cleared the Worker's cache at https://pragmatic-papers-staging.example.workers.dev (article published)",
+        "Cleared every page from the Worker's cache at https://pragmatic-papers-staging.example.workers.dev (article published)",
       )
     })
 
@@ -144,6 +148,112 @@ describe("purgeEdgeCache", () => {
       expect(order).toEqual(["worker", "edge"])
     })
 
+    it("purges only what a burst's saves named from the Worker", async () => {
+      configureWorker()
+
+      purgeEdgeCache(logger, "page about", { paths: ["/about", "/sitemap.xml"] })
+      purgeEdgeCache(logger, "article a", { paths: ["/articles/a", null], shared: true })
+      await flushEdgeCachePurge()
+
+      expect(mockRevalidateAll).toHaveBeenCalledExactlyOnceWith({
+        paths: ["/about", "/sitemap.xml", "/articles/a"],
+        shared: true,
+      })
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringMatching(/^Cleared \/about, \/sitemap.xml, \/articles\/a, the shared pages /),
+      )
+    })
+
+    it("tells the Worker what a burst's saves revalidated, to revalidate only that", async () => {
+      configureWorker()
+
+      purgeEdgeCache(logger, "page about", {
+        paths: ["/about", "/sitemap.xml"],
+        revalidated: { paths: ["/about"], tags: ["pages-sitemap"] },
+      })
+      purgeEdgeCache(logger, "doc a", {
+        paths: ["/docs"],
+        revalidated: { paths: ["/docs", "/about"], tags: ["docs"] },
+      })
+      await flushEdgeCachePurge()
+
+      expect(mockRevalidateAll).toHaveBeenCalledExactlyOnceWith({
+        paths: ["/about", "/sitemap.xml", "/docs"],
+        shared: false,
+        revalidated: { paths: ["/about", "/docs"], tags: ["pages-sitemap", "docs"] },
+      })
+    })
+
+    it("revalidates every page in the Worker's Next cache once a save didn't say", async () => {
+      configureWorker()
+
+      purgeEdgeCache(logger, "page about", {
+        paths: ["/about"],
+        revalidated: { paths: ["/about"], tags: [] },
+      })
+      purgeEdgeCache(logger, "article a", { paths: ["/articles/a"] })
+      await flushEdgeCachePurge()
+
+      expect(mockRevalidateAll).toHaveBeenCalledExactlyOnceWith({
+        paths: ["/about", "/articles/a"],
+        shared: false,
+        revalidated: undefined,
+      })
+    })
+
+    it("purges every page once any save in the burst named none", async () => {
+      configureWorker()
+
+      purgeEdgeCache(logger, "page about", { paths: ["/about"] })
+      purgeEdgeCache(logger, "header saved")
+      await flushEdgeCachePurge()
+
+      expect(mockRevalidateAll).toHaveBeenCalledExactlyOnceWith({})
+    })
+
+    it("warms the Worker's pages once its cache is cleared", async () => {
+      configureWorker()
+
+      purgeEdgeCache(logger, "article published")
+      await flushEdgeCachePurge()
+
+      expect(mockWarmWorkerSoon).toHaveBeenCalledExactlyOnceWith(logger)
+    })
+
+    it("leaves the Worker alone when asked, still purging the edge", async () => {
+      configure()
+      configureWorker()
+
+      purgeEdgeCache(logger, "deploy", { worker: false })
+      await flushEdgeCachePurge()
+
+      expect(mockRevalidateAll).not.toHaveBeenCalled()
+      expect(mockWarmWorkerSoon).not.toHaveBeenCalled()
+      expect(mockPurge).toHaveBeenCalledTimes(1)
+    })
+
+    it("skips when asked to leave the Worker alone and the edge can't be purged", async () => {
+      configureWorker()
+      vi.stubEnv("SERVER_URL", "http://localhost:8000")
+
+      purgeEdgeCache(logger, "deploy", { worker: false })
+      await flushEdgeCachePurge()
+
+      expect(mockRevalidateAll).not.toHaveBeenCalled()
+      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining("Skipping Cloudflare purge"))
+    })
+
+    it("clears the Worker when any purge in a burst asks for it", async () => {
+      configure()
+      configureWorker()
+
+      purgeEdgeCache(logger, "deploy", { worker: false })
+      purgeEdgeCache(logger, "article published")
+      await flushEdgeCachePurge()
+
+      expect(mockRevalidateAll).toHaveBeenCalledTimes(1)
+    })
+
     it("still purges the edge when the Worker fails, and warns", async () => {
       configure()
       configureWorker()
@@ -153,6 +263,7 @@ describe("purgeEdgeCache", () => {
       await flushEdgeCachePurge()
 
       expect(mockPurge).toHaveBeenCalledTimes(1)
+      expect(mockWarmWorkerSoon).not.toHaveBeenCalled()
       expect(logger.warn).toHaveBeenCalledWith(
         "Clearing the Worker's cache at https://pragmatic-papers-staging.example.workers.dev failed (footer saved): Worker revalidation failed (HTTP 401)",
       )

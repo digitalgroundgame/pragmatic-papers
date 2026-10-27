@@ -19,7 +19,8 @@ const NOT_EDGE_CACHED = [
   // last one wins, so without this a request without Payload's cookies got public caching.
   // Upload files stay cached: with local storage (staging, previews) media and map assets
   // are served from `/api/<collection>/file/...`, anyone can read them, and narration audio
-  // and video shouldn't re-download on every load. (Cloudflare's cache rule skips `/api`.)
+  // and video shouldn't re-download on every load. (Cloudflare's cache rule skips `/api`, but
+  // for `/api/ticker`.)
   "admin(?:/|$)",
   "api(?:/(?!(?:media|map-assets)/file/)|$)",
 
@@ -36,6 +37,12 @@ const NOT_EDGE_CACHED = [
   // - the deploy's switchover check (`/next/purge-edge`): no-store, so the edge never keeps
   //   an answer naming the old container.
   "next/purge-edge$",
+  // - the deployed commit (`/next/version`): no-store, for the same reason.
+  "next/version$",
+  // - the applied migrations (`/next/migrations`): no-store. It answers a bearer token, and
+  //   Cloudflare's cache key ignores `Authorization`, so a cached copy (or a cached 401)
+  //   would reach readers and the staging Worker deploy's wait loop.
+  "next/migrations$",
 
   // The feed page (`/feed`, `/feed/...`) is rendered per request, its 404 follows a Site
   // Settings switch that should apply on save, and a stale copy would call load-more's
@@ -50,6 +57,15 @@ const NOT_EDGE_CACHED = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Each deploy reads src/docs/ to sync the help docs (syncDocs), which no import traces.
+  outputFileTracingIncludes: {
+    "/**": ["./src/docs/**/*"],
+  },
+  // The CI image's build sets this (dockerfiles/PragmaticPapers.ci.Dockerfile): CI's Static
+  // checks run `next typegen` and `tsc` on the same commit, which cover what next build's
+  // own pass (~25 s) checks, route types included.
+  // Coolify's builds and local builds still type-check.
+  typescript: { ignoreBuildErrors: process.env.SKIP_BUILD_TYPE_CHECK === "true" },
   // Temporarily required on Windows until Next.js fixes Turbopack Sass resolution.
   // See: https://github.com/vercel/next.js/issues/86431
   sassOptions: {
@@ -93,8 +109,7 @@ const nextConfig: NextConfig = {
       //
       // There is no per-action override for this in Next — `bodySizeLimit` is one number
       // for every Server Action in the app, so this also covers the feed's `loadFeedBatch`
-      // (`src/app/feed/actions.ts`), which anyone can call, and
-      // `SocialEmbed/hooks/revalidateSnapshot.ts`, which only server code calls.
+      // (`src/app/feed/actions.ts`), which anyone can call.
       // `loadFeedBatch` takes a single number, yet a caller can now make Next read and parse up
       // to 8 MB per request instead of 1 MB: low exposure, but wider than the one flow this was
       // raised for.
@@ -114,6 +129,9 @@ const nextConfig: NextConfig = {
       permanent: false,
       source: "/:path((?!ie-incompatible.html$).*)", // all pages except the incompatibility page
     },
+    // The page slugged `home` is the site root, which has a route of its own; `/home` would
+    // otherwise render it a second time, per request, through `/[slug]`.
+    { source: "/home", destination: "/", permanent: true },
     // The RSS feeds moved under the section they list, ending in `.xml` like
     // every other feed and sitemap. Permanent, so feed readers that
     // honour 301/308 update the URL they have stored.
@@ -179,8 +197,10 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // API routes are dynamic and may be authenticated; bypass all caching layers.
-        source: "/api/:path*",
+        // API routes are dynamic and may be authenticated; bypass all caching layers. Except
+        // the ticker's feed (`/api/ticker`), which is public and sets its own: a minute at the
+        // edge, so a hidden post or a new stream shows soon without purging every page.
+        source: "/api/:path((?!ticker$).*)",
         headers: [
           {
             key: "Cache-Control",
@@ -220,6 +240,15 @@ const nextConfig: NextConfig = {
             // Payload auth token — present when an editor is logged in.
             type: "cookie",
             key: "payload-token",
+          },
+          {
+            // Set beside a single sign-on session for staff only (src/plugins/sso,
+            // `payloadUserCookie`), who signed in through a provider and so have no Payload
+            // token. Members' session cookie (`pp-session`) is left out, so they get cached
+            // pages like everyone else. Cloudflare's own rule (cloudflare/rulesets) matches
+            // it too: its name contains "payload-token".
+            type: "cookie",
+            key: "payload-token-sso",
           },
         ],
       },
@@ -305,6 +334,13 @@ const config = withSentryConfig(payloadConfig, {
   // which says why.
 
   webpack: {
+    // The Worker's server swaps the SDK for a stub (src/cloudflare/stubs/sentry.ts), so
+    // nothing should wrap its routes and components with it.
+    ...(process.env.OPENNEXT_BUILD === "true" && {
+      autoInstrumentServerFunctions: false,
+      autoInstrumentMiddleware: false,
+      autoInstrumentAppDirectory: false,
+    }),
     // Tree-shaking options for reducing bundle size
     treeshake: {
       // Automatically tree-shake Sentry logger statements to reduce bundle size

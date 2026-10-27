@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { integrationStatus } from "../../types"
 import { cloudflareWorker } from "../index"
+import { MAX_PURGE_PATHS } from "../worker"
 
 const worker = cloudflareWorker({
   id: "worker-example",
@@ -39,8 +40,70 @@ describe("cloudflareWorker", () => {
     await worker.revalidateAll({ fetchImpl })
 
     const [url, init] = fetchImpl.mock.calls[0]!
-    expect(String(url)).toBe("https://w.example.dev/next/revalidate-all")
+    expect(String(url)).toBe("https://w.example.dev/next/revalidate-all?save=1")
     expect(init).toMatchObject({ method: "POST", headers: { Authorization: "Bearer s3cret" } })
+  })
+
+  it("names the paths to purge, and the shared pages, when given them", async () => {
+    vi.stubEnv("EXAMPLE_WORKER_URL", "https://w.example.dev")
+    vi.stubEnv("EXAMPLE_SECRET", "s3cret")
+    const fetchImpl = vi.fn().mockResolvedValue(Response.json({ revalidated: true }))
+
+    await worker.revalidateAll({ fetchImpl, paths: ["/articles/a", "/volumes/1"], shared: true })
+
+    const url = new URL(String(fetchImpl.mock.calls[0]![0]))
+    expect(url.pathname).toBe("/next/revalidate-all")
+    expect(url.searchParams.getAll("path")).toEqual(["/articles/a", "/volumes/1"])
+    expect(url.searchParams.get("shared")).toBe("1")
+    expect(url.searchParams.get("save")).toBe("1")
+  })
+
+  it("names what the save revalidated, for the Worker's own Next cache", async () => {
+    vi.stubEnv("EXAMPLE_WORKER_URL", "https://w.example.dev")
+    vi.stubEnv("EXAMPLE_SECRET", "s3cret")
+    const fetchImpl = vi.fn().mockResolvedValue(Response.json({ revalidated: true }))
+
+    await worker.revalidateAll({
+      fetchImpl,
+      paths: ["/articles/a", "/articles/feed.xml"],
+      revalidated: { paths: ["/articles/a"], tags: ["articles-sitemap"] },
+    })
+
+    const url = new URL(String(fetchImpl.mock.calls[0]![0]))
+    expect(url.searchParams.get("next")).toBe("1")
+    expect(url.searchParams.getAll("next-path")).toEqual(["/articles/a"])
+    expect(url.searchParams.getAll("next-tag")).toEqual(["articles-sitemap"])
+  })
+
+  it("leaves the Worker to revalidate everything when the save didn't say, or said too much", async () => {
+    vi.stubEnv("EXAMPLE_WORKER_URL", "https://w.example.dev")
+    vi.stubEnv("EXAMPLE_SECRET", "s3cret")
+    const fetchImpl = vi.fn().mockResolvedValue(Response.json({ revalidated: true }))
+    const tags = Array.from({ length: MAX_PURGE_PATHS + 1 }, (_, i) => `tag${i}`)
+
+    await worker.revalidateAll({ fetchImpl, paths: ["/articles/a"] })
+    await worker.revalidateAll({
+      fetchImpl,
+      paths: ["/articles/a"],
+      revalidated: { paths: [], tags },
+    })
+
+    for (const [called] of fetchImpl.mock.calls) {
+      expect(new URL(String(called)).searchParams.has("next")).toBe(false)
+    }
+  })
+
+  it(`purges everything rather than name more than ${MAX_PURGE_PATHS} paths`, async () => {
+    vi.stubEnv("EXAMPLE_WORKER_URL", "https://w.example.dev")
+    vi.stubEnv("EXAMPLE_SECRET", "s3cret")
+    const fetchImpl = vi.fn().mockResolvedValue(Response.json({ revalidated: true }))
+    const paths = Array.from({ length: MAX_PURGE_PATHS + 1 }, (_, i) => `/articles/a${i}`)
+
+    await worker.revalidateAll({ fetchImpl, paths, shared: true })
+
+    expect(String(fetchImpl.mock.calls[0]![0])).toBe(
+      "https://w.example.dev/next/revalidate-all?save=1",
+    )
   })
 
   it("throws with the status, never the secret, when the Worker refuses", async () => {

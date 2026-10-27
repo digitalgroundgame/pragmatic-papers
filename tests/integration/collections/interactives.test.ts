@@ -7,13 +7,13 @@ import { validateDrilldownData } from "@/interactives/contract"
 import { loadFederalCourtsGeometry } from "@/interactives/federal-courts/geometry"
 import { federalCourtsPresentation } from "@/interactives/federal-courts/presentation"
 import type { DrilldownData } from "@/interactives/types"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 
 let payload: Payload
 let interactiveId: number | null = null
 
 beforeAll(async () => {
-  payload = await getPayloadConfig()
+  payload = await getPayloadClient()
 })
 
 afterAll(async () => {

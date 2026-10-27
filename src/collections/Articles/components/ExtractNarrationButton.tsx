@@ -2,7 +2,13 @@
 
 import { Button, toast, useDocumentInfo, useFormFields } from "@payloadcms/ui"
 import React, { useState, useSyncExternalStore } from "react"
-import { extractNarrationText } from "@/utilities/extractNarrationText"
+import { extractNarrationText } from "@/collections/Articles/narration/extractNarrationText"
+import {
+  collectAuthorIds,
+  collectMediaIdsFromContent,
+  fetchAuthorsMap,
+  fetchMediaMap,
+} from "@/collections/Articles/narration/fetchNarrationDocs"
 
 const noop = (): void => {
   // no-op for useSyncExternalStore
@@ -97,159 +103,6 @@ function renderFormattedNarration(text: string): React.ReactNode {
   )
 }
 
-function collectMediaIdsFromContent(content: unknown): Array<string | number> {
-  const ids = new Set<string | number>()
-
-  function traverse(node: unknown): void {
-    if (!node || typeof node !== "object") return
-    const obj = node as Record<string, unknown>
-
-    if (obj.type === "block" && obj.fields && typeof obj.fields === "object") {
-      const fields = obj.fields as Record<string, unknown>
-      const blockType = fields.blockType as string | undefined
-
-      if (blockType === "mediaBlock" && fields.media) {
-        const m = fields.media
-        if (typeof m === "number" || typeof m === "string") {
-          ids.add(m)
-        } else if (typeof m === "object" && m !== null) {
-          const mediaObj = m as Record<string, unknown>
-          if (typeof mediaObj.id === "number" || typeof mediaObj.id === "string") {
-            if (!mediaObj.alt && !mediaObj.caption) {
-              ids.add(mediaObj.id as string | number)
-            }
-          } else if (
-            "value" in mediaObj &&
-            (typeof mediaObj.value === "number" || typeof mediaObj.value === "string")
-          ) {
-            ids.add(mediaObj.value as string | number)
-          }
-        }
-      } else if (blockType === "mediaCollage" && Array.isArray(fields.images)) {
-        for (const img of fields.images as Record<string, unknown>[]) {
-          if (img && typeof img === "object" && img.media) {
-            const m = img.media
-            if (typeof m === "number" || typeof m === "string") {
-              ids.add(m)
-            } else if (typeof m === "object" && m !== null) {
-              const mediaObj = m as Record<string, unknown>
-              if (typeof mediaObj.id === "number" || typeof mediaObj.id === "string") {
-                if (!mediaObj.alt && !mediaObj.caption) {
-                  ids.add(mediaObj.id as string | number)
-                }
-              } else if (
-                "value" in mediaObj &&
-                (typeof mediaObj.value === "number" || typeof mediaObj.value === "string")
-              ) {
-                ids.add(mediaObj.value as string | number)
-              }
-            }
-          }
-        }
-      }
-    }
-
-    if (Array.isArray(obj.children)) {
-      for (const child of obj.children) {
-        traverse(child)
-      }
-    }
-    if (obj.root && typeof obj.root === "object") {
-      traverse(obj.root)
-    }
-  }
-
-  traverse(content)
-  return Array.from(ids)
-}
-
-async function fetchMediaMap(
-  mediaIds: Array<string | number>,
-): Promise<
-  Record<string | number, { alt?: string | null; caption?: unknown; filename?: string | null }>
-> {
-  if (mediaIds.length === 0) return {}
-
-  const map: Record<
-    string | number,
-    { alt?: string | null; caption?: unknown; filename?: string | null }
-  > = {}
-  const CHUNK_SIZE = 25
-  const chunks: Array<Array<string | number>> = []
-
-  for (let i = 0; i < mediaIds.length; i += CHUNK_SIZE) {
-    chunks.push(mediaIds.slice(i, i + CHUNK_SIZE))
-  }
-
-  try {
-    await Promise.all(
-      chunks.map(async (chunk) => {
-        const params = chunk
-          .map((id, idx) => `where[id][in][${idx}]=${encodeURIComponent(String(id))}`)
-          .join("&")
-        const res = await fetch(`/api/media?${params}&depth=1&limit=${chunk.length}`)
-        if (res.ok) {
-          const data = await res.json()
-          if (Array.isArray(data?.docs)) {
-            for (const doc of data.docs) {
-              if (doc && (typeof doc.id === "number" || typeof doc.id === "string")) {
-                map[doc.id] = {
-                  alt: typeof doc.alt === "string" ? doc.alt : null,
-                  caption: doc.caption,
-                  filename: typeof doc.filename === "string" ? doc.filename : null,
-                }
-              }
-            }
-          }
-        }
-      }),
-    )
-  } catch (err) {
-    console.error("Failed to fetch media documents for narration extraction:", err)
-  }
-  return map
-}
-
-async function fetchAuthorsMap(
-  authorIds: Array<string | number>,
-): Promise<Record<string | number, { name?: string | null }>> {
-  if (authorIds.length === 0) return {}
-
-  const map: Record<string | number, { name?: string | null }> = {}
-  const CHUNK_SIZE = 25
-  const chunks: Array<Array<string | number>> = []
-
-  for (let i = 0; i < authorIds.length; i += CHUNK_SIZE) {
-    chunks.push(authorIds.slice(i, i + CHUNK_SIZE))
-  }
-
-  try {
-    await Promise.all(
-      chunks.map(async (chunk) => {
-        const params = chunk
-          .map((id, idx) => `where[id][in][${idx}]=${encodeURIComponent(String(id))}`)
-          .join("&")
-        const res = await fetch(`/api/users?${params}&depth=0&limit=${chunk.length}`)
-        if (res.ok) {
-          const data = await res.json()
-          if (Array.isArray(data?.docs)) {
-            for (const doc of data.docs) {
-              if (doc && (typeof doc.id === "number" || typeof doc.id === "string")) {
-                map[doc.id] = {
-                  name: typeof doc.name === "string" ? doc.name : null,
-                }
-              }
-            }
-          }
-        }
-      }),
-    )
-  } catch (err) {
-    console.error("Failed to fetch user documents for narration extraction:", err)
-  }
-  return map
-}
-
 export function ExtractNarrationButton(): React.ReactNode {
   const isMounted = useIsMounted()
   const docInfo = useDocumentInfo()
@@ -269,7 +122,7 @@ export function ExtractNarrationButton(): React.ReactNode {
     const f = fields || {}
     return {
       title: f.title?.value as string | undefined,
-      authors: f.authors?.value as Array<Record<string, unknown> | string | number> | undefined,
+      authors: f.authors?.value,
       publishedAt: f.publishedAt?.value as string | Date | undefined,
       content: f.content?.value as Record<string, unknown> | undefined,
     }
@@ -278,28 +131,17 @@ export function ExtractNarrationButton(): React.ReactNode {
   const handleGenerate = async (): Promise<void> => {
     setIsGenerating(true)
     try {
-      const authorIds = (authors || [])
-        .map((a) => (typeof a === "object" && a !== null ? a.id : a))
-        .filter((id): id is string | number => typeof id === "string" || typeof id === "number")
-      const authorsMap = await fetchAuthorsMap(authorIds)
-      const resolvedAuthors = authorIds
-        .map((id) => {
-          const fromMap = authorsMap[id]
-          if (fromMap) return fromMap
-          const original = (authors || []).find(
-            (a) => typeof a === "object" && a !== null && String(a.id) === String(id),
-          )
-          if (original && typeof original === "object" && "name" in original) {
-            return { name: original.name as string }
-          }
-          // Never fall back to the raw ID — it would be read aloud as the
-          // byline. An unresolvable author is simply left out.
-          return null
-        })
-        .filter((author): author is { name?: string | null } => author !== null)
+      // Either fetch failing throws, so the catch below reports it rather than a
+      // script without its byline or alt text.
+      const authorIds = collectAuthorIds(authors)
+      const [authorsMap, mediaMap] = await Promise.all([
+        fetchAuthorsMap(authorIds),
+        fetchMediaMap(collectMediaIdsFromContent(content)),
+      ])
+      // An author the API didn't return (a deleted user) is left out. Never fall
+      // back to the raw id: it would be read aloud as the byline.
+      const resolvedAuthors = authorIds.flatMap((id) => authorsMap[id] ?? [])
 
-      const mediaIds = collectMediaIdsFromContent(content)
-      const mediaMap = await fetchMediaMap(mediaIds)
       const text = extractNarrationText({
         title,
         authors: resolvedAuthors,

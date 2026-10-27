@@ -1,7 +1,7 @@
 import type { Payload } from "payload"
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("@/utilities/listmonk", () => ({
+vi.mock("@/integrations/listmonk", () => ({
   listScheduledCampaigns: vi.fn(),
   createScheduledCampaign: vi.fn(),
   updateScheduledCampaign: vi.fn(),
@@ -11,13 +11,13 @@ vi.mock("@react-email/render", () => ({
 }))
 
 import { scheduleVolumeNewsletter } from "@/collections/Volumes/endpoints/scheduleNewsletter/logic"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
-import type { ScheduledCampaignSummary } from "@/utilities/listmonk"
+import { getPayloadClient } from "@/data/payload"
+import type { ScheduledCampaignSummary } from "@/integrations/listmonk"
 import {
   createScheduledCampaign,
   listScheduledCampaigns,
   updateScheduledCampaign,
-} from "@/utilities/listmonk"
+} from "@/integrations/listmonk"
 
 const MINIMAL_CONTENT = {
   root: {
@@ -47,7 +47,7 @@ beforeAll(async () => {
   // Exercise the production code path so campaigns carry the bare "newsletter"
   // tag asserted below; env-namespacing is unit-tested in logic.test.ts.
   process.env.BUILD_ENV = "production"
-  payload = await getPayloadConfig()
+  payload = await getPayloadClient()
 })
 
 afterAll(async () => {

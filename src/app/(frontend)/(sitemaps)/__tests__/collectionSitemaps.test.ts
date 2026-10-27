@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const find = vi.fn()
 
-vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: vi.fn(async () => ({ find })) }))
+vi.mock("@/data/payload", () => ({ getPayloadClient: vi.fn(async () => ({ find })) }))
 // Straight through, so each sitemap reads the `find` fixture it was given.
 vi.mock("next/cache", () => ({ unstable_cache: (fn: () => unknown) => fn }))
 
@@ -11,6 +11,7 @@ const { default: pagesSitemap } = await import("../../sitemap")
 const { default: articlesSitemap } = await import("../../articles/sitemap")
 const { GET: newsSitemap } = await import("../../articles/news-sitemap.xml/route")
 const { default: volumesSitemap } = await import("../../volumes/sitemap")
+const { MAX_SITEMAP_ENTRIES } = await import("../sitemaps")
 
 const SITE_URL = "https://pragmaticpapers.com"
 const UPDATED_AT = "2026-09-01T12:00:00.000Z"
@@ -127,6 +128,15 @@ describe("/articles/news-sitemap.xml", () => {
     )
   })
 
+  // Google News reads no more than 1,000 entries from one news sitemap.
+  it("asks for at most 1,000 articles", async () => {
+    withDocs([])
+
+    await renderXml(newsSitemap)
+
+    expect(find).toHaveBeenCalledWith(expect.objectContaining({ limit: 1000, pagination: false }))
+  })
+
   it("skips articles without a slug or a publish date", async () => {
     withDocs([
       { slug: "", title: "No slug", publishedAt: PUBLISHED_AT },
@@ -165,6 +175,22 @@ describe.each(routes)("the $name sitemap", ({ collection, list }) => {
         overrideAccess: false,
         draft: false,
         where: { _status: { equals: "published" } },
+      }),
+    )
+  })
+
+  // Payload applies `limit` even with `pagination: false`: a cap below the protocol's would
+  // drop documents silently.
+  it("asks for as many documents as a sitemap may hold, freshest first", async () => {
+    withDocs([])
+
+    await list()
+
+    expect(find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        limit: MAX_SITEMAP_ENTRIES,
+        pagination: false,
+        sort: "-updatedAt",
       }),
     )
   })

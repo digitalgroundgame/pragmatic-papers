@@ -5,7 +5,7 @@ import { authors } from "@/stories/fixtures/docs"
 
 const { find } = vi.hoisted(() => ({ find: vi.fn() }))
 
-vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: async () => ({ find }) }))
+vi.mock("@/data/payload", () => ({ getPayloadClient: async () => ({ find }) }))
 
 const { ContributorsBlock } = await import("../Component")
 

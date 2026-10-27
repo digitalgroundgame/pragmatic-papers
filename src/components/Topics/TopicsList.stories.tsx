@@ -24,6 +24,16 @@ export const Default: Story = {
   },
 }
 
+/** On an article, the row opens with a small label; the region keeps its name. */
+export const WithLabel: Story = {
+  args: { label: "Topics:" },
+  play: async ({ canvasElement }) => {
+    const section = within(canvasElement).getByRole("region", { name: "Topics" })
+    await expect(within(section).getByText("Topics:")).toHaveAttribute("aria-hidden", "true")
+    await expect(within(section).queryByRole("heading")).not.toBeInTheDocument()
+  },
+}
+
 export const Unresolved: Story = {
   args: { topics: [1, 2] },
   play: async ({ canvasElement }) => {

@@ -1,18 +1,11 @@
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-import { PayloadRequest, CollectionSlug } from "payload"
+import { PayloadRequest } from "payload"
 
-/** The path each collection's documents are served under, before the slug. */
-export const collectionPrefixMap: Partial<Record<CollectionSlug, string>> = {
-  pages: "",
-  articles: "/articles",
-  volumes: "/volumes",
-  topics: "/topics",
-  interactives: "/interactives",
-}
+import { docPath, type RoutedCollection } from "./routes"
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 type Props = {
-  collection: keyof typeof collectionPrefixMap
+  collection: RoutedCollection
   slug: string
   req: PayloadRequest
 }
@@ -29,7 +22,8 @@ export const generatePreviewPath = ({ collection, slug }: Props) => {
   const encodedParams = new URLSearchParams({
     slug: encodedSlug,
     collection,
-    path: `${collectionPrefixMap[collection]}/${encodedSlug}`,
+    // The home page previews at `/`, where it's served, rather than through `/home`'s redirect.
+    path: docPath(collection, encodedSlug),
     previewSecret: process.env.PREVIEW_SECRET || "",
   })
 

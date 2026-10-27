@@ -1,8 +1,17 @@
-import { revalidateRedirects } from "@/hooks/revalidateRedirects"
-import type { Article, Interactive, Page, Topic, Volume } from "@/payload-types"
-import { collectionPrefixMap } from "@/utilities/generatePreviewPath"
-import { getServerSideURL } from "@/utilities/getURL"
+import type { PluginSwitchName } from "@/globals/Plugins/isPluginEnabled"
+import { admin, editor } from "@/access/collections"
+import { isAdmin, isStaff } from "@/access/roles"
+import { revalidateRedirects, revalidateRedirectsDelete } from "@/hooks/revalidateRedirects"
+import { docsPlugin } from "@/plugins/docs"
+import { docsNotifications } from "@/plugins/docs/notifications"
+import { notificationsPlugin } from "@/plugins/notifications"
+import { toursPlugin } from "@/plugins/tours"
+import type { Article, Interactive, Page, Topic, User, Volume } from "@/payload-types"
+import { getSiteURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
+import { docPath } from "@/utilities/routes"
+import { describePlugin } from "@/utilities/registerPlugin"
+import { truncate } from "@/utilities/truncate"
 import { toRoman } from "@/utilities/toRoman"
 import { formBuilderPlugin } from "@payloadcms/plugin-form-builder"
 import { nestedDocsPlugin } from "@payloadcms/plugin-nested-docs"
@@ -16,26 +25,27 @@ import {
   type GenerateURL,
 } from "@payloadcms/plugin-seo/types"
 import { FixedToolbarFeature, HeadingFeature, lexicalEditor } from "@payloadcms/richtext-lexical"
+import type { SerializedEditorState } from "@payloadcms/richtext-lexical/lexical"
+import { convertLexicalToPlaintext } from "@payloadcms/richtext-lexical/plaintext"
 import { s3Storage } from "@payloadcms/storage-s3"
-import { type CollectionSlug, type Payload, type Plugin } from "payload"
+import { type Payload, type Plugin } from "payload"
+
+import { achievementsPlugin } from "./achievements"
+import { commentsPlugin } from "./comments"
+import { achievementsOptions, readerAchievements } from "./readerAchievements"
+import { commentsOn, signUpProviders, ssoOptions } from "./signIn"
+import { getSignedInUser, ssoPlugin } from "./sso"
+import { staffByDefault } from "./staffByDefault"
+
+// Reads the plugin's switch on System → Plugins when called. Imported then, not here: the
+// Plugins global reaches the Payload config, which imports this file.
+const pluginSwitch = (name: PluginSwitchName) => async (): Promise<boolean> =>
+  (await import("@/globals/Plugins/isPluginEnabled")).isPluginEnabled(name)
 
 type SeoDoc = Volume | Article | Page | Topic | Interactive
 
 function isVolume(obj: SeoDoc): obj is Volume {
   return (obj as Volume).volumeNumber !== undefined
-}
-
-interface LexicalTextNode {
-  type?: string
-  text?: string
-  children?: LexicalTextNode[]
-}
-
-function lexicalToPlainText(node: LexicalTextNode | undefined | null): string {
-  if (!node) return ""
-  if (typeof node.text === "string") return node.text
-  if (!Array.isArray(node.children)) return ""
-  return node.children.map(lexicalToPlainText).join(" ")
 }
 
 export const generateTitle: GenerateTitle<SeoDoc> = ({ doc }) => {
@@ -51,34 +61,25 @@ export const generateTitle: GenerateTitle<SeoDoc> = ({ doc }) => {
 
 const DESCRIPTION_LENGTH = 160
 
-/** Cuts `text` to a meta description's length at a word boundary. */
-function truncateDescription(text: string): string {
-  if (text.length <= DESCRIPTION_LENGTH) return text
-  const cut = text.slice(0, DESCRIPTION_LENGTH - 1)
-  const lastSpace = cut.lastIndexOf(" ")
-  return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).replace(/[\s.,;:]+$/, "")}…`
-}
-
 export const generateDescription: GenerateDescription<SeoDoc> = ({ doc }) => {
   if ("description" in doc && doc.description) return doc.description
   // Interactives have no description field; their standfirst says what the page is.
   if ("intro" in doc && doc.intro) {
-    const intro = lexicalToPlainText(doc.intro.root as LexicalTextNode)
-      .replace(/\s+/g, " ")
-      .trim()
-    if (intro) return truncateDescription(intro)
+    const intro = convertLexicalToPlaintext({ data: doc.intro }).replace(/\s+/g, " ").trim()
+    if (intro.length > DESCRIPTION_LENGTH) {
+      return truncate(intro, DESCRIPTION_LENGTH - 1, { atWord: true })
+    }
+    if (intro) return intro
   }
   return DEFAULT_DESCRIPTION
 }
 
 export const generateURL: GenerateURL<SeoDoc> = ({ collectionConfig, doc }) => {
-  const url = getServerSideURL()
+  const url = getSiteURL()
   if (!doc?.slug) return url
 
-  const collection = collectionConfig?.slug
-  if (collection === "pages" && doc.slug === "home") return url
-  const prefix = (collection && collectionPrefixMap[collection as CollectionSlug]) ?? ""
-  return `${url}${prefix}/${doc.slug}`
+  const path = docPath(collectionConfig?.slug ?? "pages", doc.slug)
+  return path === "/" ? url : `${url}${path}`
 }
 
 /**
@@ -139,7 +140,7 @@ export const resolveAuthorNames = (raw: unknown, payload: Payload): Promise<stri
 export const resolveTopicNames = (raw: unknown, payload: Payload): Promise<string> =>
   resolveNames(raw, payload, "topics")
 
-const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
+export const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
   const title =
     (originalDoc.title as string | undefined) || (originalDoc.name as string | undefined) || ""
   const meta = originalDoc.meta as Record<string, unknown> | undefined
@@ -160,8 +161,10 @@ const beforeSync: BeforeSync = async ({ originalDoc, payload, searchDoc }) => {
     (originalDoc.profileImage as number | null | undefined) ??
     null
 
-  const content = originalDoc.content as { root?: LexicalTextNode } | undefined
-  const body = lexicalToPlainText(content?.root).replace(/\s+/g, " ").trim().slice(0, 39000)
+  const content = originalDoc.content as SerializedEditorState | undefined
+  const body = content
+    ? convertLexicalToPlaintext({ data: content }).replace(/\s+/g, " ").trim().slice(0, 39000)
+    : ""
 
   return { ...searchDoc, title, excerpt, slug, authors, topics, image, body }
 }
@@ -199,144 +202,247 @@ export const supabaseObjectURL = ({
 }): string =>
   `${supabaseUrl}/storage/v1/object/public/${bucket}/${prefix ? `${prefix}/` : ""}${filename}`
 
+/**
+ * A storage collection's `generateFileURL`: the object's Supabase URL, or `/<localPath>/<filename>`
+ * when `SUPABASE_URL` or `S3_BUCKET` is unset. `defaultPrefix` stands in for a missing prefix.
+ */
+export const storageFileURL =
+  (localPath: string, defaultPrefix?: string) =>
+  ({ filename, prefix }: { filename: string; prefix?: string }): string => {
+    const supabaseUrl = process.env.SUPABASE_URL
+    const bucket = process.env.S3_BUCKET
+    if (!supabaseUrl || !bucket) return `/${localPath}/${filename}`
+    return supabaseObjectURL({ supabaseUrl, bucket, prefix: prefix || defaultPrefix, filename })
+  }
+
+/**
+ * The site's Payload plugins, in the order they run. Ours describe themselves for System →
+ * Plugins (`registerPlugin`); the packages don't yet, so they're described here (`describePlugin`).
+ */
 export const plugins: Plugin[] = [
-  searchPlugin({
-    collections: ["articles", "pages", "volumes", "topics"],
-    defaultPriorities: {
-      articles: 40,
-      volumes: 30,
-      pages: 20,
-      topics: 10,
-    },
-    beforeSync,
-    searchOverrides: {
-      labels: { singular: "Search Result", plural: "Search" },
-      admin: { group: "System" },
-      fields: ({ defaultFields }) => [
-        ...defaultFields,
-        { name: "excerpt", type: "text", admin: { readOnly: true } },
-        { name: "slug", type: "text", admin: { readOnly: true } },
-        { name: "authors", type: "text", admin: { readOnly: true } },
-        { name: "topics", type: "text", admin: { readOnly: true } },
-        { name: "image", type: "upload", relationTo: "media", admin: { readOnly: true } },
-        { name: "body", type: "textarea", admin: { readOnly: true, hidden: true } },
-      ],
-    },
-  }),
-  redirectsPlugin({
-    collections: ["pages", "volumes", "articles"],
-    overrides: {
-      // @ts-expect-error - This is a valid override, mapped fields don't resolve to the same type
-      fields: ({ defaultFields }) => {
-        return defaultFields.map((field) => {
-          if ("name" in field && field.name === "from") {
-            return {
-              ...field,
-              admin: {
-                description: "You will need to rebuild the website when changing this field.",
-              },
-            }
-          }
-          return field
-        })
+  describePlugin(
+    searchPlugin({
+      collections: ["articles", "pages", "volumes", "topics"],
+      defaultPriorities: {
+        articles: 40,
+        volumes: 30,
+        pages: 20,
+        topics: 10,
       },
-      hooks: {
-        afterChange: [revalidateRedirects],
+      beforeSync,
+      searchOverrides: {
+        labels: { singular: "Search Result", plural: "Search" },
+        admin: { group: "System" },
+        fields: ({ defaultFields }) => [
+          ...defaultFields,
+          { name: "excerpt", type: "text", admin: { readOnly: true } },
+          { name: "slug", type: "text", admin: { readOnly: true } },
+          { name: "authors", type: "text", admin: { readOnly: true } },
+          { name: "topics", type: "text", admin: { readOnly: true } },
+          { name: "image", type: "upload", relationTo: "media", admin: { readOnly: true } },
+          { name: "body", type: "textarea", admin: { readOnly: true, hidden: true } },
+        ],
       },
-      admin: {
-        hidden: true, // TODO: Setup redirects plugin
+    }),
+    {
+      slug: "plugin-search",
+      manifest: {
+        name: "Search",
+        source: "@payloadcms/plugin-search",
+        description:
+          "Keeps a search index of articles, pages, volumes and topics, which the site's search reads.",
       },
     },
-  }),
-  nestedDocsPlugin({
-    collections: ["categories"],
-    generateURL: (docs) => docs.reduce((url, doc) => `${url}/${doc.slug}`, ""),
-  }),
-  seo,
-  formBuilderPlugin({
-    fields: {
-      payment: false,
-    },
-    formOverrides: {
-      fields: ({ defaultFields }) => {
-        return defaultFields.map((field) => {
-          if ("name" in field && field.name === "confirmationMessage") {
-            return {
-              ...field,
-              editor: lexicalEditor({
-                features: ({ rootFeatures }) => {
-                  return [
-                    ...rootFeatures,
-                    FixedToolbarFeature(),
-                    HeadingFeature({ enabledHeadingSizes: ["h1", "h2", "h3", "h4"] }),
-                  ]
+  ),
+  describePlugin(
+    redirectsPlugin({
+      collections: ["pages", "volumes", "articles"],
+      overrides: {
+        // @ts-expect-error - This is a valid override, mapped fields don't resolve to the same type
+        fields: ({ defaultFields }) => {
+          return defaultFields.map((field) => {
+            if ("name" in field && field.name === "from") {
+              return {
+                ...field,
+                admin: {
+                  description: "The old path, starting with a slash, e.g. /articles/old-slug.",
                 },
-              }),
+              }
             }
-          }
-          return field
-        })
-      },
-      admin: {
-        hidden: true, // TODO: Setup form builder plugin
-      },
-    },
-    formSubmissionOverrides: {
-      admin: {
-        hidden: true, // TODO: Setup form builder plugin
-      },
-    },
-  }),
-  s3Storage({
-    // Enable S3 storage only when not using local storage
-    // For staging/preview: set USE_LOCAL_STORAGE=true to use local file system
-    // For production: set USE_LOCAL_STORAGE=false (or leave unset) to use S3
-    enabled: process.env.USE_LOCAL_STORAGE !== "true",
-    collections: {
-      media: {
-        disablePayloadAccessControl: true,
-        generateFileURL: ({ filename, prefix }) => {
-          const supabaseUrl = process.env.SUPABASE_URL
-          const bucket = process.env.S3_BUCKET
-
-          if (!supabaseUrl || !bucket) {
-            // Fallback to local media path if env vars are not set
-            return `/media/${filename}`
-          }
-
-          return supabaseObjectURL({ supabaseUrl, bucket, prefix, filename })
-        },
-      },
-      "map-assets": {
-        disablePayloadAccessControl: true,
-        prefix: "map-assets",
-        generateFileURL: ({ filename, prefix }) => {
-          const supabaseUrl = process.env.SUPABASE_URL
-          const bucket = process.env.S3_BUCKET
-
-          if (!supabaseUrl || !bucket) {
-            return `/map-assets/${filename}`
-          }
-
-          return supabaseObjectURL({
-            supabaseUrl,
-            bucket,
-            prefix: prefix || "map-assets",
-            filename,
+            return field
           })
         },
+        access: {
+          create: admin,
+          update: admin,
+          delete: admin,
+        },
+        hooks: {
+          afterChange: [revalidateRedirects],
+          afterDelete: [revalidateRedirectsDelete],
+        },
+        admin: {
+          group: "Site",
+          hidden: ({ user }) => !isAdmin(user as User | null),
+        },
+      },
+    }),
+    {
+      slug: "plugin-redirects",
+      manifest: {
+        name: "Redirects",
+        source: "@payloadcms/plugin-redirects",
+        description: "Redirects from old URLs to pages, volumes and articles.",
       },
     },
-    bucket: process.env.S3_BUCKET || "",
-    config: {
-      forcePathStyle: true,
-      credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY_ID || "",
-        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
+  ),
+  describePlugin(
+    nestedDocsPlugin({
+      collections: ["categories"],
+      generateURL: (docs) => docs.reduce((url, doc) => `${url}/${doc.slug}`, ""),
+    }),
+    {
+      slug: "plugin-nested-docs",
+      manifest: {
+        name: "Nested docs",
+        source: "@payloadcms/plugin-nested-docs",
+        description: "Parents and breadcrumb URLs for categories.",
       },
-      region: process.env.S3_REGION,
-      endpoint: process.env.S3_ENDPOINT || "",
     },
-    clientUploads: true,
+  ),
+  describePlugin(seo, {
+    slug: "plugin-seo",
+    manifest: {
+      name: "SEO",
+      source: "@payloadcms/plugin-seo",
+      description:
+        "The Auto-generate buttons in the SEO tab of articles, pages, volumes, topics and interactives.",
+    },
+  }),
+  describePlugin(
+    formBuilderPlugin({
+      fields: {
+        payment: false,
+      },
+      formOverrides: {
+        fields: ({ defaultFields }) => {
+          return defaultFields.map((field) => {
+            if ("name" in field && field.name === "confirmationMessage") {
+              return {
+                ...field,
+                editor: lexicalEditor({
+                  features: ({ rootFeatures }) => {
+                    return [
+                      ...rootFeatures,
+                      FixedToolbarFeature(),
+                      HeadingFeature({ enabledHeadingSizes: ["h1", "h2", "h3", "h4"] }),
+                    ]
+                  },
+                }),
+              }
+            }
+            return field
+          })
+        },
+        admin: {
+          hidden: true, // TODO: Setup form builder plugin
+        },
+      },
+      formSubmissionOverrides: {
+        // The plugin lets any logged-in user read every submission.
+        access: { read: editor },
+        admin: {
+          hidden: true, // TODO: Setup form builder plugin
+        },
+      },
+    }),
+    {
+      slug: "plugin-form-builder",
+      manifest: {
+        name: "Form builder",
+        source: "@payloadcms/plugin-form-builder",
+        description: "Forms and their submissions. Hidden in the admin until it's set up.",
+      },
+    },
+  ),
+  describePlugin(
+    s3Storage({
+      // Enable S3 storage only when not using local storage
+      // For staging/preview: set USE_LOCAL_STORAGE=true to use local file system
+      // For production: set USE_LOCAL_STORAGE=false (or leave unset) to use S3
+      enabled: process.env.USE_LOCAL_STORAGE !== "true",
+      collections: {
+        media: {
+          disablePayloadAccessControl: true,
+          generateFileURL: storageFileURL("media"),
+        },
+        "map-assets": {
+          disablePayloadAccessControl: true,
+          prefix: "map-assets",
+          generateFileURL: storageFileURL("map-assets", "map-assets"),
+        },
+      },
+      bucket: process.env.S3_BUCKET || "",
+      config: {
+        forcePathStyle: true,
+        credentials: {
+          accessKeyId: process.env.S3_ACCESS_KEY_ID || "",
+          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
+        },
+        region: process.env.S3_REGION,
+        endpoint: process.env.S3_ENDPOINT || "",
+      },
+      clientUploads: true,
+    }),
+    {
+      slug: "storage-s3",
+      manifest: {
+        name: "S3 storage",
+        source: "@payloadcms/storage-s3",
+        description:
+          "Keeps media and map uploads in the S3 bucket. Off where USE_LOCAL_STORAGE=true, which keeps them on disk.",
+      },
+      enabled: process.env.USE_LOCAL_STORAGE !== "true",
+    },
+  ),
+  docsPlugin({ enabled: pluginSwitch("docs") }),
+  notificationsPlugin({
+    sources: [docsNotifications({ enabled: pluginSwitch("docs"), tours: pluginSwitch("tours") })],
+    enabled: pluginSwitch("notifications"),
+  }),
+  toursPlugin({ enabled: pluginSwitch("tours") }),
+  ssoPlugin(ssoOptions),
+  commentsPlugin({
+    // Read from the database on each request, like `sso`'s, so switching either off stops
+    // posts at once.
+    enabled: commentsOn,
+    // Members and staff alike: a member is signed in to the site but not to Payload.
+    currentUser: (req) => getSignedInUser(req, ssoOptions),
+    // `emailVerified` and `roles` are what readers' achievements are worked out from.
+    authorFields: ["name", "avatarUrl", "roles", "emailVerified"],
+    // Staff addresses are the ones an admin gave them.
+    isVerified: (author) => author.emailVerified === true || isStaff(author as unknown as User),
+    describeAuthor: (author) => ({
+      name: typeof author.name === "string" && author.name ? author.name : "Anonymous",
+      image: typeof author.avatarUrl === "string" ? author.avatarUrl : null,
+      badge: isStaff(author as unknown as User) ? "Staff" : null,
+    }),
+    // A reader's highest achievement badge, when Staff doesn't apply. None while achievements are off.
+    authorBadges: (authors, req) => readerAchievements.badgesFor(authors, req),
+    signInProviders: signUpProviders,
+    baseURL: getSiteURL,
+    moderators: editor,
+    admins: admin,
+  }),
+  achievementsPlugin(achievementsOptions),
+  // Last, so it sees every other plugin's collections.
+  describePlugin(staffByDefault, {
+    slug: "staff-by-default",
+    manifest: {
+      name: "Staff by default",
+      source: "src/plugins/staffByDefault.ts",
+      description:
+        "Gives every access rule a collection or plugin leaves unset to staff, where Payload's default is anyone signed in, so members never get more than readers.",
+    },
   }),
 ]

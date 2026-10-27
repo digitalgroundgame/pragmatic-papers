@@ -3,12 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const { find, experiment } = vi.hoisted(() => ({ find: vi.fn(), experiment: { on: true } }))
 
-vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: async () => ({ find }) }))
+vi.mock("@/data/payload", () => ({ getPayloadClient: async () => ({ find }) }))
 // The cache is Next's concern; the route's own job is which interactives it lists.
 vi.mock("next/cache", () => ({ unstable_cache: <T>(fn: T): T => fn }))
 vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
   isExperimentEnabled: async () => experiment.on,
 }))
+import { MAX_SITEMAP_ENTRIES } from "../../(sitemaps)/sitemaps"
 import sitemap from "../sitemap"
 
 beforeEach(() => {
@@ -27,6 +28,18 @@ describe("/interactives/sitemap.xml", () => {
         overrideAccess: false,
         draft: false,
         where: { _status: { equals: "published" } },
+      }),
+    )
+  })
+
+  it("asks for as many interactives as a sitemap may hold, freshest first", async () => {
+    find.mockResolvedValue({ docs: [] })
+    await sitemap()
+    expect(find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        limit: MAX_SITEMAP_ENTRIES,
+        pagination: false,
+        sort: "-updatedAt",
       }),
     )
   })

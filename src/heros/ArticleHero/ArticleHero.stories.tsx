@@ -87,3 +87,17 @@ export const WithTableOfContents: Story = {
     await expect(button).toHaveAttribute("aria-expanded", "false")
   },
 }
+
+/** The page shows the button while comments are on; it jumps to the Comments heading below the article. */
+export const WithComments: Story = {
+  args: { showComments: true },
+  play: async ({ canvasElement }) => {
+    const link = within(canvasElement).getByRole("link", { name: "Comments" })
+    await expect(link).toHaveAttribute("href", "#comments")
+    // The large icon button sizes the icons in this row, not the icons themselves.
+    for (const button of [link, within(canvasElement).getByRole("button", { name: "Share" })]) {
+      await expect(button.getBoundingClientRect().width).toBe(36)
+      await expect(button.querySelector("svg")!.getBoundingClientRect().width).toBe(20)
+    }
+  },
+}

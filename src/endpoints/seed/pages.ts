@@ -1,12 +1,14 @@
 import type { Page } from "@/payload-types"
 import type { Payload, RequiredDataFromCollectionSlug } from "payload"
 
+import { feedsPage as starterFeedsPage } from "@/collections/Pages/starterPages/feeds"
+
 import { createContactForm } from "./forms"
 import { devMerchCatalogue, seedMerchProducts } from "./merch"
 import {
   createMerchBlockNode,
   createRichText,
-  createRichTextContent,
+  createRichTextFromString,
   createRichTextFromParagraphs,
 } from "./richtext"
 
@@ -61,6 +63,7 @@ interface CreatePagesResult {
   aboutPage: Page
   articlesPage: Page
   contactPage: Page
+  feedsPage: Page
   privacyPolicyPage: Page
   termsOfUsePage: Page
   volumesPage: Page
@@ -308,7 +311,7 @@ export const createPages = async (
           columns: [
             {
               size: "full",
-              richText: createRichTextContent(contact.content),
+              richText: createRichTextFromString(contact.content),
             },
           ],
         },
@@ -346,7 +349,7 @@ export const createPages = async (
           columns: [
             {
               size: "full",
-              richText: createRichTextContent(privacyPolicy.content),
+              richText: createRichTextFromString(privacyPolicy.content),
             },
           ],
         },
@@ -379,7 +382,7 @@ export const createPages = async (
           columns: [
             {
               size: "full",
-              richText: createRichTextContent(termsOfUse.content),
+              richText: createRichTextFromString(termsOfUse.content),
             },
           ],
         },
@@ -427,10 +430,19 @@ export const createPages = async (
     context,
   )
 
+  // Deployed sites get this page as a draft on deploy (createMissingStarterPages); a local
+  // database gets it published.
+  const feedsPage = await createOrUpdatePage(
+    payload,
+    { ...starterFeedsPage, _status: "published", publishedAt: new Date().toISOString() },
+    context,
+  )
+
   return {
     aboutPage,
     articlesPage,
     contactPage,
+    feedsPage,
     privacyPolicyPage,
     termsOfUsePage,
     volumesPage,

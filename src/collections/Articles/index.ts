@@ -33,6 +33,7 @@ import { populateTableOfContentsAnchors, tableOfContentsField } from "@/componen
 import { footnotesArrayField } from "@/fields/footnotes"
 import { type Article } from "@/payload-types"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
+import { rememberReadersCopy } from "@/utilities/readersCopy"
 
 import {
   MetaDescriptionField,
@@ -329,6 +330,7 @@ export const Articles: CollectionConfig = {
   ],
   hooks: {
     beforeChange: [
+      rememberReadersCopy,
       (args: Parameters<CollectionBeforeChangeHook<Article>>[0]): Partial<Article> | void => {
         const { req, operation, data } = args
         if (operation === "create") {
@@ -345,7 +347,10 @@ export const Articles: CollectionConfig = {
     afterChange: [
       revalidateArticle,
       revalidateNavLinks,
-      grantPublicProfile<Article>((doc) => doc.authors ?? []),
+      // Only a published byline links to a contributor page, so drafts and autosaves credit no one.
+      grantPublicProfile<Article>((doc) =>
+        doc._status === "published" ? (doc.authors ?? []) : [],
+      ),
     ],
     beforeDelete: [removeFromRankings],
     afterDelete: [revalidateDelete, revalidateNavLinksDelete],

@@ -4,8 +4,11 @@ import { draftMode } from "next/headers"
 import React from "react"
 
 import { EndRule } from "@/blocks/SquiggleRule/EndRule"
+import { ArticleFooter } from "@/components/ArticleFooter"
 import { ArticleSidebar } from "@/components/ArticleSidebar"
 import { AuthorList } from "@/components/Authors/AuthorList"
+import { Comments } from "@/components/Comments"
+import { CommentsUnpublished } from "@/components/Comments/Unpublished"
 import { FootnoteList } from "@/components/FootnoteList"
 import { JsonLd } from "@/components/JsonLd"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
@@ -15,14 +18,18 @@ import RichText from "@/components/RichText"
 import { TableOfContents, TableOfContentsProvider } from "@/components/TableOfContents"
 import { TopicsList } from "@/components/Topics/TopicsList"
 import { Separator } from "@/components/ui/separator"
+import { isPluginEnabled } from "@/globals/Plugins/isPluginEnabled"
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { ArticleHero } from "@/heros/ArticleHero"
 import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
-import { queryArticleBySlug, queryVolumesForArticles } from "@/utilities/queries"
+import { getPayloadClient } from "@/data/payload"
+import { PRERENDER_LIMIT } from "@/utilities/prerender"
+import { queryArticleBySlug, queryVolumesForArticles } from "@/data/queries"
 import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
+
+import { isArticlePublished } from "./isArticlePublished"
 
 // Prerendered from generateStaticParams; a slug published since the build is rendered on its
 // first request and cached the same way. Saving the article or one of its authors revalidates it.
@@ -30,13 +37,14 @@ import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structure
 export const revalidate = 3600
 
 export async function generateStaticParams(): Promise<{ slug: string | null | undefined }[]> {
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const articles = await payload.find({
     collection: "articles",
     draft: false,
-    limit: 1000,
+    limit: PRERENDER_LIMIT,
     overrideAccess: false,
     pagination: false,
+    sort: "-publishedAt",
     select: {
       slug: true,
     },
@@ -74,10 +82,17 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   const populatedAuthors = (authors || []).filter(isResolved<User>)
 
-  const [[volume], tableOfContentsEnabled] = await Promise.all([
-    queryVolumesForArticles([article.id]),
-    isExperimentEnabled("tableOfContents"),
-  ])
+  const [[volume], tableOfContentsEnabled, commentsSwitch, ssoSwitch, published] =
+    await Promise.all([
+      queryVolumesForArticles([article.id]),
+      isExperimentEnabled("tableOfContents"),
+      isPluginEnabled("comments"),
+      // Readers sign in to comment, so comments need single sign-on on too.
+      isPluginEnabled("sso"),
+      // Preview stays on across pages, so it keeps comments wherever readers have them.
+      draft ? isArticlePublished(article.id) : true,
+    ])
+  const commentsEnabled = commentsSwitch && ssoSwitch
   const showTableOfContents = tableOfContentsEnabled && article.showTableOfContents === true
 
   return (
@@ -96,7 +111,11 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
           {draft && <LivePreviewListener />}
 
           <TableOfContentsProvider>
-            <ArticleHero article={article} showTableOfContents={showTableOfContents} />
+            <ArticleHero
+              article={article}
+              showTableOfContents={showTableOfContents}
+              showComments={commentsEnabled}
+            />
             <div
               id="intro"
               className="lg:toc-open:gap-10 xl:toc-open:gap-20 relative flex flex-col justify-between gap-3 lg:flex-row lg:gap-6"
@@ -108,18 +127,19 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
               )}
               <div className="mx-auto max-w-2xl space-y-3">
                 <MathJaxProvider enableMathRendering={enableMathRendering}>
-                  <RichText
-                    data={content}
-                    enableGutter={false}
-                    className="drop-cap"
-                    parentDoc={{ collection: "articles", id: article.id }}
-                  />
+                  <RichText data={content} enableGutter={false} className="drop-cap" />
                 </MathJaxProvider>
                 <EndRule content={content} />
-                <FootnoteList footnotes={footnotes} />
-                <Separator />
-                <TopicsList topics={topics} />
-                <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
+                <ArticleFooter>
+                  <FootnoteList footnotes={footnotes} />
+                  <div className="space-y-4">
+                    <Separator />
+                    <TopicsList topics={topics} label="Topics:" />
+                  </div>
+                  <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
+                  {commentsEnabled &&
+                    (published ? <Comments articleId={article.id} /> : <CommentsUnpublished />)}
+                </ArticleFooter>
               </div>
             </div>
           </TableOfContentsProvider>

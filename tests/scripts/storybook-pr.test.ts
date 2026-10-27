@@ -48,6 +48,11 @@ const ENTRIES: IndexEntry[] = [
   ...component("UI/Card", "src/components/ui/card.stories.tsx", "src/components/ui/card.tsx"),
   ...component("UI/Dialog", "src/components/ui/dialog.stories.tsx", "src/components/ui/dialog.tsx"),
   ...component("UI/Select", "src/components/ui/select.stories.tsx", "src/components/ui/select.tsx"),
+  ...component(
+    "Layout/NotFound",
+    "src/app/(frontend)/NotFound.stories.tsx",
+    "src/app/(frontend)/not-found.tsx",
+  ),
   // A story without a docs page.
   {
     id: "layout-header--default",
@@ -68,7 +73,14 @@ describe("changedComponents", () => {
 
   it("matches a file in a component's folder or below it", () => {
     expect(titles(["src/blocks/Banner/config.ts"])).toEqual(["Blocks/Banner"])
-    expect(titles(["src/components/Media/ImageMedia/index.tsx"])).toEqual(["Components/Media"])
+    expect(titles(["src/components/Media/CMSImage/index.tsx"])).toEqual(["Components/Media"])
+  })
+
+  it("matches a route's stories only from files in the route's own folder", () => {
+    expect(titles(["src/app/(frontend)/layout.tsx"])).toEqual(["Layout/NotFound"])
+    expect(
+      titles(["src/app/(frontend)/articles/[slug]/page.tsx", "src/app/(frontend)/docs/sitemap.ts"]),
+    ).toEqual([])
   })
 
   it("doesn't match a whole folder of primitives by folder alone", () => {
@@ -267,7 +279,7 @@ describe("main", () => {
       })),
     )
     expect(calls[1]?.url).toBe(
-      `${api}/deployments?environment=Storybook%20Preview&ref=feat%2Fthing&per_page=100`,
+      `${api}/deployments?environment=Storybook&ref=feat%2Fthing&per_page=100`,
     )
   })
 

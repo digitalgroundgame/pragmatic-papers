@@ -2,11 +2,13 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, Payload } fr
 
 import { revalidateTag } from "next/cache"
 
+import { readersChange } from "@/utilities/readersCopy"
+
 import { purgeEdgeCache } from "./purgeEdgeCache"
 
 /**
  * The Header and Footer globals' nav links can point at a page, article, volume or topic
- * (`relationTo` in `src/fields/link.ts`). `getCachedGlobal` caches each global with the
+ * (`relationTo` in `src/fields/link.ts`). `getGlobal` caches each global with the
  * linked documents populated, and builds every href from the cached `slug`, so renaming,
  * unpublishing or deleting a linked document would leave the nav pointing at a 404 until
  * someone re-saved the global.
@@ -23,7 +25,6 @@ const NAV_TAGS = ["global_header", "global_footer"] as const
 
 interface NavTarget {
   slug?: string | null
-  _status?: "draft" | "published" | null
 }
 
 function revalidateNav(logger: Payload["logger"], reason: string): void {
@@ -40,30 +41,16 @@ function revalidateNav(logger: Payload["logger"], reason: string): void {
   purgeEdgeCache(logger, reason)
 }
 
-/** Whether a reader could have seen it: published, or in a collection without drafts. */
-const visible = (doc?: NavTarget | null): boolean =>
-  doc != null && (doc._status === undefined || doc._status === null || doc._status === "published")
-
-export const revalidateNavLinks: CollectionAfterChangeHook = ({
-  collection,
-  doc,
-  previousDoc,
-  operation,
-  req: { payload, context },
-}) => {
-  if (context.disableRevalidate || operation === "create") return doc
-  const next = doc as NavTarget
-  const prev = previousDoc as NavTarget | undefined
-  if (!prev) return doc
-
-  const wasVisible = visible(prev)
-  const isVisible = visible(next)
-  // A draft of something never published can't be in the nav's cached copy in any form a
-  // reader sees, so its edits change nothing.
-  if (!wasVisible && !isVisible) return doc
-
-  if (wasVisible !== isVisible || prev.slug !== next.slug) {
-    revalidateNav(payload.logger, `${collection.slug} ${prev.slug ?? next.slug} changed`)
+export const revalidateNavLinks: CollectionAfterChangeHook = async (args) => {
+  const { collection, doc, operation, req } = args
+  if (req.context.disableRevalidate || operation === "create") return doc
+  // Compared as readers see it: an autosave over a published document changes nothing
+  // the nav shows, and its publish is compared with the copy readers had before.
+  const change = await readersChange(args)
+  if (!change) return doc
+  const { before, after } = change
+  if (!before || !after || before.slug !== after.slug) {
+    revalidateNav(req.payload.logger, `${collection.slug} ${before?.slug ?? after?.slug} changed`)
   }
   return doc
 }

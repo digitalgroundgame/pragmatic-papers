@@ -1,5 +1,6 @@
 import React from "react"
 
+import { CommentsLink } from "@/components/Comments/CommentsLink"
 import { Byline } from "@/components/Authors/Byline"
 import { toBylineAuthor } from "@/components/Authors/BylineAuthor"
 import { ShareButtons } from "@/components/ShareButtons"
@@ -8,7 +9,7 @@ import { NarrationPlayer } from "@/components/NarrationPlayer"
 import { TableOfContentsButton } from "@/components/TableOfContents"
 import { Separator } from "@/components/ui/separator"
 import type { Article, User } from "@/payload-types"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { isResolved } from "@/utilities/relationships"
 import { PublicationDates } from "./PublicationDates"
 
@@ -19,11 +20,14 @@ interface ArticleHeroProps {
    * depends on the `tableOfContents` experiment as well as the article's own setting.
    */
   showTableOfContents?: boolean
+  /** Whether to render the button that jumps to the comments, which the page renders only while comments are on. */
+  showComments?: boolean
 }
 
 export const ArticleHero: React.FC<ArticleHeroProps> = ({
   article,
   showTableOfContents = false,
+  showComments = false,
 }) => {
   const { publishedAt, updatedAt, title, heroImage, authors, narration, content } = article
 
@@ -32,7 +36,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
   return (
     <div className="relative flex flex-col gap-2">
       <Media
-        priority
+        preload
         sizes="(max-width: 768px) 100vw, 1024px"
         media={heroImage}
         variant="large"
@@ -47,10 +51,8 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
         <div data-slot="article-meta-controls" className="flex grow items-center justify-end gap-1">
           <NarrationPlayer narration={narration} className="mr-auto shrink-0" />
           {showTableOfContents && <TableOfContentsButton content={content} />}
-          <ShareButtons
-            url={`${getServerSideURL()}/articles/${article.slug}`}
-            title={article.title}
-          />
+          {showComments && <CommentsLink />}
+          <ShareButtons url={`${getSiteURL()}/articles/${article.slug}`} title={article.title} />
         </div>
       </div>
       <Separator />

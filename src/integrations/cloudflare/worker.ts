@@ -4,13 +4,32 @@ export interface CloudflareWorkerIntegration extends Integration {
   /** The Worker's URL, or null when unset. */
   url(): string | null
   /**
-   * Throw away every page the Worker has cached, through its `/next/revalidate-all`, so each
-   * renders again from the database on its next request. Resolves once the Worker has
-   * answered; throws when the connection is not configured or the Worker refuses, with the
-   * status and never the secret.
+   * Throw away the pages the Worker has cached, through its `/next/revalidate-all`, so each
+   * renders again from the database on its next request: the given paths and, with `shared`,
+   * every page that lists articles, volumes or contributors, or every page when neither is
+   * given. With `revalidated`, the Worker's own Next cache drops only the paths and tags the
+   * save revalidated here; without it, every page in it. Resolves once the Worker has answered; throws when the connection is not
+   * configured or the Worker refuses, with the status and never the secret.
    */
-  revalidateAll(opts?: { fetchImpl?: typeof fetch }): Promise<void>
+  revalidateAll(opts?: RevalidateOptions): Promise<void>
 }
+
+export interface RevalidateOptions {
+  fetchImpl?: typeof fetch
+  paths?: readonly string[]
+  shared?: boolean
+  /** The paths and tags the save revalidated in this deployment's Next cache. */
+  revalidated?: Revalidated
+}
+
+/** What a save revalidated in Next's cache, for the Worker to revalidate in its own. */
+export interface Revalidated {
+  paths: readonly string[]
+  tags: readonly string[]
+}
+
+/** More paths than this purge everything instead, so the request's URL stays short. */
+export const MAX_PURGE_PATHS = 100
 
 export interface CloudflareWorkerOptions {
   id: string
@@ -45,14 +64,26 @@ export function cloudflareWorker({
     },
     required: [urlEnv, secretEnv],
     url,
-    async revalidateAll({ fetchImpl = fetch } = {}) {
+    async revalidateAll({ fetchImpl = fetch, paths = [], shared = false, revalidated } = {}) {
       const base = url()
       const secret = env(secretEnv)
       if (!base || !secret) {
         throw new Error(`Worker revalidation needs ${[urlEnv, secretEnv].join(" and ")}`)
       }
 
-      const response = await fetchImpl(new URL("/next/revalidate-all", base), {
+      const target = new URL("/next/revalidate-all", base)
+      // A save, not a deploy: the Worker skips its deploy-time seeding.
+      target.searchParams.set("save", "1")
+      if (paths.length <= MAX_PURGE_PATHS) {
+        for (const path of paths) target.searchParams.append("path", path)
+        if (shared) target.searchParams.set("shared", "1")
+      }
+      if (revalidated && revalidated.paths.length + revalidated.tags.length <= MAX_PURGE_PATHS) {
+        target.searchParams.set("next", "1")
+        for (const path of revalidated.paths) target.searchParams.append("next-path", path)
+        for (const tag of revalidated.tags) target.searchParams.append("next-tag", tag)
+      }
+      const response = await fetchImpl(target, {
         method: "POST",
         headers: { Authorization: `Bearer ${secret}` },
         signal: AbortSignal.timeout(TIMEOUT_MS),

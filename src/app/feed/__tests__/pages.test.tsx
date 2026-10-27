@@ -20,7 +20,7 @@ vi.mock("../getFeedBatch", () => ({
   getFeedBatch: (args: unknown) => getFeedBatch(args),
   withVolumes: async (articles: unknown[]) => articles,
 }))
-vi.mock("@/utilities/queries", () => ({
+vi.mock("@/data/queries", () => ({
   queryArticleBySlug: (slug: string) => queryArticleBySlug(slug),
 }))
 vi.mock("../renderFeedArticle", () => ({
@@ -30,12 +30,14 @@ vi.mock("../FeedShell", () => ({ FeedShell: () => null }))
 
 const { default: FeedPage, metadata: feedMetadata } = await import("../page")
 const { default: DeepLinkFeedPage, generateMetadata } = await import("../[collection]/[slug]/page")
+const { loadFeedBatch } = await import("../actions")
 
 interface ShellProps {
   initialItems: Array<{ id: number }>
   initialNextCursor: number | null
   initialPinnedArticleId?: number
   initialPageIndex?: number
+  loadBatch: unknown
 }
 const props = (el: unknown): ShellProps => (el as { props: ShellProps }).props
 
@@ -62,6 +64,7 @@ describe("/feed", () => {
     expect(props(await FeedPage())).toEqual({
       initialItems: [{ id: 1 }, { id: 2 }],
       initialNextCursor: 2,
+      loadBatch: loadFeedBatch,
     })
   })
 
@@ -93,6 +96,7 @@ describe("/feed/[collection]/[slug]", () => {
     expect(shell.initialItems.map((a) => a.id)).toEqual([2, 1])
     expect(shell.initialPinnedArticleId).toBe(2)
     expect(shell.initialPageIndex).toBe(3)
+    expect(shell.loadBatch).toBe(loadFeedBatch)
   })
 
   it("puts an article from outside the first batch first", async () => {

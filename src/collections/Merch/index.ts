@@ -1,7 +1,7 @@
 import type { CollectionConfig, FieldAccess, PayloadRequest } from "payload"
 
 import { admin } from "@/access/collections"
-import { isAdmin } from "@/access/roles"
+import { isAdmin, isStaff } from "@/access/roles"
 import { integrationStatus, shopifyStore } from "@/integrations"
 import {
   revalidateMerchProduct,
@@ -65,7 +65,7 @@ export const Merch: CollectionConfig = {
     // everything, including archived rows, so a vanished product is
     // diagnosable in the admin.
     read: ({ req: { user } }) => {
-      if (user) return true
+      if (isStaff(user)) return true
       return { status: { equals: "active" } }
     },
   },

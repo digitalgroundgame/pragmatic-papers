@@ -1,9 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, screen, userEvent, waitFor, within } from "storybook/test"
 
-import { liveBroadcast, tickerPosts, upcomingBroadcast } from "@/stories/fixtures/ticker"
+import {
+  fewTickerPosts,
+  liveBroadcast,
+  tickerPosts,
+  upcomingBroadcast,
+} from "@/stories/fixtures/ticker"
 import { shortURL } from "./LinkIcon"
-import { TickerView } from "./TickerView"
+import { TickerPlaceholder } from "./TickerLoader"
+import { TICKER_EMPTY, TickerView } from "./TickerView"
 
 const meta = {
   title: "Components/Ticker",
@@ -43,12 +49,46 @@ export const Live: Story = {
 
 /** A broadcast scheduled for later today. */
 export const Upcoming: Story = {
-  args: { broadcast: upcomingBroadcast, posts: tickerPosts },
+  args: {
+    broadcast: upcomingBroadcast,
+    posts: tickerPosts,
+    now: new Date("2026-10-07T16:00:00Z"),
+  },
+}
+
+/** A broadcast scheduled for a later day: its weekday comes before the time. */
+export const UpcomingLaterInTheWeek: Story = {
+  args: {
+    broadcast: upcomingBroadcast,
+    posts: tickerPosts,
+    now: new Date("2026-10-05T16:00:00Z"),
+  },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText("Wednesday 7:00 p.m. ET")).toBeInTheDocument()
+  },
 }
 
 /** Nothing on air: only the posts. */
 export const PostsOnly: Story = {
   args: { broadcast: null, posts: tickerPosts },
+}
+
+/**
+ * One short post: it goes round several times a pass, so the strip is full rather than one post
+ * crossing an empty band.
+ */
+export const FewPosts: Story = {
+  args: { broadcast: null, posts: fewTickerPosts },
+  play: async ({ canvasElement }) => {
+    const viewport = canvasElement.querySelector<HTMLElement>(".ticker-viewport")!
+    const pass = canvasElement.querySelector<HTMLElement>(".ticker-track > ul")!
+    await expect(pass.getBoundingClientRect().width).toBeGreaterThanOrEqual(
+      viewport.getBoundingClientRect().width,
+    )
+    // Still only one post for assistive tech.
+    const list = within(canvasElement).getByRole("list", { name: "Latest posts" })
+    await expect(within(list).getAllByRole("listitem")).toHaveLength(1)
+  },
 }
 
 /** On air with no posts to show: the broadcast takes the whole strip. */
@@ -86,5 +126,69 @@ export const LinkTooltip: Story = {
     await waitFor(() => expect(screen.queryByText(filibuster)).not.toBeInTheDocument())
     await expect(link).toHaveAttribute("href", filibuster)
     await expect(link).toHaveAttribute("target", "_blank")
+  },
+}
+
+/**
+ * What a page shows while the ticker's feed loads: the "Latest" label, sent with the page, in a
+ * strip exactly the ticker's size, so nothing below moves and the label stays put when the
+ * posts fade in.
+ */
+export const Loading: Story = {
+  args: { broadcast: null, posts: tickerPosts },
+  render: (args) => (
+    <div className="flex flex-col">
+      <TickerPlaceholder />
+      <TickerView {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const placeholder = canvasElement.querySelector<HTMLElement>("[data-ticker-placeholder]")!
+    const ticker = within(canvasElement).getByRole("region", { name: "Live and latest" })
+    const box = (el: HTMLElement) => {
+      const style = getComputedStyle(el)
+      return [el.getBoundingClientRect().height, style.marginTop, style.marginBottom]
+    }
+    await expect(box(placeholder)).toEqual(box(ticker))
+
+    // The label is where the ticker's own is, so it doesn't jump when the posts arrive.
+    const label = (el: HTMLElement) => {
+      const span = within(el).getByText("Latest")
+      const rect = span.getBoundingClientRect()
+      return [rect.left, rect.width, rect.height, getComputedStyle(span).color]
+    }
+    await expect(within(placeholder).getByText("Latest")).toBeVisible()
+    await expect(label(placeholder)).toEqual(label(ticker))
+
+    // The posts fade in on opacity alone, which the compositor can run without repainting.
+    const posts = ticker.querySelector<HTMLElement>(".ticker-posts")!
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches
+    await expect(getComputedStyle(posts).animationName).toBe(reduced ? "none" : "ticker-fade-in")
+  },
+}
+
+/**
+ * No channel on air and no posts: the strip stays, at the placeholder's size, and says so. Taking
+ * it away once the feed arrived would shift everything below it.
+ */
+export const Empty: Story = {
+  args: { broadcast: null, posts: [] },
+  render: (args) => (
+    <div className="flex flex-col">
+      <TickerPlaceholder />
+      <TickerView {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const placeholder = canvasElement.querySelector<HTMLElement>("[data-ticker-placeholder]")!
+    const ticker = within(canvasElement).getByRole("region", { name: "Live and latest" })
+    const box = (el: HTMLElement) => {
+      const style = getComputedStyle(el)
+      return [el.getBoundingClientRect().height, style.marginTop, style.marginBottom]
+    }
+    await expect(box(placeholder)).toEqual(box(ticker))
+    // It fades in, as posts would.
+    await waitFor(() => expect(within(ticker).getByText(TICKER_EMPTY)).toBeVisible())
+    await expect(within(ticker).queryByRole("checkbox")).not.toBeInTheDocument()
   },
 }

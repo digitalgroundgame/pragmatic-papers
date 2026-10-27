@@ -1,5 +1,8 @@
-import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { after } from "next/server"
+
+import { flushEdgeCachePurge, purgeEdgeCache } from "@/hooks/purgeEdgeCache"
+import { PURGE_SETTLE_MS, warmPages } from "@/hooks/warmPages"
+import { getPayloadClient } from "@/data/payload"
 
 import { hasPayloadSecret } from "../bearer"
 
@@ -9,7 +12,10 @@ import { hasPayloadSecret } from "../bearer"
  * public URL until the answer names its own id: until Coolify's health check passes and it
  * moves traffic over, the old container answers, and a purge would only refill the edge with
  * the previous release's pages (whose scripts the new container no longer serves). Then it
- * POSTs here on localhost to purge.
+ * POSTs here on localhost to purge. Once the purge has gone out, the most-read pages are
+ * requested through the public URL (`warmPages`), so the first readers find them cached. A
+ * Cloudflare Worker serving the same database (`cloudflareWorkerCache`) is left alone: its own
+ * deploy workflow empties and warms it.
  *
  * Both authenticated with `Authorization: Bearer <PAYLOAD_SECRET>`, like `/next/revalidate-all`.
  */
@@ -27,6 +33,13 @@ export async function POST(request: Request): Promise<Response> {
   if (!hasPayloadSecret(request)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 })
   }
-  purgeEdgeCache((await getPayloadConfig()).logger, "deploy")
+  const payload = await getPayloadClient()
+  purgeEdgeCache(payload.logger, "deploy", { worker: false })
+  // The purge and the warm-up run after the response, and neither throws.
+  after(async () => {
+    await flushEdgeCachePurge()
+    await new Promise((resolve) => setTimeout(resolve, PURGE_SETTLE_MS))
+    await warmPages(payload)
+  })
   return Response.json({ queued: true })
 }

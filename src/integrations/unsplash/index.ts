@@ -86,6 +86,11 @@ export interface UnsplashAppOptions {
 
 const API = "https://api.unsplash.com"
 const IMAGE_HOST = "images.unsplash.com"
+/**
+ * How long an API call may take. A Media save waits on one (`attributeUnsplashPhoto`), so a
+ * hung connection fails it, as any Unsplash error does, instead of stalling the editor.
+ */
+const TIMEOUT_MS = 10_000
 
 /** The parts of Unsplash's photo object this site reads. */
 interface RawPhoto {
@@ -164,6 +169,7 @@ export function unsplashApp({
 
     const response = await fetchImpl(url, {
       headers: { Authorization: `Client-ID ${key}`, "Accept-Version": "v1" },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     })
     if (!response.ok) {
       let reasons: string[] = []

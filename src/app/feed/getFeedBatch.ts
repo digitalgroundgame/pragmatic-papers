@@ -1,6 +1,6 @@
 import type { Article } from "@/payload-types"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
-import { queryVolumesForArticles } from "@/utilities/queries"
+import { getPayloadClient } from "@/data/payload"
+import { queryVolumesForArticles } from "@/data/queries"
 import { relationshipId } from "@/utilities/relationships"
 import type { FeedArticle, FeedArticleBatch } from "./types"
 
@@ -87,7 +87,7 @@ export async function getFeedBatch({
   limit?: number
   seed?: number
 }): Promise<FeedArticleBatch> {
-  const payload = await getPayloadConfig()
+  const payload = await getPayloadClient()
   const page = cursor ?? 1
   const res = await payload.find({
     collection: "articles",

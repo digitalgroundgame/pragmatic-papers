@@ -2,7 +2,7 @@ import { AdminBar, AdminBarHint } from "@/components/AdminBar"
 import { Footer } from "@/Footer/Component"
 import { Header } from "@/Header/Component"
 import { sentryHtmlAttributes } from "@/sentryConfig"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION, mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { GoogleAnalytics } from "@/components/GoogleAnalytics.lazy"
 import { ThemeProvider } from "@wrksz/themes/next"
@@ -55,7 +55,7 @@ export default async function RootLayout({
 }
 
 export const metadata: Metadata = {
-  metadataBase: new URL(getServerSideURL()),
+  metadataBase: new URL(getSiteURL()),
   description: DEFAULT_DESCRIPTION,
   openGraph: mergeOpenGraph(),
   twitter: {

@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import type * as ReactTypes from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import type { ExtractNarrationTextOptions } from "@/utilities/extractNarrationText"
-import type * as extractModule from "@/utilities/extractNarrationText"
+import type { ExtractNarrationTextOptions } from "@/collections/Articles/narration/extractNarrationText"
+import type * as extractModule from "@/collections/Articles/narration/extractNarrationText"
 
 const { mockRef } = vi.hoisted(() => ({ mockRef: { shouldMockNotMounted: false } }))
 
@@ -53,7 +53,7 @@ vi.mock("@payloadcms/ui", () => ({
 
 let shouldThrowGenerationError = false
 
-vi.mock("@/utilities/extractNarrationText", async (importOriginal) => {
+vi.mock("@/collections/Articles/narration/extractNarrationText", async (importOriginal) => {
   const original = await importOriginal<typeof extractModule>()
   return {
     ...original,
@@ -89,7 +89,8 @@ describe("ExtractNarrationButton", () => {
   it("renders the generate button and shows formatted view and editable textarea on view toggle", async () => {
     mockFields = {
       title: { value: "Sample Article Title" },
-      authors: { value: [{ id: 1, name: "Alice Author" }] },
+      // A hasMany relationship's form state holds bare ids.
+      authors: { value: [1] },
       publishedAt: { value: "2026-07-20T00:00:00.000Z" },
       content: {
         value: {
@@ -105,6 +106,14 @@ describe("ExtractNarrationButton", () => {
         },
       },
     }
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ docs: [{ id: 1, name: "Alice Author" }] }),
+      }),
+    )
 
     render(<ExtractNarrationButton />)
 
@@ -136,6 +145,8 @@ describe("ExtractNarrationButton", () => {
     expect(textarea.value).toContain("Hello world narration text.")
 
     expect(screen.getByRole("button", { name: /regenerate text/i })).toBeDefined()
+
+    vi.unstubAllGlobals()
   })
 
   it("copies text to clipboard and shows success toast", async () => {
@@ -417,7 +428,7 @@ describe("ExtractNarrationButton", () => {
     vi.unstubAllGlobals()
   })
 
-  it("logs console error when media fetch endpoint fails", async () => {
+  it("reports a failed media fetch instead of generating a script without alt text", async () => {
     mockFields = {
       title: { value: "Media Fetch Failure Test" },
       content: {
@@ -430,25 +441,48 @@ describe("ExtractNarrationButton", () => {
       },
     }
 
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {
-      // no-op
-    })
-    const mockFetch = vi.fn().mockRejectedValue(new Error("Fetch Failure"))
-    vi.stubGlobal("fetch", mockFetch)
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Fetch Failure")))
 
     render(<ExtractNarrationButton />)
-    const generateBtn = await screen.findByRole("button", { name: /generate narration text/i })
-    fireEvent.click(generateBtn)
+    fireEvent.click(await screen.findByRole("button", { name: /generate narration text/i }))
 
     await waitFor(() => {
-      expect(mockToastSuccess).toHaveBeenCalledWith("Narration text generated!")
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Failed to fetch media documents for narration extraction:",
-        expect.any(Error),
+      expect(mockToastError).toHaveBeenCalledWith(
+        "Failed to generate narration text: Fetch Failure",
       )
     })
+    expect(mockToastSuccess).not.toHaveBeenCalled()
+    expect(screen.queryByLabelText(/formatted narration preview/i)).not.toBeInTheDocument()
 
-    consoleSpy.mockRestore()
+    vi.unstubAllGlobals()
+  })
+
+  it("reports a media response that isn't ok instead of generating a script", async () => {
+    mockFields = {
+      title: { value: "Media Server Error Test" },
+      content: {
+        value: {
+          root: {
+            type: "root",
+            children: [{ type: "block", fields: { blockType: "mediaBlock", media: 999 } }],
+          },
+        },
+      },
+    }
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }))
+
+    render(<ExtractNarrationButton />)
+    fireEvent.click(await screen.findByRole("button", { name: /generate narration text/i }))
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith(
+        "Failed to generate narration text: couldn't load media (HTTP 500)",
+      )
+    })
+    expect(mockToastSuccess).not.toHaveBeenCalled()
+    expect(screen.queryByLabelText(/formatted narration preview/i)).not.toBeInTheDocument()
+
     vi.unstubAllGlobals()
   })
 
@@ -576,33 +610,66 @@ describe("ExtractNarrationButton", () => {
     vi.unstubAllGlobals()
   })
 
-  it("handles fetch failure gracefully and falls back to excluding unresolvable authors", async () => {
-    mockFields = {
-      title: { value: "Author Fetch Failure Test" },
-      authors: { value: [123] },
-    }
+  it.each([401, 403, 500])(
+    "reports an authors response of %i instead of a script without its byline",
+    async (status) => {
+      mockFields = {
+        title: { value: "Author Fetch Failure Test" },
+        authors: { value: [123] },
+      }
 
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: false,
-    })
-    vi.stubGlobal("fetch", mockFetch)
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status }))
+
+      render(<ExtractNarrationButton />)
+      fireEvent.click(await screen.findByRole("button", { name: /generate narration text/i }))
+
+      await waitFor(() => {
+        expect(mockToastError).toHaveBeenCalledWith(
+          `Failed to generate narration text: couldn't load users (HTTP ${status})`,
+        )
+      })
+      expect(mockToastSuccess).not.toHaveBeenCalled()
+      expect(screen.queryByLabelText(/formatted narration preview/i)).not.toBeInTheDocument()
+      // Nothing was cached, so the button still offers a first generation.
+      expect(screen.getByRole("button", { name: /generate narration text/i })).toBeEnabled()
+
+      vi.unstubAllGlobals()
+    },
+  )
+
+  it("keeps the previous script when regenerating fails", async () => {
+    mockFields = { title: { value: "First Script" }, authors: { value: [123] } }
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ docs: [{ id: 123, name: "Fetched Author One" }] }),
+      }),
+    )
 
     render(<ExtractNarrationButton />)
-    const generateBtn = await screen.findByRole("button", { name: /generate narration text/i })
-    fireEvent.click(generateBtn)
-
+    fireEvent.click(await screen.findByRole("button", { name: /generate narration text/i }))
     await waitFor(() => {
       expect(mockToastSuccess).toHaveBeenCalledWith("Narration text generated!")
     })
 
-    const formattedPreview = screen.getByLabelText(/formatted narration preview/i)
-    expect(formattedPreview.textContent).not.toContain("123")
-    expect(formattedPreview.textContent).not.toContain("By")
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 403 }))
+    fireEvent.click(screen.getByRole("button", { name: /regenerate text/i }))
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith(
+        "Failed to generate narration text: couldn't load users (HTTP 403)",
+      )
+    })
+    expect(mockToastSuccess).not.toHaveBeenCalledWith("Narration text regenerated!")
+    expect(screen.getByLabelText(/formatted narration preview/i)).toHaveTextContent(
+      "By Fetched Author One",
+    )
 
     vi.unstubAllGlobals()
   })
 
-  it("skips unresolvable author IDs (line 297 fallback)", async () => {
+  it("leaves out an author the users API doesn't return", async () => {
     mockFields = {
       title: { value: "Author Fetch Partial Success Test" },
       authors: { value: [123, 999] },

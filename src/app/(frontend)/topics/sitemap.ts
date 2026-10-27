@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next"
 
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
-import { getServerSideURL } from "@/utilities/getURL"
+import { MAX_SITEMAP_ENTRIES } from "@/app/(frontend)/(sitemaps)/sitemaps"
+import { getPayloadClient } from "@/data/payload"
+import { getSiteURL } from "@/utilities/getURL"
 
 // Read per request, like the topic pages it lists: Next would otherwise prerender it at build
 // time, from the build's database.
@@ -9,13 +10,14 @@ export const dynamic = "force-dynamic"
 
 /** /topics/sitemap.xml: the /topics index and every topic. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const payload = await getPayloadConfig()
-  const siteUrl = getServerSideURL().replace(/\/$/, "")
+  const payload = await getPayloadClient()
+  const siteUrl = getSiteURL()
 
   const { docs } = await payload.find({
     collection: "topics",
     depth: 0,
-    limit: 5000,
+    // One entry is the index page.
+    limit: MAX_SITEMAP_ENTRIES - 1,
     overrideAccess: false,
     pagination: false,
     sort: "name",

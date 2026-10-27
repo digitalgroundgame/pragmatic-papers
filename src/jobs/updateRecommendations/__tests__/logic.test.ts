@@ -266,7 +266,12 @@ describe("buildCandidatesFromDB", () => {
     await buildCandidatesFromDB(payload, new Map())
 
     expect(find).toHaveBeenCalledWith(
-      expect.objectContaining({ collection: "articles", draft: false, pagination: false }),
+      expect.objectContaining({
+        collection: "articles",
+        draft: false,
+        limit: 0,
+        pagination: false,
+      }),
     )
     expect(find).toHaveBeenCalledWith(
       expect.objectContaining({

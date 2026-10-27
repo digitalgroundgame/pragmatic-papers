@@ -1,49 +1,75 @@
-# Deploys staging's Cloudflare Worker (wrangler.jsonc, src/cloudflare/README.md): the public
-# site, built by OpenNext, on workers.dev, reading staging's database through Hyperdrive.
-# Staging itself keeps running on Coolify, which the Worker sends /admin and /api to.
+# Deploys the public site as a Cloudflare Worker (wrangler.jsonc, src/cloudflare/README.md),
+# built by OpenNext, reading the database through Hyperdrive:
+#   - a push to `dev` deploys staging's, at staging-worker.pragmaticpapers.com;
+#   - a push to `main` deploys production's (`env.production` in wrangler.jsonc).
+# Coolify keeps running both sites, and each Worker sends /admin and /api to it.
 #
-# Runs on every push to `dev`, and by hand. Skips itself until it's set up.
+# Runs on those pushes, and by hand (the branch picks the Worker). Each skips itself until
+# it's set up.
 #
 # SETUP (Settings → Secrets and variables → Actions)
 # --------------------------------------------------
+# Both:
 #   - secret   CLOUDFLARE_WORKERS_TOKEN  Workers Scripts, Workers R2 Storage, D1 and
 #                                        Hyperdrive, all Edit
 #   - secret   CLOUDFLARE_ACCOUNT_ID     shared with the Storybook deploy
+#   - secret   SENTRY_DSN                the DSN Coolify's apps report to; without it the
+#                                        Worker reports nothing
+# Staging:
 #   - secret   STAGING_PAYLOAD_SECRET    staging's PAYLOAD_SECRET: the Worker's own secret,
 #                                        and the token for /next/revalidate-all and
 #                                        staging's /next/migrations
 #   - variable SHOWCASE_STAGING_URL      staging's Coolify URL, which the Worker proxies to
 #   - variable WORKER_STAGING_URL        the Worker's own URL, e.g.
-#                                        https://pragmatic-papers-staging.<subdomain>.workers.dev
+#                                        https://staging-worker.pragmaticpapers.com
+# Production:
+#   - secret   PRODUCTION_PAYLOAD_SECRET production's PAYLOAD_SECRET, as for staging
+#   - variable PRODUCTION_ORIGIN_URL     production's Coolify URL, on a hostname of its own
+#                                        once the Worker has pragmaticpapers.com
+#   - variable WORKER_PRODUCTION_URL     the Worker's own URL: its workers.dev address until
+#                                        it takes over, then https://pragmaticpapers.com
+#   - variable PRODUCTION_SUPABASE_URL   production's SUPABASE_URL and S3_BUCKET, which media
+#   - variable PRODUCTION_S3_BUCKET      links are built from
 # The Hyperdrive config in wrangler.jsonc must exist; the R2 bucket and D1 database are
 # created here if they don't.
-name: Staging Worker
+name: Worker
 
 on:
   push:
-    branches: [dev]
+    branches: [dev, main]
   workflow_dispatch:
 
 permissions:
   contents: read
   packages: read
 
-# One deploy at a time, so an older build never lands last.
+# One deploy at a time per Worker, so an older build never lands last.
 concurrency:
-  group: worker-staging
+  group: worker-${{ github.ref_name }}
 
 jobs:
   deploy:
-    name: Deploy staging Worker
+    name: Deploy ${{ github.ref_name == 'main' && 'production' || 'staging' }} Worker
+    # Only dev and main have a Worker.
+    if: github.ref_name == 'dev' || github.ref_name == 'main'
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # Lists each deploy under the repo's Deployments as Staging Worker or Production Worker,
+    # linked to the Worker, beside Coolify's (deployments.yml).
+    environment:
+      name: ${{ github.ref_name == 'main' && 'Production Worker' || 'Staging Worker' }}
+      url: ${{ github.ref_name == 'main' && vars.WORKER_PRODUCTION_URL || vars.WORKER_STAGING_URL }}
     env:
-      READY: ${{ secrets.CLOUDFLARE_WORKERS_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' && secrets.STAGING_PAYLOAD_SECRET != '' && vars.SHOWCASE_STAGING_URL != '' && vars.WORKER_STAGING_URL != '' }}
+      # The Worker's name and the names in wrangler.jsonc, for the top level (staging) or
+      # `env.production`.
+      TARGET: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+      WRANGLER_ENV: ${{ github.ref_name == 'main' && 'production' || '' }}
+      READY: ${{ secrets.CLOUDFLARE_WORKERS_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' && (github.ref_name == 'main' && (secrets.PRODUCTION_PAYLOAD_SECRET != '' && vars.PRODUCTION_ORIGIN_URL != '' && vars.WORKER_PRODUCTION_URL != '' && vars.PRODUCTION_SUPABASE_URL != '' && vars.PRODUCTION_S3_BUCKET != '') || github.ref_name == 'dev' && (secrets.STAGING_PAYLOAD_SECRET != '' && vars.SHOWCASE_STAGING_URL != '' && vars.WORKER_STAGING_URL != '')) }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       WRANGLER_SEND_METRICS: "false"
-      SERVER_URL: ${{ vars.WORKER_STAGING_URL }}
-      ORIGIN_URL: ${{ vars.SHOWCASE_STAGING_URL }}
+      SERVER_URL: ${{ github.ref_name == 'main' && vars.WORKER_PRODUCTION_URL || vars.WORKER_STAGING_URL }}
+      ORIGIN_URL: ${{ github.ref_name == 'main' && vars.PRODUCTION_ORIGIN_URL || vars.SHOWCASE_STAGING_URL }}
       # The build prerenders from a throwaway database: nothing reaches staging's while
       # building. /next/revalidate-all throws those pages away once the Worker is up.
       DATABASE_URI: postgres://postgres:postgres@localhost:5432/build
@@ -55,7 +81,7 @@ jobs:
 
     services:
       postgres:
-        # Copied into GHCR by postgres-image.yml; pulled logged in, so not rate-limited.
+        # Copied into GHCR by ci-images.yml; pulled logged in, so not rate-limited.
         image: ghcr.io/digitalgroundgame/postgres:17-alpine
         credentials:
           username: ${{ github.actor }}
@@ -70,7 +96,7 @@ jobs:
     steps:
       - name: Skip until set up
         if: env.READY != 'true'
-        run: echo "::notice::The staging Worker isn't set up yet (see the top of .github/workflows/worker.yml); skipping."
+        run: echo "::notice::The $TARGET Worker isn't set up yet (see the top of .github/workflows/worker.yml); skipping."
 
       - uses: actions/checkout@v7
         if: env.READY == 'true'
@@ -96,30 +122,30 @@ jobs:
         if: env.READY == 'true'
         run: |
           # The names in wrangler.jsonc.
-          bucket=pragmatic-papers-staging-cache
-          database=pragmatic-papers-staging-tags
+          bucket=pragmatic-papers-$TARGET-cache
+          database=pragmatic-papers-$TARGET-tags
           pnpm exec wrangler r2 bucket info "$bucket" >/dev/null 2>&1 || pnpm exec wrangler r2 bucket create "$bucket"
           pnpm exec wrangler d1 info "$database" >/dev/null 2>&1 || pnpm exec wrangler d1 create "$database"
 
-      # Staging's Coolify app migrates its database while it builds the same push. Deploying
+      # The Coolify app migrates its database while it builds the same push. Deploying
       # before that would run this commit's code against the old schema, so wait until
-      # staging reports the newest migration in this commit (`/next/migrations`). A push
+      # it reports the newest migration in this commit (`/next/migrations`). A push
       # without a new migration passes at once.
-      - name: Wait for staging's database to be migrated
+      - name: Wait for the database to be migrated
         if: env.READY == 'true'
         timeout-minutes: 45
         env:
-          STAGING_PAYLOAD_SECRET: ${{ secrets.STAGING_PAYLOAD_SECRET }}
+          SITE_PAYLOAD_SECRET: ${{ github.ref_name == 'main' && secrets.PRODUCTION_PAYLOAD_SECRET || secrets.STAGING_PAYLOAD_SECRET }}
         run: |
           newest=$(find src/migrations -maxdepth 1 -name '2*.ts' -printf '%f\n' | sort | tail -n 1)
           newest=${newest%.ts}
-          echo "Waiting for staging to have run $newest"
+          echo "Waiting for $TARGET to have run $newest"
           while true; do
             # The query string keeps Cloudflare's edge from answering with an older copy.
-            applied=$(curl --silent --max-time 30 --header "Authorization: Bearer $STAGING_PAYLOAD_SECRET" \
+            applied=$(curl --silent --max-time 30 --header "Authorization: Bearer $SITE_PAYLOAD_SECRET" \
               "$ORIGIN_URL/next/migrations?at=$(date +%s%N)" | jq -r '.applied[]?' 2>/dev/null || true)
             if printf '%s\n' "$applied" | grep -qxF "$newest"; then
-              echo "Staging has run $newest"
+              echo "$TARGET has run $newest"
               exit 0
             fi
             echo "Not yet; checking again in 30s"
@@ -127,35 +153,54 @@ jobs:
           done
 
       # Uploads the prerendered pages to R2, creates the D1 table if it's missing, then
-      # `wrangler deploy`s with the runtime variables and Payload's secret.
+      # `wrangler deploy`s with the runtime variables and the secrets.
       - name: Deploy
         if: env.READY == 'true'
         env:
-          STAGING_PAYLOAD_SECRET: ${{ secrets.STAGING_PAYLOAD_SECRET }}
+          SITE_PAYLOAD_SECRET: ${{ github.ref_name == 'main' && secrets.PRODUCTION_PAYLOAD_SECRET || secrets.STAGING_PAYLOAD_SECRET }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          PRODUCTION_SUPABASE_URL: ${{ vars.PRODUCTION_SUPABASE_URL }}
+          PRODUCTION_S3_BUCKET: ${{ vars.PRODUCTION_S3_BUCKET }}
         run: |
           secrets="$RUNNER_TEMP/worker-secrets.json"
-          jq -n --arg secret "$STAGING_PAYLOAD_SECRET" '{PAYLOAD_SECRET: $secret}' > "$secrets"
-          pnpm exec opennextjs-cloudflare deploy -- \
-            --secrets-file "$secrets" \
-            --var "SERVER_URL:$SERVER_URL" \
-            --var "ORIGIN_URL:$ORIGIN_URL"
+          jq -n --arg secret "$SITE_PAYLOAD_SECRET" --arg dsn "$SENTRY_DSN" \
+            '{PAYLOAD_SECRET: $secret} + (if $dsn == "" then {} else {SENTRY_DSN: $dsn} end)' > "$secrets"
+          vars=(--var "SERVER_URL:$SERVER_URL" --var "ORIGIN_URL:$ORIGIN_URL" --var "SENTRY_RELEASE:$GITHUB_SHA")
+          if [ "$TARGET" = production ]; then
+            vars+=(--var "SUPABASE_URL:$PRODUCTION_SUPABASE_URL" --var "S3_BUCKET:$PRODUCTION_S3_BUCKET")
+          fi
+          pnpm exec opennextjs-cloudflare deploy ${WRANGLER_ENV:+--env "$WRANGLER_ENV"} -- \
+            --secrets-file "$secrets" "${vars[@]}"
           rm "$secrets"
 
       - name: Re-render what the build prerendered
         if: env.READY == 'true'
         env:
-          STAGING_PAYLOAD_SECRET: ${{ secrets.STAGING_PAYLOAD_SECRET }}
+          SITE_PAYLOAD_SECRET: ${{ github.ref_name == 'main' && secrets.PRODUCTION_PAYLOAD_SECRET || secrets.STAGING_PAYLOAD_SECRET }}
         run: |
           curl --fail-with-body --silent --show-error --retry 5 --retry-all-errors \
-            --request POST --header "Authorization: Bearer $STAGING_PAYLOAD_SECRET" \
+            --request POST --header "Authorization: Bearer $SITE_PAYLOAD_SECRET" \
             "$SERVER_URL/next/revalidate-all"
+
+      # Coolify requests the most-read pages through the Worker's URL (its WORKER_URL), so the
+      # first readers find them in its now-empty cache. It answers at once and warms in the
+      # background. Best-effort: a deploy Coolify hasn't caught up with yet answers 404.
+      - name: Warm the most-read pages
+        if: env.READY == 'true'
+        continue-on-error: true
+        env:
+          SITE_PAYLOAD_SECRET: ${{ github.ref_name == 'main' && secrets.PRODUCTION_PAYLOAD_SECRET || secrets.STAGING_PAYLOAD_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
+            --request POST --header "Authorization: Bearer $SITE_PAYLOAD_SECRET" \
+            "$ORIGIN_URL/next/warm-worker"
 
       - name: Check the home page answers
         if: env.READY == 'true'
         run: |
           # The Worker's own logs for these requests, printed if it fails.
           logs="$RUNNER_TEMP/tail.log"
-          pnpm exec wrangler tail pragmatic-papers-staging --format pretty > "$logs" 2>&1 &
+          pnpm exec wrangler tail "pragmatic-papers-$TARGET" --format pretty > "$logs" 2>&1 &
           tail_pid=$!
           sleep 10
           body="$RUNNER_TEMP/home.html"
@@ -169,3 +214,10 @@ jobs:
           kill "$tail_pid" || true
           echo "::group::Worker logs"; cat "$logs"; echo "::endgroup::"
           exit 1
+
+      # The gateway in front of the site (gateway.wrangler.jsonc), last, once the site
+      # whose entrypoints it binds to is live and re-rendered, so a failure here can't cut
+      # the site's deploy short. It has no secrets or variables of its own.
+      - name: Deploy the gateway
+        if: env.READY == 'true'
+        run: pnpm exec wrangler deploy --config gateway.wrangler.jsonc ${WRANGLER_ENV:+--env "$WRANGLER_ENV"}

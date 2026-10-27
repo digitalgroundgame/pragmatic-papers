@@ -4,6 +4,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { seed } from "../index"
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }))
+// The repo's help docs are synced for real; only the editor's Markdown conversion, which needs
+// Payload's config, is left out.
+vi.mock("@/plugins/docs/markdown", () => ({
+  docsEditorConfig: () => ({}),
+  markdownToContent: () => ({ root: { children: [] } }),
+}))
 
 // Collections and globals whose hooks call revalidatePath/revalidateTag. A
 // write to one of these without `disableRevalidate` crashes `pnpm dev:db-seed`.
@@ -16,6 +22,7 @@ const REVALIDATING = new Set([
   "redirects",
   "header",
   "footer",
+  "docs",
 ])
 
 interface Write {
@@ -64,6 +71,15 @@ function createRecordingPayload() {
       docs: docsIn(collection).filter((doc) => matches(doc, where)),
     })),
     findByID: vi.fn(async ({ collection, id }) => docsIn(collection).find((doc) => doc.id === id)),
+    count: vi.fn(async ({ collection, where }) => ({
+      totalDocs: docsIn(collection).filter((doc) => matches(doc, where)).length,
+    })),
+    findVersions: vi.fn(async () => ({ docs: [] })),
+    kv: {
+      get: vi.fn(async () => null),
+      has: vi.fn(async () => false),
+      set: vi.fn(async () => undefined),
+    },
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
   }
 
@@ -127,7 +143,7 @@ describe("seed", () => {
     expect(clearRankings).toBeLessThan(deleteArticles)
   })
 
-  it("switches every experiment on", async () => {
+  it("switches every experiment and beta plugin on", async () => {
     const { payload, writes } = createRecordingPayload()
 
     await seed(payload, undefined, { disableRevalidate: true })
@@ -136,9 +152,27 @@ describe("seed", () => {
       (write) => write.op === "updateGlobal" && write.target === "site-settings",
     )
     expect(siteSettings?.data).toEqual({
-      experiments: { feed: true, interactives: true, tableOfContents: true, ticker: true },
+      experiments: {
+        feed: true,
+        interactives: true,
+        tableOfContents: true,
+      },
     })
     expect(siteSettings?.context?.disableRevalidate).toBe(true)
+
+    const plugins = writes.find(
+      (write) => write.op === "updateGlobal" && write.target === "plugins",
+    )
+    expect(plugins?.data).toEqual({
+      switches: {
+        docs: true,
+        notifications: true,
+        tours: true,
+        sso: true,
+        comments: true,
+        achievements: true,
+      },
+    })
   })
 
   it("reports each step's progress", async () => {
@@ -147,8 +181,8 @@ describe("seed", () => {
 
     await seed(payload, onProgress, { disableRevalidate: true })
 
-    expect(onProgress).toHaveBeenCalledWith("Clearing existing data...", 1, 13)
-    expect(onProgress).toHaveBeenLastCalledWith("Seeding article recommendations...", 13, 13)
+    expect(onProgress).toHaveBeenCalledWith("Clearing existing data...", 1, 15)
+    expect(onProgress).toHaveBeenLastCalledWith("Seeding article recommendations...", 15, 15)
   })
 
   it("names the step that failed", async () => {

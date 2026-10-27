@@ -1,6 +1,8 @@
 import { DELETE_MEDIA_IN_USE } from "@/collections/Media/hooks/protectPublishedMedia"
 import { seedRandomRankings } from "@/jobs/updateRecommendations/logic"
 import type { Media, User } from "@/payload-types"
+import { syncDocs } from "@/plugins/docs/syncDocs"
+import { readerAchievements } from "@/plugins/readerAchievements"
 import { revalidatePath } from "next/cache"
 import type { Payload } from "payload"
 import { createArticle, getWriterOrThrow, validateWriters } from "./articles"
@@ -86,6 +88,7 @@ export const seed = async (
         // Snapshots point at their interactive, so they go first.
         await payload.delete({ collection: "interactive-snapshots", context, where: {} })
         await payload.delete({ collection: "interactives", context, where: {} })
+        await payload.delete({ collection: "docs", context, where: {} })
         // Last, once the content that uses it is gone. The flag also clears media
         // that content the seed doesn't own (a real user's profile image) still uses,
         // which the delete would otherwise skip without saying so.
@@ -466,9 +469,43 @@ export const seed = async (
           slug: "site-settings",
           context,
           data: {
-            experiments: { feed: true, interactives: true, tableOfContents: true, ticker: true },
+            experiments: {
+              feed: true,
+              interactives: true,
+              tableOfContents: true,
+            },
           },
         })
+        // And every beta plugin's switch on System → Plugins.
+        await payload.updateGlobal({
+          slug: "plugins",
+          context,
+          data: {
+            switches: {
+              docs: true,
+              notifications: true,
+              tours: true,
+              sso: true,
+              comments: true,
+              achievements: true,
+            },
+          },
+        })
+      },
+    },
+    {
+      name: "Creating achievements...",
+      fn: async () => {
+        // The ones a deploy creates once per site: Verified, and Early member.
+        await readerAchievements.seed(payload)
+      },
+    },
+    {
+      name: "Syncing help docs...",
+      fn: async () => {
+        // The ones a deploy seeds, back after the wipe above. Published here, so local dev
+        // shows them; a deployed site gets them as drafts for an editor to publish, once.
+        await syncDocs(payload, undefined, { localSeed: true })
       },
     },
     {

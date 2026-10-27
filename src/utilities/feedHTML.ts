@@ -63,12 +63,3 @@ export const escapeHTML = (value: string | null | undefined): string =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;")
-
-/**
- * Make a site path absolute: feed readers and Substack resolve relative URLs
- * against their own origin, not ours. Absolute `http(s)` URLs pass through.
- */
-export const absoluteURL = (url: string, siteUrl: string): string => {
-  if (/^https?:\/\//.test(url)) return url
-  return `${siteUrl}${url.startsWith("/") ? "" : "/"}${url}`
-}

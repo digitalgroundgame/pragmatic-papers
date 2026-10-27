@@ -5,14 +5,14 @@ vi.mock("@/components/Logo/AnimatedLogo", () => ({ AnimatedLogo: () => null }))
 vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({
   isExperimentEnabled: async () => false,
 }))
-vi.mock("@/utilities/getGlobals", () => ({
-  getCachedGlobal: (slug: string) => async () =>
+vi.mock("@/data/globals", () => ({
+  getGlobal: async (slug: string) =>
     slug === "header" ? { navItems: [], actions: [] } : { socials: [] },
 }))
 
 const { Ticker } = await import("@/components/Ticker")
 const { MegaMenu } = await import("@/components/MegaMenu")
-const { Header } = await import("../Component")
+const { DefaultHeader: Header } = await import("../Component")
 
 type El = React.ReactElement<Record<string, unknown>>
 

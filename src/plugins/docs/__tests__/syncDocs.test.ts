@@ -548,6 +548,7 @@ describe("listDocFiles", () => {
         parent: null,
         folder: dir,
         file: path.join(dir, "experiments.md"),
+        urlPath: "experiments",
       },
     ])
   })
@@ -567,6 +568,14 @@ describe("listDocFiles", () => {
       ["blocks", "writing"],
       ["experiments", null],
       ["home", null],
+    ])
+    expect(entries.map((entry) => entry.urlPath)).toEqual([
+      "writing",
+      "writing/articles",
+      "writing/media",
+      "writing/blocks",
+      "experiments",
+      "home",
     ])
     expect(entries[1]!.folder).toBe(path.join(dir, "writing"))
   })

@@ -175,23 +175,19 @@ a file only places the doc on sites that don't have it yet. Once per deploy,
 `/next/revalidate-all` (which `start.sh` calls when a deploy goes live) seeds that
 site's database with each doc whose slug it doesn't have yet, as a **draft**,
 converting the Markdown with the docs editor and uploading its pictures to Media
-(`syncRepoDocs`). It's a first draft for editors to rewrite in the site's voice: code never
-publishes, changes or deletes a doc a site has, so a doc belongs to the site's editors from
-the moment it arrives, and there's nothing to backport. A draft is on neither `/docs` nor the
-bell until an editor publishes it. When a doc's file changes (its content hash, which covers
-its pictures), a site that has the doc gets a **suggestion** beside it (the `doc-suggestions`
-collection, `suggestChange` in `src/plugins/docs/suggest.ts`): the diff of the Markdown since
-the copy that site last took in (kept in the key-value store, `saveBaseline`), the front
-matter's `changeNote`, and any new or changed pictures uploaded to Media. Editors work it into
-the doc in their own words, then mark it done or dismiss it; the bell tells them about open
-ones (`docSuggestionsNotifications`). A change arriving while one is open joins it. So **every
-PR that changes an existing doc gives it a new `changeNote`**, a sentence for the editors on
-what changed; CI's "Doc change notes" job (`scripts/check-doc-change-notes.ts`) checks.
-`planRepoDoc` (`syncDocs.ts`) decides, and each revision suggested is recorded
-(`markOffered`, beside `markSeeded` in `src/utilities/seedOnce.ts`) so it's suggested once.
-A doc that has no offer recorded (one seeded before offers began) is suggested the repo's
-copy when it differs from the `sourceHash` the doc was saved with; one an editor wrote, with
-no `sourceHash`, records the repo's current copy and gets only later changes. Each doc it seeds, or finds already there, is recorded in Payload's
+(`syncRepoDocs`). Code never publishes, overwrites the published version or deletes,
+so a doc belongs to the site's editors from the moment it arrives. A draft is on
+neither `/docs` nor the bell until an editor publishes it. When a doc's file changes
+(its content hash, which covers `revisedAt` and its pictures), a site that already
+has the doc is left alone: the sync reports it as `changed` and records nothing, so
+editors' text is never replaced by the repo's. `planRepoDoc` (`syncDocs.ts`) decides.
+Each site keeps the repo's copy it took in: its hash (`markOffered`, beside
+`markSeeded` in `src/utilities/seedOnce.ts`) and the Markdown with a hash of each
+picture (`saveBaseline`, `src/plugins/docs/baseline.ts`, under
+`doc-source:docs:<slug>`), so the repo's changes since can later be shown to editors.
+A doc seeded before these were kept gets them on a deploy whose copy matches the
+`sourceHash` it was saved with; one an editor wrote, with no `sourceHash`, records
+the repo's current copy. Each doc it seeds, or finds already there, is recorded in Payload's
 key-value store (`markSeeded`, which other
 deploy-seeded content uses too), so one an editor deletes stays deleted and is never
 recreated (only the Coolify app's deploy seeds, see [Hosting](#hosting-coolify)). `pnpm dev:db-seed` seeds

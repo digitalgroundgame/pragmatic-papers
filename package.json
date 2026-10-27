@@ -82,7 +82,6 @@
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "cross-env": "^10.1.0",
-    "diff": "8.0.4",
     "dotenv": "^18.0.5",
     "driver.js": "1.9.0",
     "embla-carousel-autoplay": "^8.6.0",

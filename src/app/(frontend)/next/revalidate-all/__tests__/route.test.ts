@@ -33,7 +33,7 @@ describe("POST /next/revalidate-all", () => {
     vi.clearAllMocks()
     syncRepoDocs.mockResolvedValue({
       created: ["a"],
-      suggested: ["c"],
+      changed: ["c"],
       existing: ["b"],
       deleted: [],
     })
@@ -47,7 +47,7 @@ describe("POST /next/revalidate-all", () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
       revalidated: true,
-      docs: { created: ["a"], suggested: ["c"] },
+      docs: { created: ["a"], changed: ["c"] },
       pages: { created: ["feeds"] },
       achievements: { created: ["Early member"] },
     })

@@ -4,7 +4,6 @@ import { nestedDocsPlugin } from "@payloadcms/plugin-nested-docs"
 import { Docs, DOCS_SLUG } from "./collection"
 import { DOCS_CACHE_TAG } from "./revalidateDoc"
 import { docNavTitle, docURL } from "./sections"
-import { DocSuggestions } from "./suggestionsCollection"
 
 export { DOCS_SLUG }
 export { DOCS_CACHE_TAG }
@@ -14,7 +13,7 @@ export { DOCS_CACHE_TAG }
  * docs, each read at the address its place gives it (`/docs/writing/articles/footnotes`). Once
  * per deploy, `/next/revalidate-all` seeds each site with the docs in src/docs/ it doesn't have
  * yet, as drafts (see `syncRepoDocs`), so a release that ships a doc has it waiting for an
- * editor to rewrite and publish, and lists the repo's changes to docs it has as suggestions. `pnpm docs:export <slug>` writes one from the admin into the repo.
+ * editor to publish. `pnpm docs:export <slug>` writes one from the admin into the repo.
  */
 export const docsPlugin = registerPlugin<SitePluginOptions>({
   slug: "docs",
@@ -40,6 +39,6 @@ export const docsPlugin = registerPlugin<SitePluginOptions>({
       generateURL: (docs) => docURL(docs.map((doc) => doc.slug as string | null | undefined)),
     })({
       ...config,
-      collections: [...(config.collections ?? []), Docs, DocSuggestions],
+      collections: [...(config.collections ?? []), Docs],
     }),
 })

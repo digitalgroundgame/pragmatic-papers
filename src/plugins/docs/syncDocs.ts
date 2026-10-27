@@ -23,14 +23,7 @@ import {
   unpackMedia,
 } from "./repoDoc"
 import { DOCS_DIR, listDocFiles } from "./repoDocFiles"
-import {
-  changedFiles,
-  type DocBaseline,
-  hashFile,
-  readBaseline,
-  saveBaseline,
-  suggestChange,
-} from "./suggest"
+import { type DocBaseline, hashFile, readBaseline, saveBaseline } from "./baseline"
 
 const MIME_TYPES: Record<string, string> = {
   gif: "image/gif",
@@ -47,11 +40,12 @@ export interface SyncResult {
   /** Docs new to this site, created as drafts for an editor to rewrite and publish. */
   created: string[]
   /**
-   * Docs the site has whose repo copy changed since it last took one in: what changed is listed
-   * beside the doc as a suggestion (`suggestChange`). The doc itself is untouched.
+   * Docs the site has whose repo copy changed since it last took one in. The doc is left as its
+   * editors have it, and so is the copy the site last took in (`readBaseline`), so every change
+   * since then can be shown to them later.
    */
-  suggested: string[]
-  /** Docs the site already has, with nothing new to suggest. */
+  changed: string[]
+  /** Docs the site already has, unchanged in the repo. */
   existing: string[]
   /** Docs seeded here before and deleted since, which stay deleted. */
   deleted: string[]
@@ -70,8 +64,8 @@ export type RepoDocAction =
   | "baseline"
   /** The repo's copy is the one the site last took in: nothing to do. */
   | "unchanged"
-  /** The repo's copy changed: list what changed beside the doc. */
-  | "suggest"
+  /** The repo's copy changed: leave the doc and its baseline as they are. */
+  | "changed"
 
 export interface RepoDocState {
   /** Whether the site has a doc with this slug, draft or published. */
@@ -89,8 +83,8 @@ export interface RepoDocState {
 
 /**
  * Decides what a sync does with one repo doc. Code never publishes, changes or deletes a doc a
- * site has: the repo seeds it once, as a first draft, and a later change reaches the site only
- * as a suggestion beside the doc, for its editors to work in by hand.
+ * site has: the repo seeds it once, as a first draft for its editors to rewrite, and a later
+ * change to the repo's copy leaves it alone.
  */
 export function planRepoDoc({
   exists,
@@ -105,7 +99,7 @@ export function planRepoDoc({
   // whether the repo has changed it since. One an editor wrote here has no hash, and gets only
   // later changes.
   if (!offered && (!sourceHash || sourceHash === hash)) return "baseline"
-  return offered?.hash === hash ? "unchanged" : "suggest"
+  return offered?.hash === hash ? "unchanged" : "changed"
 }
 
 export interface SyncOptions {
@@ -159,12 +153,12 @@ async function uploadOnce(
 
 /**
  * Seeds this site's database with each doc in `dir` it has never had, as a draft, with its
- * files uploaded to Media, and lists the repo's changes to a doc it has as a suggestion beside
- * it (`planRepoDoc` decides which). Code never publishes, changes or deletes a doc the site has,
- * so editors own a doc from the moment it arrives and decide every word readers see. Each doc is
- * recorded as seeded (`markSeeded`), so one an editor deletes isn't seeded again; each revision
- * as offered (`markOffered`), so it's suggested once; and the repo's copy the site last took in
- * (`saveBaseline`), so the next change is a diff from it.
+ * files uploaded to Media (`planRepoDoc` decides which). Code never publishes, changes or deletes
+ * a doc the site has, so editors own a doc from the moment it arrives and decide every word
+ * readers see: a later change to the repo's copy is only reported. Each doc is recorded as seeded
+ * (`markSeeded`), so one an editor deletes isn't seeded again, with the hash of the repo's copy
+ * the site took in (`markOffered`) and that copy itself (`saveBaseline`), so the repo's changes
+ * since can be measured against it.
  */
 export async function syncDocs(
   payload: Payload,
@@ -173,7 +167,7 @@ export async function syncDocs(
 ): Promise<SyncResult> {
   const result: SyncResult = {
     created: [],
-    suggested: [],
+    changed: [],
     existing: [],
     deleted: [],
   }
@@ -198,7 +192,7 @@ export async function syncDocs(
       limit: 1,
       overrideAccess: true,
       pagination: false,
-      select: { slug: true, sourceHash: true, title: true },
+      select: { slug: true, sourceHash: true },
       where: { slug: { equals: slug } },
     })
     const existing = docs[0]
@@ -255,24 +249,9 @@ export async function syncDocs(
       continue
     }
 
-    if (action === "suggest") {
-      const changed = new Set(changedFiles(baseline?.files, copy.files))
-      const pictures: (number | string)[] = []
-      for (const [i, ref] of refs.entries()) {
-        if (changed.has(ref.$media)) {
-          pictures.push(await uploadOnce(payload, ref.$media, files[i]!, ref))
-        }
-      }
-      await suggestChange(payload, {
-        doc: existing!.id,
-        title: existing!.title,
-        from: baseline,
-        to: copy,
-        pictures,
-      })
-      await markOffered(payload, DOCS_SLUG, slug, hash)
-      await saveBaseline(payload, slug, copy)
-      result.suggested.push(slug)
+    if (action === "changed") {
+      // Nothing recorded: the hash and the copy on file stay the ones the site took in.
+      result.changed.push(slug)
       continue
     }
 
@@ -283,7 +262,7 @@ export async function syncDocs(
 
     // Converted only for a doc it creates: a deploy reads every doc.
     editorConfig ??= docsEditorConfig(payload.config)
-    const { heroAlt, heroImage, changeNote: _changeNote, ...rest } = meta
+    const { heroAlt, heroImage, ...rest } = meta
     const repoDoc: RepoDoc = {
       ...rest,
       ...(heroImage ? { heroImage: { $media: heroImage, alt: heroAlt } } : {}),

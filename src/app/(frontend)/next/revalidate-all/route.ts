@@ -70,7 +70,7 @@ export async function POST(request: Request): Promise<Response> {
 
   return Response.json({
     revalidated: true,
-    docs: docs && { created: docs.created, suggested: docs.suggested },
+    docs: docs && { created: docs.created, changed: docs.changed },
     pages: { created: pages },
     achievements: { created: achievements },
   })

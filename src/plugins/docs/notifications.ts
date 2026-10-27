@@ -1,10 +1,9 @@
 import type { Payload } from "payload"
-import { hasRoleOrAdmin, isEditor, isStaff, type Role } from "@/access/roles"
+import { hasRoleOrAdmin, isStaff, type Role } from "@/access/roles"
 import type { NotificationSource } from "@/plugins/notifications"
 import { findTour, tourHref } from "@/plugins/tours"
 
 import { docPaths, docsTree, HOME_DOC_SLUG, parentIds, WHATS_NEW_PATH } from "./sections"
-import { DOC_SUGGESTIONS_SLUG } from "./suggestionsCollection"
 import { docThumbnail } from "./thumbnail"
 
 type Switch = (payload: Payload) => boolean | Promise<boolean>
@@ -55,39 +54,5 @@ export const docsNotifications = ({
         image: docThumbnail(doc.heroImage),
         ...(showTours && findTour(doc.tour) ? { showMe: tourHref(doc.tour!) } : {}),
       }))
-  },
-})
-
-/**
- * The repo's changes to docs this site has, for the notifications bell, for editors only (the
- * staff who own the docs): each open suggestion, newest first, linking to it in the admin. Each
- * time a deploy adds to an open suggestion it's dated afresh, so it counts as unread again.
- */
-export const docSuggestionsNotifications = (): NotificationSource => ({
-  type: {
-    slug: "doc-suggestions",
-    label: "Doc suggestions",
-    description: "Changes to features that the help docs should mention.",
-  },
-  index: { label: "See all", href: `/admin/collections/${DOC_SUGGESTIONS_SLUG}` },
-  itemsFor: async ({ payload, user }) => {
-    if (!isEditor(user)) return []
-    const { docs } = await payload.find({
-      collection: DOC_SUGGESTIONS_SLUG,
-      depth: 0,
-      limit: 20,
-      overrideAccess: true,
-      pagination: false,
-      select: { title: true, note: true, updatedAt: true },
-      sort: "-updatedAt",
-      where: { status: { equals: "open" } },
-    })
-    return docs.map((suggestion) => ({
-      id: `${suggestion.id}:${suggestion.updatedAt}`,
-      title: `Update the doc: ${suggestion.title}`,
-      summary: suggestion.note ?? undefined,
-      href: `/admin/collections/${DOC_SUGGESTIONS_SLUG}/${suggestion.id}`,
-      date: suggestion.updatedAt,
-    }))
   },
 })

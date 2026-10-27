@@ -132,41 +132,25 @@ describe("syncDocs", () => {
       })
     ).docs[0]
 
-  /** Changes the summary in the repo's copy, with a note saying so. */
+  /** Changes the summary in the repo's copy. */
   const setSummary = async (summary: string) => {
     const file = path.join(folder, `${SLUG}.md`)
-    const source = (await readFile(file, "utf8")).replace(/^changeNote: .*\n/m, "")
-    await writeFile(
-      file,
-      source.replace(
-        /^summary: .*$/m,
-        `summary: ${summary}\nchangeNote: The summary is now "${summary}"`,
-      ),
-    )
+    const source = await readFile(file, "utf8")
+    await writeFile(file, source.replace(/^summary: .*$/m, `summary: ${summary}`))
   }
 
-  const suggestionsFor = async (status?: "open" | "resolved") =>
+  const versionCount = async () =>
     (
-      await payload.find({
-        collection: "doc-suggestions",
-        depth: 0,
+      await payload.countVersions({
+        collection: "docs",
         overrideAccess: true,
-        sort: "createdAt",
-        where: {
-          and: [
-            { doc: { equals: (await findDoc())!.id } },
-            ...(status ? [{ status: { equals: status } }] : []),
-          ],
-        },
+        where: { parent: { equals: (await findDoc())!.id } },
       })
-    ).docs
+    ).totalDocs
 
-  it("lists the repo's change beside a doc an editor rewrote, and never changes the doc", async () => {
+  it("never changes a doc an editor rewrote when the repo's copy changes", async () => {
     const editor = await createUser("editor")
     const doc = await findDoc()
-    const original = /^summary: .*$/m.exec(
-      await readFile(path.join(folder, `${SLUG}.md`), "utf8"),
-    )![0]
     const edited = await payload.update({
       collection: "docs",
       id: doc!.id,
@@ -177,84 +161,32 @@ describe("syncDocs", () => {
     })
     expect(edited.summary).toBe("Edited in the admin.")
 
-    // Nothing changed in the repo: nothing to suggest.
     expect(own(await syncDocs(payload, dir)).existing).toEqual([SLUG])
-    expect(await suggestionsFor()).toEqual([])
+    const offered = await payload.kv.get(`offered:docs:${SLUG}`)
+    const baseline = await payload.kv.get(`doc-source:docs:${SLUG}`)
+    const versions = await versionCount()
 
     await setSummary("A new summary.")
     expect(own(await syncDocs(payload, dir))).toEqual({
       created: [],
-      suggested: [SLUG],
+      changed: [SLUG],
       existing: [],
       deleted: [],
     })
-    // The doc, published and latest, is the editor's.
+    // The doc, published and latest, is the editor's, with no new version.
     expect((await publishedDoc())?.summary).toBe("Edited in the admin.")
     expect((await findDoc())?.summary).toBe("Edited in the admin.")
     expect((await findDoc())?._status).toBe("published")
-    const [suggestion, ...others] = await suggestionsFor()
-    expect(others).toEqual([])
-    expect(suggestion).toMatchObject({
-      title: doc!.title,
-      status: "open",
-      note: 'The summary is now "A new summary."',
-    })
-    expect(suggestion!.changes).toContain(`-${original}\n+summary: A new summary.`)
-    expect(suggestion!.changes).not.toContain("changeNote")
-
-    // Suggested once: the next deploy leaves it alone.
-    expect(own(await syncDocs(payload, dir)).existing).toEqual([SLUG])
-
-    // A newer change joins the open suggestion, diffed from where it started.
-    await setSummary("A newer summary.")
-    expect(own(await syncDocs(payload, dir)).suggested).toEqual([SLUG])
-    const [joined, ...more] = await suggestionsFor()
-    expect(more).toEqual([])
-    expect(joined!.id).toBe(suggestion!.id)
-    expect(joined!.changes).toContain(`-${original}\n+summary: A newer summary.`)
-    expect(joined!.note).toBe(
-      'The summary is now "A new summary."\n\nThe summary is now "A newer summary."',
-    )
-    expect((await findDoc())?.summary).toBe("Edited in the admin.")
-  })
-
-  it("lets an editor mark a suggestion done, and opens a new one for the next change", async () => {
-    const editor = await createUser("editor")
-    const [open] = await suggestionsFor("open")
-    const done = await payload.update({
-      collection: "doc-suggestions",
-      id: open!.id,
-      data: { status: "resolved" },
-      overrideAccess: false,
-      user: editor,
-    })
-    expect(done.status).toBe("resolved")
-    expect(done.resolvedBy).toMatchObject({ id: editor.id })
-    expect(done.resolvedAt).toEqual(expect.any(String))
-
-    // Writers can't see them, and nobody makes one by hand.
-    const writer = await createUser("writer")
-    await expect(
-      payload.find({ collection: "doc-suggestions", overrideAccess: false, user: writer }),
-    ).rejects.toThrow()
-    await expect(
-      payload.create({
-        collection: "doc-suggestions",
-        data: { title: "By hand", doc: open!.doc as number, status: "open" },
-        overrideAccess: false,
-        user: editor,
-      }),
-    ).rejects.toThrow()
-
-    await setSummary("Yet another summary.")
-    expect(own(await syncDocs(payload, dir)).suggested).toEqual([SLUG])
-    const [next, ...others] = await suggestionsFor("open")
-    expect(others).toEqual([])
-    expect(next!.id).not.toBe(open!.id)
-    expect(next!.changes).toContain("-summary: A newer summary.\n+summary: Yet another summary.")
+    expect(await versionCount()).toBe(versions)
+    // The hash and the copy on file stay the ones the site took in, deploy after deploy.
+    expect(own(await syncDocs(payload, dir)).changed).toEqual([SLUG])
+    expect(await payload.kv.get(`offered:docs:${SLUG}`)).toEqual(offered)
+    expect(await payload.kv.get(`doc-source:docs:${SLUG}`)).toEqual(baseline)
   })
 
   it("keeps a copy of an unchanged doc seeded before copies were kept", async () => {
+    // Back to the copy the site took in.
+    await cp(path.join(DOCS_DIR, SOURCE, `${SLUG}.md`), path.join(folder, `${SLUG}.md`))
     await payload.kv.delete(`doc-source:docs:${SLUG}`)
     expect(own(await syncDocs(payload, dir)).existing).toEqual([SLUG])
     expect(await payload.kv.get(`doc-source:docs:${SLUG}`)).toMatchObject({
@@ -262,15 +194,7 @@ describe("syncDocs", () => {
     })
   })
 
-  it("suggests the whole doc to a doc seeded before offers began that the repo changed since", async () => {
-    for (const suggestion of await suggestionsFor("open")) {
-      await payload.update({
-        collection: "doc-suggestions",
-        id: suggestion.id,
-        data: { status: "dismissed" },
-        overrideAccess: true,
-      })
-    }
+  it("leaves a doc seeded before offers began that the repo changed since, recording nothing", async () => {
     await payload.kv.delete(`offered:docs:${SLUG}`)
     await payload.kv.delete(`doc-source:docs:${SLUG}`)
     // As a doc seeded before offers were recorded: only the hash it was saved with.
@@ -282,11 +206,10 @@ describe("syncDocs", () => {
       overrideAccess: true,
     })
     await setSummary("Changed before offers began.")
-    expect(own(await syncDocs(payload, dir)).suggested).toEqual([SLUG])
-    const [suggestion] = await suggestionsFor("open")
-    expect(suggestion!.note).toContain("no earlier copy")
-    expect(suggestion!.changes).toContain("+summary: Changed before offers began.")
+    expect(own(await syncDocs(payload, dir)).changed).toEqual([SLUG])
     expect((await findDoc())?.summary).toBe("Edited in the admin.")
+    expect(await payload.kv.get(`offered:docs:${SLUG}`)).toBeNull()
+    expect(await payload.kv.get(`doc-source:docs:${SLUG}`)).toBeNull()
   })
 
   it("reuses a PNG it uploaded, though Media stored it as WebP", async () => {
@@ -304,24 +227,16 @@ describe("syncDocs", () => {
   })
 
   it("leaves a doc an editor deleted deleted, though its file is still there", async () => {
-    const { id } = (await findDoc())!
     await payload.delete({
       collection: "docs",
       overrideAccess: true,
       context: ctx,
       where: { slug: { equals: SLUG } },
     })
-    // Its suggestions go with it.
-    const { totalDocs } = await payload.count({
-      collection: "doc-suggestions",
-      overrideAccess: true,
-      where: { doc: { equals: id } },
-    })
-    expect(totalDocs).toBe(0)
     const result = own(await syncDocs(payload, dir))
     expect(result).toEqual({
       created: [],
-      suggested: [],
+      changed: [],
       existing: ["and-another", "another"],
       deleted: [SLUG],
     })
@@ -350,7 +265,7 @@ describe("syncDocs", () => {
     const file = path.join(folder, "and-another.md")
     const source = await readFile(file, "utf8")
     await writeFile(file, source.replace(/^summary: .*$/m, "summary: Changed in the repo."))
-    expect(own(await syncDocs(payload, dir)).suggested).toEqual(["and-another"])
+    expect(own(await syncDocs(payload, dir)).changed).toEqual(["and-another"])
     const latest = await payload.findByID({
       collection: "docs",
       id: doc.id,
@@ -364,7 +279,9 @@ describe("syncDocs", () => {
   it("deletes nothing when a doc's file is gone", async () => {
     await rm(path.join(folder, "another.md"))
     const result = own(await syncDocs(payload, dir))
-    expect(result.existing).toEqual(["and-another"])
+    // The one the last test changed in the repo is still reported as changed.
+    expect(result.changed).toEqual(["and-another"])
+    expect(result.deleted).toEqual([SLUG])
     const { docs } = await payload.find({
       collection: "docs",
       draft: true,

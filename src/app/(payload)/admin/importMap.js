@@ -59,7 +59,6 @@ import { LinkedAccounts as LinkedAccounts_b486c29a74421942d033e2dcba49c5a8 } fro
 import { LinkToDoc as LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { ReindexButton as ReindexButton_aead06e4cbf6b2620c5c51c9ab283634 } from '@payloadcms/plugin-search/client'
 import { InlineCodeFeatureClient as InlineCodeFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
-import { SuggestionChanges as SuggestionChanges_dcaba26e8b5a678d6ae835c105ebe611 } from '@/plugins/docs/exports/client'
 import { ExperimentSwitchField as ExperimentSwitchField_bfc53fcaa9b90365c2431ea18727763a } from '@/globals/SiteSettings/components/ExperimentSwitchField'
 import { TickerPostsField as TickerPostsField_d65ef9a49dad00363969240f35d9582b } from '@/Header/Ticker/TickerPostsField'
 import { IntegrationStatusField as IntegrationStatusField_1900110be8e66af69bcbacc986bd055a } from '@/globals/Integrations/components/IntegrationStatusField'
@@ -75,10 +74,10 @@ import { default as default_8a7ab0eb7ab5c511aba12e68480bfe5e } from '@/component
 import { SignIn as SignIn_34dad4c6fc433e004d883df4dbe637c4 } from '@/plugins/sso/exports/rsc'
 import { MathJaxProviderRoot as MathJaxProviderRoot_5e6ec76a4009b641df710b8874095c4b } from '@/providers/MathJaxProvider'
 import { AdminBarHintProvider as AdminBarHintProvider_0a143f595a642b35392c6258a68b49d3 } from '@/components/AdminBar/AdminBarHintProvider'
+import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
 import { TourGate as TourGate_0c37a05e6e36249360109969f95aaf61 } from '@/plugins/tours/TourGate'
 import { AdminSentryProvider as AdminSentryProvider_667ceb8bba780e4bbe5e9cc4600c3631 } from '@/providers/AdminSentryProvider'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
-import { S3ClientUploadHandler as S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24 } from '@payloadcms/storage-s3/client'
 
 /** @type import('payload').ImportMap */
 export const importMap = {
@@ -143,7 +142,6 @@ export const importMap = {
   "@payloadcms/plugin-search/client#LinkToDoc": LinkToDoc_aead06e4cbf6b2620c5c51c9ab283634,
   "@payloadcms/plugin-search/client#ReindexButton": ReindexButton_aead06e4cbf6b2620c5c51c9ab283634,
   "@payloadcms/richtext-lexical/client#InlineCodeFeatureClient": InlineCodeFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
-  "@/plugins/docs/exports/client#SuggestionChanges": SuggestionChanges_dcaba26e8b5a678d6ae835c105ebe611,
   "@/globals/SiteSettings/components/ExperimentSwitchField#ExperimentSwitchField": ExperimentSwitchField_bfc53fcaa9b90365c2431ea18727763a,
   "@/Header/Ticker/TickerPostsField#TickerPostsField": TickerPostsField_d65ef9a49dad00363969240f35d9582b,
   "@/globals/Integrations/components/IntegrationStatusField#IntegrationStatusField": IntegrationStatusField_1900110be8e66af69bcbacc986bd055a,
@@ -159,8 +157,8 @@ export const importMap = {
   "@/plugins/sso/exports/rsc#SignIn": SignIn_34dad4c6fc433e004d883df4dbe637c4,
   "@/providers/MathJaxProvider#MathJaxProviderRoot": MathJaxProviderRoot_5e6ec76a4009b641df710b8874095c4b,
   "@/components/AdminBar/AdminBarHintProvider#AdminBarHintProvider": AdminBarHintProvider_0a143f595a642b35392c6258a68b49d3,
+  "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24,
   "@/plugins/tours/TourGate#TourGate": TourGate_0c37a05e6e36249360109969f95aaf61,
   "@/providers/AdminSentryProvider#AdminSentryProvider": AdminSentryProvider_667ceb8bba780e4bbe5e9cc4600c3631,
-  "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1,
-  "@payloadcms/storage-s3/client#S3ClientUploadHandler": S3ClientUploadHandler_f97aa6c64367fa259c5bc0567239ef24
+  "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

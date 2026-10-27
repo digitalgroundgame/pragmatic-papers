@@ -8,7 +8,7 @@ import { syncRepoDocs } from "../syncRepoDocs"
 
 const logger = { info: vi.fn(), error: vi.fn() }
 const payload = { logger } as unknown as Payload
-const empty = { created: [], suggested: [], existing: [], deleted: [] }
+const empty = { created: [], changed: [], existing: [], deleted: [] }
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -25,10 +25,10 @@ describe("syncRepoDocs", () => {
     expect(logger.info).toHaveBeenCalledWith({ created: ["a"] }, expect.any(String))
   })
 
-  it("logs the docs it listed suggestions for", async () => {
-    syncDocs.mockResolvedValue({ ...empty, suggested: ["a"] })
+  it("logs the docs the repo changed, which it left alone", async () => {
+    syncDocs.mockResolvedValue({ ...empty, changed: ["a"] })
     await syncRepoDocs(payload)
-    expect(logger.info).toHaveBeenCalledWith({ suggested: ["a"] }, expect.any(String))
+    expect(logger.info).toHaveBeenCalledWith({ changed: ["a"] }, expect.any(String))
   })
 
   it("logs nothing when the site has every doc already", async () => {

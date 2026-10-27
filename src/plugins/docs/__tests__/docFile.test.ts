@@ -60,15 +60,6 @@ describe("parseDocFile", () => {
     expect(formatDocFile({ meta, body: "Hi." })).toContain("tour: articles\n")
   })
 
-  it("reads the note on what a change is about", () => {
-    const withNote = source.replace("---\n\n", "changeNote: Hide moved to the Ticker tab.\n---\n\n")
-    const { meta } = parseDocFile(withNote, "a.md")
-    expect(meta.changeNote).toBe("Hide moved to the Ticker tab.")
-    expect(formatDocFile({ meta, body: "Hi." })).toContain(
-      "changeNote: Hide moved to the Ticker tab.\n",
-    )
-  })
-
   it.each([
     ["no front matter", "Just text", /no front matter/],
     [
@@ -97,11 +88,6 @@ describe("parseDocFile", () => {
       "a tour that isn't a key",
       source.replace("---\n\n", "tour: [articles]\n---\n\n"),
       /tour's key/,
-    ],
-    [
-      "a change note that isn't a sentence",
-      source.replace("---\n\n", "changeNote: true\n---\n\n"),
-      /"changeNote" should be a sentence/,
     ],
   ])("refuses %s", (_, text, message) => {
     expect(() => parseDocFile(text, "a.md")).toThrow(message)

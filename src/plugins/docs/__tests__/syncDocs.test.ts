@@ -8,7 +8,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { hashRepoDoc, legacyRepoDocHash, mediaFilename } from "../repoDoc"
 import { listDocFiles } from "../repoDocFiles"
-import { NO_BASELINE_NOTE } from "../suggest"
 import { planRepoDoc, type RepoDocState, syncDocs } from "../syncDocs"
 
 // The editor's own conversion is tested against the real config in markdown.test.ts.
@@ -49,13 +48,12 @@ const baseline = (doc: string) => ({
 
 /**
  * A Payload whose find answers from `docs` (those with the slug asked for, or with none),
- * `media` and `suggestions`, whose key-value store holds `kv` (a key, or a key and its value),
+ * and `media`, whose key-value store holds `kv` (a key, or a key and its value),
  * and which records what was written.
  */
 const fakePayload = ({
   docs = [] as Record<string, unknown>[],
   media = [] as Record<string, unknown>[],
-  suggestions = [] as Record<string, unknown>[],
   kv = [] as (string | [string, unknown])[],
 } = {}) => {
   let nextDoc = 1
@@ -80,13 +78,11 @@ const fakePayload = ({
         docs:
           collection === "media"
             ? media
-            : collection === "doc-suggestions"
-              ? suggestions
-              : docs.filter((doc) => !doc.slug || doc.slug === where?.slug?.equals),
+            : docs.filter((doc) => !doc.slug || doc.slug === where?.slug?.equals),
       }),
     ),
     create: vi.fn(async ({ collection }: { collection: string }) => ({
-      id: collection === "media" ? 41 : collection === "doc-suggestions" ? 70 : nextDoc++,
+      id: collection === "media" ? 41 : nextDoc++,
     })),
     update: vi.fn(async () => ({})),
     delete: vi.fn(async () => ({})),
@@ -109,7 +105,7 @@ describe("syncDocs", () => {
     const payload = fakePayload()
     await expect(syncDocs(payload, path.join(dir, "missing"))).resolves.toEqual({
       created: [],
-      suggested: [],
+      changed: [],
       existing: [],
       deleted: [],
     })
@@ -121,12 +117,12 @@ describe("syncDocs", () => {
     const payload = fakePayload()
     await expect(syncDocs(payload, dir)).resolves.toEqual({
       created: ["experiments"],
-      suggested: [],
+      changed: [],
       existing: [],
       deleted: [],
     })
     expect(payload.kv.store.has("seeded:docs:experiments")).toBe(true)
-    // Its revision counts as offered, and its copy is kept for the next change to diff from.
+    // Its revision counts as offered, and its copy is kept for later changes to be measured against.
     expect(payload.kv.store.get("offered:docs:experiments")).toEqual({
       hash: hashRepoDoc(source, [hero, image]),
       at: expect.any(String),
@@ -172,7 +168,7 @@ describe("syncDocs", () => {
     const payload = fakePayload({ kv: ["seeded:docs:experiments"] })
     await expect(syncDocs(payload, dir)).resolves.toEqual({
       created: [],
-      suggested: [],
+      changed: [],
       existing: [],
       deleted: ["experiments"],
     })
@@ -227,7 +223,7 @@ describe("syncDocs", () => {
     })
     await expect(syncDocs(payload, dir)).resolves.toEqual({
       created: [],
-      suggested: [],
+      changed: [],
       existing: ["experiments"],
       deleted: [],
     })
@@ -242,31 +238,17 @@ describe("syncDocs", () => {
     expect(payload.delete).not.toHaveBeenCalled()
   })
 
-  it("suggests a change made before offers began, with the whole doc when it has no copy", async () => {
+  it("leaves a doc alone that the repo changed before offers began, recording nothing", async () => {
     const payload = fakePayload({
-      docs: [{ id: 3, sourceHash: "old", title: "Experiments" }],
+      docs: [{ id: 3, sourceHash: "old" }],
       kv: ["seeded:docs:experiments"],
     })
-    expect((await syncDocs(payload, dir)).suggested).toEqual(["experiments"])
+    expect((await syncDocs(payload, dir)).changed).toEqual(["experiments"])
     expect(payload.update).not.toHaveBeenCalled()
-    expect(payload.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        collection: "doc-suggestions",
-        data: expect.objectContaining({
-          doc: 3,
-          title: "Experiments",
-          status: "open",
-          note: NO_BASELINE_NOTE,
-          changes: expect.stringContaining("+title: Experiments"),
-          fromSource: null,
-          toSource: source,
-        }),
-      }),
-    )
-    expect(payload.kv.store.get("offered:docs:experiments")).toEqual(
-      expect.objectContaining({ hash: hashRepoDoc(source, [hero, image]) }),
-    )
-    expect(payload.kv.store.get("doc-source:docs:experiments")).toEqual(baseline(source))
+    expect(payload.create).not.toHaveBeenCalled()
+    // The hash the doc was saved with stays the one the site took in.
+    expect(payload.kv.store.has("offered:docs:experiments")).toBe(false)
+    expect(payload.kv.store.has("doc-source:docs:experiments")).toBe(false)
   })
 
   it("leaves a doc alone when the repo's copy is the one it was last offered", async () => {
@@ -299,104 +281,35 @@ describe("syncDocs", () => {
 
   const changed = source.replace(
     "summary: Switch beta features on per site.",
-    "summary: Switch beta features on per site, from Plugins.\nchangeNote: Betas moved to Plugins.",
+    "summary: Switch beta features on per site, from Plugins.",
   )
 
-  it("suggests what changed beside the doc, and never changes the doc", async () => {
+  it("never changes a doc the site has when the repo's copy changes", async () => {
     await writeFile(path.join(dir, "experiments.md"), changed)
+    await writeFile(path.join(dir, "experiments-drawer.png"), Buffer.from("a new drawer"))
+    const offered = { hash: hashRepoDoc(source, [hero, image]), at: "then" }
     const payload = fakePayload({
-      docs: [{ id: 3, title: "Beta features" }],
+      docs: [{ id: 3 }],
       kv: [
         "seeded:docs:experiments",
-        ["offered:docs:experiments", { hash: "old" }],
+        ["offered:docs:experiments", offered],
         ["doc-source:docs:experiments", baseline(source)],
       ],
     })
     await expect(syncDocs(payload, dir)).resolves.toEqual({
       created: [],
-      suggested: ["experiments"],
+      changed: ["experiments"],
       existing: [],
       deleted: [],
     })
     expect(payload.update).not.toHaveBeenCalled()
-    expect(payload.delete).not.toHaveBeenCalled()
-    // The pictures didn't change, so nothing is uploaded: only the suggestion is created.
-    expect(payload.create).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({
-        collection: "doc-suggestions",
-        overrideAccess: true,
-        data: expect.objectContaining({
-          doc: 3,
-          title: "Beta features",
-          note: "Betas moved to Plugins.",
-          changes: expect.stringContaining(
-            "-summary: Switch beta features on per site.\n+summary: Switch beta features on per site, from Plugins.",
-          ),
-          fromSource: source,
-          toSource: changed,
-          pictures: [],
-        }),
-      }),
-    )
-    const [[{ data }]] = payload.create.mock.calls as unknown as [[{ data: { changes: string } }]]
-    expect(data.changes).not.toContain("changeNote")
-    expect(payload.kv.store.get("doc-source:docs:experiments")).toEqual(
-      expect.objectContaining({ source: changed }),
-    )
-  })
-
-  it("uploads a changed picture with the suggestion, for editors to use", async () => {
-    const newImage = Buffer.from("a new drawer")
-    await writeFile(path.join(dir, "experiments-drawer.png"), newImage)
-    const payload = fakePayload({
-      docs: [{ id: 3, title: "Experiments" }],
-      kv: [
-        "seeded:docs:experiments",
-        ["offered:docs:experiments", { hash: "old" }],
-        ["doc-source:docs:experiments", baseline(source)],
-      ],
-    })
-    await syncDocs(payload, dir)
-    expect(payload.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        collection: "media",
-        file: expect.objectContaining({ name: mediaFilename("experiments-drawer.png", newImage) }),
-      }),
-    )
-    expect(payload.create).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        collection: "doc-suggestions",
-        data: expect.objectContaining({ changes: "", pictures: [41] }),
-      }),
-    )
-  })
-
-  it("adds a change to the doc's open suggestion, diffed from where that one started", async () => {
-    await writeFile(path.join(dir, "experiments.md"), changed)
-    const older = source.replace("title: Experiments", "title: Old experiments")
-    const payload = fakePayload({
-      docs: [{ id: 3, title: "Experiments" }],
-      suggestions: [{ id: 8, fromSource: older, note: "Renamed.", pictures: [{ id: 5 }] }],
-      kv: [
-        "seeded:docs:experiments",
-        ["offered:docs:experiments", { hash: "old" }],
-        ["doc-source:docs:experiments", baseline(source)],
-      ],
-    })
-    expect((await syncDocs(payload, dir)).suggested).toEqual(["experiments"])
     expect(payload.create).not.toHaveBeenCalled()
-    expect(payload.update).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({
-        collection: "doc-suggestions",
-        id: 8,
-        data: expect.objectContaining({
-          note: "Renamed.\n\nBetas moved to Plugins.",
-          changes: expect.stringMatching(/-title: Old experiments[\s\S]*\+summary: .*Plugins/),
-          toSource: changed,
-          pictures: [5],
-        }),
-      }),
-    )
+    expect(payload.delete).not.toHaveBeenCalled()
+    // The hash and the copy on file stay the ones the site took in, so every change since can
+    // be measured against them.
+    expect(payload.kv.set).not.toHaveBeenCalled()
+    expect(payload.kv.store.get("offered:docs:experiments")).toEqual(offered)
+    expect(payload.kv.store.get("doc-source:docs:experiments")).toEqual(baseline(source))
   })
 
   it("deletes nothing, even when the folder holds no docs", async () => {
@@ -404,7 +317,7 @@ describe("syncDocs", () => {
     const payload = fakePayload({ docs: [{ id: 7, slug: "old-name", sourceHash: "abc" }] })
     await expect(syncDocs(payload, dir)).resolves.toEqual({
       created: [],
-      suggested: [],
+      changed: [],
       existing: [],
       deleted: [],
     })
@@ -491,7 +404,7 @@ Intro.
         ["offered:docs:experiments", { hash: "old" }],
       ],
     })
-    expect((await syncDocs(payload, dir)).suggested).toEqual(["experiments"])
+    expect((await syncDocs(payload, dir)).changed).toEqual(["experiments"])
     expect(payload.update).not.toHaveBeenCalled()
     expect(createdDocs(payload)).toEqual([])
   })
@@ -512,7 +425,7 @@ Intro.
       ],
     })
     const result = await syncDocs(payload, dir)
-    expect(result.suggested).toEqual([])
+    expect(result.changed).toEqual([])
     expect(result.existing).toContain("experiments")
     expect(payload.update).not.toHaveBeenCalled()
     expect(payload.kv.store.get("offered:docs:experiments")).toEqual({
@@ -521,7 +434,7 @@ Intro.
     })
   })
 
-  it("still suggests a change to a doc whose old hash covered another folder or another copy", async () => {
+  it("still reports a change to a doc whose old hash covered another folder or another copy", async () => {
     const payload = fakePayload({
       docs: [{ id: 32, slug: "experiments" }],
       kv: [
@@ -532,7 +445,7 @@ Intro.
         ],
       ],
     })
-    expect((await syncDocs(payload, dir)).suggested).toEqual(["experiments"])
+    expect((await syncDocs(payload, dir)).changed).toEqual(["experiments"])
   })
 })
 
@@ -569,17 +482,17 @@ describe("planRepoDoc", () => {
     expect(planRepoDoc(state({ offered: null, sourceHash: null }))).toBe("baseline")
   })
 
-  it("suggests a change made before offers began to a doc never offered a revision", () => {
-    expect(planRepoDoc(state({ offered: null, sourceHash: "old" }))).toBe("suggest")
+  it("reports a change made before offers began to a doc never offered a revision", () => {
+    expect(planRepoDoc(state({ offered: null, sourceHash: "old" }))).toBe("changed")
   })
 
   it("does nothing when the repo's copy is the one last offered", () => {
     expect(planRepoDoc(state({ hash: "old" }))).toBe("unchanged")
   })
 
-  it("suggests a changed copy", () => {
-    expect(planRepoDoc(state())).toBe("suggest")
-    expect(planRepoDoc(state({ offered: { hash: "old", version: 4, at: "then" } }))).toBe("suggest")
+  it("reports a changed copy, whatever drafts the doc has", () => {
+    expect(planRepoDoc(state())).toBe("changed")
+    expect(planRepoDoc(state({ offered: { hash: "old", version: 4, at: "then" } }))).toBe("changed")
   })
 })
 

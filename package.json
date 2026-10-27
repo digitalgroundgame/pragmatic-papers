@@ -87,6 +87,7 @@
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "feed": "^6.0.0",
+    "geist": "1.8.2",
     "graphql": "^16.13.2",
     "htmlparser2": "^12.0.0",
     "lottie-react": "^3.1.2",

@@ -18,20 +18,20 @@ async function isLive(req: PayloadRequest, id: number | string | null): Promise<
 }
 
 /**
- * Only editors unpublish a live article. A writer may save drafts of an article they
- * created or are credited on, which `isDraftOrEditor` allows, but an update that sets
- * `_status: "draft"` without saving a draft is an unpublish, and access can't tell the
- * two apart: both arrive as a draft status, and only the operation knows `draft`.
- * Restoring an older draft version over the live article is an unpublish too.
- * Deleting a live article is refused to writers by `canDeleteArticle`.
+ * Only editors change what readers see of a live article. A writer may save drafts of an
+ * article they created or are credited on, which `isDraftOrEditor` allows, but any update
+ * that isn't a draft save writes the live article: with `_status: "draft"` it unpublishes
+ * it, and with no `_status` it changes it in place. Access can't tell either from a draft
+ * save, because only the operation knows `draft`. Restoring an older draft version over
+ * the live article unpublishes it too. Deleting a live article is refused to writers by
+ * `canDeleteArticle`.
  */
-export const keepWritersFromUnpublishing: CollectionBeforeOperationHook = async ({
+export const keepWritersOffLiveArticles: CollectionBeforeOperationHook = async ({
   args,
   operation,
   req,
 }) => {
-  const { data, draft, id, overrideAccess } = args as {
-    data?: { _status?: unknown }
+  const { draft, id, overrideAccess } = args as {
     draft?: boolean
     id?: number | string
     overrideAccess?: boolean
@@ -56,7 +56,6 @@ export const keepWritersFromUnpublishing: CollectionBeforeOperationHook = async 
   }
 
   if (operation !== "update") return args
-  if (data?._status !== "draft") return args
 
   // A bulk update can't be checked one article at a time here, so a writer gets none.
   if (id === undefined) throw new Forbidden(req.t)

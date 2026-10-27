@@ -1,7 +1,7 @@
 ---
 title: Who can write, publish and schedule an article
 navTitle: Publishing and roles
-summary: Writers draft their own articles and editors publish them. Your work saves itself as you go, and Live Preview shows it as readers will see it.
+summary: Writers draft the articles they write and editors publish them. Your work saves itself as you go, and Live Preview shows it as readers will see it.
 publishedAt: 2025-07-01
 revisedAt: 2026-10-26
 heroImage: writing-and-publishing-hero.webp
@@ -13,8 +13,8 @@ Every article starts as a draft. Readers only see it once it's published, and on
 
 ## Writers
 
-- Create articles and edit the ones **you created**, whether they're drafts or already published.
-- You can't publish, and you can't change a published article's live version. When a draft is ready, tell an editor.
+- Create articles, and edit the drafts of any article **you created or are credited on** as an author, even one that's already published.
+- You can't publish, and your edits to a published article stay in its draft until an editor publishes them. When a draft is ready, tell an editor.
 - You can delete an article you created while it isn't published. Once it's live, only an editor can unpublish it, delete it, or restore an older draft version over it. Restoring a version **as a draft** still works.
 
 ## Editors

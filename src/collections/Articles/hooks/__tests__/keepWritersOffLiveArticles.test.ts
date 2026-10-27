@@ -2,7 +2,7 @@
 import { Forbidden } from "payload"
 import { describe, expect, it, vi } from "vitest"
 
-import { keepWritersFromUnpublishing } from "../keepWritersFromUnpublishing"
+import { keepWritersOffLiveArticles } from "../keepWritersOffLiveArticles"
 
 const writer = { id: 7, roles: ["writer"] }
 const editor = { id: 8, roles: ["editor"] }
@@ -21,11 +21,11 @@ function fakeReq({
 }
 
 const run = (operation: string, args: Record<string, unknown>, req: unknown) =>
-  keepWritersFromUnpublishing({ args, operation, req } as never)
+  keepWritersOffLiveArticles({ args, operation, req } as never)
 
 const unpublishArgs = { id: 1, data: { _status: "draft" } }
 
-describe("keepWritersFromUnpublishing on update", () => {
+describe("keepWritersOffLiveArticles on update", () => {
   it("refuses a writer unpublishing a live article", async () => {
     const { req } = fakeReq()
     await expect(run("update", unpublishArgs, req)).rejects.toBeInstanceOf(Forbidden)
@@ -48,11 +48,17 @@ describe("keepWritersFromUnpublishing on update", () => {
     await expect(run("update", unpublishArgs, req)).resolves.toBe(unpublishArgs)
   })
 
-  it("ignores updates that don't set a draft status", async () => {
-    const { req, findByID } = fakeReq()
+  it("refuses a writer changing a live article in place, without a draft or a status", async () => {
+    const { req } = fakeReq()
+    await expect(run("update", { id: 1, data: { title: "Renamed" } }, req)).rejects.toBeInstanceOf(
+      Forbidden,
+    )
+  })
+
+  it("lets a writer change an article that isn't live in place", async () => {
+    const { req } = fakeReq({ status: "draft" })
     const args = { id: 1, data: { title: "Renamed" } }
     await expect(run("update", args, req)).resolves.toBe(args)
-    expect(findByID).not.toHaveBeenCalled()
   })
 
   it("refuses a writer's bulk update to a draft status", async () => {
@@ -79,7 +85,7 @@ describe("keepWritersFromUnpublishing on update", () => {
   })
 })
 
-describe("keepWritersFromUnpublishing on restoreVersion", () => {
+describe("keepWritersOffLiveArticles on restoreVersion", () => {
   it("refuses a writer restoring a draft version over a live article", async () => {
     const { req } = fakeReq({ version: { parent: 1, status: "draft" } })
     await expect(run("restoreVersion", { id: "v1" }, req)).rejects.toBeInstanceOf(Forbidden)

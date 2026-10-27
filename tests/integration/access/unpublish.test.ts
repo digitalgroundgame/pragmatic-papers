@@ -109,6 +109,42 @@ describe("unpublishing an article", () => {
   })
 })
 
+describe("changing a live article in place", () => {
+  /** What a non-draft API update sends: new content, no `_status`, no draft flag. */
+  function rename(user: User, id: number, title: string) {
+    return payload.update({
+      collection: "articles",
+      id,
+      overrideAccess: false,
+      user,
+      context: ctx,
+      data: { title },
+    })
+  }
+
+  async function liveTitle(id: number): Promise<string> {
+    const article = await payload.findByID({ collection: "articles", id, depth: 0 })
+    return article.title
+  }
+
+  it("is refused to a writer, leaving the live copy as it was", async () => {
+    const writer = await createUser("writer")
+    const article = await liveArticle({ createdBy: writer.id })
+
+    await expect(rename(writer, article.id, "Changed live")).rejects.toBeInstanceOf(Forbidden)
+    expect(await liveTitle(article.id)).toBe(article.title)
+    expect(await isLive(article.id)).toBe(true)
+  })
+
+  it("is allowed to an editor", async () => {
+    const editor = await createUser("editor")
+    const article = await liveArticle({})
+
+    await rename(editor, article.id, "Changed live by an editor")
+    expect(await liveTitle(article.id)).toBe("Changed live by an editor")
+  })
+})
+
 describe("restoring a draft version of a live article", () => {
   /** A live article whose history holds an earlier draft version, and that version's id. */
   async function liveWithDraftVersion(data: Partial<Article>) {

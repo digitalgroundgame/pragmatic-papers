@@ -3,7 +3,7 @@ import type { Condition, Field } from "payload"
 import { describe, expect, it } from "vitest"
 
 import { canDeleteArticle, isDraftOrEditor } from "@/access/policies"
-import { keepWritersFromUnpublishing } from "@/collections/Articles/hooks/keepWritersFromUnpublishing"
+import { keepWritersOffLiveArticles } from "@/collections/Articles/hooks/keepWritersOffLiveArticles"
 import { Articles } from "../index"
 
 /** Finds a field by name anywhere in the config, through tabs, rows and groups. */
@@ -37,7 +37,7 @@ describe("Articles access", () => {
   it("only editors take a live article down", () => {
     expect(Articles.access?.delete).toBe(canDeleteArticle)
     expect(Articles.access?.update).toBe(isDraftOrEditor)
-    expect(Articles.hooks?.beforeOperation).toContain(keepWritersFromUnpublishing)
+    expect(Articles.hooks?.beforeOperation).toContain(keepWritersOffLiveArticles)
   })
 
   it("shows Syndicate to Substack to editors only", () => {

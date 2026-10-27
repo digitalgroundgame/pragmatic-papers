@@ -26,7 +26,7 @@ import {
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
-import { keepWritersFromUnpublishing } from "@/collections/Articles/hooks/keepWritersFromUnpublishing"
+import { keepWritersOffLiveArticles } from "@/collections/Articles/hooks/keepWritersOffLiveArticles"
 import { removeFromRankings } from "@/collections/Articles/hooks/removeFromRankings"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
 import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
@@ -330,7 +330,7 @@ export const Articles: CollectionConfig = {
     },
   ],
   hooks: {
-    beforeOperation: [keepWritersFromUnpublishing],
+    beforeOperation: [keepWritersOffLiveArticles],
     beforeChange: [
       rememberReadersCopy,
       (args: Parameters<CollectionBeforeChangeHook<Article>>[0]): Partial<Article> | void => {

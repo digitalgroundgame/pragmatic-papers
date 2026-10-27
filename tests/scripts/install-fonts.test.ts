@@ -306,7 +306,8 @@ describe("install-fonts.ts", () => {
       expect(result.stderr).toContain("Installed Geist-latin.woff2 from the geist package")
       const font = readFileSync(GEIST_FILE())
       expect(font.subarray(0, 4).toString("latin1")).toBe("wOF2")
-      // Latin only, weights 400–600: well under the package's 70 kB, and Google's 29 kB.
+      // Latin and Latin Extended-A, weights 400–600: well under the package's 70 kB, and
+      // the 29 kB Google served for latin alone.
       expect(font.byteLength).toBeLessThan(29_000)
       expect(font.byteLength).toBeLessThan(GEIST.byteLength / 2)
     })

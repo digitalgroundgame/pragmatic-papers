@@ -18,8 +18,8 @@ const FKScreamer = localFont({
   variable: "--font-display",
 })
 
-// Geist comes from Vercel's `geist` package, trimmed to the latin characters and weights
-// 400–600 at install (scripts/install-fonts.ts), so a build never fetches it:
+// Geist comes from Vercel's `geist` package, trimmed to Latin and Latin Extended-A and
+// weights 400–600 at install (scripts/install-fonts.ts), so a build never fetches it:
 // next/font/google downloads it from Google on every build, and fails the build when
 // Google's answer is off. Like Google's CSS, both weights are faces of the one variable
 // file.

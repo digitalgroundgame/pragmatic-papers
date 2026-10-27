@@ -66,13 +66,14 @@ async function subsetDisplayFont(path: string): Promise<void> {
 }
 
 /**
- * The characters Geist keeps: Google Fonts' "latin" subset, the one pages used to preload
- * from Google. Anything else falls back per character.
+ * The characters Geist keeps: Google Fonts' "latin" subset, plus the Latin Extended-A and
+ * Romanian ș/ț that FKScreamer keeps, so names like Erdoğan or Wałęsa render in both
+ * fonts. Cyrillic and Vietnamese would take every page's preload from 26 kB to 38 kB, so
+ * they fall back per character.
  */
 const SANS_FONT_RANGES: [number, number][] = [
-  [0x0000, 0x00ff],
-  [0x0131, 0x0131],
-  [0x0152, 0x0153],
+  [0x0000, 0x017f],
+  [0x0218, 0x021b],
   [0x02bb, 0x02bc],
   [0x02c6, 0x02c6],
   [0x02da, 0x02da],
@@ -95,8 +96,9 @@ const SANS_FONT_RANGES: [number, number][] = [
  * Installs the body font, Geist, into `<root>/public/fonts/Geist-latin.woff2` and returns
  * the exit code. It comes from Vercel's `geist` package (a dependency, so always there)
  * rather than next/font/google, which fetches it from Google on every build and fails
- * the build when Google's answer is off. The variable font is trimmed to the latin
- * characters and the weights the site uses: 70 kB down to under the 29 kB Google served.
+ * the build when Google's answer is off. The variable font is trimmed to the Latin
+ * characters and the weights the site uses: 70 kB down to 26 kB, under the 29 kB Google
+ * served for latin alone.
  */
 export async function installSansFont(root: string = process.cwd()): Promise<number> {
   const src = resolve(

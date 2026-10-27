@@ -1,5 +1,4 @@
 import { cn } from "@/utilities/utils"
-import { Geist } from "next/font/google"
 import localFont from "next/font/local"
 
 const FKScreamer = localFont({
@@ -19,10 +18,19 @@ const FKScreamer = localFont({
   variable: "--font-display",
 })
 
-// Next has no metrics for Geist, so it generates no fallback of its own.
-const geist = Geist({
-  weight: ["400", "600"],
-  subsets: ["latin"],
+// Geist ships with the repo, so a build never fetches it: next/font/google downloads it
+// from Google on every build, and fails the build when Google's answer is off. The file is
+// Google Fonts' "latin" subset of Geist v5, the variable font Google served for these
+// weights; other characters fall back per character. Like Google's CSS, both weights are
+// faces of the one file. Geist is under the SIL Open Font License (_fonts/Geist-OFL.txt).
+const geist = localFont({
+  src: [
+    { path: "./_fonts/Geist-latin.woff2", weight: "400", style: "normal" },
+    { path: "./_fonts/Geist-latin.woff2", weight: "600", style: "normal" },
+  ],
+  display: "swap",
+  // These faces (globals.css) are sized to Geist's widths, as next/font/google left them.
+  adjustFontFallback: false,
   fallback: ["Geist Fallback Arial", "Geist Fallback Roboto", "Helvetica", "Arial", "sans-serif"],
   variable: "--font-sans",
 })

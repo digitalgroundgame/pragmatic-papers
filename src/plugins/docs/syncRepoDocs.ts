@@ -3,8 +3,8 @@ import type { Payload } from "payload"
 import { type SyncResult, syncDocs } from "./syncDocs"
 
 /**
- * Seeds this site's database with the repo's docs it doesn't have yet, as drafts, and offers the
- * repo's changes to docs it has as new draft versions. Drafts aren't on /docs or in the bell, so
+ * Seeds this site's database with the repo's docs it doesn't have yet, as drafts, and lists the
+ * repo's changes to docs it has as suggestions beside them, leaving the docs alone. Drafts aren't on /docs or in the bell, so
  * nothing is cached to drop: an editor publishing one clears the caches, as any save does. Run
  * once per deploy, inside the request `/next/revalidate-all` gets when a deploy goes live, not
  * when a server starts: a Worker starts many times, and would cut short a sync left running
@@ -17,16 +17,10 @@ export async function syncRepoDocs(payload: Payload): Promise<SyncResult | null>
     if (result.created.length) {
       payload.logger.info({ created: result.created }, "Seeded help docs from the repo as drafts")
     }
-    if (result.offered.length) {
+    if (result.suggested.length) {
       payload.logger.info(
-        { offered: result.offered },
-        "Offered the repo's changes to help docs as new drafts",
-      )
-    }
-    if (result.skipped.length) {
-      payload.logger.info(
-        { skipped: result.skipped },
-        "Left the repo's changes to help docs an editor has a draft of; a later deploy offers them",
+        { suggested: result.suggested },
+        "Listed the repo's changes to help docs as suggestions for editors",
       )
     }
     return result

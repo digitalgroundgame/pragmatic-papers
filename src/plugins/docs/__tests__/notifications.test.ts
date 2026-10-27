@@ -6,7 +6,7 @@ import type { User } from "@/payload-types"
 const { queryPublishedDocs } = vi.hoisted(() => ({ queryPublishedDocs: vi.fn() }))
 vi.mock("../queries", () => ({ queryPublishedDocs }))
 
-import { docsNotifications } from "../notifications"
+import { docSuggestionsNotifications, docsNotifications } from "../notifications"
 import { docThumbnail } from "../thumbnail"
 
 const payload = {} as Payload
@@ -126,5 +126,53 @@ describe("docsNotifications", () => {
     expect(await titlesFor(["member"])).toEqual([])
     expect(await titlesFor([])).toEqual([])
     expect(queryPublishedDocs).not.toHaveBeenCalled()
+  })
+})
+
+describe("docSuggestionsNotifications", () => {
+  const suggestions = [
+    { id: 4, title: "Footnotes", note: "Footnotes number themselves.", updatedAt: "2026-10-27" },
+    { id: 3, title: "Ticker", note: null, updatedAt: "2026-10-26" },
+  ]
+  const find = vi.fn(async () => ({ docs: suggestions }))
+  const withSuggestions = { find } as unknown as Payload
+
+  it("lists open suggestions for editors, linking to each in the admin", async () => {
+    const items = await docSuggestionsNotifications().itemsFor({
+      payload: withSuggestions,
+      user: user(["editor"]),
+    })
+    expect(items).toEqual([
+      {
+        id: "4:2026-10-27",
+        title: "Update the doc: Footnotes",
+        summary: "Footnotes number themselves.",
+        href: "/admin/collections/doc-suggestions/4",
+        date: "2026-10-27",
+      },
+      {
+        id: "3:2026-10-26",
+        title: "Update the doc: Ticker",
+        summary: undefined,
+        href: "/admin/collections/doc-suggestions/3",
+        date: "2026-10-26",
+      },
+    ])
+    expect(find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collection: "doc-suggestions",
+        where: { status: { equals: "open" } },
+      }),
+    )
+  })
+
+  it("shows nothing to staff who don't own the docs", async () => {
+    find.mockClear()
+    const items = await docSuggestionsNotifications().itemsFor({
+      payload: withSuggestions,
+      user: user(["writer"]),
+    })
+    expect(items).toEqual([])
+    expect(find).not.toHaveBeenCalled()
   })
 })

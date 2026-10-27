@@ -32,6 +32,12 @@ export interface DocFrontMatter {
    * Editors reorder by dragging once it's seeded.
    */
   order?: number
+  /**
+   * What the change to an existing doc is about, for the editors who own it: a site that has
+   * the doc gets the diff as a suggestion with this note, and never the text itself. Every PR
+   * that changes an existing doc gives it a new one (CI checks).
+   */
+  changeNote?: string
 }
 
 export interface DocFile {
@@ -51,6 +57,7 @@ const KEYS = [
   "showTableOfContents",
   "tour",
   "order",
+  "changeNote",
 ] as const satisfies (keyof DocFrontMatter)[]
 
 const REQUIRED = ["title", "summary", "publishedAt"] as const
@@ -134,6 +141,9 @@ export function parseDocFile(source: string, name: string): DocFile {
   }
   if (meta.order !== undefined && !Number.isInteger(meta.order)) {
     throw new Error(`${name}: "order" should be a whole number, e.g. 1`)
+  }
+  if (meta.changeNote !== undefined && typeof meta.changeNote !== "string") {
+    throw new Error(`${name}: "changeNote" should be a sentence about what changed`)
   }
   if (meta.tour !== undefined && typeof meta.tour !== "string") {
     throw new Error(`${name}: "tour" should be a tour's key, e.g. articles`)

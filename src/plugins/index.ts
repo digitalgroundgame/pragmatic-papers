@@ -3,7 +3,7 @@ import { admin, editor } from "@/access/collections"
 import { isAdmin, isStaff } from "@/access/roles"
 import { revalidateRedirects, revalidateRedirectsDelete } from "@/hooks/revalidateRedirects"
 import { docsPlugin } from "@/plugins/docs"
-import { docsNotifications } from "@/plugins/docs/notifications"
+import { docSuggestionsNotifications, docsNotifications } from "@/plugins/docs/notifications"
 import { notificationsPlugin } from "@/plugins/notifications"
 import { toursPlugin } from "@/plugins/tours"
 import type { Article, Interactive, Page, Topic, User, Volume } from "@/payload-types"
@@ -407,7 +407,10 @@ export const plugins: Plugin[] = [
   ),
   docsPlugin({ enabled: pluginSwitch("docs") }),
   notificationsPlugin({
-    sources: [docsNotifications({ enabled: pluginSwitch("docs"), tours: pluginSwitch("tours") })],
+    sources: [
+      docsNotifications({ enabled: pluginSwitch("docs"), tours: pluginSwitch("tours") }),
+      docSuggestionsNotifications(),
+    ],
     enabled: pluginSwitch("notifications"),
   }),
   toursPlugin({ enabled: pluginSwitch("tours") }),

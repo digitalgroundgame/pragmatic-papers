@@ -184,6 +184,7 @@ export interface Config {
     forms: Form;
     'form-submissions': FormSubmission;
     docs: Doc;
+    'doc-suggestions': DocSuggestion;
     comments: Comment;
     'comment-violations': CommentViolation;
     achievements: Achievement;
@@ -197,6 +198,9 @@ export interface Config {
   collectionsJoins: {
     users: {
       awards: 'awards';
+    };
+    docs: {
+      suggestions: 'doc-suggestions';
     };
   };
   collectionsSelect: {
@@ -217,6 +221,7 @@ export interface Config {
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
     docs: DocsSelect<false> | DocsSelect<true>;
+    'doc-suggestions': DocSuggestionsSelect<false> | DocSuggestionsSelect<true>;
     comments: CommentsSelect<false> | CommentsSelect<true>;
     'comment-violations': CommentViolationsSelect<false> | CommentViolationsSelect<true>;
     achievements: AchievementsSelect<false> | AchievementsSelect<true>;
@@ -1564,9 +1569,17 @@ export interface Doc {
    */
   tour?: string | null;
   /**
-   * Seeded from src/docs/ by a deploy. Edits here are kept: when the repo's copy changes, a deploy saves it as a new draft for you to publish, edit or discard, and never changes the published doc.
+   * Seeded from src/docs/ by a deploy, as a first draft for you to rewrite. The doc is yours from then on: when the repo's copy changes, a deploy lists what changed under Suggestions, and never changes the doc.
    */
   sourceHash?: string | null;
+  /**
+   * The repo's changes to this doc since it was seeded. Open one to see what changed, work it into the doc in your own words, then mark it done.
+   */
+  suggestions?: {
+    docs?: (number | DocSuggestion)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
   breadcrumbs?:
     | {
         doc?: (number | null) | Doc;
@@ -1578,6 +1591,38 @@ export interface Doc {
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
+}
+/**
+ * The repo's changes to docs this site has. Work each one into the doc in your own words, then mark it done, or dismiss it. Deploys never change the doc itself.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "doc-suggestions".
+ */
+export interface DocSuggestion {
+  id: number;
+  title: string;
+  doc?: (number | null) | Doc;
+  /**
+   * Done once the doc says what changed, in your words. Dismissed if it doesn't need to.
+   */
+  status: 'open' | 'resolved' | 'dismissed';
+  resolvedBy?: (number | null) | User;
+  resolvedAt?: string | null;
+  /**
+   * From the pull request that changed the feature.
+   */
+  note?: string | null;
+  changes?: string | null;
+  /**
+   * New or changed pictures, uploaded to Media for you to use.
+   */
+  pictures?: (number | Media)[] | null;
+  fromSource?: string | null;
+  toSource?: string | null;
+  fromHash?: string | null;
+  toHash?: string | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * Hide a comment to take it off the page and count it against its author; replies to it stay. Publish a held or hidden one to restore it and reverse its violation. Deleting a comment deletes its replies too.
@@ -1807,6 +1852,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'docs';
         value: number | Doc;
+      } | null)
+    | ({
+        relationTo: 'doc-suggestions';
+        value: number | DocSuggestion;
       } | null)
     | ({
         relationTo: 'comments';
@@ -2647,6 +2696,7 @@ export interface DocsSelect<T extends boolean = true> {
   showTableOfContents?: T;
   tour?: T;
   sourceHash?: T;
+  suggestions?: T;
   breadcrumbs?:
     | T
     | {
@@ -2658,6 +2708,26 @@ export interface DocsSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "doc-suggestions_select".
+ */
+export interface DocSuggestionsSelect<T extends boolean = true> {
+  title?: T;
+  doc?: T;
+  status?: T;
+  resolvedBy?: T;
+  resolvedAt?: T;
+  note?: T;
+  changes?: T;
+  pictures?: T;
+  fromSource?: T;
+  toSource?: T;
+  fromHash?: T;
+  toHash?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

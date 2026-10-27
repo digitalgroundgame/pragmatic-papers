@@ -25,6 +25,7 @@ import {
 import type { CollectionConfig } from "payload"
 
 import { revalidateDoc, revalidateDocDelete } from "./revalidateDoc"
+import { DOC_SUGGESTIONS_SLUG, deleteDocSuggestions } from "./suggestionsCollection"
 
 export const DOCS_SLUG = "docs"
 
@@ -43,9 +44,9 @@ const ROLE_LABELS: Record<Role, string> = {
  * it, and their docs under them, so a doc is read at `/docs/<area>/<section>/<slug>`. Editors
  * drag docs into order among their siblings, and move one by picking its parent. Most arrive
  * with a release: each deploy adds the ones in src/docs/ its site doesn't have yet, as drafts
- * for an editor to publish (see `syncRepoDocs`). From then on the doc is the site's: editors
- * change it here, and the repo only ever offers its changes as a new draft version. Editors can
- * also write one from scratch.
+ * for an editor to rewrite and publish (see `syncRepoDocs`). From then on the doc is the site's:
+ * editors change it here, and the repo's later changes arrive beside it as suggestions
+ * (`DocSuggestions`), never in it. Editors can also write one from scratch.
  */
 export const Docs: CollectionConfig<"docs"> = {
   slug: DOCS_SLUG,
@@ -177,8 +178,8 @@ export const Docs: CollectionConfig<"docs"> = {
         !value || Object.hasOwn(TOURS, value) || `No tour is called "${value}".`,
     },
     {
-      // Set by `syncDocs` on a doc it seeded from src/docs/, or a draft it offered: the hash
-      // of the files it came from. Empty on docs written here.
+      // Set by `syncDocs` on a doc it seeded from src/docs/: the hash of the files it came
+      // from. Empty on docs written here.
       name: "sourceHash",
       type: "text",
       label: "From the repo",
@@ -187,14 +188,26 @@ export const Docs: CollectionConfig<"docs"> = {
         readOnly: true,
         condition: (data) => Boolean(data?.sourceHash),
         description:
-          "Seeded from src/docs/ by a deploy. Edits here are kept: when the repo's copy changes, a deploy saves it as a new draft for you to publish, edit or discard, and never changes the published doc.",
+          "Seeded from src/docs/ by a deploy, as a first draft for you to rewrite. The doc is yours from then on: when the repo's copy changes, a deploy lists what changed under Suggestions, and never changes the doc.",
+      },
+    },
+    {
+      name: "suggestions",
+      type: "join",
+      collection: DOC_SUGGESTIONS_SLUG,
+      on: "doc",
+      defaultSort: "-updatedAt",
+      admin: {
+        defaultColumns: ["title", "status", "updatedAt"],
+        description:
+          "The repo's changes to this doc since it was seeded. Open one to see what changed, work it into the doc in your own words, then mark it done.",
       },
     },
   ],
   hooks: {
     beforeChange: [rememberReadersCopy],
     afterChange: [revalidateDoc],
-    afterDelete: [revalidateDocDelete],
+    afterDelete: [revalidateDocDelete, deleteDocSuggestions],
   },
   versions: {
     drafts: {

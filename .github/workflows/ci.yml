@@ -178,6 +178,34 @@ jobs:
       - name: Check for pending migrations
         run: node scripts/check-pending-migrations.mjs
 
+  # A deploy never changes a help doc a site already has: it lists the change
+  # beside the doc for its editors, with the doc's changeNote saying what the
+  # change is about. So every PR that changes an existing doc gives it a new one.
+  # Not gated on `changes`: a Markdown-only PR is exactly the one to check.
+  doc-change-notes:
+    name: Doc change notes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      # The PR's merge commit and its first parent, the base it's compared with.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+          sparse-checkout: |
+            scripts/check-doc-change-notes.ts
+            src/docs
+          sparse-checkout-cone-mode: false
+
+      # Node 24 runs the TypeScript script directly; no install needed.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      - name: Check changed docs have a new changeNote
+        run: node scripts/check-doc-change-notes.ts --base HEAD^1
+
   unit-tests:
     name: Unit tests
     needs: changes

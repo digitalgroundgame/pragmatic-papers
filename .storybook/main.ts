@@ -3,6 +3,8 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import type { Plugin } from "vite"
 
+import { sameFile } from "./sameFile"
+
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 const payloadClient = path.resolve(dirname, "../src/data/payload.ts")
 const payloadClientMock = path.resolve(dirname, "../src/stories/mocks/payload.ts")
@@ -18,9 +20,11 @@ function mockPayload(): Plugin {
     name: "storybook-mock-payload",
     enforce: "pre",
     async resolveId(source, importer, options) {
-      if (!source.endsWith("data/payload") || importer === payloadClientMock) return null
+      if (!source.endsWith("data/payload")) return null
+      if (importer && sameFile(importer, payloadClientMock)) return null
       const resolved = await this.resolve(source, importer, { ...options, skipSelf: true })
-      return resolved?.id === payloadClient ? payloadClientMock : null
+      if (!resolved || !sameFile(resolved.id, payloadClient)) return null
+      return payloadClientMock
     },
   }
 }

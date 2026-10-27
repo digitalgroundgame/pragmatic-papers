@@ -3,20 +3,18 @@ import { existsSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 
-import { imagesIn, parseDocFile } from "../docFile"
-import { DOCS_PATH, docNavTitle, HOME_DOC_SLUG, WHATS_NEW_PATH } from "../sections"
-import { DOCS_DIR, listDocFiles } from "../repoDocFiles"
 import { TOURS } from "@/plugins/tours"
+import { imagesIn, parseDocFile } from "../docFile"
+import { listDocFiles } from "../repoDocFiles"
+import { docNavTitle, DOCS_PATH, HOME_DOC_SLUG, WHATS_NEW_PATH } from "../sections"
 
 const docs = await listDocFiles()
 
 /** Where each doc is read, from its place in the folders, as a site that seeds them all files it. */
 const repoPaths = new Set([
   WHATS_NEW_PATH,
-  ...docs.map(({ slug, file }) =>
-    slug === HOME_DOC_SLUG
-      ? DOCS_PATH
-      : `${DOCS_PATH}/${path.relative(DOCS_DIR, file).slice(0, -".md".length)}`,
+  ...docs.map(({ slug, urlPath }) =>
+    slug === HOME_DOC_SLUG ? DOCS_PATH : `${DOCS_PATH}/${urlPath}`,
   ),
 ])
 
@@ -27,7 +25,7 @@ const areaOf = (slug: string): string => {
 }
 
 // A doc that fails here fails its deploy's sync instead, where nobody is watching.
-describe.each(docs.map((doc) => [path.relative(DOCS_DIR, doc.file), doc] as const))(
+describe.each(docs.map((doc) => [`${doc.urlPath}.md`, doc] as const))(
   "src/docs/%s",
   (name, { slug, parent, folder, file }) => {
     const { meta, body } = parseDocFile(readFileSync(file, "utf8"), name)

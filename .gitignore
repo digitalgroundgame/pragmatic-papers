@@ -30,9 +30,8 @@ build
 dist
 next-env.d.ts
 
-# Fonts: FKScreamer is copied in at install time; Geist is committed
-public/fonts/*
-!public/fonts/Geist-*
+# Fonts (generated at install time)
+public/fonts
 
 # Generated content
 public/map-assets/

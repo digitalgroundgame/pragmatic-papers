@@ -44,10 +44,4 @@ describe("fonts", () => {
     expect(sans().adjustFontFallback).toBe(false)
     expect(sans().fallback?.slice(0, 2)).toEqual(["Geist Fallback Arial", "Geist Fallback Roboto"])
   })
-
-  it("ships Geist's license beside the font", () => {
-    expect(readFileSync(path.join(dir, "../../../public/fonts/Geist-OFL.txt"), "utf8")).toContain(
-      "SIL Open Font License",
-    )
-  })
 })

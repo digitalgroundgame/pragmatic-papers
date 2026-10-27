@@ -9,8 +9,7 @@ coverage
 build
 dist
 out
-public/fonts/*
-!public/fonts/Geist-*
+public/fonts
 public/media
 public/mathjax
 public/robots.txt

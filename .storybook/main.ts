@@ -1,13 +1,13 @@
 import type { StorybookConfig } from "@storybook/nextjs-vite"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import type { Plugin } from "vite"
-
-import { sameFile } from "./sameFile"
+import { normalizePath, type Plugin } from "vite"
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
-const payloadClient = path.resolve(dirname, "../src/data/payload.ts")
-const payloadClientMock = path.resolve(dirname, "../src/stories/mocks/payload.ts")
+// Vite's ids use "/" on every OS, so these do too.
+const payloadClient = normalizePath(path.resolve(dirname, "../src/data/payload.ts"))
+const payloadClientMock = normalizePath(path.resolve(dirname, "../src/stories/mocks/payload.ts"))
+const withoutQuery = (id: string | undefined) => id?.split("?")[0]
 
 /**
  * Every Payload query goes through getPayloadClient (`@/data/payload`); Storybook gets the
@@ -20,11 +20,10 @@ function mockPayload(): Plugin {
     name: "storybook-mock-payload",
     enforce: "pre",
     async resolveId(source, importer, options) {
-      if (!source.endsWith("data/payload")) return null
-      if (importer && sameFile(importer, payloadClientMock)) return null
+      if (!source.endsWith("data/payload") || withoutQuery(importer) === payloadClientMock)
+        return null
       const resolved = await this.resolve(source, importer, { ...options, skipSelf: true })
-      if (!resolved || !sameFile(resolved.id, payloadClient)) return null
-      return payloadClientMock
+      return withoutQuery(resolved?.id) === payloadClient ? payloadClientMock : null
     },
   }
 }

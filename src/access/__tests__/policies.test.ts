@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import {
+  canDeleteArticle,
   isSelfOrAdmin,
   isCreatedByOrEditor,
   isDraftOrEditor,
@@ -37,6 +38,25 @@ describe("isSelfOrAdmin policy", () => {
   })
 })
 
+describe("canDeleteArticle policy", () => {
+  it("allows admins, chief-editors, and editors", () => {
+    expect(canDeleteArticle(makeArgs(makeUser("admin")))).toBe(true)
+    expect(canDeleteArticle(makeArgs(makeUser("chief-editor")))).toBe(true)
+    expect(canDeleteArticle(makeArgs(makeUser("editor")))).toBe(true)
+  })
+
+  it("restricts other users to articles they created that aren't live", () => {
+    const user = { id: 456, roles: ["writer"] } as unknown as User
+    expect(canDeleteArticle(makeArgs(user))).toEqual({
+      and: [{ createdBy: { equals: 456 } }, { _status: { not_equals: "published" } }],
+    })
+  })
+
+  it("denies anonymous users", () => {
+    expect(canDeleteArticle(makeArgs(null))).toBe(false)
+  })
+})
+
 describe("isCreatedByOrEditor policy", () => {
   it("allows admins, chief-editors, and editors", () => {
     expect(isCreatedByOrEditor(makeArgs(makeUser("admin")))).toBe(true)
@@ -59,44 +79,79 @@ describe("isCreatedByOrEditor policy", () => {
 })
 
 describe("isDraftOrEditor policy", () => {
-  it("allows admins, chief-editors, and editors", () => {
-    expect(isDraftOrEditor(makeArgs(makeUser("admin")))).toBe(true)
-    expect(isDraftOrEditor(makeArgs(makeUser("chief-editor")))).toBe(true)
-    expect(isDraftOrEditor(makeArgs(makeUser("editor")))).toBe(true)
-  })
+  const writer = { id: 789, roles: ["writer"] } as unknown as User
+  const ownOrCredited = {
+    or: [{ createdBy: { equals: 789 } }, { authors: { in: [789] } }],
+  }
 
-  it("restricts writers to documents they created", () => {
-    const user = { id: 789, roles: ["writer"] } as unknown as User
-    expect(isDraftOrEditor(makeArgs(user))).toEqual({
-      createdBy: { equals: 789 },
-    })
-  })
-
-  it("denies writers from updating status to published", () => {
-    const user = { id: 789, roles: ["writer"] } as unknown as User
-    const args = { req: { user }, data: { _status: "published" } } as unknown as Parameters<
+  /** Args for one article, whose latest version `findByID` returns. */
+  const forArticle = (user: User, latest: object | null, data?: object) => {
+    const findByID = vi.fn().mockResolvedValue(latest)
+    const args = { id: 1, req: { user, payload: { findByID } }, data } as unknown as Parameters<
       typeof isDraftOrEditor
     >[0]
-    expect(isDraftOrEditor(args)).toBe(false)
+    return { args, findByID }
+  }
+
+  it("allows admins, chief-editors, and editors", async () => {
+    expect(await isDraftOrEditor(makeArgs(makeUser("admin")))).toBe(true)
+    expect(await isDraftOrEditor(makeArgs(makeUser("chief-editor")))).toBe(true)
+    expect(await isDraftOrEditor(makeArgs(makeUser("editor")))).toBe(true)
   })
 
-  it("restricts writers to their own documents when update status is draft", () => {
-    const user = { id: 789, roles: ["writer"] } as unknown as User
-    const args = { req: { user }, data: { _status: "draft" } } as unknown as Parameters<
+  it("restricts writers to documents they created or are credited on", async () => {
+    expect(await isDraftOrEditor(makeArgs(writer))).toEqual(ownOrCredited)
+  })
+
+  it("denies writers from updating status to published", async () => {
+    const args = { req: { user: writer }, data: { _status: "published" } } as unknown as Parameters<
       typeof isDraftOrEditor
     >[0]
-    expect(isDraftOrEditor(args)).toEqual({
-      createdBy: { equals: 789 },
-    })
+    expect(await isDraftOrEditor(args)).toBe(false)
   })
 
-  it("denies other roles (narrators, members)", () => {
-    expect(isDraftOrEditor(makeArgs(makeUser("narrator")))).toBe(false)
-    expect(isDraftOrEditor(makeArgs(makeUser("member")))).toBe(false)
+  it("restricts writers to their own documents when update status is draft", async () => {
+    const args = { req: { user: writer }, data: { _status: "draft" } } as unknown as Parameters<
+      typeof isDraftOrEditor
+    >[0]
+    expect(await isDraftOrEditor(args)).toEqual(ownOrCredited)
   })
 
-  it("denies anonymous users", () => {
-    expect(isDraftOrEditor(makeArgs(null))).toBe(false)
+  it("lets a writer update an article whose latest version credits them", async () => {
+    const { args, findByID } = forArticle(writer, { createdBy: 5, authors: [4, { id: 789 }] })
+    expect(await isDraftOrEditor(args)).toBe(true)
+    expect(findByID).toHaveBeenCalledWith(
+      expect.objectContaining({ collection: "articles", id: 1, draft: true }),
+    )
+  })
+
+  it("lets a writer update an article they created", async () => {
+    const { args } = forArticle(writer, { createdBy: { id: 789 }, authors: [] })
+    expect(await isDraftOrEditor(args)).toBe(true)
+  })
+
+  it("lets the creator in when the latest version has no authors field", async () => {
+    const { args } = forArticle(writer, { createdBy: 789, authors: null })
+    expect(await isDraftOrEditor(args)).toBe(true)
+  })
+
+  it("keeps a writer out of an article that doesn't credit them, whatever they send", async () => {
+    const { args } = forArticle(writer, { createdBy: 5, authors: [4] }, { authors: [789] })
+    expect(await isDraftOrEditor(args)).toBe(false)
+  })
+
+  it("denies a writer an article that doesn't exist", async () => {
+    const { args } = forArticle(writer, null)
+    expect(await isDraftOrEditor(args)).toBe(false)
+  })
+
+  it("denies other roles (narrators, members)", async () => {
+    expect(await isDraftOrEditor(makeArgs(makeUser("narrator")))).toBe(false)
+    expect(await isDraftOrEditor(makeArgs(makeUser("member")))).toBe(false)
+  })
+
+  it("denies anonymous users", async () => {
+    expect(await isDraftOrEditor(makeArgs(null))).toBe(false)
   })
 })
 

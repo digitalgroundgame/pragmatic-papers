@@ -1,6 +1,6 @@
-import { isPublishedOrStaff, isCreatedByOrEditor, isDraftOrEditor } from "@/access/policies"
+import { canDeleteArticle, isDraftOrEditor, isPublishedOrStaff } from "@/access/policies"
 import { writerOrEditor } from "@/access/collections"
-import { editorFieldLevel } from "@/access/fields"
+import { editorFieldLevel, shownToEditors } from "@/access/fields"
 import { AUTHOR_ROLES } from "@/access/roles"
 import { Banner } from "@/blocks/Banner/config"
 import { Code } from "@/blocks/Code/config"
@@ -26,6 +26,7 @@ import {
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
+import { keepWritersOffLiveArticles } from "@/collections/Articles/hooks/keepWritersOffLiveArticles"
 import { removeFromRankings } from "@/collections/Articles/hooks/removeFromRankings"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
 import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
@@ -79,7 +80,7 @@ export const Articles: CollectionConfig = {
   slug: "articles",
   access: {
     create: writerOrEditor,
-    delete: isCreatedByOrEditor,
+    delete: canDeleteArticle,
     read: isPublishedOrStaff,
     update: isDraftOrEditor,
   },
@@ -298,6 +299,7 @@ export const Articles: CollectionConfig = {
       },
       admin: {
         position: "sidebar",
+        condition: shownToEditors,
         description:
           "Adds the published article to the Substack import feed. Takes effect once the article is published.",
       },
@@ -307,7 +309,8 @@ export const Articles: CollectionConfig = {
       type: "ui",
       admin: {
         position: "sidebar",
-        condition: (data) => Boolean(data?.syndicateToSubstack),
+        condition: (data, siblingData, context) =>
+          Boolean(data?.syndicateToSubstack) && shownToEditors(data, siblingData, context),
         components: {
           Field: "@/collections/Articles/components/SubstackImportUrl#SubstackImportUrl",
         },
@@ -327,6 +330,7 @@ export const Articles: CollectionConfig = {
     },
   ],
   hooks: {
+    beforeOperation: [keepWritersOffLiveArticles],
     beforeChange: [
       rememberReadersCopy,
       (args: Parameters<CollectionBeforeChangeHook<Article>>[0]): Partial<Article> | void => {

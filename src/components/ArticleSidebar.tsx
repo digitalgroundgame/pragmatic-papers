@@ -1,5 +1,6 @@
 import React from "react"
 
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/utilities/utils"
 
 /**
@@ -22,13 +23,14 @@ export function ArticleSidebar({
       )}
     >
       {/* Scrolling clips what overflows sideways too, so the padding keeps room for the
-          icons that hang left of the entries, and the margin keeps the text where it was. */}
-      <div
+          icons that hang left of the entries, and the margin keeps the text where it was.
+          The cap goes on the viewport, the element that scrolls. */}
+      <ScrollArea
         data-slot="sidebar-scroll"
-        className="-ml-4 max-h-(--sidebar-max-height,none) [scrollbar-width:thin] overflow-y-auto overscroll-contain pr-1 pb-1 pl-4"
+        className="-ml-4 [&>[data-slot=scroll-area-viewport]]:max-h-(--sidebar-max-height,none) [&>[data-slot=scroll-area-viewport]]:overscroll-contain"
       >
-        {children}
-      </div>
+        <div className="pr-3 pb-1 pl-4">{children}</div>
+      </ScrollArea>
     </aside>
   )
 }

@@ -47,11 +47,16 @@ type Story = StoryObj<typeof meta>
 export const LongTableOfContents: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const scroller = canvasElement.querySelector<HTMLElement>('[data-slot="sidebar-scroll"]')!
+    const scroller = canvasElement.querySelector<HTMLElement>(
+      '[data-slot="sidebar-scroll"] [data-slot="scroll-area-viewport"]',
+    )!
 
     // Capped to the room below the header, so it scrolls rather than running off the screen.
     await expect(scroller.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight)
     await expect(scroller.scrollHeight).toBeGreaterThan(scroller.clientHeight)
+
+    // ScrollArea draws its own scrollbar in place of the browser's.
+    await expect(canvasElement.querySelector('[data-slot="scroll-area-thumb"]')).toBeInTheDocument()
 
     const last = canvas.getByRole("link", { name: "Section 40" })
     scroller.scrollTop = scroller.scrollHeight
@@ -80,7 +85,9 @@ export const ShortTableOfContents: Story = {
   ),
   play: async ({ canvasElement }) => {
     // Nothing to scroll: the box is as tall as its contents.
-    const scroller = canvasElement.querySelector<HTMLElement>('[data-slot="sidebar-scroll"]')!
+    const scroller = canvasElement.querySelector<HTMLElement>(
+      '[data-slot="sidebar-scroll"] [data-slot="scroll-area-viewport"]',
+    )!
     await expect(scroller.scrollHeight).toBe(scroller.clientHeight)
   },
 }

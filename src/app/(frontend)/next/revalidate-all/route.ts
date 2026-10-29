@@ -1,16 +1,13 @@
 import { revalidatePath, revalidateTag } from "next/cache"
 
 import { createMissingStarterPages } from "@/collections/Pages/starterPages"
-import { syncRepoDocs } from "@/plugins/docs/syncRepoDocs"
 import { readerAchievements } from "@/plugins/readerAchievements"
 import { getPayloadClient } from "@/data/payload"
 
 import { hasPayloadSecret } from "../bearer"
 
 /**
- * Run once each time a deploy goes live. Seeds the help docs in src/docs/ this deployment's
- * database doesn't have yet as drafts, and the repo's changes to docs it has as new draft
- * versions (`syncRepoDocs`), creates any starter page the site doesn't have yet as a draft for
+ * Run once each time a deploy goes live. Creates any starter page the site doesn't have yet as a draft for
  * an editor to publish (`createMissingStarterPages`), creates the achievements a site starts
  * with, once per site (`readerAchievements.seed`; Early member goes to the members who signed
  * up before it), then throws away every page and route Next.js
@@ -25,7 +22,7 @@ import { hasPayloadSecret } from "../bearer"
  * Worker's deploy workflow once it has deployed.
  *
  * The Worker also gets this request after every editor save (`cloudflareWorkerCache`), marked
- * `?save`: that skips the docs and starter pages, which are for a deploy. A save that says
+ * `?save`: that skips the starter pages and achievements, which are for a deploy. A save that says
  * what it revalidated (`?next`, with each `next-path` and `next-tag`) revalidates only those,
  * as the save did in Coolify's Next cache; any other throws away every page.
  *
@@ -60,7 +57,6 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const payload = await getPayloadClient()
-  const docs = await syncRepoDocs(payload)
   const pages = await createMissingStarterPages(payload)
   const achievements = await readerAchievements.seed(payload).catch((err: unknown) => {
     payload.logger.error({ err }, "Creating the starter achievements failed")
@@ -70,7 +66,6 @@ export async function POST(request: Request): Promise<Response> {
 
   return Response.json({
     revalidated: true,
-    docs: docs && { created: docs.created, offered: docs.offered },
     pages: { created: pages },
     achievements: { created: achievements },
   })

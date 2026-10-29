@@ -44,4 +44,4 @@ Hover to the left of any paragraph or block and drag the handle (⋮⋮) up or d
 
 ## Writing a help doc
 
-Editors can write docs under **Help → Docs**. Give it a title, a one or two sentence **Summary** (that's what the bell shows), and the date it should be listed under in **Published At**. Leave **Audience** empty for everyone, or pick the roles it's for. Ask a developer to add it to the next release so it ships to every site.
+Editors can write docs under **Help → Docs**. Give it a title, a one or two sentence **Summary** (that's what the bell shows), and the date it should be listed under in **Published At**. Leave **Audience** empty for everyone, or pick the roles it's for.

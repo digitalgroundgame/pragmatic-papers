@@ -31,6 +31,7 @@ import { removeFromRankings } from "@/collections/Articles/hooks/removeFromRanki
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
 import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
 import { populateTableOfContentsAnchors, tableOfContentsField } from "@/components/TableOfContents"
+import { TableOfContentsLabelsFeature } from "@/components/TableOfContents/feature"
 import { footnotesArrayField } from "@/fields/footnotes"
 import { type Article } from "@/payload-types"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
@@ -152,6 +153,7 @@ export const Articles: CollectionConfig = {
                       inlineBlocks: [InlineMathBlock, FootnoteBlock],
                     }),
                     FootnoteShortcutFeature(),
+                    TableOfContentsLabelsFeature(),
                     FixedToolbarFeature(),
                     InlineToolbarFeature(),
                     HorizontalRuleFeature(),

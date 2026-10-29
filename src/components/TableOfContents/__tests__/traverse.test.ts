@@ -72,6 +72,23 @@ describe("stampAnchors", () => {
     expect(anchorsOf(stampAnchors(raw([heading("h2", "My Section")])))).toEqual(["my-section"])
   })
 
+  it("slugifies a heading's table of contents label instead of its text", () => {
+    const labelled = {
+      ...heading("h2", "Michigan Senate – Smith vs Jones"),
+      $: { tocLabel: "Michigan Senate" },
+    }
+    expect(anchorsOf(stampAnchors(raw([labelled])))).toEqual(["michigan-senate"])
+  })
+
+  it("dedupes a label against another heading's text", () => {
+    const labelled = {
+      ...heading("h2", "Michigan Senate – Smith vs Jones"),
+      $: { tocLabel: "Turnout" },
+    }
+    const state = stampAnchors(raw([heading("h2", "Turnout"), labelled]))
+    expect(anchorsOf(state)).toEqual(["turnout", "turnout-2"])
+  })
+
   it("suffixes duplicate heading anchors", () => {
     const state = stampAnchors(raw([heading("h2", "Same"), heading("h3", "Same")]))
     expect(anchorsOf(state)).toEqual(["same", "same-2"])

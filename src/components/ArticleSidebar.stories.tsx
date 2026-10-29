@@ -89,5 +89,8 @@ export const ShortTableOfContents: Story = {
       '[data-slot="sidebar-scroll"] [data-slot="scroll-area-viewport"]',
     )!
     await expect(scroller.scrollHeight).toBe(scroller.clientHeight)
+    // ScrollArea's viewport is always a scroll container, so the wheel has to chain from it
+    // to the page: with overscroll contained, the page wouldn't scroll under the pointer.
+    await expect(getComputedStyle(scroller).overscrollBehaviorY).toBe("auto")
   },
 }

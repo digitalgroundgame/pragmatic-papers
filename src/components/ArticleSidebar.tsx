@@ -27,7 +27,7 @@ export function ArticleSidebar({
           The cap goes on the viewport, the element that scrolls. */}
       <ScrollArea
         data-slot="sidebar-scroll"
-        className="-ml-4 [&>[data-slot=scroll-area-viewport]]:max-h-(--sidebar-max-height,none) [&>[data-slot=scroll-area-viewport]]:overscroll-contain"
+        className="-ml-4 [&>[data-slot=scroll-area-viewport]]:max-h-(--sidebar-max-height,none)"
       >
         <div className="pr-3 pb-1 pl-4">{children}</div>
       </ScrollArea>

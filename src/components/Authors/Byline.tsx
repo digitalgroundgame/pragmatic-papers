@@ -1,8 +1,8 @@
 import React from "react"
 
 import type { BylineAuthor } from "@/components/Authors/BylineAuthor"
-import { Avatar, AvatarFallback, AvatarGroup, AvatarImage } from "@/components/ui/avatar"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
+import { Avatar, AvatarFallback, AvatarGroup, AvatarImage } from "@/components/ui/avatar"
 import { getInitials } from "@/utilities/getInitials"
 import { getSeparator } from "./getSeparator"
 
@@ -59,7 +59,12 @@ export function Byline({ authors }: BylineProps): React.ReactNode {
             {index > 0 && (
               <span className="text-foreground">{getSeparator(index, authors.length)}</span>
             )}
-            <HoverPrefetchLink href={`/contributors/${slug}`} className="hover:underline">
+            <HoverPrefetchLink
+              href={`/contributors/${slug}`}
+              // underline was exceeding the content size due to the underline-offset-4 set above
+              // the addition of pb-1 fixes this issue
+              className="pb-1 hover:underline focus-visible:underline"
+            >
               {name}
             </HoverPrefetchLink>
           </React.Fragment>

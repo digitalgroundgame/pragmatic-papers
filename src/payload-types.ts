@@ -1564,7 +1564,7 @@ export interface Doc {
    */
   tour?: string | null;
   /**
-   * Seeded from src/docs/ by a deploy. Edits here are kept: when the repo's copy changes, a deploy saves it as a new draft for you to publish, edit or discard, and never changes the published doc.
+   * Seeded from src/docs/ by an earlier deploy. The doc is yours: deploys never change it.
    */
   sourceHash?: string | null;
   breadcrumbs?:

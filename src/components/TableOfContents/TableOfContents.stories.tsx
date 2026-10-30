@@ -32,7 +32,8 @@ const text = (i: number) => createParagraph(SENTENCES[i % SENTENCES.length]!)
 // so the entries come from the same resolvers the site uses. It opens with a
 // paragraph (an Intro entry), nests h2–h4, repeats a heading (deduped anchor),
 // puts a table right under a heading (folded into it) and another after a
-// paragraph (listed on its own), and nests each iconed block under a heading.
+// paragraph (listed on its own), nests each iconed block under a heading, and
+// gives a long heading a shorter table of contents label.
 const content = stampTableOfContentsAnchors(
   richText(
     text(0),
@@ -54,7 +55,10 @@ const content = stampTableOfContentsAnchors(
     block({ blockType: "socialEmbed", platform: "youtube" }),
     createHeadingNode("Turnout", "h3"),
     text(0),
-    createHeadingNode("What to watch", "h2"),
+    {
+      ...createHeadingNode("What to watch on election night, race by race", "h2"),
+      $: { tocLabel: "What to watch" },
+    },
     text(1),
     createTableNode([
       createTableRowNode([createTableHeaderNode("Race"), createTableHeaderNode("Seats")]),
@@ -120,6 +124,13 @@ export const Default: Story = {
     }
     const nested = toc.getByRole("link", { name: "Image grid" }).closest('[data-slot="toc-list"]')
     await expect(nested).toHaveClass("pl-4")
+
+    // A heading with a label is listed, and linked, by the label.
+    await expect(toc.getByRole("link", { name: "What to watch" })).toHaveAttribute(
+      "href",
+      "#what-to-watch",
+    )
+    await expect(toc.queryByText(/race by race/)).not.toBeInTheDocument()
   },
 }
 

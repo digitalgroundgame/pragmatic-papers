@@ -3,9 +3,9 @@ import { createHash } from "node:crypto"
 import type { Role } from "@/access/roles"
 
 /**
- * A repo doc as the sync reads it from `src/docs/<area>/<section>/<slug>.md` (see
+ * A repo doc as `loadRepoDocs` reads it from `src/docs/<area>/<section>/<slug>.md` (see
  * `docFile.ts`), with its body as rich text. Media ids differ from site to site, so wherever the
- * doc uses media it holds a `MediaRef` naming a file beside it; `syncDocs` uploads it and puts
+ * doc uses media it holds a `MediaRef` naming a file beside it; `loadRepoDocs` uploads it and puts
  * the id back.
  */
 export interface RepoDoc {
@@ -73,7 +73,7 @@ const mapTree = (value: unknown, replace: (node: unknown) => unknown): unknown =
 }
 
 /**
- * The name a synced file is uploaded under, so the next sync finds it instead of uploading
+ * The name a loaded file is uploaded under, so the next load finds it instead of uploading
  * again. Repo files already start with their doc's slug.
  */
 export const mediaFilename = (file: string, bytes: Buffer): string =>
@@ -121,7 +121,7 @@ export const mediaRefsIn = (content: unknown): MediaRef[] => {
   return [...refs.values()]
 }
 
-/** For a sync: swaps each `MediaRef` for the id of the Media its file was uploaded as. */
+/** For a load: swaps each `MediaRef` for the id of the Media its file was uploaded as. */
 export const unpackMedia = (content: unknown, ids: Map<string, number | string>): unknown =>
   mapTree(content, (node) => {
     if (!isMediaRef(node)) return undefined
@@ -129,25 +129,3 @@ export const unpackMedia = (content: unknown, ids: Map<string, number | string>)
     if (id === undefined) throw new Error(`No media uploaded for ${node.$media}`)
     return id
   })
-
-/**
- * Changes when the doc's file or any file it uses does, so an unchanged doc is skipped. Where
- * it sits isn't part of it: that's the site's once seeded, so moving a doc in the repo offers
- * nothing.
- */
-export const hashRepoDoc = (source: string, files: Buffer[]): string => {
-  const hash = createHash("sha256").update(source)
-  for (const file of files) hash.update(file)
-  return hash.digest("hex")
-}
-
-/**
- * The hash a site saved for a doc before docs nested, when it also covered the section folder
- * the doc sat in (now the doc it sits under; empty for the home doc). A doc saved with it holds
- * this copy already, so the sync records the new hash rather than offering an unchanged doc.
- */
-export const legacyRepoDocHash = (folder: string, source: string, files: Buffer[]): string => {
-  const hash = createHash("sha256").update(`${folder}\n`).update(source)
-  for (const file of files) hash.update(file)
-  return hash.digest("hex")
-}

@@ -57,7 +57,7 @@ const NOT_EDGE_CACHED = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  // Each deploy reads src/docs/ to sync the help docs (syncDocs), which no import traces.
+  // The seed reads src/docs/ to load the help docs (loadRepoDocs), which no import traces.
   outputFileTracingIncludes: {
     "/**": ["./src/docs/**/*"],
   },

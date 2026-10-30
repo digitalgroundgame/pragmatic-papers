@@ -1,7 +1,7 @@
 import { DELETE_MEDIA_IN_USE } from "@/collections/Media/hooks/protectPublishedMedia"
 import { seedRandomRankings } from "@/jobs/updateRecommendations/logic"
 import type { Media, User } from "@/payload-types"
-import { syncDocs } from "@/plugins/docs/syncDocs"
+import { loadRepoDocs } from "@/plugins/docs/loadRepoDocs"
 import { readerAchievements } from "@/plugins/readerAchievements"
 import { revalidatePath } from "next/cache"
 import type { Payload } from "payload"
@@ -501,11 +501,11 @@ export const seed = async (
       },
     },
     {
-      name: "Syncing help docs...",
+      name: "Loading help docs...",
       fn: async () => {
-        // The ones a deploy seeds, back after the wipe above. Published here, so local dev
-        // shows them; a deployed site gets them as drafts for an editor to publish, once.
-        await syncDocs(payload, undefined, { localSeed: true })
+        // The Markdown in src/docs/, published, so local dev has docs. Deployed sites' docs
+        // are written by their editors.
+        await loadRepoDocs(payload)
       },
     },
     {

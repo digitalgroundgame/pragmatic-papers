@@ -13,7 +13,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm dev` — starts everything in Docker Compose (Postgres + Next.js dev server on port 8000)
 - `pnpm dev:db-nuke` — stop Postgres and delete its volume (`docker compose down -v`), wiping the entire data directory. Use this after a Postgres major-version bump or whenever the local data is corrupt; the next `pnpm dev` recreates a fresh cluster and Drizzle push re-syncs the schema
 - `pnpm dev:db-fresh` — bring Postgres up and rebuild the schema by re-running all migrations from scratch (`payload migrate:fresh`). Unlike `dev:db-nuke`, this keeps the volume and exercises the committed migration files (the same path prod uses), so it surfaces migration drift that Drizzle push masks in dev
-- `pnpm dev:db-seed` — bring Postgres up, seed it from the terminal, and stop it again. Runs the same `seed()` as the admin dashboard's "Seed your database" button, so it first deletes **every** article, volume, page, media file, topic, map asset, interactive, form and form submission (not just seeded ones), the seed users, and the recommendation rankings, then syncs the help docs in `src/docs/` back in. Drizzle push builds the schema on an empty database, so it works straight after `dev:db-nuke`. It refuses to run unless `DATABASE_URI` points at localhost and `USE_LOCAL_STORAGE=true` (override with `SEED_ALLOW_REMOTE=true`), and exits 1 if you decline Drizzle's data-loss prompt. Stop `pnpm dev` first: this command stops the Postgres container it shares.
+- `pnpm dev:db-seed` — bring Postgres up, seed it from the terminal, and stop it again. Runs the same `seed()` as the admin dashboard's "Seed your database" button, so it first deletes **every** article, volume, page, media file, topic, map asset, interactive, form and form submission (not just seeded ones), the seed users, and the recommendation rankings, then loads the help docs in `src/docs/`, published. Drizzle push builds the schema on an empty database, so it works straight after `dev:db-nuke`. It refuses to run unless `DATABASE_URI` points at localhost and `USE_LOCAL_STORAGE=true` (override with `SEED_ALLOW_REMOTE=true`), and exits 1 if you decline Drizzle's data-loss prompt. Stop `pnpm dev` first: this command stops the Postgres container it shares.
 - `pnpm showcase <pr-number | staging | url> (<slug...> | --all) [--draft]` — push feature articles from the catalog in `src/endpoints/seed/showcase.ts` to a live site through its REST API, as `SHOWCASE_EMAIL` / `SHOWCASE_PASSWORD` (an account with an author role). A PR number means its `pr-<n>.pragmaticpapers.com` preview; `staging` means `SHOWCASE_STAGING_URL`, and pushes drafts. Only adds articles whose slug is missing; deletes nothing. A PR with the `showcase` label or a `Showcase: <slug...>` line in its description (the workflow keeps the two in sync; the label alone inserts a line naming the articles the PR adds to the catalog) gets them pushed to its preview after every deploy by `.github/workflows/showcase.yml`, which then turns that line into links to them, titled, at the top of the description, and can also be run by hand for a PR (the articles join that line, which opts the PR in) or staging. Nothing is pushed by default: when a PR adds a seeded article to that catalog, opt it in by adding the `showcase` label or putting `Showcase: <slug>` in its description
 
 ### Quality Checks
@@ -148,8 +148,8 @@ served stale). When the feature graduates, delete the checkbox and the checks.
 
 ### Help docs and notifications
 
-A release that changes what staff do in the admin ships a help doc in the same
-PR. Docs are the `docs` collection (`src/plugins/docs/`, the docs plugin), so they
+Each site's editors write its help docs in the admin (**Help → Docs**); code doesn't
+ship them to deployed sites. Docs are the `docs` collection (`src/plugins/docs/`, the docs plugin), so they
 can hold blocks and images like an article, and they nest in one tree (the nested
 docs plugin, which the docs plugin applies): an area like Writing has no parent, its
 sections sit under it, and their docs under them, so a doc is read at its place in
@@ -164,44 +164,24 @@ doc of its own that introduces the docs under it, which its page lists. Writing
 (articles, blocks, media) and Editing (pages, volumes, moderation, site settings) are
 the areas today. There's no Admin area: an admin-only doc goes where its subject does,
 and one whose `audience` leaves out writers sits in Editing (`repoDocs.test.ts`
-checks). Each doc ends with Previous and Next links in the sidebar's order. The ones a
-release ships live in the repo as Markdown, with the folders mirroring the tree: each
-doc is `<slug>.md`, the docs under it are in a `<slug>/` folder beside it
+checks). Each doc ends with Previous and Next links in the sidebar's order.
+
+The Markdown in `src/docs/` is reference material for editors, and what `pnpm
+dev:db-seed` loads so local dev has docs (`loadRepoDocs`, published, with its
+pictures uploaded to Media). Deploys never seed, change or delete docs, so readers get
+only what a site's editors wrote. The folders mirror the
+tree: each doc is `<slug>.md`, the docs under it are in a `<slug>/` folder beside it
 (`src/docs/writing/articles/footnotes.md`), and its pictures sit beside it, each
-named for the doc (`<slug>-hero.webp`, `<slug>-drawer.webp`). Siblings seed in their
-`order` (front matter), then by slug. A doc's place is the site's once it arrives: a
-deploy files a new doc under the doc its folder names, and never moves one, so moving
-a file only places the doc on sites that don't have it yet. Once per deploy,
-`/next/revalidate-all` (which `start.sh` calls when a deploy goes live) seeds that
-site's database with each doc whose slug it doesn't have yet, as a **draft**,
-converting the Markdown with the docs editor and uploading its pictures to Media
-(`syncRepoDocs`). Code never publishes, overwrites the published version or deletes,
-so a doc belongs to the site's editors from the moment it arrives. A draft is on
-neither `/docs` nor the bell until an editor publishes it. When a doc's file changes
-(its content hash, which covers `revisedAt` and its pictures), a site that already
-has the doc gets the new copy as a **new draft version** (`payload.update` with
-`draft: true`, which writes a version and leaves the published doc alone): the admin
-shows the doc as Changed, and an editor compares it in the Versions tab, then
-publishes, edits or discards it (Revert to published). `planRepoDoc` (`syncDocs.ts`)
-decides. A doc whose latest version is an editor's own draft is skipped and logged,
-not recorded, so a later deploy offers the change once that draft is published or
-discarded; a suggestion of the deploy's own that nobody has touched is superseded by
-a newer one. Each revision offered is recorded (`markOffered`, beside `markSeeded`
-in `src/utilities/seedOnce.ts`) with the version it was saved as, so a discarded
-one isn't offered again. A doc that has no offer recorded (one seeded before
-offers began) is offered the repo's copy when it differs from the `sourceHash` the
-doc was saved with; one an editor wrote, with no `sourceHash`, records the repo's
-current hash as offered and gets only later changes. Each doc it seeds, or finds already there, is recorded in Payload's
-key-value store (`markSeeded`, which other
-deploy-seeded content uses too), so one an editor deletes stays deleted and is never
-recreated (only the Coolify app's deploy seeds, see [Hosting](#hosting-coolify)). `pnpm dev:db-seed` seeds
-them locally, published, deleted or not.
+named for the doc (`<slug>-hero.webp`, `<slug>-drawer.webp`). Siblings load in their
+`order` (front matter), then by slug. Docs a deploy seeded before still carry the
+`sourceHash` they were seeded with, and their `seeded:docs:<slug>` records stay in the
+key-value store.
 
 A doc's front matter (`src/plugins/docs/docFile.ts`) holds its `title`, a
 `navTitle` of 24 characters at most for the sidebar, a `summary` of a sentence
 or two (the bell shows it), `publishedAt` (the day the release reaches
 production; for a feature that shipped earlier, the day it did), `revisedAt`
-when a later release changes it (shown as "Updated …" beside the date; the bell
+when it changes later (shown as "Updated …" beside the date; the bell
 keeps it under `publishedAt`), `heroImage` and `heroAlt` (1200×630, the bell's
 thumbnail, the link preview's image and the banner above the doc's title; optional,
 but give a doc one where a picture helps) and, for a
@@ -248,8 +228,8 @@ the tour locally.
 The three plugins are betas, each with its switch on **System → Plugins** (`isPluginEnabled`),
 passed from `src/plugins/index.ts` through each plugin's `enabled` option, so
 the plugins never read the switches themselves. With `docs` off, `/docs` pages 404,
-their sitemap is empty and the bell leaves docs out (a source's `enabled`); the Docs collection and the
-deploy's docs sync carry on, so docs are ready when it's switched on. With
+their sitemap is empty and the bell leaves docs out (a source's `enabled`); the Docs collection stays,
+so editors can write docs before it's switched on. With
 `notifications` off there's no bell; with `tours` off, `TourGate` doesn't mount
 the tour provider and no Show me button appears.
 
@@ -710,7 +690,7 @@ Staging's public site also runs as a Cloudflare Worker at `staging-worker.pragma
 `src/cloudflare/README.md`.
 
 Each database has one seeder: the deploy of the Coolify app that runs its migrations. Its
-`/next/revalidate-all` seeds what a deploy seeds (help docs, starter pages, starter achievements); the Worker reads
+`/next/revalidate-all` seeds what a deploy seeds (starter pages, starter achievements); the Worker reads
 the same database and sets `DEPLOY_SEED=false` (`wrangler.jsonc`), so its deploy only throws
 pages away. Two seeders could each create the same content at once. Deploy-seeded content
 added later goes through that route, so it follows the same switch.

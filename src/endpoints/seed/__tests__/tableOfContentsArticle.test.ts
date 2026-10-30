@@ -54,4 +54,9 @@ describe("the table of contents tour article", () => {
     expect(tableHeading?.icon).toBeDefined()
     expect(tableHeading?.children ?? []).toEqual([])
   })
+
+  it("lists the long last heading by its shorter label", async () => {
+    const last = (await tourEntries()).at(-1)
+    expect(last).toMatchObject({ label: "Reading along", anchor: "reading-along" })
+  })
 })

@@ -1,5 +1,6 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
+import { createRequire } from "node:module"
 import process from "node:process"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import subsetFont from "subset-font"
@@ -35,10 +36,18 @@ const DISPLAY_FONT_RANGES: [number, number][] = [
  */
 const DISPLAY_FONT_FEATURES = ["ccmp", "locl", "liga", "calt", "kern", "mark", "mkmk"]
 
+/** The weights fonts.ts declares; the variable font keeps everything between them. */
+const SANS_FONT_WEIGHTS = { min: 400, max: 600 }
+
+const charactersIn = (ranges: [number, number][]): string =>
+  ranges
+    .flatMap(([from, to]) =>
+      Array.from({ length: to - from + 1 }, (_, i) => String.fromCodePoint(from + i)),
+    )
+    .join("")
+
 async function subsetDisplayFont(path: string): Promise<void> {
-  const text = DISPLAY_FONT_RANGES.flatMap(([from, to]) =>
-    Array.from({ length: to - from + 1 }, (_, i) => String.fromCodePoint(from + i)),
-  ).join("")
+  const text = charactersIn(DISPLAY_FONT_RANGES)
   const original = readFileSync(path)
   try {
     const subset = await subsetFont(original, text, {
@@ -54,6 +63,66 @@ async function subsetDisplayFont(path: string): Promise<void> {
     // The full font still renders correctly, so a failed subset only costs bytes.
     console.warn(`${yellow("⚠")} Could not subset FKScreamer, shipping it whole: ${String(error)}`)
   }
+}
+
+/**
+ * The characters Geist keeps: Google Fonts' "latin" subset, plus the Latin Extended-A and
+ * Romanian ș/ț that FKScreamer keeps, so names like Erdoğan or Wałęsa render in both
+ * fonts. Cyrillic and Vietnamese would take every page's preload from 26 kB to 38 kB, so
+ * they fall back per character.
+ */
+const SANS_FONT_RANGES: [number, number][] = [
+  [0x0000, 0x017f],
+  [0x0218, 0x021b],
+  [0x02bb, 0x02bc],
+  [0x02c6, 0x02c6],
+  [0x02da, 0x02da],
+  [0x02dc, 0x02dc],
+  [0x0304, 0x0304],
+  [0x0308, 0x0308],
+  [0x0329, 0x0329],
+  [0x2000, 0x206f],
+  [0x20ac, 0x20ac],
+  [0x2122, 0x2122],
+  [0x2191, 0x2191],
+  [0x2193, 0x2193],
+  [0x2212, 0x2212],
+  [0x2215, 0x2215],
+  [0xfeff, 0xfeff],
+  [0xfffd, 0xfffd],
+]
+
+/**
+ * Installs the body font, Geist, into `<root>/public/fonts/Geist-latin.woff2` and returns
+ * the exit code. It comes from Vercel's `geist` package (a dependency, so always there)
+ * rather than next/font/google, which fetches it from Google on every build and fails
+ * the build when Google's answer is off. The variable font is trimmed to the Latin
+ * characters and the weights the site uses: 70 kB down to 26 kB, under the 29 kB Google
+ * served for latin alone.
+ */
+export async function installSansFont(root: string = process.cwd()): Promise<number> {
+  const src = resolve(
+    dirname(createRequire(import.meta.url).resolve("geist/font/sans")),
+    "fonts/geist-sans/Geist-Variable.woff2",
+  )
+  const dest = resolve(root, "public/fonts/Geist-latin.woff2")
+  mkdirSync(dirname(dest), { recursive: true })
+  const original = readFileSync(src)
+  try {
+    writeFileSync(
+      dest,
+      await subsetFont(original, charactersIn(SANS_FONT_RANGES), {
+        targetFormat: "woff2",
+        variationAxes: { wght: SANS_FONT_WEIGHTS },
+      }),
+    )
+    console.warn(`${green("✔")} Installed Geist-latin.woff2 from the geist package`)
+  } catch (error) {
+    // The whole font renders the same, so a failed subset only costs bytes.
+    writeFileSync(dest, original)
+    console.warn(`${yellow("⚠")} Could not subset Geist, shipping it whole: ${String(error)}`)
+  }
+  return 0
 }
 
 /**
@@ -152,5 +221,6 @@ export async function installFonts(
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  process.exit(await installFonts())
+  const sans = await installSansFont()
+  process.exit((await installFonts()) || sans)
 }

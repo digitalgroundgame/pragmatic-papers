@@ -100,7 +100,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-email": "^6.11.0",
-    "react-hook-form": "^7.88.0",
+    "react-hook-form": "^7.90.0",
     "sanitize-html": "^2.18.1",
     "schema-dts": "^2.0.0",
     "server-only": "^0.0.1",

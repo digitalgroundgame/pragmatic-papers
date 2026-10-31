@@ -23,10 +23,15 @@ function creditReader(collection: { hooks?: { afterChange?: unknown[] } }) {
 }
 
 describe("grantPublicProfile wiring", () => {
-  it("credits an article's authors", () => {
+  it("credits a published article's authors", () => {
     const read = creditReader(Articles)
-    expect(read({ authors: [1, { id: 2 }] })).toEqual([1, { id: 2 }])
-    expect(read({ authors: null })).toEqual([])
+    expect(read({ _status: "published", authors: [1, { id: 2 }] })).toEqual([1, { id: 2 }])
+    expect(read({ _status: "published", authors: null })).toEqual([])
+  })
+
+  it("credits no one from a draft or autosave", () => {
+    const read = creditReader(Articles)
+    expect(read({ _status: "draft", authors: [1, 2] })).toEqual([])
   })
 
   it("credits a narration's narrator", () => {

@@ -1,11 +1,14 @@
 import type React from "react"
 import { describe, expect, it, vi } from "vitest"
 
-vi.mock("next/font/local", () => ({ default: () => ({ variable: "__variable_display" }) }))
-vi.mock("next/font/google", () => ({ Geist: () => ({ variable: "__variable_sans" }) }))
+vi.mock("next/font/local", () => ({
+  default: ({ variable }: { variable: string }) => ({
+    variable: variable === "--font-display" ? "__variable_display" : "__variable_sans",
+  }),
+}))
 vi.mock("@wrksz/themes/next", () => ({ ThemeProvider: () => null }))
 vi.mock("@/components/AdminBar", () => ({ AdminBar: () => null, AdminBarHint: () => null }))
-vi.mock("@/utilities/getURL", () => ({ getServerSideURL: () => "https://example.test" }))
+vi.mock("@/utilities/getURL", () => ({ getSiteURL: () => "https://example.test" }))
 
 const { default: FeedRootLayout, metadata, viewport } = await import("../layout")
 const { AdminBar } = await import("@/components/AdminBar")

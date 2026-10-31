@@ -1,11 +1,11 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("@/utilities/listmonk", () => ({ subscribeMember: vi.fn() }))
-vi.mock("@/utilities/turnstile", () => ({ verifyTurnstileToken: vi.fn() }))
+vi.mock("@/integrations/listmonk", () => ({ subscribeMember: vi.fn() }))
+vi.mock("@/integrations/cloudflare/turnstile", () => ({ verifyTurnstileToken: vi.fn() }))
 
-import { subscribeMember } from "@/utilities/listmonk"
-import { verifyTurnstileToken } from "@/utilities/turnstile"
+import { subscribeMember } from "@/integrations/listmonk"
+import { verifyTurnstileToken } from "@/integrations/cloudflare/turnstile"
 import { POST } from "../route"
 
 function makeReq(body: Record<string, unknown>, headers?: Record<string, string>) {

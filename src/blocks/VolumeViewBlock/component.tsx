@@ -1,7 +1,7 @@
 import type { Volume, VolumeView as VolumeBlockProps } from "@/payload-types"
 
 import RichText from "@/components/RichText"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 import React from "react"
 
 import { PageRange } from "@/components/PageRange"
@@ -12,12 +12,25 @@ export const VolumeViewBlock: React.FC<
   VolumeBlockProps & {
     id?: string | null
     pageNumber?: number
+    /**
+     * False on a page that can't read `?p=` (the home page, which is prerendered): it lists
+     * the newest volumes without page links, which would only reload the same list.
+     */
+    paginated?: boolean
   }
 > = async (props) => {
-  const { id, introContent, populateBy, selectedDocs, pageNumber, limit: limitFromProps } = props
+  const {
+    id,
+    introContent,
+    populateBy,
+    selectedDocs,
+    pageNumber,
+    paginated = true,
+    limit: limitFromProps,
+  } = props
 
   if (populateBy === "collection") {
-    const payload = await getPayloadConfig()
+    const payload = await getPayloadClient()
 
     const limit = limitFromProps || 6
 
@@ -25,7 +38,7 @@ export const VolumeViewBlock: React.FC<
       collection: "volumes",
       depth: 1,
       limit,
-      page: pageNumber,
+      page: paginated ? pageNumber : 1,
       overrideAccess: false,
       select: {
         title: true,
@@ -43,8 +56,17 @@ export const VolumeViewBlock: React.FC<
       <div className="container my-4 max-w-3xl space-y-8" id={id ?? undefined}>
         <RichText className="font-display" data={introContent} enableGutter={false} />
         <VolumesView volumes={docs} />
-        <PageRange collection="volumes" currentPage={page} limit={limit} totalDocs={totalDocs} />
-        <PaginationVolumes className="container" page={page} totalPages={totalPages} />
+        {paginated && (
+          <>
+            <PageRange
+              collection="volumes"
+              currentPage={page}
+              limit={limit}
+              totalDocs={totalDocs}
+            />
+            <PaginationVolumes className="container" page={page} totalPages={totalPages} />
+          </>
+        )}
       </div>
     )
   } else {

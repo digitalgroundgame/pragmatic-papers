@@ -5,7 +5,7 @@ import {
 } from "@/blocks/SocialEmbed/adapters/youtube.adapter"
 import { EmbedError } from "@/blocks/SocialEmbed/embeds/EmbedError"
 import type { SocialEmbedBlock } from "@/payload-types"
-import { isFailure } from "@/utilities/results"
+import { isFailure } from "@/utilities/result"
 
 export async function YouTubeEmbedBlock(props: SocialEmbedBlock): Promise<React.ReactNode> {
   const { url, snapshot } = props

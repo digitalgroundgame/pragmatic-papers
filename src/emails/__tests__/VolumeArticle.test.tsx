@@ -66,7 +66,7 @@ function linksTo(doc: Document, href: string): HTMLAnchorElement[] {
   )
 }
 
-// formatDistanceToNow reads the clock, so pin it for stable output.
+// formatTimeAgo reads the clock, so pin it for stable output.
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
   vi.setSystemTime(new Date("2026-09-23T12:00:00.000Z"))

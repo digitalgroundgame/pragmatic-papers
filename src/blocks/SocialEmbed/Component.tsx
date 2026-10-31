@@ -4,39 +4,25 @@ import { RedditEmbedBlock } from "@/blocks/SocialEmbed/embeds/RedditEmbed"
 import { TikTokEmbedBlock } from "@/blocks/SocialEmbed/embeds/TikTokEmbed"
 import { TwitterEmbedBlock } from "@/blocks/SocialEmbed/embeds/TwitterEmbed"
 import { YouTubeEmbedBlock } from "@/blocks/SocialEmbed/embeds/YouTubeEmbed"
-import { shouldRevalidate } from "@/blocks/SocialEmbed/helpers/snapshotFreshness"
-import type { ParentDocContext } from "@/blocks/SocialEmbed/types"
 import type { SocialEmbedBlock as SocialEmbedBlockProps } from "@/payload-types"
 import React from "react"
 
-export type SocialEmbedRenderProps = SocialEmbedBlockProps & {
-  parentDoc?: ParentDocContext
-}
-
-export async function SocialEmbedBlock(props: SocialEmbedRenderProps): Promise<React.ReactNode> {
-  let snapshot = props.snapshot
-  if (shouldRevalidate(props.snapshot) && props.parentDoc && props.id) {
-    const { revalidateSnapshot } = await import("@/blocks/SocialEmbed/hooks/revalidateSnapshot")
-    snapshot = await revalidateSnapshot({
-      parentDoc: props.parentDoc,
-      embedBlockId: props.id,
-      platform: props.platform,
-      url: props.url,
-      snapshot: props.snapshot,
-    })
-  }
-
+/**
+ * Renders the snapshot saved with the article, however old. Rendering never writes: the
+ * snapshot is fetched when the article is saved (`fetchSnapshot`).
+ */
+export function SocialEmbedBlock(props: SocialEmbedBlockProps): React.ReactNode {
   switch (props.platform) {
     case "bluesky":
-      return <BlueskyEmbedBlock {...props} snapshot={snapshot} />
+      return <BlueskyEmbedBlock {...props} />
     case "reddit":
-      return <RedditEmbedBlock {...props} snapshot={snapshot} />
+      return <RedditEmbedBlock {...props} />
     case "tiktok":
-      return <TikTokEmbedBlock {...props} snapshot={snapshot} />
+      return <TikTokEmbedBlock {...props} />
     case "twitter":
-      return <TwitterEmbedBlock {...props} snapshot={snapshot} />
+      return <TwitterEmbedBlock {...props} />
     case "youtube":
-      return <YouTubeEmbedBlock {...props} snapshot={snapshot} />
+      return <YouTubeEmbedBlock {...props} />
     default:
       return (
         <EmbedError

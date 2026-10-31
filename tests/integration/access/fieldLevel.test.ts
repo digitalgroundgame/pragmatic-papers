@@ -3,6 +3,7 @@ import type { Payload } from "payload"
 import type { Article, User } from "@/payload-types"
 import { getPayload, createUser } from "../helpers/testUsers"
 import { ARTICLE_CONTENT } from "../fixtures/content"
+import { relationshipId } from "@/utilities/relationships"
 
 describe("field-level access", () => {
   let payload: Payload
@@ -130,7 +131,8 @@ describe("field-level access", () => {
         data: { createdBy: admin.id },
       })
 
-      expect(updated.createdBy).toEqual(article.createdBy)
+      // Compared by id: each side populates the user with its own reader's field access.
+      expect(relationshipId(updated.createdBy)).toBe(writer.id)
     })
 
     it("denies admin from updating store-owned fields on merch", async () => {

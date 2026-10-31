@@ -94,9 +94,9 @@ Public pages are cached at Cloudflare's edge for 10 minutes, then served stale f
 
 #### Ticker
 
-The strip under the header on every page (`src/components/Ticker`, rendered by the header), shown when the **Ticker** experiment is on in **System → Settings**. Each source is skipped with a `[ticker] skipping …` log line until it's configured; all are **Runtime Variables**, set in the production, staging **and** preview apps (`dockerfiles/.env.example` lists them).
+The strip under the header on every page (`src/components/Ticker`, rendered by the header), shown when **Ticker** is switched on in **Site → Header → Ticker**. Each source is skipped with a `[ticker] skipping …` log line until it's configured; all are **Runtime Variables**, set in the production, staging **and** preview apps (`dockerfiles/.env.example` lists them).
 
-- `YOUTUBE_API_KEY` — a YouTube Data API v3 key (any Google Cloud project, public reads only). Shows a channel's broadcast when it's live or starting within a day. Each check costs one of the key's 10,000 free daily quota units per channel plus one, every 5 minutes at most and only while the site is being visited, so one key can serve every app.
+- `YOUTUBE_API_KEY` — a YouTube Data API v3 key (any Google Cloud project, public reads only). Shows a channel's broadcast when it's live or starting soon (within a day unless the Header's Ticker tab sets otherwise). Each check costs one of the key's 10,000 free daily quota units per channel plus one, every 5 minutes at most and only while the site is being visited, so one key can serve every app.
 - Bluesky needs nothing: it reads the public API.
 - `X_BEARER_TOKEN` — an app-only token. Reading posts needs a paid X API plan or pay-per-use credits; it's checked every 30 minutes at most.
 - Which channels and accounts it reads are set in the admin, under **System → Integrations**, which also shows which variables each connection is missing. `YOUTUBE_CHANNEL_IDS` (comma separated), `BLUESKY_HANDLES` and `X_USERNAMES` (each comma separated) are fallbacks for when it's left empty.
@@ -150,6 +150,7 @@ Use managed PostgreSQL service (AWS RDS, Supabase, Neon, etc.) for all deploymen
 - **staging** deploys `dev`, not the live site. Its own preview deployments are off: the **preview** app serves the `pr-<n>` hostnames (see [Previews built in GitHub Actions](#previews-built-in-github-actions)).
 - **Two servers run them:** `dev-worker` runs staging and the previews, and hosts the `docker-registry` service staging's images are pulled from; `prod-worker` runs production, apparently pulling from the same registry.
 - **Staging and production build on one Coolify build server, one build at a time**, so a `dev` deploy can delay a `main` deploy behind it. The build caches below (`/pnpm`, `/nextjs`) are shared by both. The build server has 8 GB of RAM and a build peaks at ~4.6 GB, so two concurrent builds wouldn't fit. Keep that headroom in mind before adding build steps or dependencies that raise build memory. Previews never use it: they build on GitHub runners.
+- **Production's database is Supabase (Micro compute), reached through its session-mode pooler** (`*.pooler.supabase.com:5432`). Every client holds a real Postgres connection, and the pooler refuses clients past its **Connection pool size** (Supabase: Database → Settings; Micro defaults to 15 of its 60 connections, raised to 40). A production build connects while the live container keeps its own: `next build` prerenders every article and volume in 3 workers, each with its own pool, which `src/payload.config.ts` caps at 3 connections during the build. A build that runs out fails on its first page with `EMAXCONNSESSION max clients reached in session mode`, after `payload migrate` has already run, so the old container keeps serving against the migrated database.
 - **Previews only deploy PRs from people with access to the repo**: same-repo PRs from owners, members and collaborators (the "Detect E2E changes" job in `playwright.yml` plans previews). Keep it that way: a preview runs on dev-worker beside staging, with staging's media mounted read-write.
 
 What Coolify's docs say about behaviour that matters to this setup (read them with the `upstream-docs` skill, `coolify` source; paths are under `content/docs/`):
@@ -487,6 +488,7 @@ USE_LOCAL_STORAGE=true
 **Requirements:**
 
 - Configure a persistent mount in Coolify at `/app/public/media` (staging bind-mounts `/data/coolify/applications/<its uuid>/public/media`; previews: see the preview image setup above)
+- That one mount keeps every upload: Maps (`map-assets`) are kept in its `map-assets/` folder. An upload collection whose `staticDir` is outside `public/media` loses its files on every redeploy
 - The app runs as uid `1001` (`nextjs`), so it must be able to write the mount's source folder. When Docker creates a missing bind source it makes it `root`-owned, and every upload fails; fix it with `chown 1001:1001 /data/coolify/applications/<uuid>/public/media`. `start.sh` warns at startup when the folder is missing, empty, or not writable.
 - Back up the media folder. It's the only copy of staging's uploads (see the preview mount's warning above).
 

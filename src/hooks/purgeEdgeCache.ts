@@ -6,7 +6,11 @@ import {
   describeStatus,
   integrationStatus,
 } from "@/integrations"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
+
+import type { Revalidated } from "@/integrations/cloudflare/worker"
+
+import { warmWorkerSoon } from "./warmWorker"
 
 type Logger = Pick<Payload["logger"], "info" | "warn">
 
@@ -19,14 +23,51 @@ export const PURGE_DEBOUNCE_MS = 1000
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "0.0.0.0"])
 
-let pending: { reasons: Set<string>; logger: Logger; timer: ReturnType<typeof setTimeout> } | null =
-  null
+/**
+ * What to revalidate in the Worker's own Next cache: the paths and tags a burst's saves
+ * revalidated here, or every page once one didn't say.
+ */
+type NextScope = { paths: Set<string>; tags: Set<string> } | "everything"
+
+/**
+ * What to purge from the Worker's cache: some paths and maybe the shared pages, and what to
+ * revalidate in its Next cache; or all of both.
+ */
+type WorkerScope = { paths: Set<string>; shared: boolean; next: NextScope } | "everything"
+
+export interface PurgeOptions {
+  /** False leaves the Worker's cache alone. */
+  worker?: boolean
+  /**
+   * The paths the save changed, as its hook revalidated them, for the Worker to purge
+   * instead of everything. Omitted, with no `shared`, the Worker purges every page.
+   */
+  paths?: readonly (string | null | undefined)[]
+  /** Also purge every page that lists articles, volumes or contributors on the Worker. */
+  shared?: boolean
+  /**
+   * The paths and tags the save revalidated in this deployment's Next cache, for the Worker
+   * to revalidate in its own. Omitted, the Worker revalidates every page in it.
+   * `revalidateForReaders` passes them for you.
+   */
+  revalidated?: Revalidated
+}
+
+let pending: {
+  reasons: Set<string>
+  logger: Logger
+  /** Whether any purge in the burst asked for the Worker's cache too. */
+  worker: boolean
+  /** The burst's Worker purges together: everything once any asked for everything. */
+  scope: WorkerScope
+  timer: ReturnType<typeof setTimeout>
+} | null = null
 let inFlight: Promise<void> = Promise.resolve()
 
 /** This deployment's public hostname, or null when it isn't one Cloudflare could be fronting. */
 function siteHost(): string | null {
   try {
-    const host = new URL(getServerSideURL()).hostname
+    const host = new URL(getSiteURL()).hostname
     return LOCAL_HOSTS.has(host) || host.endsWith(".localhost") ? null : host
   } catch {
     return null
@@ -41,14 +82,59 @@ function edgeSkipReason(): string | null {
   return null
 }
 
-async function revalidateWorker(logger: Logger, why: string): Promise<void> {
+function scopeOf({ paths = [], shared = false, revalidated }: PurgeOptions): WorkerScope {
+  const named = paths.filter((path): path is string => !!path)
+  if (!named.length && !shared) return "everything"
+  const next: NextScope = revalidated
+    ? { paths: new Set(revalidated.paths), tags: new Set(revalidated.tags) }
+    : "everything"
+  return { paths: new Set(named), shared, next }
+}
+
+function mergeNext(a: NextScope, b: NextScope): NextScope {
+  if (a === "everything" || b === "everything") return "everything"
+  return { paths: new Set([...a.paths, ...b.paths]), tags: new Set([...a.tags, ...b.tags]) }
+}
+
+function mergeScopes(a: WorkerScope, b: WorkerScope): WorkerScope {
+  if (a === "everything" || b === "everything") return "everything"
+  return {
+    paths: new Set([...a.paths, ...b.paths]),
+    shared: a.shared || b.shared,
+    next: mergeNext(a.next, b.next),
+  }
+}
+
+function describeScope(scope: WorkerScope): string {
+  if (scope === "everything") return "every page"
+  const parts = [...scope.paths]
+  if (scope.shared) parts.push("the shared pages")
+  return parts.join(", ")
+}
+
+async function revalidateWorker(logger: Logger, why: string, scope: WorkerScope): Promise<boolean> {
   try {
-    await cloudflareWorkerCache.revalidateAll()
-    logger.info(`Cleared the Worker's cache at ${cloudflareWorkerCache.url()} (${why})`)
+    await cloudflareWorkerCache.revalidateAll(
+      scope === "everything"
+        ? {}
+        : {
+            paths: [...scope.paths],
+            shared: scope.shared,
+            revalidated:
+              scope.next === "everything"
+                ? undefined
+                : { paths: [...scope.next.paths], tags: [...scope.next.tags] },
+          },
+    )
+    logger.info(
+      `Cleared ${describeScope(scope)} from the Worker's cache at ${cloudflareWorkerCache.url()} (${why})`,
+    )
+    return true
   } catch (err) {
     logger.warn(
       `Clearing the Worker's cache at ${cloudflareWorkerCache.url()} failed (${why}): ${err instanceof Error ? err.message : String(err)}`,
     )
+    return false
   }
 }
 
@@ -67,11 +153,13 @@ async function purgeEdge(logger: Logger, why: string, host: string): Promise<voi
 
 async function flush(): Promise<void> {
   if (!pending) return
-  const { reasons, logger } = pending
+  const { reasons, logger, worker, scope } = pending
   pending = null
   const why = [...reasons].join(", ")
   // The Worker first: once the edge is empty it refills from whatever the Worker answers.
-  if (integrationStatus(cloudflareWorkerCache).configured) await revalidateWorker(logger, why)
+  if (worker && integrationStatus(cloudflareWorkerCache).configured) {
+    if (await revalidateWorker(logger, why, scope)) warmWorkerSoon(logger)
+  }
   const host = siteHost()
   if (host && !edgeSkipReason()) await purgeEdge(logger, why, host)
 }
@@ -93,26 +181,42 @@ async function flush(): Promise<void> {
  * When the deployment has a Cloudflare Worker serving its pages (`cloudflareWorkerCache`), the
  * same flush clears the Worker's cache first, through its `/next/revalidate-all`: the Worker
  * keeps its own copy of every prerendered page, which neither Next's revalidation here nor the
- * edge purge reaches.
+ * edge purge reaches. `paths` are the paths the hook revalidated, and `shared` the pages that
+ * list articles, volumes and contributors (which render per request here, so no hook names
+ * them): given either, the Worker purges only those from its edge cache and keeps every other
+ * page. A burst purges what all its saves named, or everything once one named nothing.
+ *
+ * Once the Worker has cleared its cache, its most-read pages are requested through its URL in
+ * the background (`warmWorkerSoon`): a Worker renders a page on a cold isolate in seconds, and
+ * readers would otherwise meet that after every save. `{ worker: false }` leaves the Worker
+ * alone, for a Coolify deploy: the Worker reads the same database and is deployed, emptied and
+ * re-rendered by its own workflow, so this deployment's start has nothing new for it.
  *
  * With neither connection configured (local dev, CI, anything not behind Cloudflare) it logs
  * the missing variables by name and does nothing.
  */
-export function purgeEdgeCache(logger: Logger, reason: string): void {
+export function purgeEdgeCache(logger: Logger, reason: string, options: PurgeOptions = {}): void {
+  const clearWorker = options.worker ?? true
   const edgeSkip = edgeSkipReason()
-  const worker = integrationStatus(cloudflareWorkerCache)
-  if (edgeSkip && !worker.configured) {
+  const worker = clearWorker && integrationStatus(cloudflareWorkerCache).configured
+  if (edgeSkip && !worker) {
     logger.info(`Skipping Cloudflare purge (${reason}) — ${edgeSkip}`)
     return
   }
 
   if (pending) {
     pending.reasons.add(reason)
+    pending.worker ||= clearWorker
+    if (clearWorker) pending.scope = mergeScopes(pending.scope, scopeOf(options))
     return
   }
   pending = {
     reasons: new Set([reason]),
     logger,
+    worker: clearWorker,
+    scope: clearWorker
+      ? scopeOf(options)
+      : { paths: new Set(), shared: false, next: { paths: new Set(), tags: new Set() } },
     timer: setTimeout(() => {
       inFlight = inFlight.then(flush)
     }, PURGE_DEBOUNCE_MS),
@@ -121,7 +225,10 @@ export function purgeEdgeCache(logger: Logger, reason: string): void {
   pending.timer.unref?.()
 }
 
-/** Tests only: send any gathered purge now and wait for it. */
+/**
+ * Send any gathered purge now and wait for it, for a caller that has to act on an empty edge
+ * (the deploy's warm-up in `/next/purge-edge`) and for tests. Never throws.
+ */
 export async function flushEdgeCachePurge(): Promise<void> {
   if (pending) {
     clearTimeout(pending.timer)

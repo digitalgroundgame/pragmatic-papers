@@ -34,6 +34,8 @@ describe("next.config.ts Cache-Control", () => {
       "/admin/collections/articles/1",
       "/api/users/me",
       "/api/newsletter/subscribe",
+      "/api/ticker/more",
+      "/api/tickers",
       "/api/media",
       "/api/media/1",
     ]) {
@@ -53,7 +55,10 @@ describe("next.config.ts Cache-Control", () => {
       "/articles/substack.xml",
       "/articles/some-article/substack.xml",
       "/recommended-articles.json",
+      "/api/ticker",
       "/next/purge-edge",
+      "/next/version",
+      "/next/migrations",
     ]) {
       expect(await cacheControlFor(path)).toBeUndefined()
     }

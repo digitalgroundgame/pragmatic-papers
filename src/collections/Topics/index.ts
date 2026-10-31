@@ -9,6 +9,11 @@ import {
 import type { CollectionConfig } from "payload"
 import { slugField } from "@/fields/slug"
 import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
+import {
+  rememberTopicArticles,
+  revalidateTopicChange,
+  revalidateTopicDelete,
+} from "./hooks/revalidateTopic"
 
 export const Topics: CollectionConfig = {
   slug: "topics",
@@ -76,7 +81,8 @@ export const Topics: CollectionConfig = {
   ],
   hooks: {
     // A nav link can point at a topic.
-    afterChange: [revalidateNavLinks],
-    afterDelete: [revalidateNavLinksDelete],
+    afterChange: [revalidateTopicChange, revalidateNavLinks],
+    beforeDelete: [rememberTopicArticles],
+    afterDelete: [revalidateTopicDelete, revalidateNavLinksDelete],
   },
 }

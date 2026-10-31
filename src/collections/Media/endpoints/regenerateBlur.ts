@@ -1,8 +1,8 @@
 import type { PayloadRequest } from "payload"
 
 import type { RegenerateBlurResponse } from "@/collections/Media/types"
-import { getBlurDataUrlFromBuffer } from "@/utilities/getBlurDataUrlFromBuffer"
-import { getServerSideURL } from "@/utilities/getURL"
+import { blurDataUrl } from "@/collections/Media/blurDataUrl"
+import { getSiteURL } from "@/utilities/getURL"
 
 export async function regenerateBlurHandler(req: PayloadRequest): Promise<Response> {
   if (!req.user) {
@@ -29,7 +29,7 @@ export async function regenerateBlurHandler(req: PayloadRequest): Promise<Respon
     return Response.json({ error: "Media has no URL" }, { status: 400 })
   }
 
-  const imageUrl = media.url.startsWith("http") ? media.url : `${getServerSideURL()}${media.url}`
+  const imageUrl = media.url.startsWith("http") ? media.url : `${getSiteURL()}${media.url}`
 
   const imageResponse = await fetch(imageUrl)
   if (!imageResponse.ok) {
@@ -37,7 +37,7 @@ export async function regenerateBlurHandler(req: PayloadRequest): Promise<Respon
   }
 
   const imageBuffer = Buffer.from(await imageResponse.arrayBuffer())
-  const blurDataURL = await getBlurDataUrlFromBuffer(imageBuffer)
+  const blurDataURL = await blurDataUrl(imageBuffer)
 
   await req.payload.update({
     collection: "media",

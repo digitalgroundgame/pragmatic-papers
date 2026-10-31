@@ -3,17 +3,18 @@ import React from "react"
 
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { isMedia, Media } from "@/components/Media"
-import type { ImageVariant } from "@/components/Media/ImageMedia"
+import type { ImageVariant } from "@/components/Media/CMSImage"
 import { TimeAgo } from "@/components/TimeAgo"
 import { cn } from "@/utilities/utils"
 import { isResolved } from "@/utilities/relationships"
+import { docPath } from "@/utilities/routes"
 
 export type ImagePosition = "above" | "below" | "left" | "right" | "none"
 
 export interface CollectionTileProps extends React.ComponentProps<"div"> {
   tile: CollectionGridSlots[number] | undefined
   imagePosition?: ImagePosition
-  priority?: boolean
+  preload?: boolean
   loading?: "eager" | "lazy"
   sizes?: string
   variant?: ImageVariant
@@ -22,7 +23,7 @@ export interface CollectionTileProps extends React.ComponentProps<"div"> {
 export const CollectionTile: React.FC<CollectionTileProps> = ({
   tile,
   imagePosition = "above",
-  priority,
+  preload,
   loading,
   className,
   sizes = "(max-width: 768px) 100vw, 920px",
@@ -34,7 +35,7 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
   if (!collection || !isResolved(collection.value)) return null
 
   const { title, slug, publishedAt, meta } = collection.value
-  const href = `/${collection.relationTo}/${slug}`
+  const href = docPath(collection.relationTo, slug ?? "")
 
   let populatedAuthors: User[] = []
   let heroImage: MediaType | null = null
@@ -83,7 +84,7 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
             className="h-full w-full object-cover object-center hover:opacity-80"
             variant={variant}
             sizes={sizes}
-            priority={priority}
+            preload={preload}
             loading={loading}
           />
         </div>

@@ -78,22 +78,32 @@ interface Facet {
   features?: { $type?: string; uri?: string }[]
 }
 
-/** The links a post's facets mark, as the text shows them. */
+/** Whether `url` is a web link. A post can carry any scheme, and the ticker renders it as an `href`. */
+function isWebUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url)
+    return protocol === "https:" || protocol === "http:"
+  } catch {
+    return false
+  }
+}
+
+/** The web links a post's facets mark, as the text shows them. */
 function facetLinks(text: string, facets: Facet[] = []): PostLink[] {
   const bytes = new TextEncoder().encode(text)
   const decoder = new TextDecoder()
   return facets.flatMap(({ index, features }) => {
     const uri = features?.find((f) => f.$type === "app.bsky.richtext.facet#link")?.uri
     const { byteStart, byteEnd } = index ?? {}
-    if (!uri || byteStart === undefined || byteEnd === undefined) return []
+    if (!uri || !isWebUrl(uri) || byteStart === undefined || byteEnd === undefined) return []
     const shown = decoder.decode(bytes.subarray(byteStart, byteEnd))
     return shown ? [{ text: shown, url: uri }] : []
   })
 }
 
-/** The links, and the link card's after them when it leads somewhere none of them does. */
+/** The links, and the link card's after them when it is a web link none of them leads to. */
 function withCard(links: PostLink[], card: string | undefined): PostLink[] {
-  return card && !links.some((link) => link.url === card)
+  return card && isWebUrl(card) && !links.some((link) => link.url === card)
     ? [...links, { text: "", url: card }]
     : links
 }

@@ -2,14 +2,16 @@ import { Pause, Play } from "lucide-react"
 import type { CSSProperties, FC, SVGProps } from "react"
 
 import { BlueskyIcon, XIcon, YoutubeIcon } from "@/components/SocialLinks/icons"
-import { formatFullTimestamp, formatTimeOfDay } from "@/heros/ArticleHero/dates"
+import { formatFullTimestamp } from "@/heros/ArticleHero/dates"
 import { cn } from "@/utilities/utils"
 
 import { LinkIcon, shortURL } from "./LinkIcon"
-import { TICKER_PAUSE_SCRIPT } from "./pause"
+import { formatStartsAt } from "./startsAt"
+import { bindPauseSwitch } from "./pause"
 import { LazyLinkTooltip } from "./LinkTooltip.lazy"
 import {
   excerpt,
+  loopRounds,
   postLinks,
   postText,
   tickerDuration,
@@ -26,11 +28,17 @@ const SOURCES: Record<TickerPostSource, { name: string; Icon: FC<SVGProps<SVGSVG
 
 function PostList({
   posts,
+  rounds,
   copy = false,
 }: {
   posts: TickerPost[]
+  /** How many times the posts go round in the list (`loopRounds`). */
+  rounds: number
   copy?: boolean
 }): React.ReactNode {
+  const items = Array.from({ length: rounds }, (_, round) =>
+    posts.map((post) => ({ post, round })),
+  ).flat()
   return (
     <ul
       aria-label={copy ? undefined : "Latest posts"}
@@ -38,11 +46,18 @@ function PostList({
       inert={copy || undefined}
       className={cn("flex shrink-0 items-center gap-6 pr-6", copy && "motion-reduce:hidden")}
     >
-      {posts.map((post) => {
+      {items.map(({ post, round }) => {
         const { name, Icon } = SOURCES[post.source]
         const links = postLinks(post)
+        // Repeats only fill the strip: hidden like the copy, and not drawn when nothing moves.
+        const filler = !copy && round > 0
         return (
-          <li key={post.id} className="flex shrink-0 items-center gap-6">
+          <li
+            key={`${post.id}:${round}`}
+            aria-hidden={filler || undefined}
+            inert={filler || undefined}
+            className={cn("flex shrink-0 items-center gap-6", filler && "motion-reduce:hidden")}
+          >
             <span aria-hidden="true" className="bg-brand size-1 rounded-full" />
             {/* The words link to the post, and each link in it is an icon beside them: an
                 anchor can't hold another, and a URL would take the line. */}
@@ -60,7 +75,11 @@ function PostList({
                 </span>
               </a>
               {links.map((url) =>
-                copy ? <LinkIcon key={url} url={url} /> : <LazyLinkTooltip key={url} url={url} />,
+                copy || filler ? (
+                  <LinkIcon key={url} url={url} />
+                ) : (
+                  <LazyLinkTooltip key={url} url={url} />
+                ),
               )}
             </span>
           </li>
@@ -83,9 +102,12 @@ function PauseSwitch({ live }: { live: boolean }): React.ReactNode {
         !live && "motion-reduce:hidden",
       )}
     >
-      <input type="checkbox" className="ticker-pause sr-only" aria-label="Pause ticker" />
-      {/* eslint-disable-next-line react/no-danger -- a constant, with nothing from the request in it */}
-      <script dangerouslySetInnerHTML={{ __html: TICKER_PAUSE_SCRIPT }} />
+      <input
+        ref={(input) => (input ? bindPauseSwitch(input) : undefined)}
+        type="checkbox"
+        className="ticker-pause sr-only"
+        aria-label="Pause ticker"
+      />
       <Pause aria-hidden="true" className="ticker-pause-icon size-3.5 fill-current" />
       <Play aria-hidden="true" className="ticker-play-icon size-3.5 fill-current" />
     </label>
@@ -93,35 +115,48 @@ function PauseSwitch({ live }: { live: boolean }): React.ReactNode {
 }
 
 function Posts({ posts, beside }: { posts: TickerPost[]; beside: boolean }): React.ReactNode {
+  const rounds = loopRounds(posts)
   return (
     // Beside a broadcast on a phone, there's room for one or the other, and the broadcast is
     // what a reader can't find elsewhere.
-    <div className={cn("flex min-w-0 flex-1 items-center gap-2", beside && "max-sm:hidden")}>
+    // They fade in beside the placeholder's label rather than appearing all at once.
+    <div
+      className={cn(
+        "ticker-posts flex min-w-0 flex-1 items-center gap-2",
+        beside && "max-sm:hidden",
+      )}
+    >
       <div className="ticker-viewport relative min-w-0 flex-1 overflow-hidden motion-reduce:overflow-x-auto">
         <div
           className="ticker-track flex w-max"
-          style={{ "--ticker-duration": `${tickerDuration(posts)}s` } as CSSProperties}
+          style={{ "--ticker-duration": `${tickerDuration(posts, rounds)}s` } as CSSProperties}
         >
-          <PostList posts={posts} />
+          <PostList posts={posts} rounds={rounds} />
           {/* The second copy is what makes the loop seamless: when the first has scrolled out,
               the track jumps back to where the second began. It is invisible to assistive
               tech and keyboards, and not drawn at all when the ticker doesn't move. */}
-          <PostList posts={posts} copy />
+          <PostList posts={posts} rounds={rounds} copy />
         </div>
       </div>
     </div>
   )
 }
 
+/** What the strip says when no channel is on air and no source has a post. */
+export const TICKER_EMPTY = "Nothing new right now"
+
 /** The ticker's label: what the strip is, set like a tile's kicker. */
-const LABEL = "text-brand-text shrink-0 font-serif text-xs font-bold tracking-wider uppercase"
+export const TICKER_LABEL =
+  "text-brand-text shrink-0 font-serif text-xs font-bold tracking-wider uppercase"
 
 function Broadcast({
   broadcast,
   pinned,
+  now,
 }: {
   broadcast: TickerBroadcast
   pinned: boolean
+  now?: Date
 }): React.ReactNode {
   const live = broadcast.status === "live"
   return (
@@ -143,7 +178,7 @@ function Broadcast({
           Live
         </span>
       ) : (
-        <span className={LABEL}>Upcoming</span>
+        <span className={TICKER_LABEL}>Upcoming</span>
       )}
       <YoutubeIcon className="size-4 shrink-0" />
       <span className="truncate font-sans font-semibold group-hover:underline">
@@ -155,7 +190,7 @@ function Broadcast({
           title={formatFullTimestamp(broadcast.startsAt)}
           className="text-muted-foreground shrink-0 font-serif"
         >
-          {formatTimeOfDay(broadcast.startsAt)}
+          {formatStartsAt(broadcast.startsAt, now)}
         </time>
       )}
     </a>
@@ -164,18 +199,27 @@ function Broadcast({
 
 /**
  * The ticker: a YouTube broadcast pinned at the start while it's live (or about to be), then
- * our latest posts scrolling past. Server-rendered at a fixed height, and moved by CSS alone
- * (`.ticker-*` in `globals.css`), so it ships no JavaScript and shifts nothing as it loads.
+ * our latest posts scrolling past. Rendered in the browser by `TickerLoader`, into the room
+ * its placeholder kept, at a fixed height, and moved by CSS alone (`.ticker-*` in
+ * `globals.css`).
  * The scroll pauses on hover, on focus, with its pause switch, and stops for readers who ask
  * for reduced motion, leaving the posts to scroll by hand.
  *
  * While it scrolls, it sticks under the header on tablets and wider, and while one of our
  * channels is live it sticks on phones too. Pausing it is the reader's way to quiet the page: it
  * stops, scrolls away with the page, and stays that way on the next page (`pause.ts`).
+ *
+ * With nothing to show it keeps its strip and says so, rather than leaving: the placeholder
+ * held this room while the feed loaded, and taking it away would shift the page below.
  */
-export function TickerView({ broadcast, posts }: TickerFeed): React.ReactNode {
-  if (!broadcast && posts.length === 0) return null
-
+export function TickerView({
+  broadcast,
+  posts,
+  now,
+}: TickerFeed & {
+  /** What an upcoming broadcast's day is measured from; stories and tests pin it. */
+  now?: Date
+}): React.ReactNode {
   const live = broadcast?.status === "live"
   return (
     <section
@@ -189,11 +233,16 @@ export function TickerView({ broadcast, posts }: TickerFeed): React.ReactNode {
           the top line. */}
       <div className="flex h-10 items-center gap-4 px-4 text-sm">
         {broadcast ? (
-          <Broadcast broadcast={broadcast} pinned={posts.length > 0} />
+          <Broadcast broadcast={broadcast} pinned={posts.length > 0} now={now} />
         ) : (
-          <span className={LABEL}>Latest</span>
+          <span className={TICKER_LABEL}>Latest</span>
         )}
         {posts.length > 0 && <Posts posts={posts} beside={Boolean(broadcast)} />}
+        {!broadcast && posts.length === 0 && (
+          <p className="ticker-posts text-muted-foreground min-w-0 truncate font-serif">
+            {TICKER_EMPTY}
+          </p>
+        )}
         {(posts.length > 0 || live) && <PauseSwitch live={live} />}
       </div>
     </section>

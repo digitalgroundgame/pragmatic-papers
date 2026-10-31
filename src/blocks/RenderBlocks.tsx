@@ -6,6 +6,7 @@ import { CallToActionBlock } from "@/blocks/CallToAction/Component"
 import { CollectionGridBlock } from "@/blocks/CollectionGrid/Component"
 import { ContentBlock } from "@/blocks/Content/Component"
 import { ContributorsBlock } from "@/blocks/Contributors/Component"
+import { FeedsListBlock } from "@/blocks/FeedsList/Component"
 import { FormBlock } from "@/blocks/Form/Component"
 import { MediaBlock } from "@/blocks/MediaBlock/Component"
 import { NewsletterSignupBlock } from "@/blocks/NewsletterSignup/Component"
@@ -13,27 +14,31 @@ import { MerchBlock } from "@/blocks/Merch/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
 import { VolumeViewBlock } from "@/blocks/VolumeViewBlock/component"
 import { isResolved } from "@/utilities/relationships"
-import { getTurnstileSiteKey } from "@/utilities/turnstile"
+import { getTurnstileSiteKey } from "@/integrations/cloudflare/turnstile"
 
 interface RenderBlocksProps {
   blocks: Page["layout"][number][]
   pageNumber?: number
+  /** False where `?p=` isn't read, so lists show their first page without page links. */
+  paginated?: boolean
 }
 
-export const RenderBlocks: React.FC<RenderBlocksProps> = ({ blocks, pageNumber }) => {
+export const RenderBlocks: React.FC<RenderBlocksProps> = ({ blocks, pageNumber, paginated }) => {
   return (
     <>
       {blocks.map((block, index) => {
         const { blockType } = block
         const key = `block-${block.id || index}`
         if (blockType === "collectionGrid") {
-          return <CollectionGridBlock key={key} {...block} priority={index === 0 || index === 1} />
+          return <CollectionGridBlock key={key} {...block} preload={index === 0 || index === 1} />
         } else if (blockType === "content") {
           return <ContentBlock key={key} {...block} />
         } else if (blockType === "contributors") {
           return <ContributorsBlock key={key} {...block} />
         } else if (blockType === "cta") {
           return <CallToActionBlock key={key} {...block} />
+        } else if (blockType === "feedsList") {
+          return <FeedsListBlock key={key} {...block} />
         } else if (blockType === "formBlock") {
           if (!isResolved(block.form)) return null
           return <FormBlock key={key} {...block} />
@@ -48,7 +53,9 @@ export const RenderBlocks: React.FC<RenderBlocksProps> = ({ blocks, pageNumber }
         } else if (blockType === "timeline") {
           return <TimelineBlock key={key} {...block} />
         } else if (blockType == "volumeView") {
-          return <VolumeViewBlock key={key} {...block} pageNumber={pageNumber} />
+          return (
+            <VolumeViewBlock key={key} {...block} pageNumber={pageNumber} paginated={paginated} />
+          )
         }
         return null
       })}

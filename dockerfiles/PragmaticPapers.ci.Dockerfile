@@ -19,24 +19,33 @@
 #
 # Build (see .github/actions/build-app-image, which playwright.yml's image job runs):
 #   docker buildx build -f dockerfiles/PragmaticPapers.ci.Dockerfile --network host \
-#     --secret id=GH_FONT_READ,env=GH_FONT_READ --build-arg DATABASE_URI=... .
+#     --secret id=GH_FONT_READ,env=GH_FONT_READ --build-arg DATABASE_URI=... \
+#     --build-arg PACKAGE_MANAGER="$(jq -r .packageManager package.json)" \
+#     [--build-arg NODE_REGISTRY=ghcr.io/digitalgroundgame] .
 ARG NODE_VERSION=24.15.0
-# Docker Hub's official node image, through Amazon ECR Public's mirror of it: Docker Hub
-# rate-limits anonymous pulls by address, and GitHub's shared runners run out. The
-# postgres services in the workflows and scripts/test-db.mjs pull from the same mirror.
+# Where Docker Hub's official node image comes from. Docker Hub rate-limits anonymous
+# pulls by address, and so does Amazon ECR Public's mirror of it, the default here;
+# GitHub's shared runners run out of both. build-app-image passes the GHCR copy
+# ci-images.yml keeps (ghcr.io/digitalgroundgame), pulled logged in, whenever it exists,
+# and Google's Docker Hub mirror (mirror.gcr.io/library) otherwise.
+ARG NODE_REGISTRY=public.ecr.aws/docker/library
 
 # ============================================
 # Base stage - setup pnpm and environment
 # ============================================
-FROM public.ecr.aws/docker/library/node:${NODE_VERSION}-alpine AS base
+FROM ${NODE_REGISTRY}/node:${NODE_VERSION}-alpine AS base
 RUN apk add --no-cache libc6-compat
 
 ENV PNPM_HOME="/pnpm" \
     PATH="/pnpm:$PATH"
 
-RUN --mount=type=bind,source=package.json,target=package.json \
-    corepack enable \
-    && corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
+# package.json's packageManager (pnpm@x.y.z), which build-app-image reads. Not a
+# bind mount of package.json: its contents would join this layer's cache key, and
+# editing any field would rebuild every dependency layer after it.
+ARG PACKAGE_MANAGER
+RUN test -n "$PACKAGE_MANAGER" || { echo "Pass --build-arg PACKAGE_MANAGER=<package.json's packageManager>" >&2; exit 1; } \
+    && corepack enable \
+    && corepack prepare "$PACKAGE_MANAGER" --activate
 
 WORKDIR /app
 
@@ -54,7 +63,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm fetch --store-dir /pnpm/store
 
 COPY package.json ./
-COPY scripts/install-fonts.ts scripts/ansi.mjs scripts/Inter-Bold.woff2 ./scripts/
+COPY scripts/install-fonts.ts scripts/ansi.mjs scripts/Inter-Bold.woff2 scripts/setup-git.mjs ./scripts/
 
 # A deploy must ship the real FKScreamer (see PragmaticPapers.Dockerfile).
 ENV FONTS_REQUIRED=true
@@ -85,6 +94,8 @@ ENV NODE_ENV=production \
 # Migrate the throwaway database first: the build reads the schema, and Payload's
 # prodMigrations stays off here, so parallel prerender workers never race to apply them.
 # A fresh runner has no Turbopack cache to go corrupt, so this skips build-next.sh.
+# SKIP_BUILD_TYPE_CHECK: CI's Static checks run `next typegen` and `tsc` on every commit
+# this image is built from, so next build doesn't type-check a second time.
 # PAYLOAD_SECRET only has to exist for the build; the deployment's real one comes from
 # Coolify at runtime. It's set here rather than as an ARG, which Docker's
 # SecretsUsedInArgOrEnv check flags whatever the value.
@@ -92,7 +103,7 @@ RUN export PAYLOAD_SECRET=build-only && \
     echo "--- PHASE: MIGRATING THE BUILD DATABASE ---" && \
     pnpm payload migrate && \
     echo "--- PHASE: BUILDING NEXT.JS ---" && \
-    SENTRY_RELEASE="${SOURCE_COMMIT}" pnpm build && \
+    SENTRY_RELEASE="${SOURCE_COMMIT}" SKIP_BUILD_TYPE_CHECK=true pnpm build && \
     echo "--- COMPLETED: BUILDING NEXT.JS ---"
 
 # The migrations this image ships, for copy-database.sh to spot a preview database that ran
@@ -102,7 +113,7 @@ RUN find src/migrations -maxdepth 1 -name '2*.ts' -exec basename {} .ts \; | sor
 # ============================================
 # Runner stage - minimal production runtime
 # ============================================
-FROM public.ecr.aws/docker/library/node:${NODE_VERSION}-alpine AS runner
+FROM ${NODE_REGISTRY}/node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
 
 ARG BUILD_ENV=preview

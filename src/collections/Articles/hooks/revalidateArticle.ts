@@ -1,19 +1,17 @@
 import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, Payload } from "payload"
 
-import { revalidatePath, revalidateTag } from "next/cache"
-
-import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
+import { revalidateForReaders } from "@/hooks/revalidateForReaders"
 import type { Article } from "@/payload-types"
+import { readersChange, type ReadersCopy } from "@/utilities/readersCopy"
 
-const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
+const revalidateDoc = async (givenDoc: ReadersCopy, payload: Payload) => {
   const path = `/articles/${givenDoc.slug}`
-
-  payload.logger.info(`Revalidating article at path: ${path}`)
-  revalidatePath(path)
-  revalidatePath("/articles/feed.xml")
-  revalidatePath("/articles/substack.xml")
-  revalidatePath(`/articles/${givenDoc.slug}/substack.xml`)
-  revalidateTag("articles-sitemap", "max")
+  const paths = [
+    path,
+    "/articles/feed.xml",
+    "/articles/substack.xml",
+    `/articles/${givenDoc.slug}/substack.xml`,
+  ]
 
   // Find and revalidate all volumes that reference this article
   const volumes = await payload.find({
@@ -29,40 +27,27 @@ const revalidateDoc = async (givenDoc: Article, payload: Payload) => {
     depth: 0,
   })
 
-  volumes.docs.forEach((volume) => {
-    const volumePath = `/volumes/${volume.slug}`
-    payload.logger.info(`Revalidating volume at path: ${volumePath}`)
-    revalidatePath(volumePath)
-  })
+  for (const volume of volumes.docs) paths.push(`/volumes/${volume.slug}`)
 
-  purgeEdgeCache(payload.logger, `article ${givenDoc.slug}`)
+  // The sitemap and the listings render per request here; `shared` covers them on the Worker,
+  // and revalidates the home page, which is prerendered.
+  revalidateForReaders(payload.logger, `article ${givenDoc.slug}`, {
+    paths,
+    tags: ["articles-sitemap"],
+    shared: true,
+  })
 }
 
-export const revalidateArticle: CollectionAfterChangeHook<Article> = async ({
-  doc,
-  previousDoc,
-  req: { payload, context },
-}) => {
-  if (!context.disableRevalidate) {
-    if (doc._status === "published") {
-      await revalidateDoc(doc, payload)
-    }
-
-    // A renamed published article leaves its old paths cached, including the
-    // Substack import URL an editor may already have copied.
-    if (
-      doc._status === "published" &&
-      previousDoc?._status === "published" &&
-      previousDoc.slug !== doc.slug
-    ) {
-      await revalidateDoc(previousDoc, payload)
-    }
-
-    // If the article was previously published, we need to revalidate the old path
-    if (previousDoc._status === "published" && doc._status !== "published") {
-      await revalidateDoc(previousDoc, payload)
-    }
-  }
+export const revalidateArticle: CollectionAfterChangeHook<Article> = async (args) => {
+  const { doc, req } = args
+  if (req.context.disableRevalidate) return doc
+  const change = await readersChange(args)
+  if (!change) return doc
+  const { before, after } = change
+  if (after) await revalidateDoc(after, req.payload)
+  // Unpublished or renamed: its old paths are still cached, including the Substack import
+  // URL an editor may already have copied.
+  if (before && (!after || before.slug !== after.slug)) await revalidateDoc(before, req.payload)
   return doc
 }
 

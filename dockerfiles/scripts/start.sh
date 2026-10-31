@@ -41,6 +41,18 @@ fi
 APP_DIR=$(dirname "$0")
 . "$APP_DIR/database-uri.sh"
 
+# Copies the files in folder $1 that folder $2 lacks (not its subfolders), creating $2.
+# Fails if any copy did.
+copy_missing_files() {
+    mkdir -p "$2" || return 1
+    status=0
+    for file in "$1"/*; do
+        [ -f "$file" ] || continue
+        [ -e "$2/${file##*/}" ] || cp "$file" "$2/" || status=1
+    done
+    return $status
+}
+
 if [ "$BUILT_WITHOUT_DATABASE" = "true" ]; then
     # Built in GitHub Actions (PragmaticPapers.ci.Dockerfile): the database work a
     # Coolify build does happens here instead, next to the database. Name the preview's
@@ -53,18 +65,24 @@ if [ "$BUILT_WITHOUT_DATABASE" = "true" ]; then
 
     # The database copy brings staging's media rows but not their files, which live
     # in staging's storage. When the app mounts that at /staging-media, copy what this
-    # preview's own media volume lacks. -n never overwrites, so the preview's own
-    # uploads survive, and later starts only pick up what staging added since. Name
-    # the files (`dir/*`), not the folder: BusyBox's cp (this image's) checks -n
-    # against each source's own destination, and for `dir/.` that's the preview's
-    # folder, which always exists, so it copied nothing at all.
+    # preview's own media volume lacks, maps (map-assets/) included. Nothing is
+    # overwritten, so the preview's own uploads survive, and later starts only pick up
+    # what staging added since. Each file is checked by name rather than with cp -n:
+    # BusyBox's cp (this image's) checks -n against each source's own destination, so
+    # it would skip map-assets/ whole once the preview has the folder.
     # An empty mount means its source path is wrong, so Docker created a new folder.
     staging_media=${STAGING_MEDIA_DIR:-/staging-media}
     if [ -d "$staging_media" ] && [ -n "$(ls -A "$staging_media")" ]; then
         echo "--- Copying staging's media from $staging_media ---"
-        before=$(ls "$APP_DIR/public/media" | wc -l)
-        if cp -n "$staging_media"/* "$APP_DIR/public/media/"; then
-            after=$(ls "$APP_DIR/public/media" | wc -l)
+        media="$APP_DIR/public/media"
+        before=$(find "$media" -type f | wc -l)
+        copied=true
+        copy_missing_files "$staging_media" "$media" || copied=false
+        if [ -d "$staging_media/map-assets" ]; then
+            copy_missing_files "$staging_media/map-assets" "$media/map-assets" || copied=false
+        fi
+        if $copied; then
+            after=$(find "$media" -type f | wc -l)
             echo "Media: copied $((after - before)), now $after files"
         else
             echo "WARNING: couldn't copy all of staging's media; some images may be missing"
@@ -140,7 +158,8 @@ refresh_prerendered_routes() {
 # Once traffic reaches this container, empty Cloudflare's edge of the previous release's
 # pages. Until Coolify's health check passes and it moves traffic over, the old container
 # answers on SERVER_URL, so wait until /next/purge-edge there names this container's
-# INSTANCE_ID; purging sooner would let the old container refill the edge.
+# INSTANCE_ID; purging sooner would let the old container refill the edge. The route then
+# requests the most-read pages through SERVER_URL, so the first readers find them cached.
 purge_edge_after_switchover() {
     if [ -z "$SERVER_URL" ]; then
         return 0
@@ -157,7 +176,7 @@ purge_edge_after_switchover() {
     done
     if wget -q -O /dev/null --post-data="" \
         --header="Authorization: Bearer $PAYLOAD_SECRET" "http://127.0.0.1:${PORT:-3000}/next/purge-edge"; then
-        echo "Edge purge queued now that $SERVER_URL is served by this container"
+        echo "Edge purge and page warm-up queued now that $SERVER_URL is served by this container"
     else
         echo "WARNING: couldn't queue the edge purge; the edge keeps old pages until they expire"
     fi

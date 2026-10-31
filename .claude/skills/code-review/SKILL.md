@@ -29,7 +29,9 @@ how Payload, Next.js, GitHub Actions, Cloudflare or Sentry behave.
 ## Step 0 — Earlier reviews of this PR
 
 Look for an earlier summary with a `<!-- claude-review sha=<sha> ... -->`
-marker (`gh pr view <number> --comments`). If there is one, review what
+marker, its `[claude-review]: #sha=<sha>&...` form, or an older visible
+`<sub>claude-review sha=<sha> ...</sub>` one
+(`gh pr view <number> --comments`). If there is one, review what
 changed since that sha (`git diff <sha>..HEAD`, or the PR diff when the
 branch was rebased) and say in the summary which commit the earlier review
 covered. Don't repeat findings it already made unless they are still
@@ -76,6 +78,35 @@ zero, one, or many:
   cross-draft-state) cached data?
 - **Auth/session/cookie logic** — `payload-token`, `__prerender_bypass`,
   Turnstile verification, anything in `src/access/`
+- **New inputs and the data they reach** — request bodies, query strings,
+  params, headers, cookies, webhook payloads, uploaded files and CMS content
+  that the change starts using. Look for:
+  - **Local API calls** (`payload.find`, `payload.update`, ...) acting for a
+    request without `overrideAccess: false` and `user`/`req`, which skip
+    every access rule, and drafts read without checking `draftMode()`.
+  - **Members treated as staff**: only staff become `req.user`
+    (`isPayloadUser`). Code that trusts a user id from the request, or reads
+    a member as `req.user`, crosses that line.
+  - **Endpoints** (plugin and collection `endpoints/`, route handlers under
+    `src/app/`) that don't check the caller themselves. The deploy routes
+    under `src/app/(frontend)/next/` (`migrations`, `purge-edge`,
+    `revalidate-all`, `warm-worker`) check `hasPayloadSecret` from
+    `bearer.ts`; the others check a Payload user.
+  - **Markup injection**: `dangerouslySetInnerHTML`, feed HTML that skips
+    `escapeHTML`, uploaded SVGs past the map sanitizer, and `href`s built
+    from CMS or user input (`javascript:` URLs). React escapes everything
+    else.
+  - **Per-user or draft data on a cached route**, which the edge and the
+    Worker then serve to every reader.
+  - **Secrets** logged, written to the database, or reaching the client
+    (`NEXT_PUBLIC_*`), and `${{ }}` holding PR titles, branch names or
+    comment text inside a workflow's `run:`.
+
+  Report a security finding only with a concrete path from an input an
+  attacker controls to the harm. Skip denial of service and rate limits,
+  missing hardening with no exploit, outdated dependencies, and anything
+  that needs control of environment variables.
+
 - **Dockerfiles / `dockerfiles/*`, `docker-compose.yml`, Coolify-specific env
   vars** (`COOLIFY_FQDN`, `BUILD_ENV`, `COPY_SOURCE_DATABASE`,
   `FORCE_DATABASE_COPY`) — build-time vs runtime behavior, what happens on
@@ -242,8 +273,9 @@ that PR:
   through the marker below.
 - End the summary with a line asking a reader to reply `/reviewed` or `LGTM` once
   they have read the review, then this marker as the very last line. `<sha>`
-  is `--head <sha>` when given (CI passes the commit it checked out), else
-  the PR's head: `gh pr view <number> --repo <owner>/<repo> --json headRefOid -q .headRefOid`.
+  is the full 40-character hash: `--head <sha>` when given (CI passes the commit
+  it checked out), else the PR's head:
+  `gh pr view <number> --repo <owner>/<repo> --json headRefOid -q .headRefOid`.
 
   ```md
   <!-- claude-review sha=<sha> verdict=<pass|blocker> -->
@@ -264,6 +296,27 @@ that PR:
 
 - If posting fails (e.g. permissions), print the full review to stdout so
   it's still visible in the Action run logs.
+
+## Progress-comment mode (claude-code-action)
+
+In CI, and when someone asks `@claude` for a review, the action keeps one
+progress comment on the PR (`mcp__github_comment__update_claude_comment`), and
+that comment is the review: tick off progress in it while you work, then make
+the summary its final body. Post no other top-level comment; inline findings
+still go through `mcp__github_inline_comment__create_inline_comment`.
+
+The action strips HTML comments from that comment, so the summary ends with
+the marker as a Markdown link reference definition instead, which GitHub
+doesn't render: a blank line, then this as its very last line (`<sha>` is the
+full hash of the commit you were given, else of the PR's head):
+
+```md
+[claude-review]: #sha=<sha>&verdict=<pass|blocker>
+```
+
+The action puts its own header above your body, which `review-ack.yml`
+allows. When the run asks for structured output, return the same verdict
+there.
 
 ## Leaving a pending review (`--pending` mode)
 

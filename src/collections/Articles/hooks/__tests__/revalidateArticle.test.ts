@@ -1,6 +1,7 @@
 // @vitest-environment node
 import type { Article } from "@/payload-types"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { draftsCollection, readersRow } from "@/utilities/__tests__/readersCopyHelpers"
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn(), revalidateTag: vi.fn() }))
 vi.mock("@/hooks/purgeEdgeCache", () => ({ purgeEdgeCache: vi.fn() }))
@@ -12,9 +13,11 @@ const { revalidateArticle, revalidateDelete } = await import("../revalidateArtic
 const payload = {
   logger: { info: vi.fn() },
   find: vi.fn().mockResolvedValue({ docs: [{ slug: "volume-1" }] }),
+  findByID: readersRow(),
 }
 
-const doc = (slug: string, status: Article["_status"]) => ({ slug, _status: status }) as Article
+const doc = (slug: string, status: Article["_status"]) =>
+  ({ id: 1, slug, _status: status }) as Article
 const req = (context: Record<string, unknown> = {}) => ({ payload, context }) as never
 const paths = () => vi.mocked(revalidatePath).mock.calls.map(([path]) => path)
 
@@ -25,6 +28,7 @@ afterEach(() => {
 describe("revalidateArticle", () => {
   it("refreshes the article, its feeds and the volumes that list it when published", async () => {
     await revalidateArticle({
+      collection: draftsCollection("articles"),
       doc: doc("new-piece", "published"),
       previousDoc: doc("new-piece", "draft"),
       req: req(),
@@ -36,13 +40,19 @@ describe("revalidateArticle", () => {
       "/articles/substack.xml",
       "/articles/new-piece/substack.xml",
       "/volumes/volume-1",
+      "/",
     ])
     expect(revalidateTag).toHaveBeenCalledWith("articles-sitemap", "max")
-    expect(purgeEdgeCache).toHaveBeenCalledWith(payload.logger, "article new-piece")
+    expect(purgeEdgeCache).toHaveBeenCalledWith(payload.logger, "article new-piece", {
+      paths: paths(),
+      shared: true,
+      revalidated: { paths: paths(), tags: ["articles-sitemap"] },
+    })
   })
 
   it("refreshes the old paths when a published article is unpublished", async () => {
     await revalidateArticle({
+      collection: draftsCollection("articles"),
       doc: doc("pulled", "draft"),
       previousDoc: doc("pulled", "published"),
       req: req(),
@@ -54,6 +64,7 @@ describe("revalidateArticle", () => {
 
   it("also refreshes the old slug's paths when a published article is renamed", async () => {
     await revalidateArticle({
+      collection: draftsCollection("articles"),
       doc: doc("new-slug", "published"),
       previousDoc: doc("old-slug", "published"),
       req: req(),
@@ -71,6 +82,7 @@ describe("revalidateArticle", () => {
 
   it("refreshes a republished article's paths once when its slug is unchanged", async () => {
     await revalidateArticle({
+      collection: draftsCollection("articles"),
       doc: doc("same", "published"),
       previousDoc: doc("same", "published"),
       req: req(),
@@ -79,8 +91,22 @@ describe("revalidateArticle", () => {
     expect(paths().filter((path) => path === "/articles/same/substack.xml")).toHaveLength(1)
   })
 
+  it("leaves the listings alone when an editor autosaves a published article", async () => {
+    payload.findByID.mockResolvedValueOnce(doc("live", "published"))
+    await revalidateArticle({
+      collection: draftsCollection("articles"),
+      doc: doc("live", "draft"),
+      previousDoc: doc("live", "published"),
+      req: req(),
+    } as never)
+
+    expect(revalidatePath).not.toHaveBeenCalled()
+    expect(purgeEdgeCache).not.toHaveBeenCalled()
+  })
+
   it("does nothing for a draft that was never published", async () => {
     await revalidateArticle({
+      collection: draftsCollection("articles"),
       doc: doc("draft", "draft"),
       previousDoc: doc("draft", "draft"),
       req: req(),
@@ -91,6 +117,7 @@ describe("revalidateArticle", () => {
 
   it("does nothing when revalidation is disabled", async () => {
     await revalidateArticle({
+      collection: draftsCollection("articles"),
       doc: doc("seeded", "published"),
       previousDoc: doc("seeded", "draft"),
       req: req({ disableRevalidate: true }),

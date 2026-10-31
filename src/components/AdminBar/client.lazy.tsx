@@ -3,7 +3,8 @@
 import dynamic from "next/dynamic"
 import React, { useEffect, useState, useSyncExternalStore } from "react"
 
-import { getClientSideURL } from "@/utilities/getURL"
+import { linkSeenToAccount, unlinkSeenFromAccount } from "@/components/Fresh/sync"
+import { getClientURL } from "@/utilities/getURL"
 
 import { readAdminBarHint, writeAdminBarHint } from "./hint"
 
@@ -21,6 +22,9 @@ const subscribeToNothing = () => () => undefined
  * literally, for Tailwind), which the hint script in the layout's `<head>` sets before the first
  * paint when the last page saw someone logged in. So the bar loads into room already made for it,
  * and readers get no gap. Whatever Payload answers corrects the hint for the next page.
+ *
+ * The same answer links the fresh dots to the account (`Fresh/sync`), as nothing else on the
+ * page knows who is logged in.
  */
 export function LazyAdminBar({ preview }: { preview?: boolean }): React.ReactNode {
   // Payload's answer, once there is one.
@@ -31,7 +35,7 @@ export function LazyAdminBar({ preview }: { preview?: boolean }): React.ReactNod
 
   useEffect(() => {
     const controller = new AbortController()
-    fetch(`${getClientSideURL()}/api/users/me`, {
+    fetch(`${getClientURL()}/api/users/me`, {
       credentials: "include",
       signal: controller.signal,
     })
@@ -42,6 +46,9 @@ export function LazyAdminBar({ preview }: { preview?: boolean }): React.ReactNod
         const user = Boolean(body.user)
         writeAdminBarHint(user)
         setLoggedIn(user)
+        // What they've seen follows their account, so a dot cleared elsewhere stays cleared.
+        if (user) void linkSeenToAccount()
+        else unlinkSeenFromAccount()
       })
       .catch(() => undefined)
     return () => controller.abort()

@@ -1,6 +1,8 @@
 import { adminFieldLevel } from "@/access/fields"
+import { isEditor } from "@/access/roles"
 import { menu } from "@/fields/menu"
 import { revalidateHeader } from "@/Header/hooks/revalidateHeader"
+import { tickerField } from "@/Header/Ticker/field"
 import type { GlobalConfig } from "payload"
 
 export const Header: GlobalConfig = {
@@ -10,25 +12,39 @@ export const Header: GlobalConfig = {
   },
   access: {
     read: () => true,
-    update: adminFieldLevel,
+    // Editors save the ticker's hidden posts; everything else here is admin-only per field.
+    update: ({ req: { user } }) => isEditor(user),
   },
   fields: [
-    menu({
-      name: "navItems",
-      label: "Navigation Items",
-      maxRows: 12,
-      labels: { singular: "Menu Item", plural: "Menu Items" },
-    }),
-    menu({
-      name: "actions",
-      label: "Action Buttons",
-      maxRows: 4,
-      labels: { singular: "Action", plural: "Actions" },
-      admin: {
-        description:
-          'Buttons shown in the header top-right. Use "Branded" variant for most important button.',
-      },
-    }),
+    {
+      type: "tabs",
+      tabs: [
+        {
+          label: "Navigation",
+          fields: [
+            menu({
+              name: "navItems",
+              label: "Navigation Items",
+              maxRows: 12,
+              labels: { singular: "Menu Item", plural: "Menu Items" },
+              access: { update: adminFieldLevel },
+            }),
+            menu({
+              name: "actions",
+              label: "Action Buttons",
+              maxRows: 4,
+              labels: { singular: "Action", plural: "Actions" },
+              admin: {
+                description:
+                  'Buttons shown in the header top-right. Use "Branded" variant for most important button.',
+              },
+              access: { update: adminFieldLevel },
+            }),
+          ],
+        },
+        { label: "Ticker", fields: [tickerField] },
+      ],
+    },
   ],
   hooks: {
     afterChange: [revalidateHeader],

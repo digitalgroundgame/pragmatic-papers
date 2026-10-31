@@ -1,38 +1,26 @@
-import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from "payload"
+import type { CollectionAfterChangeHook, CollectionAfterDeleteHook, Payload } from "payload"
 
-import { revalidatePath, revalidateTag } from "next/cache"
+import { revalidateForReaders } from "@/hooks/revalidateForReaders"
+import type { Article, Volume } from "@/payload-types"
+import { readersChange } from "@/utilities/readersCopy"
 
-import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
-import type { Article } from "@/payload-types"
+const revalidateVolume = (slug: string | null | undefined, payload: Payload, why: string) => {
+  revalidateForReaders(payload.logger, `volume ${slug}${why}`, {
+    paths: [`/volumes/${slug}`, "/volumes/feed.xml"],
+    tags: ["volumes-sitemap"],
+    shared: true,
+  })
+}
 
-export const revalidateArticle: CollectionAfterChangeHook<Article> = ({
-  doc,
-  previousDoc,
-  req: { payload, context },
-}) => {
-  if (!context.disableRevalidate) {
-    if (doc._status === "published") {
-      const path = `/volumes/${doc.slug}`
-
-      payload.logger.info(`Revalidating article at path: ${path}`)
-
-      revalidatePath(path)
-      revalidatePath("/volumes/feed.xml")
-      revalidateTag("volumes-sitemap", "max")
-      purgeEdgeCache(payload.logger, `volume ${doc.slug}`)
-    }
-
-    // If the article was previously published, we need to revalidate the old path
-    if (previousDoc._status === "published" && doc._status !== "published") {
-      const oldPath = `/volumes/${previousDoc.slug}`
-
-      payload.logger.info(`Revalidating old article at path: ${oldPath}`)
-
-      revalidatePath(oldPath)
-      revalidatePath("/volumes/feed.xml")
-      revalidateTag("volumes-sitemap", "max")
-      purgeEdgeCache(payload.logger, `volume ${previousDoc.slug} unpublished`)
-    }
+export const revalidateArticle: CollectionAfterChangeHook<Volume> = async (args) => {
+  const { doc, req } = args
+  if (req.context.disableRevalidate) return doc
+  const change = await readersChange(args)
+  if (!change) return doc
+  const { before, after } = change
+  if (after) revalidateVolume(after.slug, req.payload, "")
+  if (before && (!after || before.slug !== after.slug)) {
+    revalidateVolume(before.slug, req.payload, after ? " renamed" : " unpublished")
   }
   return doc
 }
@@ -41,14 +29,7 @@ export const revalidateDelete: CollectionAfterDeleteHook<Article> = ({
   doc,
   req: { payload, context },
 }) => {
-  if (!context.disableRevalidate) {
-    const path = `/volumes/${doc?.slug}`
-
-    revalidatePath(path)
-    revalidatePath("/volumes/feed.xml")
-    revalidateTag("volumes-sitemap", "max")
-    purgeEdgeCache(payload.logger, `volume ${doc?.slug} deleted`)
-  }
+  if (!context.disableRevalidate) revalidateVolume(doc?.slug, payload, " deleted")
 
   return doc
 }

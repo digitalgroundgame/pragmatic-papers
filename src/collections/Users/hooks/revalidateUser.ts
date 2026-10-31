@@ -1,8 +1,12 @@
 import type { User } from "@/payload-types"
-import { revalidatePath } from "next/cache"
 import type { CollectionAfterChangeHook } from "payload"
 
-import { purgeEdgeCache } from "@/hooks/purgeEdgeCache"
+import { isStaff } from "@/access/roles"
+import { revalidateForReaders } from "@/hooks/revalidateForReaders"
+
+/** Whether anything public shows this user: staff, or anyone with a public author page. */
+export const isOnPublicPages = (user: User | null | undefined): boolean =>
+  Boolean(user && (isStaff(user) || user.publicProfile))
 
 export const revalidateUser: CollectionAfterChangeHook<User> = async ({
   doc,
@@ -10,6 +14,11 @@ export const revalidateUser: CollectionAfterChangeHook<User> = async ({
   req: { payload, context },
 }) => {
   if (context.disableRevalidate) return doc
+  // A member (a commenter) has no page and is credited on none, before or after.
+  if (!isOnPublicPages(doc) && !isOnPublicPages(previousDoc)) return doc
+
+  // Every path to revalidate here and purge on the Worker.
+  const paths: string[] = []
 
   const slugsToRevalidate = new Set<string | null | undefined>()
   slugsToRevalidate.add(doc.slug)
@@ -18,15 +27,9 @@ export const revalidateUser: CollectionAfterChangeHook<User> = async ({
   }
 
   for (const slug of slugsToRevalidate) {
-    if (slug) {
-      const path = `/contributors/${slug}`
-      payload.logger.info(`Revalidating author at path: ${path}`)
-      revalidatePath(path)
-    }
+    if (slug) paths.push(`/contributors/${slug}`)
   }
-
-  payload.logger.info(`Revalidating authors index at path: /contributors`)
-  revalidatePath("/contributors")
+  paths.push("/contributors")
 
   // Find all published articles where this user is an author and revalidate them
   const articles = await payload.find({
@@ -47,11 +50,7 @@ export const revalidateUser: CollectionAfterChangeHook<User> = async ({
     pagination: false,
   })
 
-  for (const article of articles.docs) {
-    const path = `/articles/${article.slug}`
-    payload.logger.info(`Revalidating article at path: ${path}`)
-    revalidatePath(path)
-  }
+  for (const article of articles.docs) paths.push(`/articles/${article.slug}`)
 
   // Find volumes that contain these articles
   if (articles.docs.length > 0) {
@@ -72,14 +71,11 @@ export const revalidateUser: CollectionAfterChangeHook<User> = async ({
       pagination: false,
     })
 
-    for (const volume of volumes.docs) {
-      const volumePath = `/volumes/${volume.slug}`
-      payload.logger.info(`Revalidating volume at path: ${volumePath}`)
-      revalidatePath(volumePath)
-    }
+    for (const volume of volumes.docs) paths.push(`/volumes/${volume.slug}`)
   }
 
-  purgeEdgeCache(payload.logger, `author ${doc.slug ?? doc.id}`)
+  // Bylines show on the listings too; `shared` covers them on the Worker.
+  revalidateForReaders(payload.logger, `author ${doc.slug ?? doc.id}`, { paths, shared: true })
 
   return doc
 }

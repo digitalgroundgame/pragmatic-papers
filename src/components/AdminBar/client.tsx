@@ -1,7 +1,7 @@
 "use client"
 
 import { PaperIcon } from "@/components/Logo/icons/PaperIcon"
-import { getClientSideURL } from "@/utilities/getURL"
+import { getClientURL } from "@/utilities/getURL"
 import type { PayloadMeUser } from "@payloadcms/admin-bar"
 import { PayloadAdminBar } from "@payloadcms/admin-bar"
 import { usePathname, useRouter } from "next/navigation"
@@ -59,7 +59,7 @@ async function fetchDocId(
 export const AdminBarClient: React.FC<{ preview?: boolean }> = ({ preview }) => {
   const router = useRouter()
   const pathname = usePathname()
-  const cmsURL = getClientSideURL()
+  const cmsURL = getClientURL()
   const [user, setUser] = useState<PayloadMeUser>()
   // Keyed by the document it was fetched for, so a stale ID never outlives a navigation.
   const [doc, setDoc] = useState<{ key: string; id: string | undefined }>()

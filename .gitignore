@@ -107,3 +107,4 @@ devenv.local.yaml
 # Cloudflare Worker build output (pnpm build:worker, wrangler dev)
 .open-next/
 .wrangler/
+coverage-storybook

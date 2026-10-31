@@ -1,5 +1,5 @@
 import type { CollectionConfig } from "payload"
-import { getServerSideURL } from "@/utilities/getURL"
+import { getSiteURL } from "@/utilities/getURL"
 import { describe, expect, it } from "vitest"
 import { generateURL } from "../index"
 
@@ -12,7 +12,7 @@ const urlFor = (collection: string | undefined, slug?: string) =>
   } as Args)
 
 describe("generateURL", () => {
-  const site = getServerSideURL()
+  const site = getSiteURL()
 
   it.each([
     ["articles", "on-pragmatism", "/articles/on-pragmatism"],

@@ -10,3 +10,10 @@ export const interactiveTag = (interactiveId: number | string): string =>
   `interactive:${interactiveId}`
 
 export const interactivePath = (slug: string): string => `/interactives/${slug}`
+
+/**
+ * An interactive's page and the sitemap that lists it, for the Worker to purge. Purging a
+ * path purges the paths under it too, so its regions and search go with it.
+ */
+export const interactivePaths = (slug: string | null | undefined): string[] =>
+  slug ? [interactivePath(slug), "/interactives/sitemap.xml"] : ["/interactives/sitemap.xml"]

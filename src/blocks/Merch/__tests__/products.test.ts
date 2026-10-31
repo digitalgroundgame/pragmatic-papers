@@ -73,14 +73,14 @@ describe("deriveBadge", () => {
 })
 
 describe("toMediaShape", () => {
-  it("presents a remote image as a Media doc ImageMedia can render", () => {
+  it("presents a remote image as a Media doc CMSImage can render", () => {
     const media = toMediaShape(makeDoc())
 
     expect(media?.url).toBe("https://cdn.shopify.com/mug.jpg")
     expect(media?.width).toBe(800)
     expect(media?.height).toBe(600)
     expect(media?.alt).toBe("A mug")
-    // Without a mimeType the Media dispatcher never routes this to ImageMedia.
+    // Without a mimeType the Media dispatcher never routes this to CMSImage.
     expect(media?.mimeType).toMatch(/^image\//)
   })
 

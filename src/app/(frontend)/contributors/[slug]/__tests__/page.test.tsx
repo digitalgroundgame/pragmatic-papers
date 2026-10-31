@@ -10,8 +10,8 @@ const { find, queryUserBySlug, permanentRedirect } = vi.hoisted(() => ({
 }))
 
 vi.mock("server-only", () => ({}))
-vi.mock("@/utilities/getPayloadConfig", () => ({ getPayloadConfig: async () => ({ find }) }))
-vi.mock("@/utilities/queries", () => ({ queryUserBySlug, queryVolumesForArticles: vi.fn() }))
+vi.mock("@/data/payload", () => ({ getPayloadClient: async () => ({ find }) }))
+vi.mock("@/data/queries", () => ({ queryUserBySlug, queryVolumesForArticles: vi.fn() }))
 vi.mock("@/components/PayloadRedirects", () => ({ PayloadRedirects: () => null }))
 vi.mock("@payload-config", () => ({ default: {} }))
 vi.mock("next/headers", () => ({ draftMode: async () => ({ isEnabled: false }) }))

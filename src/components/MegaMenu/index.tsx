@@ -5,7 +5,7 @@ import {
   navigationMenuListClassName,
 } from "@/components/ui/navigation-menu-styles"
 import { type MenuField } from "@/payload-types"
-import { getLinkFieldUrl, linksToUnpublished } from "@/utilities/getLinkFieldUrl"
+import { linkHref, linksToUnpublished } from "@/utilities/linkField"
 import { cn } from "@/utilities/utils"
 import { CMSLink } from "../Link"
 import type { MegaMenuItem } from "./Interactive"
@@ -25,7 +25,7 @@ interface MegaMenuProps {
 export function MegaMenu({ menu, label }: MegaMenuProps): React.ReactNode {
   if (!menu) return null
   const items = menu.flatMap(({ id, link }): MegaMenuItem[] => {
-    const href = getLinkFieldUrl(link)
+    const href = linkHref(link)
     if (!href || !link || linksToUnpublished(link)) return []
     return [{ id: id ?? href, href, link: <CMSLink link={link} /> }]
   })

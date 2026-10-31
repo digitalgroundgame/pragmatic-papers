@@ -3,13 +3,13 @@ import {
   buildTikTokSrc,
   parseTikTokPostId,
 } from "@/blocks/SocialEmbed/adapters/tiktok.adapter"
-import type { SocialEmbedRenderProps } from "@/blocks/SocialEmbed/Component"
+import type { SocialEmbedBlock } from "@/payload-types"
 import { EmbedError } from "@/blocks/SocialEmbed/embeds/EmbedError"
 
 export async function TikTokEmbedBlock({
   url,
   snapshot,
-}: SocialEmbedRenderProps): Promise<React.ReactNode> {
+}: SocialEmbedBlock): Promise<React.ReactNode> {
   if (snapshot?.status && snapshot.status !== "ok") {
     if (snapshot.html) {
       return (

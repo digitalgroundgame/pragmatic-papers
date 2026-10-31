@@ -40,6 +40,12 @@ export interface TickerFeed {
   posts: TickerPost[]
 }
 
+/**
+ * The cache tag on the Header's ticker settings as the feed reads them (`getTickerFeed`),
+ * which the Header's revalidate hook clears.
+ */
+export const TICKER_SETTINGS_TAG = "ticker_settings"
+
 /** How many posts run in the ticker at once. */
 export const MAX_POSTS = 8
 
@@ -100,6 +106,31 @@ export function withoutHidden(posts: TickerPost[], hidden: readonly string[]): T
   return keys.size === 0 ? posts : posts.filter((post) => !keys.has(postKey(post.url)))
 }
 
+/** Our own sites: every Pragmatic Papers host, whatever deployment is reading the feed. */
+export const OWN_HOSTS = ["pragmaticpapers.com"] as const
+
+/** Whether a link leads to one of `hosts` or a subdomain of one. */
+function isOwnLink(link: string, hosts: readonly string[]): boolean {
+  let host: string
+  try {
+    host = new URL(link).hostname.toLowerCase()
+  } catch {
+    return false
+  }
+  return hosts.some((own) => host === own || host.endsWith(`.${own}`))
+}
+
+/**
+ * The posts, without the ones that link to our own site. The ticker sits on that site, so a
+ * post sending readers back to an article they can already reach from the page is circular.
+ */
+export function withoutOwnLinks(
+  posts: TickerPost[],
+  hosts: readonly string[] = OWN_HOSTS,
+): TickerPost[] {
+  return posts.filter((post) => !postLinks(post).some((link) => isOwnLink(link, hosts)))
+}
+
 /**
  * Every source's posts as one list, newest first. The same thing cross-posted to Bluesky and X
  * shows once: the newer copy.
@@ -130,14 +161,37 @@ export function excerpt(text: string, max = MAX_POST_LENGTH): string {
 /** About how many characters wide a link icon and its gap are. */
 const LINK_WIDTH = 3
 
+/** About how many characters wide a post's dot, source icon and the gaps around them are. */
+const POST_CHROME_WIDTH = 13
+
+/**
+ * About how many characters wide one pass must be to fill the widest screens: 2,560 px of the
+ * posts' 14 px serif, at about 5.4 px a character. Narrower than that, the strip would show
+ * empty space before the loop came round.
+ */
+export const MIN_PASS_WIDTH = 480
+
+function postWidth(post: TickerPost): number {
+  return excerpt(postText(post)).length + postLinks(post).length * LINK_WIDTH
+}
+
+/**
+ * How many times the posts repeat in one pass. A few short posts would leave the strip half
+ * empty, the loop's second copy only appearing once the first has scrolled out, so they go
+ * round again until a pass is wide enough to fill the screen.
+ */
+export function loopRounds(posts: TickerPost[]): number {
+  const width = posts.reduce((sum, post) => sum + postWidth(post) + POST_CHROME_WIDTH, 0)
+  if (width === 0) return 1
+  return Math.max(1, Math.ceil(MIN_PASS_WIDTH / width))
+}
+
 /**
  * Seconds for one full pass, so the ticker moves at an easy reading pace however much is in
- * it: about 4.5 characters a second, never faster than a pass every 40 seconds.
+ * it: about 4.5 characters a second, never faster than a pass every 40 seconds. A pass holds
+ * the posts `rounds` times (`loopRounds`).
  */
-export function tickerDuration(posts: TickerPost[]): number {
-  const characters = posts.reduce(
-    (sum, post) => sum + excerpt(postText(post)).length + postLinks(post).length * LINK_WIDTH,
-    0,
-  )
+export function tickerDuration(posts: TickerPost[], rounds = 1): number {
+  const characters = posts.reduce((sum, post) => sum + postWidth(post), 0) * rounds
   return Math.max(40, Math.round(characters / 4.5))
 }

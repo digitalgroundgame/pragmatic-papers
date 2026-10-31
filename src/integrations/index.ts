@@ -1,6 +1,8 @@
 import { blueskyAccounts } from "./bluesky"
 import { cloudflareWorker, cloudflareZone } from "./cloudflare"
 import { githubRepo } from "./github"
+import { listmonkServer } from "./listmonk/connection"
+import { oauthApp } from "./oauth"
 import { shopifyStore } from "./shopify"
 import { xAccounts } from "./x"
 import { youtubeChannels } from "./youtube"
@@ -27,7 +29,16 @@ export const courtTracker = githubRepo({
   tokenEnv: "COURT_TRACKER_GITHUB_TOKEN",
 })
 
-export { shopifyStore }
+export { listmonkServer, shopifyStore }
+
+/** Turnstile, which the newsletter signup form checks before subscribing anyone. */
+export const cloudflareTurnstile: Integration = {
+  id: "cloudflare-turnstile",
+  label: "Newsletter signup bot check",
+  service: "Cloudflare",
+  describe: () => "cloudflare:turnstile",
+  required: ["CLOUDFLARE_TURNSTILE_SECRET_KEY", "TURNSTILE_SITE_KEY"],
+}
 
 /**
  * The Cloudflare zone in front of every environment — production, staging and each PR
@@ -105,6 +116,41 @@ export const unsplash = unsplashApp({
   defaultAppName: "pragmatic_papers_development",
 })
 
+/**
+ * The OAuth applications behind "Sign in with …" on the admin's login page (the `sso`
+ * experiment, `src/plugins/sso`). Each provider's button appears once its two variables are
+ * set; its application must list `<SERVER_URL>/api/auth/callback/<google|discord|destiny>`
+ * as a redirect URI.
+ */
+export const googleSignIn = oauthApp({
+  id: "google-sign-in",
+  label: "Sign in with Google",
+  service: "Google",
+  clientIdEnv: "GOOGLE_CLIENT_ID",
+  clientSecretEnv: "GOOGLE_CLIENT_SECRET",
+})
+
+export const discordSignIn = oauthApp({
+  id: "discord-sign-in",
+  label: "Sign in with Discord",
+  service: "Discord",
+  clientIdEnv: "DISCORD_CLIENT_ID",
+  clientSecretEnv: "DISCORD_CLIENT_SECRET",
+})
+
+/**
+ * Destiny.gg allows one application per account, with one redirect URL that callbacks must
+ * start with, and shows its secret only when it's regenerated (the one it's created with
+ * isn't the one its token exchange checks).
+ */
+export const destinySignIn = oauthApp({
+  id: "destiny-sign-in",
+  label: "Sign in with Destiny.gg",
+  service: "Destiny.gg",
+  clientIdEnv: "DESTINY_CLIENT_ID",
+  clientSecretEnv: "DESTINY_CLIENT_SECRET",
+})
+
 /** Declaration order is display order. */
 export const INTEGRATIONS: readonly Integration[] = [
   courtTracker,
@@ -115,6 +161,11 @@ export const INTEGRATIONS: readonly Integration[] = [
   blueskyPosts,
   xPosts,
   unsplash,
+  listmonkServer,
+  cloudflareTurnstile,
+  googleSignIn,
+  discordSignIn,
+  destinySignIn,
 ]
 
 export function getIntegration(id: string): Integration | null {

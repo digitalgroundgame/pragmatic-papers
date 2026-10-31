@@ -149,6 +149,28 @@ describe("blueskyAccounts", () => {
     expect(second!.links).toEqual([{ text: "", url: "https://example.com/card" }])
   })
 
+  it("drops links that aren't http(s), from facets and the link card", async () => {
+    const text = "one two"
+    const link = (byteStart: number, byteEnd: number, uri: string) => ({
+      index: { byteStart, byteEnd },
+      features: [{ $type: "app.bsky.richtext.facet#link", uri }],
+    })
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
+      reply({
+        feed: [
+          post("3k1", text, handle, {
+            facets: [link(0, 3, "data:text/html,<p>hi</p>"), link(4, 7, "http://example.com/two")],
+            embed: { external: { uri: "javascript:alert(1)" } },
+          }),
+          post("3k2", "card", handle, { embed: { external: { uri: "not a url" } } }),
+        ],
+      }),
+    )
+    const [first, second] = await account.recentPosts({ handle, fetchImpl })
+    expect(first!.links).toEqual([{ text: "two", url: "http://example.com/two" }])
+    expect(second!.links).toEqual([])
+  })
+
   it("keeps at most `limit` posts", async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () =>
       reply({ feed: [post("a", "one"), post("b", "two"), post("c", "three")] }),

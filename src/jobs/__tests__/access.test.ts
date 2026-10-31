@@ -19,10 +19,18 @@ afterEach(() => {
 })
 
 describe("canRunJobs", () => {
-  it("lets any logged-in user run jobs, with or without a secret", () => {
+  it("lets logged-in staff run jobs, with or without a secret", () => {
     vi.stubEnv("CRON_SECRET", "")
 
-    expect(canRunJobs(request({ user: { id: 1 } as PayloadRequest["user"] }))).toBe(true)
+    const user = { id: 1, roles: ["editor"] } as PayloadRequest["user"]
+    expect(canRunJobs(request({ user }))).toBe(true)
+  })
+
+  it("refuses a logged-in member", () => {
+    vi.stubEnv("CRON_SECRET", "")
+
+    const user = { id: 1, roles: ["member"] } as PayloadRequest["user"]
+    expect(canRunJobs(request({ user }))).toBe(false)
   })
 
   it("lets a caller with the secret run jobs", () => {

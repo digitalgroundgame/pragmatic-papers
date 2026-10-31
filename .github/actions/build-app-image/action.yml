@@ -23,6 +23,14 @@ inputs:
     description: "Token that can write packages; required with push-tag"
     required: false
     default: ""
+  save-cache:
+    description: >-
+      "true" to write the layer cache back to GitHub's cache. Exporting it takes
+      one to two and a half minutes, so only pushes (to dev and main) save it; PRs
+      and the merge queue read dev's entry, which every branch can, being the
+      default branch's.
+    required: false
+    default: "false"
 
 outputs:
   image:
@@ -43,6 +51,55 @@ runs:
           network=host
           image=mirror.gcr.io/moby/buildkit:buildx-stable-1
         buildkitd-flags: --allow-insecure-entitlement network.host
+        # The runner is thrown away after the job, so skip removing the builder, which
+        # took ~40 s at the end of every run, ahead of the jobs waiting on the image.
+        cleanup: false
+
+    # The pnpm version, for the base stage's corepack. Passed as a build arg rather
+    # than read from a bind-mounted package.json there, because a bind mount's
+    # contents are part of the layer's cache key: any edit to package.json, a
+    # script included, would rebuild every dependency layer after it.
+    - name: Read the package manager
+      id: package-manager
+      shell: bash
+      run: echo "value=$(jq -r .packageManager package.json)" >> "$GITHUB_OUTPUT"
+
+    # The Node base image from ci-images.yml's GHCR copy, pulled logged in: ECR Public
+    # throttles logged-out pulls per IP, and shared runners run out ("429 Too Many
+    # Requests: Data limit exceeded"). Until that copy has this NODE_VERSION (a bump
+    # publishes it once it reaches dev), or when the login fails, it's Google's Docker
+    # Hub mirror, which BuildKit's own image comes through too, and ECR Public only when
+    # neither has the tag. BuildKit reads the login from the runner's Docker config.
+    - name: Log in to GHCR
+      id: ghcr-login
+      continue-on-error: true
+      uses: docker/login-action@v4
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ inputs.registry-token || github.token }}
+
+    - name: Choose the Node base image
+      id: node-registry
+      shell: bash
+      env:
+        LOGGED_IN: ${{ steps.ghcr-login.outcome == 'success' }}
+        MIRROR: ghcr.io/digitalgroundgame
+      run: |
+        version=$(sed -n 's/^ARG NODE_VERSION=//p' dockerfiles/PragmaticPapers.ci.Dockerfile)
+        has() { [ -n "$version" ] && docker buildx imagetools inspect "$1/node:${version}-alpine" > /dev/null; }
+        if [ "$LOGGED_IN" = true ] && has "$MIRROR"; then
+          registry=$MIRROR
+        else
+          echo "::warning::No GHCR copy of node:${version}-alpine to pull. Run the CI images workflow to publish it."
+          if has mirror.gcr.io/library; then
+            registry=mirror.gcr.io/library
+          else
+            registry=public.ecr.aws/docker/library
+          fi
+        fi
+        echo "Building on $registry/node:${version}-alpine"
+        echo "value=$registry" >> "$GITHUB_OUTPUT"
 
     # Written as a tar for the artifact rather than pushed: fork, Dependabot and
     # merge-queue runs can't push to GHCR, and E2E runs on every one of them.
@@ -65,13 +122,15 @@ runs:
         build-args: |
           DATABASE_URI=postgres://postgres:postgres@127.0.0.1:5432/build
           SOURCE_COMMIT=${{ inputs.source-commit }}
+          PACKAGE_MANAGER=${{ steps.package-manager.outputs.value }}
+          NODE_REGISTRY=${{ steps.node-registry.outputs.value }}
         labels: |
           org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           org.opencontainers.image.revision=${{ inputs.source-commit }}
         # The dependency layers only change with the lockfile; everything from
         # `COPY . .` on rebuilds each time anyway.
         cache-from: type=gha,scope=app-image
-        cache-to: type=gha,scope=app-image,mode=max
+        cache-to: ${{ inputs.save-cache == 'true' && 'type=gha,scope=app-image,mode=max' || '' }}
 
     - name: Save the image for later jobs
       uses: actions/upload-artifact@v7
@@ -80,14 +139,7 @@ runs:
         path: ${{ runner.temp }}/app-image.tar
         retention-days: 1
 
-    - name: Log in to GHCR
-      if: inputs.push-tag != ''
-      uses: docker/login-action@v4
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ inputs.registry-token }}
-
+    # Logged in by the first GHCR step, with registry-token.
     - name: Push to GHCR
       if: inputs.push-tag != ''
       shell: bash

@@ -13,11 +13,11 @@ import {
   Tailwind,
   Text,
 } from "react-email"
-import { formatDistanceToNow } from "date-fns/formatDistanceToNow"
 import * as React from "react"
 
 import type { Article, Topic, User, Volume } from "@/payload-types"
-import { formatAuthors } from "@/utilities/formatAuthors"
+import { formatTimeAgo } from "@/utilities/formatDate"
+import { formatAuthors } from "@/utilities/formatList"
 import { getMediaUrl } from "@/utilities/getMediaUrl"
 import { isResolved } from "@/utilities/relationships"
 import { cn } from "@/utilities/utils"
@@ -167,9 +167,7 @@ export function VolumeArticleEmail({
                 </Row>
               )}
               {article.publishedAt && (
-                <Text className="my-0 text-neutral-600">
-                  {formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true })}
-                </Text>
+                <Text className="my-0 text-neutral-600">{formatTimeAgo(article.publishedAt)}</Text>
               )}
               <Text className="my-1 text-base leading-relaxed text-black">{excerpt}</Text>
               {article.topics && article.topics.length > 0 && (

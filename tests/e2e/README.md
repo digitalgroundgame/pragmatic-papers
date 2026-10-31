@@ -35,7 +35,14 @@ Every slug, name and date the specs rely on comes from the seed through
 
 ## In CI
 
-The "E2E tests" job in `.github/workflows/playwright.yml` runs the suite
+The "E2E tests" job in `.github/workflows/playwright.yml` runs the suite in
+the merge queue, on PRs into `main` (which skip the queue), and on a PR into
+`dev` only once it has the `e2e` label (adding the label
+starts a run; later pushes run it while the label stays). Without the label the
+required check is skipped on the PR, which counts as passing, and the queue
+catches a failure before the PR lands. The job doesn't wait for the
+workflow's "Build image" job to start: it installs and seeds while the image
+builds, then waits for it (`scripts/wait-for-app-image.sh`). It runs
 inside the pinned `mcr.microsoft.com/playwright` image, against the app image
 the PR's preview deploys (`E2E_IMAGE`: its standalone `node server.js`).
 `.github/actions/setup-e2e` sets the environment it runs with. The job log

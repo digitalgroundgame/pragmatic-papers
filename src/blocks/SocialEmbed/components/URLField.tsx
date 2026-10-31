@@ -1,7 +1,7 @@
 "use client"
 import "@/blocks/SocialEmbed/components/URLField.scss"
 import { detectPlatform } from "@/blocks/SocialEmbed/helpers/detectPlatform"
-import { useDebounce } from "@/utilities/useDebounce"
+import { useDebounce } from "@/hooks/useDebounce"
 import { TextField, useField } from "@payloadcms/ui"
 import { CheckCircle2, XCircle } from "lucide-react"
 import type { TextFieldClientComponent } from "payload"

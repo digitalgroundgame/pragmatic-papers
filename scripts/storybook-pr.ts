@@ -7,7 +7,7 @@
  *   node scripts/storybook-pr.ts close    # PR closed or merged (.github/workflows/storybook-close.yml)
  *
  * `deploy` records the preview as a GitHub Deployment of the PR's branch in the
- * "Storybook Preview" environment, so the PR's deployments list it next to the
+ * "Storybook" environment, so the PR's deployments list it next to the
  * site's Preview (scripts/preview-deployment.ts), and marks the PR's older ones
  * inactive. `close` marks all of them inactive, as the site's Preview does;
  * storybook-close.yml then deletes the Worker Preview itself.
@@ -20,9 +20,11 @@
  *
  * A component is matched through the build's index.json: a changed file that
  * is a story file or a story's `component`, else the stories nearest above it
- * (say `Media/ImageMedia/index.tsx` under `Media/Media.stories.tsx`), as long
+ * (say `Media/CMSImage/index.tsx` under `Media/Media.stories.tsx`), as long
  * as that folder has only a few of them: a helper in `components/ui` shouldn't
- * list all 27 primitives.
+ * list all 27 primitives. Under `src/app/` a folder is a route, and the routes
+ * below it aren't part of its components, so there only the file's own folder
+ * counts: a page under `(frontend)/articles/` isn't `(frontend)/not-found.tsx`.
  *
  * Edits made with the workflow's token start no workflow, so this can't loop.
  */
@@ -33,12 +35,15 @@ import { blockEnd, blockStart, editPrBody, renderBlock, withBlock } from "./pr-d
 
 export const LINKS_START = blockStart("storybook-links")
 export const LINKS_END = blockEnd("storybook-links")
-export const ENVIRONMENT = "Storybook Preview"
+export const ENVIRONMENT = "Storybook"
 
 /** More components than this are summarised as "and N more". */
 export const MAX_COMPONENTS = 20
 /** A folder with more stories than this is too broad to match a file by folder alone. */
 export const MAX_STORIES_PER_FOLDER = 3
+
+/** Route folders: their stories cover their own files, not the routes nested below. */
+const ROUTES = /^src\/app\//
 
 /** Changed files that never render a component on their own. */
 const IGNORED = /(^|\/)__tests__\/|\.test\.tsx?$|^src\/migrations\/|^src\/payload-types\.ts$/
@@ -84,7 +89,10 @@ export function changedComponents(files: string[], entries: IndexEntry[]): Compo
     }
     for (let folder = dirname(file); folder.includes("/"); folder = dirname(folder)) {
       const nearest = byFolder.get(folder)
-      if (!nearest) continue
+      if (!nearest) {
+        if (ROUTES.test(file)) break
+        continue
+      }
       if (nearest.size <= MAX_STORIES_PER_FOLDER) for (const title of nearest) titles.add(title)
       break
     }

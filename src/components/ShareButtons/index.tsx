@@ -108,13 +108,13 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
         render={
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="icon-lg"
             aria-label="Share"
             className={cn("shrink-0", className)}
           />
         }
       >
-        <Share2 className="size-4" />
+        <Share2 />
       </PopoverTrigger>
       <PopoverContent align="end" aria-label="Share">
         <div className="grid grid-cols-7 gap-1">

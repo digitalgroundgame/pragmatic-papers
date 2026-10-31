@@ -4,7 +4,7 @@ import { expect, mocked, within } from "storybook/test"
 import { volumes } from "@/stories/fixtures/docs"
 import { createFakePayload } from "@/stories/fixtures/payload"
 import { createHeadingNode, createParagraph, richText } from "@/stories/fixtures/richText"
-import { getPayloadConfig } from "@/utilities/getPayloadConfig"
+import { getPayloadClient } from "@/data/payload"
 
 import { VolumeViewBlock } from "./component"
 
@@ -21,7 +21,7 @@ const meta = {
     ),
   },
   beforeEach: () => {
-    mocked(getPayloadConfig).mockResolvedValue(createFakePayload({ collections: { volumes } }))
+    mocked(getPayloadClient).mockResolvedValue(createFakePayload({ collections: { volumes } }))
   },
 } satisfies Meta<typeof VolumeViewBlock>
 
@@ -60,6 +60,22 @@ export const SecondPage: Story = {
   play: async ({ canvasElement }) => {
     await expect(await listedVolumes(canvasElement)).toEqual(["Turnout", "Labor"])
     await expect(within(canvasElement).getByText(/Showing 5 - 6 of 6/)).toBeInTheDocument()
+  },
+}
+
+/** On the home page, which is prerendered and can't read `?p=`: the newest volumes, no page links. */
+export const Unpaginated: Story = {
+  args: { populateBy: "collection", limit: 4, pageNumber: 2, paginated: false },
+  play: async ({ canvasElement }) => {
+    await expect(await listedVolumes(canvasElement)).toEqual([
+      "The Local Issue",
+      "Courts",
+      "Money",
+      "Maps",
+    ])
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByText(/Showing/)).not.toBeInTheDocument()
+    await expect(canvas.queryByRole("navigation")).not.toBeInTheDocument()
   },
 }
 

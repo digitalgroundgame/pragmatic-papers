@@ -64,6 +64,16 @@ describe("TableOfContentsCheckbox", () => {
     expect(table).toHaveAttribute("title", "#table-1")
   })
 
+  it("previews a heading by its table of contents label", () => {
+    mockChecked = true
+    mockContent = content([
+      { ...heading("h2", "Michigan Senate – Smith vs Jones"), $: { tocLabel: "Michigan Senate" } },
+    ])
+    render(<TableOfContentsCheckbox {...props} />)
+
+    expect(screen.getByText("Michigan Senate")).toHaveAttribute("title", "#michigan-senate")
+  })
+
   it("prompts for a heading when the editor has no entries", () => {
     mockChecked = true
     mockContent = content([])

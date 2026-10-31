@@ -5,11 +5,14 @@ import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { installFonts } from "../../scripts/install-fonts"
+import { installFonts, installSansFont } from "../../scripts/install-fonts"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SCRIPT = resolve(__dirname, "../../scripts/install-fonts.ts")
 const INTER_BOLD = readFileSync(resolve(__dirname, "../../scripts/Inter-Bold.woff2"))
+const GEIST = readFileSync(
+  resolve(__dirname, "../../node_modules/geist/dist/fonts/geist-sans/Geist-Variable.woff2"),
+)
 
 /** Runs the installer in-process, so coverage sees it, and collects what it logged. */
 async function runScript(cwd: string, env: Record<string, string> = {}) {
@@ -88,7 +91,16 @@ describe("install-fonts.ts", () => {
       )
     })
 
+    it("flags a package file that isn't a font, and doesn't try to subset it", async () => {
+      const result = await runScript(tmpRoot)
+      expect(result.status).toBe(0)
+      expect(result.stderr).toContain("isn't a WOFF2 file (14 bytes)")
+      expect(result.stderr).toContain("pnpm reinstall")
+      expect(result.stderr).not.toContain("subset")
+    })
+
     it("ships a font it can't subset whole, with a warning", async () => {
+      writeFileSync(resolve(PRIVATE_FONTS_SRC, "FKScreamer-Bold.woff2"), "wOF2-broken-font-data")
       const result = await runScript(tmpRoot)
       expect(result.status).toBe(0)
       expect(result.stderr).toContain("Could not subset FKScreamer, shipping it whole")
@@ -186,9 +198,17 @@ describe("install-fonts.ts", () => {
 
     it("succeeds when the real fonts are present", async () => {
       mkdirSync(PRIVATE_FONTS_SRC, { recursive: true })
-      writeFileSync(resolve(PRIVATE_FONTS_SRC, "FKScreamer-Bold.woff2"), "fake-font-data")
+      writeFileSync(resolve(PRIVATE_FONTS_SRC, "FKScreamer-Bold.woff2"), INTER_BOLD)
       const result = await runScript(tmpRoot, { FONTS_REQUIRED: "true" })
       expect(result.status).toBe(0)
+    })
+
+    it("fails when the package's font file isn't a font", async () => {
+      mkdirSync(PRIVATE_FONTS_SRC, { recursive: true })
+      writeFileSync(resolve(PRIVATE_FONTS_SRC, "FKScreamer-Bold.woff2"), "fake-font-data")
+      const result = await runScript(tmpRoot, { FONTS_REQUIRED: "true" })
+      expect(result.status).toBe(1)
+      expect(result.stderr).toContain("isn't a WOFF2 file")
     })
 
     it("rejects a stale Inter fallback left by an earlier run", async () => {
@@ -256,12 +276,56 @@ describe("install-fonts.ts", () => {
       expect(result.status).toBe(0)
       expect(result.stderr).toContain("Copied Inter Bold as fallback font")
       expect(readFileSync(FONT_FILE)).toEqual(INTER_BOLD)
+      expect(existsSync(resolve(FONTS_DIR, "Geist-latin.woff2"))).toBe(true)
     })
 
     it("exits 1 when FONTS_REQUIRED can't be met", () => {
       const result = spawn({ FONTS_REQUIRED: "true" })
       expect(result.status).toBe(1)
       expect(result.stderr).toContain("refusing to fall back to Inter")
+    })
+  })
+  describe("installSansFont", () => {
+    const GEIST_FILE = () => resolve(FONTS_DIR, "Geist-latin.woff2")
+    const quietly = async () => {
+      const lines: string[] = []
+      const warn = vi
+        .spyOn(console, "warn")
+        .mockImplementation((...args: unknown[]) => void lines.push(args.join(" ")))
+      try {
+        return { status: await installSansFont(tmpRoot), stderr: lines.join("\n") }
+      } finally {
+        warn.mockRestore()
+      }
+    }
+
+    it("installs Geist from the geist package, trimmed, without the private fonts", async () => {
+      rmSync(FONTS_DIR, { recursive: true, force: true })
+      const result = await quietly()
+      expect(result.status).toBe(0)
+      expect(result.stderr).toContain("Installed Geist-latin.woff2 from the geist package")
+      const font = readFileSync(GEIST_FILE())
+      expect(font.subarray(0, 4).toString("latin1")).toBe("wOF2")
+      // Latin and Latin Extended-A, weights 400–600: well under the package's 70 kB, and
+      // the 29 kB Google served for latin alone.
+      expect(font.byteLength).toBeLessThan(29_000)
+      expect(font.byteLength).toBeLessThan(GEIST.byteLength / 2)
+    })
+
+    it("ships the whole font when subsetting fails", async () => {
+      vi.doMock("subset-font", () => ({ default: () => Promise.reject(new Error("boom")) }))
+      vi.resetModules()
+      try {
+        const { installSansFont: install } = await import("../../scripts/install-fonts")
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined)
+        expect(await install(tmpRoot)).toBe(0)
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining("Could not subset Geist"))
+        warn.mockRestore()
+        expect(readFileSync(GEIST_FILE())).toEqual(GEIST)
+      } finally {
+        vi.doUnmock("subset-font")
+        vi.resetModules()
+      }
     })
   })
 })

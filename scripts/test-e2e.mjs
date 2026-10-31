@@ -67,8 +67,9 @@ const APP_CONTAINER = "pragmatic-papers-e2e-app"
 // What the server reads at runtime, passed through from this environment. DATABASE_URI
 // is passed separately, below.
 const APP_ENV = ["PAYLOAD_SECRET", "SERVER_URL", "USE_LOCAL_STORAGE", "MERCH_SITE_URL", "PORT"]
-// Where the seed wrote uploads, which the server has to serve from its own filesystem.
-const UPLOAD_DIRS = ["public/media", "public/map-assets"]
+// Where the seed wrote uploads (maps included, in public/media/map-assets), which the
+// server has to serve from its own filesystem.
+const UPLOAD_DIRS = ["public/media"]
 
 const docker = (...args) => execFileSync("docker", args, { stdio: "inherit" })
 
@@ -153,7 +154,7 @@ try {
 
   // CI restores .next/cache from a prior run to speed up `next build`'s
   // compilation — but that directory also holds Next.js's unstable_cache
-  // Data Cache (e.g. getCachedGlobal's `global_header`/`global_footer`
+  // Data Cache (e.g. getGlobal's `global_header`/`global_footer`
   // entries), which persists independent of build freshness. A stale entry
   // cached before this run's seed data existed would otherwise survive the
   // rebuild and serve outdated content. Clear just the data cache, not the
@@ -162,6 +163,13 @@ try {
   rmSync(".next/cache/fetch-cache", { recursive: true, force: true })
 
   if (image) {
+    // CI seeds while the workflow's "Build image" job is still running, then
+    // waits here for the image (scripts/wait-for-app-image.sh).
+    const wait = process.env.E2E_IMAGE_WAIT
+    if (wait) {
+      console.warn(`${blue("●")} Waiting for ${image}...`)
+      execSync(wait, { env: process.env, stdio: "inherit" })
+    }
     console.warn(`${blue("●")} Starting ${image}...`)
     server = await startImageServer()
   } else if (useProdServer) {

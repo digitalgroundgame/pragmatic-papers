@@ -43,7 +43,7 @@ vi.mock("../sources", async (importOriginal) => ({
 
 const { getTickerFeed, getTickerPostLists } = await import("../getTickerFeed")
 const { broadcastSource, postSources } = await import("../sources")
-const { TICKER_SETTINGS_TAG } = await import("../items")
+const { MAX_POSTS, TICKER_SETTINGS_TAG } = await import("../items")
 
 const post = (id: string, createdAt: string): TickerPost => ({
   id,
@@ -138,6 +138,18 @@ describe("getTickerFeed", () => {
     )
     expect((await getTickerFeed()).posts).toEqual([kept])
     expect((await getTickerPostLists())[0]).toEqual([kept])
+  })
+
+  it("shows older posts when the newest all link to our own site", async () => {
+    const ours = Array.from({ length: MAX_POSTS + 2 }, (_, i) => ({
+      ...post(`ours-${i}`, `2026-10-08T${String(12 + i).padStart(2, "0")}:00:00Z`),
+      links: [{ text: "pragmaticpapers.com/a", url: `https://pragmaticpapers.com/a/${i}` }],
+    }))
+    const kept = post("kept", "2026-10-08T10:00:00Z")
+    loadSource.mockImplementation(async (source) =>
+      source === broadcastSource ? null : source === postSources[0] ? [...ours, kept] : [],
+    )
+    expect((await getTickerFeed()).posts).toEqual([kept])
   })
 
   it("lists every source's posts for the admin, hidden ones included", async () => {

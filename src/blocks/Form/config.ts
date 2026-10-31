@@ -7,8 +7,11 @@ import {
   lexicalEditor,
 } from "@payloadcms/richtext-lexical"
 
+import { blockImages } from "@/blocks/blockImages"
+
 export const FormBlock: Block = {
   slug: "formBlock",
+  admin: { images: blockImages("formBlock") },
   interfaceName: "FormBlock",
   fields: [
     {

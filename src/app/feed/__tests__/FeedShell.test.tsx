@@ -7,7 +7,7 @@ import { makeSummary } from "./fixtures"
 // only the shell's job: which slots exist, which are mounted, and paging. The
 // buttons stand in for what the real children report back to the shell.
 vi.mock("../ArticleView", async () => {
-  const { useFeedAutoPlay } = await import("../hooks/useFeedAutoPlay")
+  const { useFeedAutoPlay } = await import("@/blocks/feed/autoPlay")
   return {
     ArticleView: (props: {
       article: RenderedFeedArticle

@@ -1,17 +1,12 @@
-function arrayOf(value: unknown): Array<Record<string, unknown> | undefined> {
-  return Array.isArray(value) ? value : []
-}
+import { blocksWith } from "@/blocks/registry"
 
 /**
- * Where each block that holds media keeps it. Blocks look the same whether they sit
- * in a `blocks` field (a page's layout) or inside Lexical rich text (a block node's
- * `fields`), so one walk over the stored JSON finds both, at any depth.
+ * Where each block that holds media keeps it: the `media` its descriptor declares
+ * (`src/blocks/<Name>/index.ts`). Blocks look the same whether they sit in a `blocks`
+ * field (a page's layout) or inside Lexical rich text (a block node's `fields`), so one
+ * walk over the stored JSON finds both, at any depth.
  */
-const MEDIA_IN_BLOCK: Record<string, (block: Record<string, unknown>) => unknown[]> = {
-  mediaBlock: (block) => [block.media],
-  mediaCollage: (block) => arrayOf(block.images).map((image) => image?.media),
-  timeline: (block) => arrayOf(block.events).map((event) => event?.avatar),
-}
+const MEDIA_IN_BLOCK = blocksWith("media")
 
 /** A relationship value is an id at depth 0, or the populated document above it. */
 export function mediaIdOf(value: unknown): string | undefined {
@@ -41,7 +36,7 @@ export function mediaInBlocks(value: unknown): Map<string, string[]> {
     const blockType = typeof record.blockType === "string" ? record.blockType : undefined
     const mediaOf = blockType ? MEDIA_IN_BLOCK[blockType] : undefined
     if (blockType && mediaOf) {
-      for (const media of mediaOf(record)) {
+      for (const media of mediaOf.find(record)) {
         const id = mediaIdOf(media)
         if (id === undefined) continue
         const blockTypes = found.get(id) ?? new Set<string>()

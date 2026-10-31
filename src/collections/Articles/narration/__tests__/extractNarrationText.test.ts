@@ -657,6 +657,23 @@ describe("extractNarrationText", () => {
     expect(text).not.toContain("squiggleRule")
   })
 
+  it("leaves out a squiggle rule block", () => {
+    const text = extractNarrationText({
+      content: {
+        root: {
+          type: "root",
+          children: [
+            { type: "paragraph", children: [{ type: "text", text: "Before" }] },
+            { type: "block", fields: { blockType: "squiggleRule" } },
+            { type: "paragraph", children: [{ type: "text", text: "After" }] },
+          ],
+        },
+      },
+    })
+
+    expect(text).toBe("Before\n\nAfter")
+  })
+
   // Headings are separated by a blank line, not an SSML <break> tag — the name
   // this test used to carry described a design that was never implemented.
   it("separates a heading from the text beneath it", () => {

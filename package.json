@@ -80,7 +80,7 @@
     "better-auth": "1.7.7",
     "better-react-mathjax": "^3.0.3",
     "class-variance-authority": "^0.7.1",
-    "cn": "^0.4.0",
+    "cn": "^0.5.0",
     "cross-env": "^10.1.0",
     "dotenv": "^18.0.5",
     "driver.js": "1.9.0",

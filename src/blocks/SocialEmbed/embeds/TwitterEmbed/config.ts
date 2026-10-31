@@ -1,5 +1,7 @@
 import type { Block } from "payload"
 
+import { blockImages } from "@/blocks/blockImages"
+
 /**
  * Legacy config for Twitter embeds.
  * @deprecated Use the SocialEmbed block instead.
@@ -13,6 +15,7 @@ export const LegacyTwitterEmbed: Block = {
     plural: "Twitter Embeds (Legacy)",
   },
   admin: {
+    images: blockImages("twitterEmbed"),
     group: "Legacy",
   },
   fields: [

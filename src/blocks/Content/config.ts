@@ -13,6 +13,7 @@ import {
   OrderedListFeature,
 } from "@payloadcms/richtext-lexical"
 
+import { blockImages } from "@/blocks/blockImages"
 import { CallToAction } from "@/blocks/CallToAction/config"
 import { Merch } from "@/blocks/Merch/config"
 import { NewsletterSignup } from "@/blocks/NewsletterSignup/config"
@@ -66,6 +67,7 @@ const columnFields: Field[] = [
 
 export const Content: Block = {
   slug: "content",
+  admin: { images: blockImages("content") },
   interfaceName: "ContentBlock",
   fields: [
     {

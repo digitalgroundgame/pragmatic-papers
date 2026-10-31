@@ -1,7 +1,10 @@
 import type { Block } from "payload"
 
+import { blockImages } from "@/blocks/blockImages"
+
 export const SquiggleRule: Block = {
   slug: "squiggleRule",
+  admin: { images: blockImages("squiggleRule") },
   interfaceName: "SquiggleRuleBlock",
   fields: [
     {

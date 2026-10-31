@@ -1,9 +1,11 @@
 import type { Block } from "payload"
 
+import { blockImages } from "@/blocks/blockImages"
 import { link } from "@/fields/link"
 
 export const Timeline: Block = {
   slug: "timeline",
+  admin: { images: blockImages("timeline") },
   dbName: "timeline",
   interfaceName: "TimelineBlock",
   labels: { plural: "Timelines", singular: "Timeline" },

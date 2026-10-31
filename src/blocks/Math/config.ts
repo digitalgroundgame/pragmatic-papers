@@ -1,5 +1,7 @@
 import { type Block } from "payload"
 
+import { blockImages } from "@/blocks/blockImages"
+
 export const InlineMathBlock: Block = {
   slug: "inlineMathBlock",
   interfaceName: "InlineMathBlock",
@@ -31,6 +33,7 @@ export const InlineMathBlock: Block = {
     singular: "Inline Math Block",
   },
   admin: {
+    images: blockImages("inlineMathBlock"),
     components: {
       Label: "/blocks/Math/AdminComponent",
     },
@@ -68,6 +71,7 @@ export const DisplayMathBlock: Block = {
     singular: "Display Math Block",
   },
   admin: {
+    images: blockImages("displayMathBlock"),
     components: {
       Label: "/blocks/Math/AdminComponent",
     },

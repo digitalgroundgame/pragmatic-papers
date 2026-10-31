@@ -13,8 +13,6 @@ import { afterCachedSite, withEdgeCache, withServerTiming } from "./edgeCache"
 import { logErrorCauses, withOrigin } from "./origin"
 import { workerSentryOptions } from "./sentry"
 
-export { DOQueueHandler } from "../../.open-next/worker.js"
-
 logErrorCauses()
 
 const site = withOrigin(openNext)

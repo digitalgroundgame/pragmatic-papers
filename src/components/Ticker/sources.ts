@@ -77,6 +77,13 @@ export const broadcastSource: TickerSource<TickerBroadcast | null> = {
   },
 }
 
+/**
+ * How many of an account's newest Bluesky posts are read. More than the ticker shows, because
+ * the posts editors hid are left out only after they're read, and the next newest take their
+ * places. Few enough that the admin's list of posts stays short.
+ */
+export const BLUESKY_RECENT_POSTS = MAX_POSTS * 2
+
 export const postSources: TickerSource<TickerPost[]>[] = [
   {
     integration: blueskyPosts,
@@ -85,7 +92,7 @@ export const postSources: TickerSource<TickerPost[]>[] = [
       const posts = await fromEach(
         "Bluesky",
         blueskyPosts.handles(settings.blueskyHandles),
-        (handle) => blueskyPosts.recentPosts({ handle, limit: MAX_POSTS, signal }),
+        (handle) => blueskyPosts.recentPosts({ handle, limit: BLUESKY_RECENT_POSTS, signal }),
       )
       return posts.map((post) => ({
         id: `bluesky:${post.uri}`,

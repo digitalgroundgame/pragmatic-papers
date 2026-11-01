@@ -79,9 +79,8 @@ export const broadcastSource: TickerSource<TickerBroadcast | null> = {
 
 /**
  * How many of an account's newest Bluesky posts are read. More than the ticker shows, because
- * the feed leaves out posts linking to our own site and the ones editors hid only after they're
- * read: an account that mostly shares our articles would otherwise leave nothing to show. Bluesky
- * is free and returns up to 100 in one request.
+ * the posts editors hid are left out only after they're read, and the next newest take their
+ * places. Bluesky is free and returns up to 100 in one request.
  */
 export const BLUESKY_RECENT_POSTS = 50
 

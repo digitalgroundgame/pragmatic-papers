@@ -161,7 +161,7 @@ describe("postSources", () => {
     )
   })
 
-  it("reads more Bluesky posts than the ticker shows, so filtered ones leave room for others", async () => {
+  it("reads more Bluesky posts than the ticker shows, so hidden ones leave room for others", async () => {
     const recent = vi.spyOn(blueskyPosts, "recentPosts").mockResolvedValue([])
     await bluesky!.load(signal, { blueskyHandles: ["one.bsky.social"] })
     expect(BLUESKY_RECENT_POSTS).toBeGreaterThan(MAX_POSTS)

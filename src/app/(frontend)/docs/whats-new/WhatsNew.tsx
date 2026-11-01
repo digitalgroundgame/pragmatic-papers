@@ -1,19 +1,19 @@
 import type { Crumb } from "@/components/Breadcrumbs"
 import { DocsLayout } from "@/components/DocsNav"
 import { JsonLd } from "@/components/JsonLd"
-import { docThumbnail } from "@/plugins/docs/thumbnail"
+import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import type { queryPublishedDocs } from "@/plugins/docs/queries"
 import {
   docPaths,
-  docsTree,
   DOCS_PATH,
+  docsTree,
   HOME_DOC_SLUG,
   parentIds,
   WHATS_NEW_PATH,
 } from "@/plugins/docs/sections"
+import { docThumbnail } from "@/plugins/docs/thumbnail"
 import { formatNotificationDate } from "@/plugins/notifications/unread"
 import { buildBreadcrumbJsonLd } from "@/utilities/structuredData"
-import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import React from "react"
 
 export type WhatsNewDoc = Awaited<ReturnType<typeof queryPublishedDocs>>[number]
@@ -64,11 +64,11 @@ export function WhatsNew({ docs }: { docs: WhatsNewDoc[] }): React.ReactNode {
                           loading="lazy"
                           width={300}
                           height={158}
-                          className="aspect-[40/21] w-full shrink-0 rounded-sm border object-cover group-hover:opacity-80 sm:w-60"
+                          className="aspect-40/21 w-full shrink-0 rounded-sm border object-cover transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16] sm:w-60"
                         />
                       )}
                       <span className="flex flex-col gap-2">
-                        <span className="group-hover:text-foreground/80 font-sans text-xl leading-tight font-semibold tracking-tight text-balance md:text-2xl">
+                        <span className="font-sans text-xl leading-tight font-semibold tracking-tight text-balance decoration-2 underline-offset-4 group-focus-visible:underline hover:underline md:text-2xl">
                           {doc.title}
                         </span>
                         <time

@@ -1,8 +1,8 @@
 "use client"
 
+import { Media } from "@/components/Media"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Media } from "@/components/Media"
 import type { User } from "@/payload-types"
 import { getClientURL } from "@/utilities/getURL"
 import { isResolved } from "@/utilities/relationships"
@@ -82,7 +82,7 @@ export function FeedActionColumn({ article }: FeedActionColumnProps): React.Reac
               >
                 <Avatar
                   size="default"
-                  className="aspect-square rounded-full ring-2 ring-white/70 hover:opacity-90"
+                  className="size-9.5 rounded-full border-2 border-white/70 transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16]"
                 >
                   <AvatarImage
                     src={profileImageUrl}
@@ -101,7 +101,7 @@ export function FeedActionColumn({ article }: FeedActionColumnProps): React.Reac
           })}
           {overflow > 0 && (
             <div
-              className="bg-foreground/15 -mt-3 flex size-8 items-center justify-center rounded-full text-xs text-white ring-2 ring-white/70"
+              className="bg-foreground/15 -mt-3 flex size-9.5 items-center justify-center rounded-full border-2 border-white/70 text-xs text-white"
               aria-label={`${overflow} more authors`}
             >
               {`+${overflow}`}
@@ -115,7 +115,7 @@ export function FeedActionColumn({ article }: FeedActionColumnProps): React.Reac
         variant="ghost"
         size="icon"
         onClick={handleShare}
-        className="h-10 w-10 rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-md hover:bg-white/20 hover:text-white"
+        className="size-10.5 rounded-full border-2 border-white/15 bg-white/10 text-white backdrop-blur-md hover:bg-white/20 hover:text-white"
         aria-label="Share article"
       >
         <Share2 className="size-5" />

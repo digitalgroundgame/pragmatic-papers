@@ -16,7 +16,7 @@ const { MerchBlock } = await import("@/blocks/Merch/Component")
 const { NewsletterSignupBlock } = await import("@/blocks/NewsletterSignup/Component")
 const { SquiggleRuleBlock } = await import("@/blocks/SquiggleRule/Component")
 const { TimelineBlock } = await import("@/blocks/Timeline/Component")
-const Embeds = await import("@/blocks/SocialEmbed")
+const Embeds = await import("@/blocks/SocialEmbed/components")
 const { HoverPrefetchLink } = await import("@/components/Link/HoverPrefetchLink")
 
 type Converter = (args: { node: unknown; nodesToJSX: (args: unknown) => ReactNode[] }) => ReactNode

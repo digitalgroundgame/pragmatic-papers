@@ -17,7 +17,7 @@ import {
   TikTokEmbedBlock,
   TwitterEmbedBlock,
   YouTubeEmbedBlock,
-} from "@/blocks/SocialEmbed"
+} from "@/blocks/SocialEmbed/components"
 import { SquiggleRuleBlock } from "@/blocks/SquiggleRule/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
 import { tableOfContentsConverter, withTableOfContentsAnchors } from "@/components/TableOfContents"

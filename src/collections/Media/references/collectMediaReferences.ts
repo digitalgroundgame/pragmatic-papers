@@ -22,9 +22,10 @@ export interface Source {
 }
 
 /**
- * Every place published content can use media. Adding an upload field, or a block
- * that holds media (see `MEDIA_IN_BLOCK`), means adding it here too, or media it
- * uses can be deleted out from under it.
+ * Every place published content can use media. Adding an upload field, or a rich text
+ * or `blocks` field whose blocks hold media (a block declares where with `media` in its
+ * descriptor, `src/blocks/<Name>/index.ts`), means adding it here too, or media it uses
+ * can be deleted out from under it.
  */
 export const SOURCES: Source[] = [
   {

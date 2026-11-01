@@ -8,7 +8,7 @@ import { GoogleAnalytics } from "@/components/GoogleAnalytics.lazy"
 import { ThemeProvider } from "@wrksz/themes/next"
 import type { Metadata } from "next"
 import React from "react"
-import { FEEDS } from "./feeds/feeds"
+import { FEEDS } from "@/data/feeds"
 import { fontVariables } from "./fonts"
 import "./globals.css"
 

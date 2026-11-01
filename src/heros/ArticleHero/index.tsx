@@ -48,8 +48,12 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
         <div className="grow-999">
           <PublicationDates publishedAt={publishedAt} updatedAt={updatedAt} />
         </div>
-        <div data-slot="article-meta-controls" className="flex grow items-center justify-end gap-1">
-          <NarrationPlayer narration={narration} className="mr-auto shrink-0" />
+        {/* The buttons sit edge to edge, so each icon's own padding spaces the row: 16px
+            between every pair of glyphs. The player's `pr-2` gives "Listen" the same 16px
+            before the next icon (its text has no padding of its own), and its `mr-auto`
+            pushes it away from them when the row has room to spare. */}
+        <div data-slot="article-meta-controls" className="flex grow items-center justify-end">
+          <NarrationPlayer narration={narration} className="mr-auto shrink-0 pr-2" />
           {showTableOfContents && <TableOfContentsButton content={content} />}
           {showComments && <CommentsLink />}
           <ShareButtons url={`${getSiteURL()}/articles/${article.slug}`} title={article.title} />

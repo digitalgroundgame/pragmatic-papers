@@ -220,7 +220,8 @@
     @apply bg-background text-foreground;
   }
   html {
-    @apply scroll-pt-20 scroll-smooth font-sans;
+    /* Anchor links (the table of contents) stop below the header, and the ticker while it sticks */
+    @apply scroll-pt-[calc(var(--sticky-top)+1.5rem)] scroll-smooth font-sans;
   }
   h1,
   h2,
@@ -440,8 +441,8 @@
 }
 
 /*
-  Where the page's own sticky things (the article sidebar) and scroll targets (the drilldown
-  pane) should stop: under the header, and under the ticker too while it sticks. The
+  Where the page's own sticky things (the article sidebar) and scroll targets (anchor links,
+  through the html element's scroll padding, and the drilldown pane) should stop: under the header, and under the ticker too while it sticks. The
   conditions mirror the two rules above; :has() can't nest, so they read the pause switch,
   which a ticker that can stick always has.
 */

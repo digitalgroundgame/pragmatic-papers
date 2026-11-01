@@ -101,3 +101,30 @@ export const WithComments: Story = {
     }
   },
 }
+
+/**
+ * The full action row. Every pair of neighbouring glyphs is 16px apart: Play and
+ * "Listen", "Listen" and the comment icon (or more, when the row has room to spare),
+ * and the comment and share icons.
+ */
+export const WithNarrationAndComments: Story = {
+  args: {
+    showComments: true,
+    article: articleFixture({
+      authors: authors.slice(0, 2),
+      narration: { ...narrationAudio, narrator: authors[1] },
+    }),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const rect = (el: Element) => el.getBoundingClientRect()
+    const playIcon = canvas.getByRole("button", { name: "Play" }).querySelector("svg")!
+    const label = canvasElement.querySelector("[data-slot=audio-player] span[aria-hidden]")!
+    const commentIcon = canvas.getByRole("link", { name: "Comments" }).querySelector("svg")!
+    const shareIcon = canvas.getByRole("button", { name: "Share" }).querySelector("svg")!
+
+    await expect(rect(label).left - rect(playIcon).right).toBeCloseTo(16, 0)
+    await expect(rect(shareIcon).left - rect(commentIcon).right).toBeCloseTo(16, 0)
+    await expect(rect(commentIcon).left - rect(label).right).toBeGreaterThanOrEqual(15.5)
+  },
+}

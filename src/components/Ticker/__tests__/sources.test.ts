@@ -2,7 +2,14 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { blueskyPosts, type Integration, xPosts, youtubeLive } from "@/integrations"
 
-import { broadcastSource, loadSource, postSources, type TickerSource } from "../sources"
+import { MAX_POSTS } from "../items"
+import {
+  BLUESKY_RECENT_POSTS,
+  broadcastSource,
+  loadSource,
+  postSources,
+  type TickerSource,
+} from "../sources"
 
 const integration = (required: string[]): Integration => ({
   id: "test-source",
@@ -152,6 +159,13 @@ describe("postSources", () => {
     expect(recent).toHaveBeenCalledWith(
       expect.objectContaining({ handle: "two.bsky.social", signal }),
     )
+  })
+
+  it("reads more Bluesky posts than the ticker shows, so hidden ones leave room for others", async () => {
+    const recent = vi.spyOn(blueskyPosts, "recentPosts").mockResolvedValue([])
+    await bluesky!.load(signal, { blueskyHandles: ["one.bsky.social"] })
+    expect(BLUESKY_RECENT_POSTS).toBeGreaterThan(MAX_POSTS)
+    expect(recent).toHaveBeenCalledWith(expect.objectContaining({ limit: BLUESKY_RECENT_POSTS }))
   })
 
   it("maps every admin username's X posts, keyed by their ID", async () => {

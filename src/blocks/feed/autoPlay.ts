@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext } from "react"
+import { createContext, useContext } from "react"
 
 export interface FeedShellContextValue {
   /** Adds one pause request. Stack with `resumeAutoPlay()`. */
@@ -17,4 +17,12 @@ const NOOP: FeedShellContextValue = {
   resumeAutoPlay: noop,
 }
 
+/** Provided by the reading feed's shell (`src/app/feed/FeedShell.tsx`). */
 export const FeedShellContext = createContext<FeedShellContextValue>(NOOP)
+
+/** Lets a feed block renderer pause / resume the feed's auto-play timer
+ *  (e.g. while a dialog is open). Pause requests stack — each `pauseAutoPlay`
+ *  must be balanced by a `resumeAutoPlay` for the feed to resume. */
+export function useFeedAutoPlay(): FeedShellContextValue {
+  return useContext(FeedShellContext)
+}

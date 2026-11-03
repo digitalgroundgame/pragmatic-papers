@@ -1,36 +1,12 @@
-import { ctaFeed } from "@/blocks/CallToAction/feed"
-import { collectionGridFeed } from "@/blocks/CollectionGrid/feed"
-import { contributorsFeed } from "@/blocks/Contributors/feed"
-import { formFeed } from "@/blocks/Form/feed"
-import { mediaBlockFeed } from "@/blocks/MediaBlock/feed"
-import { mediaCollageFeed } from "@/blocks/MediaCollageBlock/feed"
-import { socialEmbedFeed } from "@/blocks/SocialEmbed/feed"
-import { timelineFeed } from "@/blocks/Timeline/feed"
-import { volumeViewFeed } from "@/blocks/VolumeViewBlock/feed"
+import type { FeedBlockBehavior } from "@/blocks/feed/types"
+import { blocksWith } from "@/blocks/registry"
 import { tableFeed } from "./table"
-import type { FeedBlockBehavior } from "./types"
 
-// Single hand-maintained index of feed behavior per block slug.
-// To add or tune a block in the feed: create or edit
-// `src/blocks/<Name>/feed.ts` and add one line here.
+// Each block declares its reading-feed behavior as `readingFeed` in its descriptor
+// (`src/blocks/<Name>/index.ts`). Lexical's native table nodes aren't a Payload block:
+// the chunker gives them a virtual blockType "table".
 const registry: Record<string, FeedBlockBehavior> = {
-  mediaBlock: mediaBlockFeed,
-  mediaCollage: mediaCollageFeed,
-  socialEmbed: socialEmbedFeed,
-  // Deprecated socialEmbed subtype aliases — share the same behavior.
-  twitterEmbed: socialEmbedFeed,
-  youtubeEmbed: socialEmbedFeed,
-  redditEmbed: socialEmbedFeed,
-  blueSkyEmbed: socialEmbedFeed,
-  tiktokEmbed: socialEmbedFeed,
-  timeline: timelineFeed,
-  cta: ctaFeed,
-  contributors: contributorsFeed,
-  collectionGrid: collectionGridFeed,
-  formBlock: formFeed,
-  volumeView: volumeViewFeed,
-  // Lexical native table nodes (not a Payload block) — synthesised
-  // by the chunker into a virtual blockType "table".
+  ...blocksWith("readingFeed"),
   table: tableFeed,
 }
 

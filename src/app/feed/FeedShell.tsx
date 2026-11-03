@@ -5,7 +5,7 @@ import { AdSlotView } from "./AdSlotView"
 import { ArticleView } from "./ArticleView"
 import { INTERACTIVE_SEL } from "./constants"
 import { FEED_AD_INTERVAL, FEED_ADS } from "./ads/registry"
-import { FeedShellContext, type FeedShellContextValue } from "./FeedShellContext"
+import { FeedShellContext, type FeedShellContextValue } from "@/blocks/feed/autoPlay"
 import { usePageMemory } from "./hooks/usePageMemory"
 import type { FeedBatch, FeedSlot, RenderedFeedArticle } from "./types"
 

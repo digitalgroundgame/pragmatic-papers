@@ -166,6 +166,27 @@ const eslintConfig = [
       ],
     },
   },
+  // Blocks are used by pages, feeds and collections, so they can't depend on a page: what a
+  // block shares with one (the reading feed's contract, the list of feeds) lives in
+  // src/blocks or src/data, and the page imports it from there.
+  {
+    files: ["src/blocks/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            payloadUiFields,
+            {
+              group: ["@/app/*"],
+              message:
+                "Blocks can't import a page. Move what the block needs next to it (src/blocks/feed/ for the reading feed), and have the page import it.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   // A story's exports are Storybook's input, not an API other modules call.
   {
     files: ["**/*.stories.tsx", ".storybook/**"],

@@ -8,8 +8,8 @@ import { formatLongDate } from "@/utilities/formatDate"
  * event, in the order the author arranged them.
  *
  * The block owns this because the field shape (date/title/description per row)
- * is the block's business, not the narration extractor's. `extractNarrationText`
- * just calls `describeTimeline(fields)`.
+ * is the block's business, not the narration extractor's: the block's descriptor
+ * (`index.ts`) narrates with `describeTimeline`.
  */
 
 function text(value: unknown): string {

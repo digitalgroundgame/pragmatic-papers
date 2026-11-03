@@ -4,7 +4,7 @@ import { FeedFormBlock } from "@/blocks/Form/FeedFormBlock"
 import { MediaBlockFeed } from "@/blocks/MediaBlock/MediaBlockFeed"
 import React from "react"
 import { FeedTableRowReflow } from "./FeedTableRowReflow"
-import type { FeedBlockRenderer } from "./types"
+import type { FeedBlockRenderer } from "@/blocks/feed/types"
 
 // Feed-specific renderers, keyed like the behavior registry. Kept apart from
 // `registry.ts` because they render on the server (RichText is server-only),

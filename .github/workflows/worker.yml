@@ -114,6 +114,10 @@ jobs:
 
       - name: Build the Worker
         if: env.READY == 'true'
+        env:
+          # Next's deploymentId, which skew protection routes on (open-next.config.ts). Each
+          # deploy needs its own, a re-run included.
+          NEXT_DEPLOYMENT_ID: dpl-${{ github.run_id }}-${{ github.run_attempt }}
         run: pnpm build:worker
 
       # The deploy fills both before `wrangler deploy` could create them, so they're made here
@@ -152,11 +156,21 @@ jobs:
             sleep 30
           done
 
+      # The queue Worker (queue.wrangler.jsonc), which holds the revalidation queue the site
+      # binds to, from this build: its class carries the build's preview-mode ID. Before the
+      # site, so the site's binding finds the class.
+      - name: Deploy the queue
+        if: env.READY == 'true'
+        run: pnpm exec wrangler deploy --config queue.wrangler.jsonc ${WRANGLER_ENV:+--env "$WRANGLER_ENV"}
+
       # Uploads the prerendered pages to R2, creates the D1 table if it's missing, then
-      # `wrangler deploy`s with the runtime variables and the secrets.
+      # `wrangler deploy`s with the runtime variables and the secrets. With skew protection on,
+      # it first reads the Worker's recent versions to map each earlier deploy to its own.
       - name: Deploy
         if: env.READY == 'true'
         env:
+          CF_WORKERS_SCRIPTS_API_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           SITE_PAYLOAD_SECRET: ${{ github.ref_name == 'main' && secrets.PRODUCTION_PAYLOAD_SECRET || secrets.STAGING_PAYLOAD_SECRET }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           PRODUCTION_SUPABASE_URL: ${{ vars.PRODUCTION_SUPABASE_URL }}

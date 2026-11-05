@@ -108,12 +108,16 @@ The same steps, for production's database and hostname:
    the previous commit meets the new schema, as Coolify's own old container does. A
    migration that drops or renames a column breaks both for that window, so split it:
    add the new column in one release and drop the old one in the next.
-3. `opennextjs-cloudflare deploy` uploads the prerendered pages to R2, creates D1's table,
-   and runs `wrangler deploy` with `SERVER_URL`, `ORIGIN_URL`, `SENTRY_RELEASE` and the
-   secrets (`PAYLOAD_SECRET`, `SENTRY_DSN`).
-4. `POST /next/revalidate-all` throws away the build's pages (it built from an empty
+3. Deploys the queue Worker (`queue.wrangler.jsonc`) from the same build, since the site
+   binds to its class.
+4. `opennextjs-cloudflare deploy` uploads the prerendered pages to R2, creates D1's table,
+   maps each earlier deploy's ID to its Worker version for skew protection
+   (`CF_DEPLOYMENT_MAPPING`, read from the last version), and runs `wrangler deploy` with
+   `SERVER_URL`, `ORIGIN_URL`, `SENTRY_RELEASE` and the secrets (`PAYLOAD_SECRET`,
+   `SENTRY_DSN`).
+5. `POST /next/revalidate-all` throws away the build's pages (it built from an empty
    database), so each renders from staging's data on its next request.
-5. `POST /next/warm-worker` on staging requests the most-read pages through the Worker's
+6. `POST /next/warm-worker` on staging requests the most-read pages through the Worker's
    URL, so the first readers find them cached. Staging, not the Worker, warms it: it can
    look up the newest volume, and it does the same after every save that clears the
    Worker's cache.
@@ -148,6 +152,7 @@ deployment.
 | `stubs/sentry.ts`                      | Stands in for `@sentry/nextjs` in the server code. The Worker has no `SENTRY_DSN`, so it reported nothing, and its Node SDK and OpenTelemetry were ~1.8 MiB gzipped of what every new isolate loads. The browser's SDK is kept                                                                                                                                                                                                                                         |
 | `_headers`                             | Copied into `.open-next/assets` by the build: hashed `/_next/static` files are cached for a year, where Workers Static Assets would send `max-age=0, must-revalidate`                                                                                                                                                                                                                                                                                                  |
 | `edgeCache.ts`, `CachedSite`           | Workers Cache, on the `CachedSite` entrypoint (`exports` in `wrangler.jsonc`). The default entrypoint is a gateway that sends it anonymous full pages and images only: logins, drafts, `Authorization`, Server Actions, OpenNext's revalidations and navigations (RSC) skip it. Only a 2xx or 3xx with caching headers is kept, tagged with its path (and `shared` for listings); `/next/revalidate-all` purges the paths it names (`?path=`, `?shared`), or all of it |
+| `queue.mjs`, `queue.wrangler.jsonc`    | A Worker of its own (`pragmatic-papers-<env>-queue`) holding OpenNext's revalidation queue, a Durable Object the site binds to by `script_name`, so the site implements none and keeps the Version URLs skew protection sends earlier deploys' tabs to. It requests pages from the site to re-render them, and is deployed from the same build, before the site                                                                                                        |
 | `gateway.ts`, `gateway.wrangler.jsonc` | A Worker of its own (`pragmatic-papers-<env>-gateway`, about 3 KB) that makes the same choice in front of the site, over service bindings to its two entrypoints, so a page the edge cache holds is answered without a new isolate loading the site's 22 MB. It serves the site's assets too, and adds a `gateway` entry to `Server-Timing` that says whether its isolate was cold. Deployed after the site; the hostnames move onto it once it's measured             |
 | `withImageCaching` in `origin.ts`      | Gives `/_next/image` responses the `Cache-Control` Next's optimizer sends on Coolify. OpenNext sets one only on images it can call immutable, which Payload's media never are                                                                                                                                                                                                                                                                                          |
 | `sharp.ts`                             | Payload's `sharp`, imported from here because Next keeps `sharp` external however it's aliased; the Worker build swaps this module instead                                                                                                                                                                                                                                                                                                                             |
@@ -199,13 +204,14 @@ Still open:
   script or the upper cache tier; the gateway Worker takes the first away, and its
   `Server-Timing` tells the two apart. Until its measurements are in, the hostnames stay on
   the site's Worker.
-- **Skew protection** (`skewProtection` in `open-next.config.ts`, experimental) would send a
-  tab opened before a deploy to the version that built its page, which also avoids Next's
-  "router state header could not be parsed" error on stale tabs. It reaches that version
-  through its Version URL, and Cloudflare generates none for a Worker that implements a
-  Durable Object, as this one does (`DOQueueHandler`, OpenNext's revalidation queue). It
-  needs the queue in a Worker of its own, bound by `script_name`, or a queue that isn't a
-  Durable Object.
+- **Skew protection** (`skewProtection` in `open-next.config.ts`, experimental) sends a
+  request from a page an earlier deploy built (Next's `deploymentId`, set per run in
+  `NEXT_DEPLOYMENT_ID`) to that deploy's Version URL, which also avoids Next's "router
+  state header could not be parsed" error on stale tabs. Cloudflare generates no Version
+  URLs for a Worker that implements a Durable Object, so the revalidation queue is in the
+  queue Worker. It acts only on custom hostnames (staging-worker, and production's once it
+  has one), not on workers.dev. Next adds `dpl` to `/_next/image` URLs of local images, so
+  those are optimized again after each deploy.
 - **The setup above** for production, then a stretch on workers.dev reading production's
   data before the hostname moves.
 - **Navigations from the edge cache.** The zone's Cache Rules don't apply to a Worker,

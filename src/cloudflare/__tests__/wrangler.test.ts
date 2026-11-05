@@ -36,4 +36,34 @@ describe("wrangler.jsonc", () => {
   it.each(workers)("%s never seeds its database on deploy", (_name, worker) => {
     expect(worker.vars?.DEPLOY_SEED).toBe("false")
   })
+
+  // Coolify production renders these from its own variables; without them the Worker's
+  // pages link media to /api/media/file (which production doesn't serve), skip analytics
+  // and show the signup form with no challenge.
+  it("gives the production Worker S3 media, analytics and Turnstile's site key", () => {
+    const production = workers.find(([name]) => name === "pragmatic-papers-production")![1]
+    expect(production.vars?.USE_LOCAL_STORAGE).toBe("false")
+    expect(production.vars?.GOOGLE_ANALYTICS_ID).toMatch(/^G-[A-Z0-9]+$/)
+    expect(production.vars?.TURNSTILE_SITE_KEY).toMatch(/^0x[A-Za-z0-9_-]+$/)
+  })
+
+  it("keeps staging's Worker on local storage", () => {
+    expect(wrangler.vars?.USE_LOCAL_STORAGE).toBe("true")
+  })
+})
+
+describe("worker.yml", () => {
+  // OpenNext compiles .env files into the Worker as fallbacks for unset bindings, and
+  // setup-project writes one for CI's tests (USE_LOCAL_STORAGE=true, a localhost database).
+  it("deletes setup-project's .env before building the Worker", () => {
+    const steps = readFileSync(join(process.cwd(), ".github/workflows/worker.yml"), "utf8")
+      .split("\n")
+      .map((line) => line.trim())
+    const setup = steps.indexOf("uses: ./.github/actions/setup-project")
+    const remove = steps.indexOf("run: rm -f .env")
+    const build = steps.indexOf("run: pnpm build:worker")
+    expect(setup).toBeGreaterThan(-1)
+    expect(remove).toBeGreaterThan(setup)
+    expect(build).toBeGreaterThan(remove)
+  })
 })

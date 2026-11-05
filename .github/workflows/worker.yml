@@ -108,6 +108,14 @@ jobs:
           node-version: "24.x"
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
 
+      # setup-project writes a .env for CI's tests (local storage, a localhost database, a
+      # throwaway secret). OpenNext compiles .env files into the Worker as fallbacks for
+      # anything its bindings leave unset, so that file would reach production. This job's
+      # env already has what the build needs.
+      - name: Keep CI's .env out of the Worker
+        if: env.READY == 'true'
+        run: rm -f .env
+
       - name: Migrate the build database
         if: env.READY == 'true'
         run: pnpm payload migrate

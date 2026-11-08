@@ -79,6 +79,8 @@ describe("build-worker.mjs", () => {
 
 describe("worker-build.yml", () => {
   const workflow = readFileSync(join(ROOT, ".github/workflows/worker-build.yml"), "utf-8")
+  const workerPaths =
+    /WORKER_PATHS: >-\n((?: {4}\S+\n)+)/.exec(workflow)?.[1]?.split(/\s+/).filter(Boolean) ?? []
 
   it.each([
     "package.json",
@@ -87,9 +89,24 @@ describe("worker-build.yml", () => {
     "open-next.config.ts",
     "wrangler.jsonc",
     "scripts/build-worker.mjs",
-    "src/cloudflare/**",
-  ])("runs on a PR that changes %s", (path) => {
-    expect(workflow).toContain(`      - ${path}\n`)
+    "src/cloudflare",
+  ])("builds when a change touches %s", (path) => {
+    expect(workerPaths).toContain(path)
+  })
+
+  it("lists only paths that exist, so a rename can't quietly turn the build off", () => {
+    for (const path of workerPaths) {
+      expect(existsSync(join(ROOT, path)), path).toBe(true)
+    }
+  })
+
+  it("runs on every PR and in the merge queue, skipping the build when nothing it needs changed", () => {
+    expect(workflow).toMatch(/^on:\n {2}pull_request:\n {2}merge_group:\n/m)
+    // A `paths` filter would stop the workflow reporting at all, which a required check
+    // waits on forever.
+    expect(workflow).not.toMatch(/^ {4}paths:/m)
+    expect(workflow).toContain("github.event.merge_group.base_sha")
+    expect(workflow).toContain("needs.changes.outputs.worker == 'true'")
   })
 
   it("builds the Worker the way worker.yml does, and deploys nothing", () => {

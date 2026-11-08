@@ -1,9 +1,9 @@
-import type { FeedArticle, LexicalNode } from "@/blocks/feed/types"
+import type { FeedArticle, LexicalNode } from "@/blocks/readingFeed/types"
 import type React from "react"
 import type { AdSlot } from "./ads/registry"
 
 export type { AdSlot } from "./ads/registry"
-export type { FeedArticle, LexicalNode } from "@/blocks/feed/types"
+export type { FeedArticle, LexicalNode } from "@/blocks/readingFeed/types"
 
 export interface ProseChunk {
   kind: "content"

@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react"
 
-import type { FeedBlockBehavior } from "@/blocks/feed/types"
+import type { FeedBlockBehavior } from "@/blocks/readingFeed/types"
 import type { FeedContext } from "@/utilities/feedHTML"
 
 /** Renders a block's fields as plain HTML for a feed. See `converters.ts` in each block. */

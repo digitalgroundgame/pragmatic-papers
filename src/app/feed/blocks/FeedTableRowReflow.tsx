@@ -2,7 +2,7 @@ import RichText from "@/components/RichText"
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import React from "react"
 import type { LexicalNode } from "../types"
-import type { FeedBlockRenderer } from "@/blocks/feed/types"
+import type { FeedBlockRenderer } from "@/blocks/readingFeed/types"
 
 function isColumnHeaderRow(row: LexicalNode): boolean {
   const cells = (row.children ?? []) as LexicalNode[]

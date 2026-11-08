@@ -167,6 +167,16 @@ describe("the block registry", () => {
     },
   )
 
+  it("gives reading-feed behavior only to blocks an article can hold", () => {
+    // The reading feed (/feed) shows articles' content and nothing else.
+    const { blocks, inline } = editor("articles", "content")
+    const inArticles = new Set(slugs([...blocks, ...inline]))
+    const unreachable = BLOCKS.filter(
+      ({ slug, readingFeed }) => readingFeed && !inArticles.has(slug),
+    ).map(({ slug }) => slug)
+    expect(unreachable, "the reading feed never shows these blocks").toEqual([])
+  })
+
   it("declares where every block that holds media keeps it", () => {
     const blocks = [...editors.values()].flatMap((e) => [...e.blocks, ...e.inline])
     const holding = slugs(blocks.filter((block) => holdsMedia(fieldsOf(block))))

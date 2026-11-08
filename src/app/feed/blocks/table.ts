@@ -1,4 +1,4 @@
-import type { FeedBlockBehavior } from "@/blocks/feed/types"
+import type { FeedBlockBehavior } from "@/blocks/readingFeed/types"
 
 // Lexical native `table` nodes — not a Payload block. The chunker
 // synthesises a virtual blockType "table" for them, and `renderers.tsx`

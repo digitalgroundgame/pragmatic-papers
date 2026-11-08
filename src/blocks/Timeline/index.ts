@@ -1,6 +1,6 @@
 import { ChartGanttIcon } from "lucide-react"
 
-import type { LexicalNode } from "@/blocks/feed/types"
+import type { LexicalNode } from "@/blocks/readingFeed/types"
 import { defineBlock } from "@/blocks/types"
 import type { TimelineBlock } from "@/payload-types"
 

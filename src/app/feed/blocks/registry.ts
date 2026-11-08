@@ -1,4 +1,4 @@
-import type { FeedBlockBehavior } from "@/blocks/feed/types"
+import type { FeedBlockBehavior } from "@/blocks/readingFeed/types"
 import { blocksWith } from "@/blocks/registry"
 import { tableFeed } from "./table"
 

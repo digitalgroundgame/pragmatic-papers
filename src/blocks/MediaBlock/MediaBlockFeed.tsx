@@ -1,4 +1,4 @@
-import type { FeedBlockRenderer } from "@/blocks/feed/types"
+import type { FeedBlockRenderer } from "@/blocks/readingFeed/types"
 import type { Media as MediaType } from "@/payload-types"
 import { isResolved } from "@/utilities/relationships"
 import React from "react"

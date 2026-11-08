@@ -180,7 +180,7 @@ const eslintConfig = [
             {
               group: ["@/app/*"],
               message:
-                "Blocks can't import a page. Move what the block needs next to it (src/blocks/feed/ for the reading feed), and have the page import it.",
+                "Blocks can't import a page. Move what the block needs next to it (src/blocks/readingFeed/ for the reading feed), and have the page import it.",
             },
           ],
         },

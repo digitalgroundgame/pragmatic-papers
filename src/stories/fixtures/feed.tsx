@@ -2,7 +2,6 @@ import type { Decorator } from "@storybook/nextjs-vite"
 import React from "react"
 
 import type { FeedArticle, FeedArticleSummary, LexicalNode } from "@/app/feed/types"
-import type { Form } from "@/payload-types"
 
 import { articleFixture, authors, topics, volumes } from "./docs"
 import { wideImage } from "./media"
@@ -10,7 +9,6 @@ import {
   createHeadingNode,
   createParagraph,
   createTextNode,
-  richText,
   SENTENCES,
   TextFormat,
 } from "./richText"
@@ -58,27 +56,11 @@ export const turnoutTable: LexicalNode = {
 
 export const mediaBlockNode: LexicalNode = block({ blockType: "mediaBlock", media: wideImage })
 
-export const pitchForm = {
-  id: 7,
-  title: "Pitch the editors",
-  submitButtonLabel: "Send it",
-  confirmationType: "message",
-  confirmationMessage: richText(createParagraph("Thanks — an editor will reply within two days.")),
-  fields: [
-    { blockType: "text", name: "name", label: "Name", required: true, width: 100 },
-    { blockType: "textarea", name: "pitch", label: "Your pitch", required: true },
-  ],
-  createdAt: "2026-01-15T12:00:00.000Z",
-  updatedAt: "2026-01-15T12:00:00.000Z",
-} as Form
-
-export const formBlockNode: LexicalNode = block({ blockType: "formBlock", form: pitchForm })
-
 export const headingNode = createHeadingNode("Turnout by county", "h2") as LexicalNode
 
 /**
  * Hero, two prose pages, then a media page, a table under a heading and a
- * form: one of each page the chunker makes.
+ * prose: one of each page the chunker makes.
  */
 export const feedBody: LexicalNode[] = [
   createHeadingNode("Why the small races matter", "h2") as LexicalNode,
@@ -91,7 +73,6 @@ export const feedBody: LexicalNode[] = [
   headingNode,
   turnoutTable,
   prose(2),
-  formBlockNode,
 ]
 
 export function feedArticle(

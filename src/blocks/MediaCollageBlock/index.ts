@@ -1,6 +1,6 @@
 import { GalleryHorizontalEndIcon, ImagesIcon } from "lucide-react"
 
-import type { LexicalNode } from "@/blocks/feed/types"
+import type { LexicalNode } from "@/blocks/readingFeed/types"
 import { defineBlock } from "@/blocks/types"
 import type { MediaCollageBlock } from "@/payload-types"
 import { describeVisual } from "@/utilities/describeVisual"

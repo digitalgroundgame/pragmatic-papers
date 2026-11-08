@@ -1,6 +1,6 @@
 import { TvIcon } from "lucide-react"
 
-import type { FeedBlockBehavior } from "@/blocks/feed/types"
+import type { FeedBlockBehavior } from "@/blocks/readingFeed/types"
 import { spokenText } from "@/blocks/narration"
 import { defineBlock } from "@/blocks/types"
 import type { SocialEmbedBlock } from "@/payload-types"

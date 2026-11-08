@@ -17,7 +17,7 @@ const NOOP: FeedShellContextValue = {
   resumeAutoPlay: noop,
 }
 
-/** Provided by the reading feed's shell (`src/app/feed/FeedShell.tsx`). */
+/** Provided by the feed's shell (`FeedShell.tsx`). */
 export const FeedShellContext = createContext<FeedShellContextValue>(NOOP)
 
 /** Lets a feed block renderer pause / resume the feed's auto-play timer

@@ -39,7 +39,7 @@ interface Issue {
 
 export const issueTitle = (target: string): string => `Worker deploy failing: ${target}`
 
-export function readConfig(env: NodeJS.ProcessEnv): Config {
+export function readConfig(env: Record<string, string | undefined>): Config {
   const read = (name: string) => {
     const value = env[name]
     if (!value) throw new Error(`${name} is not set`)

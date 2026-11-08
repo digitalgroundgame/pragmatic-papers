@@ -4,22 +4,17 @@
 # worker.yml only builds on pushes to dev and main, so a dependency bump that breaks the
 # Worker (a Next minor without its matching OpenNext release, or an OpenNext release whose
 # Worker answers every page with a 500) would otherwise only show up on staging's deploy.
-# Not a required check: it runs only when the paths below change.
+#
+# It runs in the merge queue too, so a PR queued before this check reported on it (a
+# Dependabot PR opened before a rebase lands) is still built before it reaches dev. Only
+# the paths in WORKER_PATHS start a build; on any other PR or queue entry the build job is
+# skipped, which a required status check accepts, so "Build and serve the Worker" can be
+# required without slowing every PR down.
 name: Worker build
 
 on:
   pull_request:
-    paths:
-      - package.json
-      - pnpm-lock.yaml
-      - pnpm-workspace.yaml
-      - next.config.ts
-      - open-next.config.ts
-      - wrangler.jsonc
-      - gateway.wrangler.jsonc
-      - scripts/build-worker.mjs
-      - src/cloudflare/**
-      - .github/workflows/worker-build.yml
+  merge_group:
   workflow_dispatch:
 
 permissions:
@@ -27,12 +22,60 @@ permissions:
   packages: read
 
 concurrency:
-  group: worker-build-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: true
+  group: worker-build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # What a change has to touch to need a Worker build. Read by the changes job, as git
+  # pathspecs; tests/scripts/build-worker.test.ts keeps the list honest.
+  WORKER_PATHS: >-
+    package.json
+    pnpm-lock.yaml
+    pnpm-workspace.yaml
+    next.config.ts
+    open-next.config.ts
+    wrangler.jsonc
+    gateway.wrangler.jsonc
+    scripts/build-worker.mjs
+    src/cloudflare
+    .github/workflows/worker-build.yml
 
 jobs:
+  # Decides whether the build runs. A pull_request trigger's `paths` can't be used: a
+  # merge_group trigger takes no path filter, and a workflow that doesn't run at all
+  # reports nothing, which a required check would wait on forever.
+  changes:
+    name: Detect Worker changes
+    runs-on: ubuntu-latest
+    outputs:
+      worker: ${{ steps.diff.outputs.worker }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Diff against the base
+        id: diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            echo "worker=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # shellcheck disable=SC2086 # WORKER_PATHS is a space-separated list of pathspecs.
+          changed=$(git diff --name-only "$BASE" HEAD -- $WORKER_PATHS)
+          if [ -n "$changed" ]; then
+            printf 'Changes the Worker build depends on:\n%s\n' "$changed"
+            echo "worker=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Nothing the Worker build depends on changed; skipping it."
+          fi
+
   build:
     name: Build and serve the Worker
+    needs: changes
+    # Fails open: if the changes job fails, the build runs rather than being skipped.
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.worker == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:

@@ -1,0 +1,118 @@
+# Builds the Cloudflare Worker (`pnpm build:worker`) on a PR that could break it, serves it
+# with `wrangler dev`, and checks that a few seeded pages answer 200. Deploys nothing.
+#
+# worker.yml only builds on pushes to dev and main, so a dependency bump that breaks the
+# Worker (a Next minor without its matching OpenNext release, or an OpenNext release whose
+# Worker answers every page with a 500) would otherwise only show up on staging's deploy.
+# Not a required check: it runs only when the paths below change.
+name: Worker build
+
+on:
+  pull_request:
+    paths:
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - next.config.ts
+      - open-next.config.ts
+      - wrangler.jsonc
+      - gateway.wrangler.jsonc
+      - scripts/build-worker.mjs
+      - src/cloudflare/**
+      - .github/workflows/worker-build.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: worker-build-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and serve the Worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # The same throwaway database and stand-ins as worker.yml's build.
+      DATABASE_URI: postgres://postgres:postgres@localhost:5432/build
+      CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE: postgres://postgres:postgres@localhost:5432/build
+      PAYLOAD_SECRET: build-only-secret
+      SERVER_URL: http://localhost:8787
+      USE_LOCAL_STORAGE: "true"
+      WRANGLER_SEND_METRICS: "false"
+
+    services:
+      postgres:
+        # Copied into GHCR by ci-images.yml; pulled logged in, so not rate-limited.
+        image: ghcr.io/digitalgroundgame/postgres:17-alpine
+        credentials:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: build
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js environment
+        uses: ./.github/actions/setup-project
+        with:
+          node-version: "24.x"
+          gh-font-read-token: ${{ secrets.GH_FONT_READ }}
+
+      # As in worker.yml: OpenNext compiles .env files into the Worker, and this job's env
+      # already has what the build needs.
+      - name: Keep CI's .env out of the Worker
+        run: rm -f .env
+
+      - name: Migrate the build database
+        run: pnpm payload migrate
+
+      # An article and a volume, so the build prerenders them and the checks below have
+      # pages to request.
+      - name: Seed the build database
+        run: pnpm tsx scripts/seed-e2e.ts
+
+      - name: Build the Worker
+        run: pnpm build:worker
+
+      # The gzipped size Cloudflare checks against its 10 MiB limit. Uploads nothing.
+      - name: Measure the Worker
+        run: |
+          pnpm exec wrangler deploy --dry-run --outdir .wrangler/dry-run 2>&1 | tee "$RUNNER_TEMP/dry-run.log"
+          size=$(grep -m 1 'Total Upload' "$RUNNER_TEMP/dry-run.log" || true)
+          echo "Worker ${size:-size not reported}" >> "$GITHUB_STEP_SUMMARY"
+
+      # The build's pages into wrangler dev's local R2, and D1's table, as a deploy does.
+      - name: Fill the local cache
+        run: pnpm exec opennextjs-cloudflare populateCache local
+
+      - name: Serve it and request pages
+        run: |
+          logs="$RUNNER_TEMP/wrangler.log"
+          pnpm exec wrangler dev --port 8787 --var "PAYLOAD_SECRET:$PAYLOAD_SECRET" \
+            --var "SERVER_URL:$SERVER_URL" --var "ORIGIN_URL:$SERVER_URL" > "$logs" 2>&1 &
+          for _ in $(seq 1 60); do
+            curl --silent --output /dev/null --max-time 5 "$SERVER_URL/robots.txt" && break
+            sleep 2
+          done
+          failed=0
+          # The seeded article and volume come from R2; the rest render in the Worker.
+          for path in / /articles/rich-text-showcase /volumes/1 /contributors /search /articles/feed.xml /sitemap_index.xml; do
+            status=$(curl --silent --output /dev/null --max-time 60 --write-out '%{http_code}' "$SERVER_URL$path" || echo 000)
+            echo "GET $path → $status"
+            echo "- \`GET $path\` → $status" >> "$GITHUB_STEP_SUMMARY"
+            [ "$status" = 200 ] || failed=1
+          done
+          if [ "$failed" = 1 ]; then
+            echo "::group::wrangler dev logs"; cat "$logs"; echo "::endgroup::"
+            echo "::error::The Worker didn't answer every page with 200 (logs above)."
+            exit 1
+          fi

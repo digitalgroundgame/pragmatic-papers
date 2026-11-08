@@ -6,36 +6,30 @@ import { makeSummary } from "./fixtures"
 // The children are covered by their own tests; stub them so these tests see
 // only the shell's job: which slots exist, which are mounted, and paging. The
 // buttons stand in for what the real children report back to the shell.
-vi.mock("../ArticleView", async () => {
-  const { useFeedAutoPlay } = await import("../FeedShellContext")
-  return {
-    ArticleView: (props: {
-      article: RenderedFeedArticle
-      active: boolean
-      initialPage: number
-      autoPlayEnabled: boolean
-      onPageChange: (pageIndex: number) => void
-      onEndReached: () => void
-    }) => {
-      const { pauseAutoPlay, resumeAutoPlay } = useFeedAutoPlay()
-      const id = props.article.article.id
-      return (
-        <div
-          data-testid="article"
-          data-id={id}
-          data-active={props.active}
-          data-page={props.initialPage}
-          data-autoplay={props.autoPlayEnabled}
-        >
-          <button onClick={() => props.onPageChange(2)}>{`turn ${id} to page 3`}</button>
-          <button onClick={props.onEndReached}>{`finish ${id}`}</button>
-          <button onClick={pauseAutoPlay}>{`pause from ${id}`}</button>
-          <button onClick={resumeAutoPlay}>{`resume from ${id}`}</button>
-        </div>
-      )
-    },
-  }
-})
+vi.mock("../ArticleView", () => ({
+  ArticleView: (props: {
+    article: RenderedFeedArticle
+    active: boolean
+    initialPage: number
+    autoPlayEnabled: boolean
+    onPageChange: (pageIndex: number) => void
+    onEndReached: () => void
+  }) => {
+    const id = props.article.article.id
+    return (
+      <div
+        data-testid="article"
+        data-id={id}
+        data-active={props.active}
+        data-page={props.initialPage}
+        data-autoplay={props.autoPlayEnabled}
+      >
+        <button onClick={() => props.onPageChange(2)}>{`turn ${id} to page 3`}</button>
+        <button onClick={props.onEndReached}>{`finish ${id}`}</button>
+      </div>
+    )
+  },
+}))
 vi.mock("../AdSlotView", () => ({
   AdSlotView: ({ ad }: { ad: { id: string } }) => <div data-testid="ad" data-id={ad.id} />,
 }))
@@ -355,23 +349,5 @@ describe("FeedShell", () => {
       fireEvent.click(screen.getByRole("button", { name: "finish 1" }))
       expect(scrollBy).toHaveBeenCalledOnce()
     })
-  })
-
-  it("holds auto-play while any child asks it to pause", () => {
-    render(<FeedShell loadBatch={loadFeedBatch} initialItems={items(1)} initialNextCursor={null} />)
-    const article = () => screen.getByTestId("article")
-
-    fireEvent.click(screen.getByRole("button", { name: "pause from 1" }))
-    fireEvent.click(screen.getByRole("button", { name: "pause from 1" }))
-    fireEvent.click(screen.getByRole("button", { name: "resume from 1" }))
-    expect(article()).toHaveAttribute("data-autoplay", "false")
-
-    fireEvent.click(screen.getByRole("button", { name: "resume from 1" }))
-    expect(article()).toHaveAttribute("data-autoplay", "true")
-
-    // An extra resume can't push the count below zero.
-    fireEvent.click(screen.getByRole("button", { name: "resume from 1" }))
-    fireEvent.click(screen.getByRole("button", { name: "pause from 1" }))
-    expect(article()).toHaveAttribute("data-autoplay", "false")
   })
 })

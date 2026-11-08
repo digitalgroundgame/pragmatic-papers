@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, waitFor } from "storybook/test"
 
 import { blockImages } from "."
-import { BLOCK_ART } from "./art"
+import { PICKERS } from "./pickers"
 
 /** Every block's images as the admin's block drawer and editor menus load them, from `public/`. */
 const BlockImageGallery = ({ slugs }: { slugs: string[] }) => (
@@ -33,7 +33,7 @@ const BlockImageGallery = ({ slugs }: { slugs: string[] }) => (
 const meta = {
   title: "Blocks/Picker images",
   component: BlockImageGallery,
-  args: { slugs: Object.keys(BLOCK_ART) },
+  args: { slugs: Object.keys(PICKERS) },
 } satisfies Meta<typeof BlockImageGallery>
 
 export default meta

@@ -43,6 +43,16 @@ describe("next.config.ts Cache-Control", () => {
     }
   })
 
+  // Fixed for a build, and the drawer and slash menu would fetch every one on each page.
+  it("lets the browser keep the block picker's images", async () => {
+    expect(await cacheControlFor("/admin/block-images/banner.svg")).toBe(
+      "public, max-age=3600, stale-while-revalidate=86400",
+    )
+    expect(await cacheControlFor("/admin/block-images")).toBe(
+      "private, no-cache, no-store, must-revalidate",
+    )
+  })
+
   // Route Handlers that set their own Cache-Control: a config header for the same key would
   // replace it, so none of these may match a Cache-Control rule at all.
   it("leaves routes that set their own Cache-Control alone", async () => {

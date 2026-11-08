@@ -119,7 +119,8 @@ export const WithNarrationAndComments: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const rect = (el: Element) => el.getBoundingClientRect()
-    const playIcon = canvas.getByRole("button", { name: "Play" }).querySelector("svg")!
+    // The player loads lazily, so wait for it before measuring.
+    const playIcon = (await canvas.findByRole("button", { name: "Play" })).querySelector("svg")!
     const label = canvasElement.querySelector("[data-slot=audio-player] span[aria-hidden]")!
     const commentIcon = canvas.getByRole("link", { name: "Comments" }).querySelector("svg")!
     const shareIcon = canvas.getByRole("button", { name: "Share" }).querySelector("svg")!
@@ -138,5 +139,57 @@ export const WithNarrationAndComments: Story = {
       expect(rect(commentIcon).left - rect(settingsIcon).right).toBeCloseTo(16, 0),
     )
     await userEvent.click(canvas.getByRole("button", { name: "Pause" }))
+  },
+}
+
+/**
+ * The longest stamps the tooltip can hold: a Wednesday in September at 12:59 p.m.
+ * Each one stays on a single line, so "ET" never wraps away from its time.
+ */
+const longestDates = articleFixture({
+  authors: authors.slice(0, 1),
+  publishedAt: "2026-09-23T16:59:00.000Z",
+  updatedAt: "2026-09-30T16:59:00.000Z",
+})
+
+async function openDatelineTooltip(canvasElement: HTMLElement): Promise<HTMLElement> {
+  await userEvent.hover(canvasElement.querySelector("#article-dateline")!)
+  return waitFor(() => {
+    const tooltip = document.querySelector<HTMLElement>("[data-slot=tooltip-content]")
+    expect(tooltip).toHaveTextContent("Wednesday, September 30, 2026 at 12:59 p.m. ET")
+    return tooltip!
+  })
+}
+
+const lineCount = (el: Element): number =>
+  Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight))
+
+export const LongestDates: Story = {
+  args: { article: longestDates },
+  play: async ({ canvasElement }) => {
+    const tooltip = await openDatelineTooltip(canvasElement)
+    await waitFor(() => expect(tooltip.getAnimations()).toHaveLength(0))
+    for (const stamp of tooltip.querySelectorAll("dd")) {
+      await expect(lineCount(stamp)).toBe(1)
+    }
+  },
+}
+
+/**
+ * On a phone the longest stamps can't fit on one line. The tooltip stays inside the
+ * screen and breaks before the time, which keeps "12:59 p.m. ET" together.
+ */
+export const LongestDatesMobile: Story = {
+  args: { article: longestDates },
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  play: async ({ canvasElement }) => {
+    const tooltip = await openDatelineTooltip(canvasElement)
+    await waitFor(() => expect(tooltip.getAnimations()).toHaveLength(0))
+    const box = tooltip.getBoundingClientRect()
+    await expect(box.left).toBeGreaterThanOrEqual(0)
+    await expect(box.right).toBeLessThanOrEqual(document.documentElement.clientWidth)
+    for (const time of tooltip.querySelectorAll("dd [data-slot=time-of-day]")) {
+      await expect(lineCount(time)).toBe(1)
+    }
   },
 }

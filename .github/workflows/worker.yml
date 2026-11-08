@@ -243,3 +243,33 @@ jobs:
       - name: Deploy the gateway
         if: env.READY == 'true'
         run: pnpm exec wrangler deploy --config gateway.wrangler.jsonc ${WRANGLER_ENV:+--env "$WRANGLER_ENV"}
+
+  # Keeps one open issue per Worker while its deploys fail, and closes it when one passes
+  # (scripts/worker-deploy-issue.ts), so a broken Worker can't go unnoticed for push
+  # after push. Skipped with the deploy job on any other branch.
+  report:
+    name: Report a failing deploy
+    needs: deploy
+    if: always() && needs.deploy.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/worker-deploy-issue.ts
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      - name: Open, update or close the issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TARGET: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+          RESULT: ${{ needs.deploy.result }}
+        run: node scripts/worker-deploy-issue.ts

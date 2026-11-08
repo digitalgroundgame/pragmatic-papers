@@ -219,6 +219,11 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Selected text is white on the brand fill (4.52:1), the same in both themes */
+  ::selection {
+    background-color: var(--brand-fill);
+    color: white;
+  }
   html {
     /* Anchor links (the table of contents) stop below the header, and the ticker while it sticks */
     @apply scroll-pt-[calc(var(--sticky-top)+1.5rem)] scroll-smooth font-sans;

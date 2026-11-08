@@ -2,7 +2,7 @@ import type { ReactElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 
 import { PICKERS } from "./pickers"
-import { BACKDROP, BRAND, type BlockPicker } from "./shapes"
+import { BACKDROP, type BlockPicker } from "./shapes"
 
 export const THUMBNAIL_WIDTH = 480
 export const THUMBNAIL_HEIGHT = 320
@@ -21,11 +21,16 @@ const Thumbnail = ({ picker }: { picker: BlockPicker }): ReactElement => (
   </svg>
 )
 
+/**
+ * A mid grey, at Lucide's own stroke width, so the icons sit with the menu's built-in ones.
+ * A file can't inherit the text color as `currentColor` would, so it has to read on both
+ * themes: about 4:1 against the light menu and 5:1 against the dark one.
+ */
+const ICON_COLOR = "#808080"
+
 const Icon = ({ picker }: { picker: BlockPicker }): ReactElement => {
   const Glyph = picker.icon
-  return (
-    <Glyph xmlns="http://www.w3.org/2000/svg" size={ICON_SIZE} color={BRAND} strokeWidth={2.25} />
-  )
+  return <Glyph xmlns="http://www.w3.org/2000/svg" size={ICON_SIZE} color={ICON_COLOR} />
 }
 
 /**

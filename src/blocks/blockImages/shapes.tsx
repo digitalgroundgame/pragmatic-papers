@@ -4,8 +4,8 @@ import type { ReactElement, ReactNode } from "react"
 /**
  * What every block's picker images are drawn with (see `./index.ts`). A thumbnail is a
  * sketch of what the block puts on the page, drawn with these shapes inside a 480×320
- * rounded card in the brand's orange and warm greys; an icon is a Lucide glyph in the brand
- * orange. Each block's `picker.tsx` draws its own, `PICKERS` lists them, and
+ * rounded card in the brand's orange and warm greys; an icon is a stock Lucide glyph in
+ * grey. Each block's `picker.tsx` draws its own, `PICKERS` lists them, and
  * `pnpm block-images` renders them to `public/block-images/`.
  */
 

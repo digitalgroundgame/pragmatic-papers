@@ -135,7 +135,7 @@
     "@vitest/browser": "^5.0.1",
     "@vitest/browser-playwright": "^5.0.1",
     "@vitest/coverage-v8": "^5.0.1",
-    "chrome-launcher": "^1.2.2",
+    "chrome-launcher": "^1.2.3",
     "copyfiles": "^2.4.1",
     "esbuild": "^0.28.2",
     "eslint": "^9.39.4",

@@ -33,8 +33,11 @@ export const Default: Story = {
     }
     // Two events carry an avatar; the others keep their place with an empty slot.
     await expect(canvas.getAllByRole("img", { name: "Portrait of a writer" })).toHaveLength(2)
-    // Only the event with a citation turned on links out.
+    // Only the event with a citation turned on links out, named from its visible label first.
     await expect(canvas.getByRole("link")).toHaveAttribute("href", "https://example.com/bill")
+    await expect(canvas.getByRole("link")).toHaveAccessibleName(
+      "[1], citation for 2022-02-17T12:00:00.000Z",
+    )
   },
 }
 

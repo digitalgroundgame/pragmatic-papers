@@ -14,13 +14,16 @@ const Citation: React.FC<Pick<TimelineEvent, "date" | "enableCitation" | "citati
   citation,
 }) => {
   if (!enableCitation || !citation || !linkHref(citation)) return null
+  // The accessible name starts with the visible label ("[1]"), so speech users
+  // can say what they see (WCAG 2.5.3, axe's label-content-name-mismatch).
+  const label = citation.label?.trim()
   return (
     <CMSLink
       link={citation}
       className={cn(
         "text-brand-text hover:text-foreground ml-1 text-sm underline underline-offset-2 transition-colors",
       )}
-      aria-label={`Citation for ${date}`}
+      aria-label={label ? `${label}, citation for ${date}` : `Citation for ${date}`}
     />
   )
 }

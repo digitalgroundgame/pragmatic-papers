@@ -24,6 +24,7 @@ const config = (overrides: Partial<ResolvedSsoConfig> = {}): ResolvedSsoConfig =
   accountPath: "/account",
   sessionSeconds: 3600,
   requiredUserColumns: [],
+  hasPicture: async () => false,
   ...overrides,
 })
 
@@ -232,6 +233,43 @@ describe("validateUserInfo", () => {
     await validate("sign-in", { id: "9", email: "ada@example.com", emailVerified: true })
     await validate("link-account", { id: "9", email: "ada@example.com", emailVerified: false })
     expect(pool.query).not.toHaveBeenCalled()
+  })
+})
+
+describe("connection pictures", () => {
+  beforeEach(() => pool.query.mockReset())
+
+  it("saves a newly linked account's picture to a user with none", async () => {
+    const hasPicture = vi.fn(async () => false)
+    const options = await optionsFor(config({ hasPicture }))
+    await options.user?.validateUserInfo?.(
+      {
+        user: { id: "9", image: "https://cdn.discordapp.com/a.png" },
+        source: { action: "link-account", method: "oauth", oauth: { providerId: "discord" } },
+      } as never,
+      {} as never,
+    )
+    await options.databaseHooks?.account?.create?.after?.(
+      { id: "1", userId: "9", providerId: "discord" } as never,
+      null,
+    )
+    expect(hasPicture).toHaveBeenCalledWith(expect.objectContaining({ userId: "9" }))
+    const [sql, values] = pool.query.mock.calls.at(-1)!
+    expect(sql).toContain("avatar_url is null")
+    expect(values).toEqual(["https://cdn.discordapp.com/a.png", 9])
+  })
+
+  it("keeps a sign-up's https picture, and drops any other", async () => {
+    const options = await optionsFor(
+      config({ signUp: { enabled: () => true, columns: () => ({ slug: "member-1" }) } }),
+    )
+    const before = options.databaseHooks?.user?.create?.before
+    expect(
+      await before?.(newUser({ image: "https://lh3.googleusercontent.com/a" }), null),
+    ).toMatchObject({ data: { image: "https://lh3.googleusercontent.com/a" } })
+    expect(await before?.(newUser({ image: "http://example.com/a.png" }), null)).toMatchObject({
+      data: { image: null },
+    })
   })
 })
 

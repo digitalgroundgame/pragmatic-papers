@@ -57,7 +57,10 @@ jobs:
     # Only dev and main have a Worker.
     if: github.ref_name == 'dev' || github.ref_name == 'main'
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Longer than the migration wait's own limit plus the build before it: a step that
+    # times out fails the job, which the report job below turns into an issue, while a job
+    # that times out is cancelled, which it ignores.
+    timeout-minutes: 75
     # Lists each deploy under the repo's Deployments as Staging Worker or Production Worker,
     # linked to the Worker, beside Coolify's (deployments.yml).
     environment:

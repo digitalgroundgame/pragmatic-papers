@@ -137,4 +137,13 @@ describe("worker.yml's report job", () => {
     expect(job).toContain("RESULT: ${{ needs.deploy.result }}")
     expect(job).toContain("run: node scripts/worker-deploy-issue.ts")
   })
+
+  // A job that times out is cancelled, which the report ignores; a step that times out
+  // fails. The deploy job has to outlast its longest step, plus the build before it.
+  it("lets the migration wait time out as a failure before the deploy job does", () => {
+    const deploy = workflow.slice(workflow.indexOf("\n  deploy:"), workflow.indexOf("\n  report:"))
+    const minutes = [...deploy.matchAll(/timeout-minutes: (\d+)/g)].map((m) => Number(m[1]))
+    const [jobLimit, ...steps] = minutes
+    expect(jobLimit).toBeGreaterThanOrEqual(Math.max(...steps) + 30)
+  })
 })

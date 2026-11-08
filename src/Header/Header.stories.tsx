@@ -127,7 +127,7 @@ export const SettingsOpen: Story = {
     await waitFor(() => expect(sheet.getAnimations({ subtree: true })).toHaveLength(0))
 
     const [d, j, l, t] = [donate, joinUs, logIn, theme].map((el) => el.getBoundingClientRect())
-    for (const box of [d, j, l]) await expect(box!.height).toBe(t!.height)
+    for (const box of [d, j, l, t]) await expect(box!.height).toBe(32)
     await expect(d!.left).toBe(l!.left)
     await expect(j!.right).toBe(l!.right)
     await expect(l!.left).toBe(t!.left)

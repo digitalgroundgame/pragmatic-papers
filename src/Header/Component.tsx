@@ -57,13 +57,7 @@ export async function DefaultHeader(): Promise<React.JSX.Element> {
               <HeaderActions actions={actions} className="hidden lg:flex" />
               <LazySettingsSheet
                 actions={
-                  // Each action takes half the row less the gap (`basis-0`), so the pair spans
-                  // the sheet's width like the buttons below it rather than overhanging it.
-                  <HeaderActions
-                    actions={actions}
-                    size="lg"
-                    className="w-full [&>a]:min-w-0 [&>a]:flex-1"
-                  />
+                  <HeaderActions actions={actions} className="w-full [&>a]:min-w-0 [&>a]:flex-1" />
                 }
               />
             </div>

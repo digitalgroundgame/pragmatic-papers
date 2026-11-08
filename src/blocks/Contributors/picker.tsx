@@ -1,4 +1,5 @@
-import { Users } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { Users } from "lucide"
 
 import { Avatar, type BlockPicker, Heading, Line, TEXT_DARK } from "@/blocks/blockImages/shapes"
 

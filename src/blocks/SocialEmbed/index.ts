@@ -3,6 +3,8 @@ import { TvIcon } from "lucide-react"
 import type { FeedBlockBehavior } from "@/blocks/readingFeed/types"
 import { spokenText } from "@/blocks/narration"
 import { defineBlock } from "@/blocks/types"
+
+import type { LegacyEmbedSlug } from "./picker"
 import type { SocialEmbedBlock } from "@/payload-types"
 import { describeVisual } from "@/utilities/describeVisual"
 
@@ -33,6 +35,7 @@ function snapshotTitle(snapshot: unknown): string {
 // Narration never reads the URL aloud: a spoken URL is unintelligible.
 export const socialEmbedBlock = defineBlock<SocialEmbedBlock>({
   slug: "socialEmbed",
+  picker: () => import("./picker").then(({ socialEmbedPicker }) => socialEmbedPicker),
   html: socialEmbedToHTML,
   narrate: (fields) => {
     const platform = spokenText(fields.platform)
@@ -49,9 +52,10 @@ export const socialEmbedBlock = defineBlock<SocialEmbedBlock>({
 })
 
 /** One of the per-platform embed blocks old articles still hold, from before `socialEmbed`. */
-const legacyEmbed = (slug: string, spoken: string) =>
+const legacyEmbed = (slug: LegacyEmbedSlug, spoken: string) =>
   defineBlock<SocialEmbedBlock>({
     slug,
+    picker: () => import("./picker").then(({ legacyEmbedPickers }) => legacyEmbedPickers[slug]),
     html: socialEmbedToHTML,
     narrate: () => describeVisual(spoken),
     readingFeed,

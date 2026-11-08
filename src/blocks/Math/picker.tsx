@@ -1,4 +1,5 @@
-import { Radical, Sigma } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { Radical, Sigma } from "lucide"
 
 import {
   type BlockPicker,

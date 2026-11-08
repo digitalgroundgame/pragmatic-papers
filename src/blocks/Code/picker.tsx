@@ -1,4 +1,5 @@
-import { CodeXml } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { CodeXml } from "lucide"
 
 import {
   type BlockPicker,

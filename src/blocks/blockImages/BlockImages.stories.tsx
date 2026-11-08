@@ -1,27 +1,28 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, waitFor } from "storybook/test"
 
-import { blockImages } from "."
-import { PICKERS } from "./pickers"
+import { BLOCKS } from "@/blocks/registry"
 
-/** Every block's images as the admin's block drawer and editor menus load them, from `public/`. */
+import { renderBlockImages } from "./render"
+
+const FILES = await renderBlockImages()
+const dataURL = (file: string) =>
+  `data:image/svg+xml;charset=utf-8,${encodeURIComponent(FILES[file] ?? "")}`
+
+/**
+ * Every block's images as the admin's block drawer and editor menus show them: as images,
+ * here from the markup `/admin/block-images/[file]` serves.
+ */
 const BlockImageGallery = ({ slugs }: { slugs: string[] }) => (
   <ul className="grid list-none grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4 p-4">
     {slugs.map((slug) => {
-      const { icon, thumbnail } = blockImages(slug)
       return (
         <li key={slug} className="rounded-lg border p-2">
           {/* eslint-disable-next-line @next/next/no-img-element -- loads them as Payload's admin does */}
-          <img
-            src={thumbnail.url}
-            alt={thumbnail.alt}
-            width={240}
-            height={160}
-            className="w-full"
-          />
+          <img src={dataURL(`${slug}.svg`)} alt="" width={240} height={160} className="w-full" />
           <span className="mt-2 flex items-center gap-2 text-sm">
             {/* eslint-disable-next-line @next/next/no-img-element -- loads them as Payload's admin does */}
-            <img src={icon.url} alt={icon.alt} width={20} height={20} />
+            <img src={dataURL(`${slug}-icon.svg`)} alt="" width={20} height={20} />
             {slug}
           </span>
         </li>
@@ -33,7 +34,7 @@ const BlockImageGallery = ({ slugs }: { slugs: string[] }) => (
 const meta = {
   title: "Blocks/Picker images",
   component: BlockImageGallery,
-  args: { slugs: Object.keys(PICKERS) },
+  args: { slugs: BLOCKS.map(({ slug }) => slug) },
 } satisfies Meta<typeof BlockImageGallery>
 
 export default meta

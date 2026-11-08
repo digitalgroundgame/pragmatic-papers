@@ -1,4 +1,5 @@
-import { LayoutDashboard } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { LayoutDashboard } from "lucide"
 
 import { type BlockPicker, Picture } from "@/blocks/blockImages/shapes"
 

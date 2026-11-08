@@ -1,4 +1,5 @@
-import { Shirt } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { Shirt } from "lucide"
 
 import {
   type BlockPicker,

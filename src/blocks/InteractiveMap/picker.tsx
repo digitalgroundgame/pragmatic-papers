@@ -1,4 +1,5 @@
-import { Map as MapIcon } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { Map as MapIcon } from "lucide"
 
 import {
   type BlockPicker,

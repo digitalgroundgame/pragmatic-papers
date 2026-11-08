@@ -1,4 +1,5 @@
-import { Image as ImageIcon } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { Image as ImageIcon } from "lucide"
 
 import { type BlockPicker, Line, Picture, TEXT_DARK } from "@/blocks/blockImages/shapes"
 

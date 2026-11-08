@@ -1,4 +1,5 @@
-import { Waves } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { Waves } from "lucide"
 
 import { type BlockPicker, BRAND, Paragraph } from "@/blocks/blockImages/shapes"
 

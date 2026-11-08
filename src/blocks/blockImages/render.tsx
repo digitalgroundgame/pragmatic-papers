@@ -1,14 +1,20 @@
-import type { ReactElement } from "react"
-import { renderToStaticMarkup } from "react-dom/server"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { BLOCKS } from "@/blocks/registry"
 
-import { PICKERS } from "./pickers"
-import { BACKDROP, type BlockPicker } from "./shapes"
+import { BACKDROP, type BlockPicker, Glyph } from "./shapes"
+import type { Markup } from "./svg/jsx-runtime"
 
 export const THUMBNAIL_WIDTH = 480
 export const THUMBNAIL_HEIGHT = 320
-export const ICON_SIZE = 24
 
-const Thumbnail = ({ picker }: { picker: BlockPicker }): ReactElement => (
+/**
+ * A mid grey, at Lucide's own stroke width, so the icons sit with the menu's built-in ones.
+ * An image can't inherit the text color as `currentColor` would, so it has to read on both
+ * themes: about 4:1 against the light menu and 5:1 against the dark one.
+ */
+const ICON_COLOR = "#808080"
+
+const Thumbnail = ({ picker }: { picker: BlockPicker }): Markup => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox={`0 0 ${THUMBNAIL_WIDTH} ${THUMBNAIL_HEIGHT}`}
@@ -22,26 +28,17 @@ const Thumbnail = ({ picker }: { picker: BlockPicker }): ReactElement => (
 )
 
 /**
- * A mid grey, at Lucide's own stroke width, so the icons sit with the menu's built-in ones.
- * A file can't inherit the text color as `currentColor` would, so it has to read on both
- * themes: about 4:1 against the light menu and 5:1 against the dark one.
+ * Every picker image, by file name: `<slug>.svg` (the thumbnail) and `<slug>-icon.svg` for
+ * each block in `BLOCKS`, loading the `picker` its descriptor names. The
+ * `/admin/block-images/[file]` route serves them.
  */
-const ICON_COLOR = "#808080"
-
-const Icon = ({ picker }: { picker: BlockPicker }): ReactElement => {
-  const Glyph = picker.icon
-  return <Glyph xmlns="http://www.w3.org/2000/svg" size={ICON_SIZE} color={ICON_COLOR} />
-}
-
-/**
- * Every file in `public/block-images/`, by name: `<slug>.svg` (the thumbnail) and
- * `<slug>-icon.svg` for each block in `PICKERS`.
- */
-export function renderBlockImages(): Record<string, string> {
+export async function renderBlockImages(): Promise<Record<string, string>> {
   const files: Record<string, string> = {}
-  for (const [slug, picker] of Object.entries(PICKERS)) {
-    files[`${slug}.svg`] = `${renderToStaticMarkup(<Thumbnail picker={picker} />)}\n`
-    files[`${slug}-icon.svg`] = `${renderToStaticMarkup(<Icon picker={picker} />)}\n`
+  for (const { slug, picker: load } of BLOCKS) {
+    if (!load) continue
+    const picker = await load()
+    files[`${slug}.svg`] = String(<Thumbnail picker={picker} />)
+    files[`${slug}-icon.svg`] = String(<Glyph icon={picker.icon} color={ICON_COLOR} />)
   }
   return files
 }

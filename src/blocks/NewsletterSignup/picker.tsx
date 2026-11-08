@@ -1,4 +1,5 @@
-import { Mail } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { Mail } from "lucide"
 
 import {
   type BlockPicker,

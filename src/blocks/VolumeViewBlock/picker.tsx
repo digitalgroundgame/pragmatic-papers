@@ -1,4 +1,5 @@
-import { BookOpen } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { BookOpen } from "lucide"
 
 import {
   type BlockPicker,

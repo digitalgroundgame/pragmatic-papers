@@ -1,4 +1,5 @@
-import { GitCommitVertical } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { GitCommitVertical } from "lucide"
 
 import {
   type BlockPicker,

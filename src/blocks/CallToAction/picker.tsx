@@ -1,4 +1,5 @@
-import { Megaphone } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { Megaphone } from "lucide"
 
 import { type BlockPicker, BRAND, Button, Card, Heading, Line } from "@/blocks/blockImages/shapes"
 

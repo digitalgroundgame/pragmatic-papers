@@ -1,4 +1,5 @@
-import { Superscript } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { Superscript } from "lucide"
 
 import {
   type BlockPicker,

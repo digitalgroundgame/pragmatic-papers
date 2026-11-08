@@ -6,6 +6,7 @@ import { bannerToHTML } from "./converters"
 
 export const bannerBlock = defineBlock<BannerBlock>({
   slug: "banner",
+  picker: () => import("./picker").then(({ bannerPicker }) => bannerPicker),
   html: bannerToHTML,
   // A banner carries real, readable prose: narrate it as a set-apart note rather than
   // describing it as a visual.

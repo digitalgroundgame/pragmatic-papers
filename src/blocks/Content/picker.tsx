@@ -1,4 +1,5 @@
-import { Columns2 } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { Columns2 } from "lucide"
 
 import { type BlockPicker, BRAND, Heading, Line, Paragraph } from "@/blocks/blockImages/shapes"
 

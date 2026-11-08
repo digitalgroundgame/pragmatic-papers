@@ -15,6 +15,7 @@ import {
 
 export const displayMathBlock = defineBlock<DisplayMathBlock>({
   slug: "displayMathBlock",
+  picker: () => import("./picker").then(({ displayMathPicker }) => displayMathPicker),
   html: displayMathToHTML,
   // Substack's editor has no math: it keeps the LaTeX source.
   substack: displayMathToCode,
@@ -23,6 +24,7 @@ export const displayMathBlock = defineBlock<DisplayMathBlock>({
 
 export const inlineMathBlock = defineBlock<InlineMathBlock>({
   slug: "inlineMathBlock",
+  picker: () => import("./picker").then(({ inlineMathPicker }) => inlineMathPicker),
   inline: true,
   html: inlineMathToHTML,
   substack: inlineMathToCode,

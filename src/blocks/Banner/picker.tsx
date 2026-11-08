@@ -1,4 +1,5 @@
-import { Info } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { Info } from "lucide"
 
 import {
   type BlockPicker,

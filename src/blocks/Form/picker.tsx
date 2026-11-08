@@ -1,4 +1,5 @@
-import { ClipboardList } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { ClipboardList } from "lucide"
 
 import { type BlockPicker, Button, Card, Input, Line, TEXT_DARK } from "@/blocks/blockImages/shapes"
 

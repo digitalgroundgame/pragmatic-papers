@@ -1,4 +1,5 @@
-import { MessageCircle, Share2, Video } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { MessageCircle, Share2, Video } from "lucide"
 
 import {
   Avatar,
@@ -6,6 +7,7 @@ import {
   BRAND,
   BRAND_WASH,
   Card,
+  Glyph,
   INK,
   Line,
   PAPER,
@@ -34,7 +36,7 @@ const SocialPost = ({ platform, video = false }: { platform?: string; video?: bo
         </text>
       </>
     ) : (
-      <Share2 x={334} y={52} width={30} height={30} color={BRAND} strokeWidth={2.25} />
+      <Glyph icon={Share2} x={334} y={52} size={30} color={BRAND} strokeWidth={2.25} />
     )}
     <Line x={120} y={106} w={240} />
     <Line x={120} y={128} w={200} />
@@ -58,10 +60,12 @@ const SocialPost = ({ platform, video = false }: { platform?: string; video?: bo
 export const socialEmbedPicker: BlockPicker = { thumbnail: <SocialPost />, icon: Share2 }
 
 /** The legacy per-platform embeds, kept so old articles still load. */
-export const legacyEmbedPickers: Record<string, BlockPicker> = {
+export const legacyEmbedPickers = {
   blueSkyEmbed: { thumbnail: <SocialPost platform="Bluesky" />, icon: MessageCircle },
   redditEmbed: { thumbnail: <SocialPost platform="Reddit" />, icon: MessageCircle },
   tiktokEmbed: { thumbnail: <SocialPost platform="TikTok" video />, icon: Video },
   twitterEmbed: { thumbnail: <SocialPost platform="Twitter" />, icon: MessageCircle },
   youtubeEmbed: { thumbnail: <SocialPost platform="YouTube" video />, icon: Video },
-}
+} satisfies Record<string, BlockPicker>
+
+export type LegacyEmbedSlug = keyof typeof legacyEmbedPickers

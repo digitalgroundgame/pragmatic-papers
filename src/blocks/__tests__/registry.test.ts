@@ -4,7 +4,6 @@ import type { SanitizedConfig } from "payload"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 
 import { blockIconURL, blockThumbnailURL } from "@/blocks/blockImages"
-import { PICKERS } from "@/blocks/blockImages/pickers"
 import { BLOCKS, blockDescriptor } from "@/blocks/registry"
 
 vi.mock("server-only", () => ({}))
@@ -233,8 +232,14 @@ describe("the block picker", () => {
   const urlOf = (image: ResolvedImage | string | undefined) =>
     typeof image === "string" ? image : image?.url
 
-  it("draws images for every block in the registry, and only them", () => {
-    expect(Object.keys(PICKERS).sort()).toEqual(BLOCKS.map(({ slug }) => slug).sort())
+  it("draws images for every block in the registry", async () => {
+    const missing = BLOCKS.filter(({ picker }) => !picker).map(({ slug }) => slug)
+    expect(missing, "give these descriptors a `picker` (see `picker.tsx`)").toEqual([])
+    for (const { picker } of BLOCKS) {
+      const { thumbnail, icon } = await picker!()
+      expect(String(thumbnail)).not.toBe("")
+      expect(icon.length).toBeGreaterThan(0)
+    }
   })
 
   it("shows every block an editor offers with its images", () => {

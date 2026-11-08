@@ -1,20 +1,23 @@
-import type { LucideIcon } from "lucide-react"
-import type { ReactElement, ReactNode } from "react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import type { IconNode } from "lucide"
+
+import { jsx, type Child, type Markup } from "./svg/jsx-runtime"
 
 /**
  * What every block's picker images are drawn with (see `./index.ts`). A thumbnail is a
  * sketch of what the block puts on the page, drawn with these shapes inside a 480×320
  * rounded card in the brand's orange and warm greys; an icon is a stock Lucide glyph in
- * grey. Each block's `picker.tsx` draws its own, `PICKERS` lists them, and
- * `pnpm block-images` renders them to `public/block-images/`.
+ * grey. Each block's `picker.tsx` draws its own, its registry descriptor loads it, and the
+ * `/admin/block-images/[file]` route serves them. They're JSX on the string runtime in
+ * `./svg`, not React.
  */
 
-/** A block's picker images, before they're rendered to SVG files. */
+/** A block's picker images. */
 export interface BlockPicker {
   /** What the thumbnail draws inside its 480×320 card. */
-  thumbnail: ReactElement
-  /** The Lucide glyph drawn as the block's icon. */
-  icon: LucideIcon
+  thumbnail: Markup
+  /** The Lucide glyph drawn as the block's icon, from the `lucide` package. */
+  icon: IconNode
 }
 
 export const BRAND = "#ff401a"
@@ -43,7 +46,7 @@ export const Line = ({
   y: number
   w: number
   fill?: string
-}): ReactElement => <rect x={x} y={y} width={w} height={12} rx={6} fill={fill} />
+}): Markup => <rect x={x} y={y} width={w} height={12} rx={6} fill={fill} />
 
 /** A heading. */
 export const Heading = ({
@@ -56,18 +59,10 @@ export const Heading = ({
   y: number
   w: number
   h?: number
-}): ReactElement => <rect x={x} y={y} width={w} height={h} rx={h / 2} fill={INK} />
+}): Markup => <rect x={x} y={y} width={w} height={h} rx={h / 2} fill={INK} />
 
 /** A paragraph: lines of the given widths, 24px apart. */
-export const Paragraph = ({
-  x,
-  y,
-  widths,
-}: {
-  x: number
-  y: number
-  widths: number[]
-}): ReactElement => (
+export const Paragraph = ({ x, y, widths }: { x: number; y: number; widths: number[] }): Markup => (
   <>
     {widths.map((w, i) => (
       <Line key={i} x={x} y={y + i * 24} w={w} />
@@ -88,8 +83,8 @@ export const Card = ({
   w: number
   h: number
   fill?: string
-  children?: ReactNode
-}): ReactElement => (
+  children?: Child
+}): Markup => (
   <>
     <rect x={x} y={y} width={w} height={h} rx={16} fill={fill} stroke={EDGE} strokeWidth={2} />
     {children}
@@ -106,7 +101,7 @@ export const Button = ({
   y: number
   w: number
   h?: number
-}): ReactElement => (
+}): Markup => (
   <>
     <rect x={x} y={y} width={w} height={h} rx={h / 2} fill={BRAND} />
     <rect x={x + w / 2 - w / 4} y={y + h / 2 - 4} width={w / 2} height={8} rx={4} fill={PAPER} />
@@ -123,7 +118,7 @@ export const Input = ({
   y: number
   w: number
   h?: number
-}): ReactElement => (
+}): Markup => (
   <rect x={x} y={y} width={w} height={h} rx={10} fill={PAPER} stroke={TEXT} strokeWidth={2} />
 )
 
@@ -140,7 +135,7 @@ export const Picture = ({
   y: number
   w: number
   h: number
-}): ReactElement => (
+}): Markup => (
   <>
     <defs>
       <clipPath id={id}>
@@ -162,7 +157,7 @@ export const Picture = ({
   </>
 )
 
-export const Avatar = ({ cx, cy, r }: { cx: number; cy: number; r: number }): ReactElement => (
+export const Avatar = ({ cx, cy, r }: { cx: number; cy: number; r: number }): Markup => (
   <>
     <circle cx={cx} cy={cy} r={r} fill={BRAND_SOFT} />
     <circle cx={cx} cy={cy - r * 0.2} r={r * 0.36} fill={BRAND_MID} />
@@ -171,4 +166,41 @@ export const Avatar = ({ cx, cy, r }: { cx: number; cy: number; r: number }): Re
       fill={BRAND_MID}
     />
   </>
+)
+
+/**
+ * A Lucide glyph, drawn as Lucide draws it (a 24×24 grid, round caps and joins), at `size`
+ * and, inside another drawing, placed at `x` and `y`.
+ */
+export const Glyph = ({
+  icon,
+  size = 24,
+  color,
+  strokeWidth = 2,
+  x,
+  y,
+}: {
+  icon: IconNode
+  size?: number
+  color: string
+  strokeWidth?: number
+  x?: number
+  y?: number
+}): Markup => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    x={x}
+    y={y}
+    aria-hidden="true"
+  >
+    {icon.map(([tag, attributes]) => jsx(tag, attributes as Record<string, unknown>))}
+  </svg>
 )

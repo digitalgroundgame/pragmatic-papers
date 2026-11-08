@@ -1,4 +1,5 @@
-import { LayoutGrid } from "lucide-react"
+/** @jsxImportSource @/blocks/blockImages/svg */
+import { LayoutGrid } from "lucide"
 
 import { type BlockPicker, Card, Line, Picture, TEXT_DARK } from "@/blocks/blockImages/shapes"
 

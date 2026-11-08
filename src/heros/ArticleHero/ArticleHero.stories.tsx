@@ -119,7 +119,8 @@ export const WithNarrationAndComments: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const rect = (el: Element) => el.getBoundingClientRect()
-    const playIcon = canvas.getByRole("button", { name: "Play" }).querySelector("svg")!
+    // The player loads lazily, so wait for it before measuring.
+    const playIcon = (await canvas.findByRole("button", { name: "Play" })).querySelector("svg")!
     const label = canvasElement.querySelector("[data-slot=audio-player] span[aria-hidden]")!
     const commentIcon = canvas.getByRole("link", { name: "Comments" }).querySelector("svg")!
     const shareIcon = canvas.getByRole("button", { name: "Share" }).querySelector("svg")!

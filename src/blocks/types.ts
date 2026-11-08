@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react"
 
+import type { BlockPicker } from "@/blocks/blockImages/shapes"
 import type { FeedBlockBehavior } from "@/blocks/readingFeed/types"
 import type { FeedContext } from "@/utilities/feedHTML"
 
@@ -64,6 +65,12 @@ export interface BlockDescriptor<Fields = Record<string, unknown>> {
   tableOfContents?: (fields: Fields) => BlockTableOfContentsEntry | null
   /** Required for a block with an upload field, or media it uses can be deleted under it. */
   media?: BlockMedia
+  /**
+   * The block's images in the admin's block picker: `() => import("./picker")`, whose default
+   * export draws them. Loaded only by the route that serves them, so pages that read this
+   * list never download the drawings.
+   */
+  picker?: () => Promise<{ default: BlockPicker }>
 }
 
 /** A descriptor whose fields are no longer known: what the registry holds. */

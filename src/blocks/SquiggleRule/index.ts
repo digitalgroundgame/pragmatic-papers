@@ -5,6 +5,7 @@ import { squiggleRuleToHTML } from "./converters"
 
 export const squiggleRuleBlock = defineBlock<SquiggleRuleBlock>({
   slug: "squiggleRule",
+  picker: () => import("./picker"),
   html: squiggleRuleToHTML,
   // A rule is decoration: narration leaves it out, as it does a horizontal rule.
   narrate: () => "",

@@ -3,6 +3,7 @@ import configPromise from "@payload-config"
 import type { SanitizedConfig } from "payload"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 
+import { blockIconURL, blockThumbnailURL } from "@/blocks/blockImages"
 import { BLOCKS, blockDescriptor } from "@/blocks/registry"
 
 vi.mock("server-only", () => ({}))
@@ -11,8 +12,12 @@ const { jsxConverters } = await import("@/components/RichText")
 const { LAYOUT_BLOCK_TYPES } = await import("@/blocks/RenderBlocks")
 
 // The slice of Payload's sanitized config this test reads.
+interface ResolvedImage {
+  url: string
+}
 interface ResolvedBlock {
   slug: string
+  admin?: { images?: { icon?: ResolvedImage | string; thumbnail?: ResolvedImage | string } }
   fields?: ResolvedField[]
   flattenedFields?: ResolvedField[]
 }
@@ -220,5 +225,32 @@ describe("the renderers", () => {
     const offered = (config.collections.find(({ slug }) => slug === "pages")?.flattenedFields as
       ResolvedField[] | undefined)!.find(({ name }) => name === "layout")!.blocks!
     expect(slugs(offered)).toEqual([...LAYOUT_BLOCK_TYPES].sort())
+  })
+})
+
+describe("the block picker", () => {
+  const urlOf = (image: ResolvedImage | string | undefined) =>
+    typeof image === "string" ? image : image?.url
+
+  it("draws images for every block in the registry", async () => {
+    const missing = BLOCKS.filter(({ picker }) => !picker).map(({ slug }) => slug)
+    expect(missing, "give these descriptors a `picker` (see `picker.tsx`)").toEqual([])
+    for (const { picker } of BLOCKS) {
+      const { thumbnail, icon } = (await picker!()).default
+      expect(String(thumbnail)).not.toBe("")
+      expect(icon.length).toBeGreaterThan(0)
+    }
+  })
+
+  it("shows every block an editor offers with its images", () => {
+    const offered = [...editors.values()].flatMap((e) => [...e.blocks, ...e.inline])
+    const missing = slugs(
+      offered.filter(
+        ({ slug, admin }) =>
+          urlOf(admin?.images?.thumbnail) !== blockThumbnailURL(slug) ||
+          urlOf(admin?.images?.icon) !== blockIconURL(slug),
+      ),
+    )
+    expect(missing, 'set `admin: { images: blockImages("<slug>") }` in these blocks').toEqual([])
   })
 })

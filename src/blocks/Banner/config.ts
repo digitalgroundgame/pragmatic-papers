@@ -6,8 +6,11 @@ import {
   lexicalEditor,
 } from "@payloadcms/richtext-lexical"
 
+import { blockImages } from "@/blocks/blockImages"
+
 export const Banner: Block = {
   slug: "banner",
+  admin: { images: blockImages("banner") },
   fields: [
     {
       name: "style",

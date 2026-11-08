@@ -1,3 +1,4 @@
+import { blockImages } from "@/blocks/blockImages"
 import { footnoteFields } from "@/fields/footnotes"
 import type { Block } from "payload"
 
@@ -63,6 +64,7 @@ export const FootnoteBlock: Block = {
     plural: "Footnotes",
   },
   admin: {
+    images: blockImages("footnote"),
     components: {
       Label: "@/blocks/Footnote/FootnoteLabel#FootnoteLabel",
     },

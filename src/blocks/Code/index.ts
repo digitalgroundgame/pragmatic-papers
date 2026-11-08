@@ -7,6 +7,7 @@ import { codeToHTML } from "./converters"
 
 export const codeBlock = defineBlock<CodeBlock>({
   slug: "code",
+  picker: () => import("./picker"),
   html: codeToHTML,
   narrate: (fields) => {
     const language = spokenText(fields.language)

@@ -6,6 +6,7 @@ import { mediaBlockToHTML } from "./converters"
 
 export const mediaBlock = defineBlock<MediaBlock>({
   slug: "mediaBlock",
+  picker: () => import("./picker"),
   html: mediaBlockToHTML,
   // Its caption, or else its alt text. A media block with neither narrates as "(An image.)".
   narrate: (fields, { describeMedia }) =>

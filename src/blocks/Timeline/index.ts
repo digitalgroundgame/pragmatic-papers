@@ -14,6 +14,7 @@ const eventsOf = (value: unknown): Array<Record<string, unknown> | null | undefi
 
 export const timelineBlock = defineBlock<TimelineBlock>({
   slug: "timeline",
+  picker: () => import("./picker"),
   html: timelineToHTML,
   narrate: describeTimeline,
   // A page per three events.

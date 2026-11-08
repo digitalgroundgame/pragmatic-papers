@@ -197,6 +197,15 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // The block picker's images: the same for everyone and fixed for a build, so the
+        // browser keeps them rather than fetching every block's again on each admin page.
+        // After the `/admin` rule, so its Cache-Control wins; the edge still skips `/admin`.
+        source: "/admin/block-images/:file",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=3600, stale-while-revalidate=86400" },
+        ],
+      },
+      {
         // API routes are dynamic and may be authenticated; bypass all caching layers. Except
         // the ticker's feed (`/api/ticker`), which is public and sets its own: a minute at the
         // edge, so a hidden post or a new stream shows soon without purging every page.

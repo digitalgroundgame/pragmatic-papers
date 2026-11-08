@@ -30,6 +30,10 @@
 #                                        it takes over, then https://pragmaticpapers.com
 #   - variable PRODUCTION_SUPABASE_URL   production's SUPABASE_URL and S3_BUCKET, which media
 #   - variable PRODUCTION_S3_BUCKET      links are built from
+#   - variable PRODUCTION_GOOGLE_ANALYTICS_ID  production's GOOGLE_ANALYTICS_ID and
+#   - variable PRODUCTION_TURNSTILE_SITE_KEY   TURNSTILE_SITE_KEY from Coolify (optional:
+#                                        unset, pages render without analytics or the
+#                                        signup form's challenge, as on Coolify)
 # The Hyperdrive config in wrangler.jsonc must exist; the R2 bucket and D1 database are
 # created here if they don't.
 name: Worker
@@ -169,6 +173,8 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           PRODUCTION_SUPABASE_URL: ${{ vars.PRODUCTION_SUPABASE_URL }}
           PRODUCTION_S3_BUCKET: ${{ vars.PRODUCTION_S3_BUCKET }}
+          PRODUCTION_GOOGLE_ANALYTICS_ID: ${{ vars.PRODUCTION_GOOGLE_ANALYTICS_ID }}
+          PRODUCTION_TURNSTILE_SITE_KEY: ${{ vars.PRODUCTION_TURNSTILE_SITE_KEY }}
         run: |
           secrets="$RUNNER_TEMP/worker-secrets.json"
           jq -n --arg secret "$SITE_PAYLOAD_SECRET" --arg dsn "$SENTRY_DSN" \
@@ -176,6 +182,14 @@ jobs:
           vars=(--var "SERVER_URL:$SERVER_URL" --var "ORIGIN_URL:$ORIGIN_URL" --var "SENTRY_RELEASE:$GITHUB_SHA")
           if [ "$TARGET" = production ]; then
             vars+=(--var "SUPABASE_URL:$PRODUCTION_SUPABASE_URL" --var "S3_BUCKET:$PRODUCTION_S3_BUCKET")
+            # Public IDs every page renders; Turnstile's secret stays on Coolify, which
+            # answers the signup form (/api/newsletter/subscribe goes to the origin).
+            if [ -n "$PRODUCTION_GOOGLE_ANALYTICS_ID" ]; then
+              vars+=(--var "GOOGLE_ANALYTICS_ID:$PRODUCTION_GOOGLE_ANALYTICS_ID")
+            fi
+            if [ -n "$PRODUCTION_TURNSTILE_SITE_KEY" ]; then
+              vars+=(--var "TURNSTILE_SITE_KEY:$PRODUCTION_TURNSTILE_SITE_KEY")
+            fi
           fi
           pnpm exec opennextjs-cloudflare deploy ${WRANGLER_ENV:+--env "$WRANGLER_ENV"} -- \
             --secrets-file "$secrets" "${vars[@]}"

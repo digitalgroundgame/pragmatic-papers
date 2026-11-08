@@ -85,11 +85,8 @@
         // has no S3 credentials. Unset, USE_LOCAL_STORAGE would be whatever a stray .env at
         // build time said (OpenNext compiles .env files in as fallbacks), so it's spelled out.
         "USE_LOCAL_STORAGE": "false",
-        // The same public IDs as Coolify production's variables: both are rendered into
-        // every page. Turnstile's secret stays on Coolify, which answers the signup form
-        // (/api/newsletter/subscribe goes to the origin).
-        "GOOGLE_ANALYTICS_ID": "G-PXK2QL92HV",
-        "TURNSTILE_SITE_KEY": "0x4AAAAAADjrVZ3mT_qhy8i6",
+        // GOOGLE_ANALYTICS_ID and TURNSTILE_SITE_KEY come from the deploy too
+        // (PRODUCTION_GOOGLE_ANALYTICS_ID and PRODUCTION_TURNSTILE_SITE_KEY in worker.yml).
         // Production's Coolify deploy seeds its database; this Worker's never does. An
         // environment doesn't inherit the top-level `vars`, so it needs its own copy.
         "DEPLOY_SEED": "false",

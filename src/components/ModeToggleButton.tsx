@@ -25,7 +25,7 @@ export function ModeToggleButton({
   return (
     <Button
       variant={showLabel ? "outline" : "ghost"}
-      size={showLabel ? "lg" : "icon-sm"}
+      size={showLabel ? "default" : "icon-sm"}
       className={cn("relative", showLabel && "w-full", className)}
       data-tour="mode-toggle"
       {...props}

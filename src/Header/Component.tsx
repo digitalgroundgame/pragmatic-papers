@@ -57,7 +57,7 @@ export async function DefaultHeader(): Promise<React.JSX.Element> {
               <HeaderActions actions={actions} className="hidden lg:flex" />
               <LazySettingsSheet
                 actions={
-                  <HeaderActions actions={actions} className="w-full justify-center [&>a]:w-1/2" />
+                  <HeaderActions actions={actions} className="w-full [&>a]:min-w-0 [&>a]:flex-1" />
                 }
               />
             </div>

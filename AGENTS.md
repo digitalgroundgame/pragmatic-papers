@@ -689,8 +689,9 @@ applications are set up and what's been verified about them; read it first.
 
 Staging's public site also runs as a Cloudflare Worker at `staging-worker.pragmaticpapers.com`
 (OpenNext, reading staging's database through Hyperdrive), deployed on every push to `dev` by
-`.github/workflows/worker.yml`; setup and what's left before production are in
-`src/cloudflare/README.md`.
+`.github/workflows/worker.yml`; PRs that could break its build get it built and served by
+`.github/workflows/worker-build.yml`, which deploys nothing. Setup and what's left before
+production are in `src/cloudflare/README.md`.
 
 Each database has one seeder: the deploy of the Coolify app that runs its migrations. Its
 `/next/revalidate-all` seeds what a deploy seeds (starter pages, starter achievements); the Worker reads

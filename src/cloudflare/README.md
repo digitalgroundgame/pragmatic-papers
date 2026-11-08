@@ -82,7 +82,11 @@ The same steps, for production's database and hostname:
    `WORKER_PRODUCTION_URL` (the Worker's URL: its workers.dev address until it takes over),
    and `PRODUCTION_SUPABASE_URL` and `PRODUCTION_S3_BUCKET` (production's `SUPABASE_URL` and
    `S3_BUCKET`, which media links are built from; the Worker never uploads, so it has no S3
-   credentials).
+   credentials). Optional: `PRODUCTION_GOOGLE_ANALYTICS_ID` and
+   `PRODUCTION_TURNSTILE_SITE_KEY` (production's `GOOGLE_ANALYTICS_ID` and
+   `TURNSTILE_SITE_KEY`); unset, pages render without analytics or the signup form's
+   challenge. Turnstile's widget only loads on the hostnames its Hostname management lists,
+   so add the Worker's hostname there too.
 3. **Coolify production**: `WORKER_URL`, as for staging.
 4. **Taking over the hostname**, once it has served from workers.dev for a while:
    - give Coolify's production app a hostname of its own (e.g.

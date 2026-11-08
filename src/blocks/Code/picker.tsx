@@ -28,4 +28,4 @@ const thumbnail = (
 )
 
 /** Its images in the block picker. */
-export const codePicker: BlockPicker = { thumbnail, icon: CodeXml }
+export default { thumbnail, icon: CodeXml } satisfies BlockPicker

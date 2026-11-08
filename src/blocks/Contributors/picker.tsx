@@ -20,4 +20,4 @@ const thumbnail = (
 )
 
 /** Its images in the block picker. */
-export const contributorsPicker: BlockPicker = { thumbnail, icon: Users }
+export default { thumbnail, icon: Users } satisfies BlockPicker

@@ -13,7 +13,7 @@ const imagesOf = (value: unknown): StoredImage[] => (Array.isArray(value) ? valu
 
 export const mediaCollageBlock = defineBlock<MediaCollageBlock>({
   slug: "mediaCollage",
-  picker: () => import("./picker").then(({ mediaCollagePicker }) => mediaCollagePicker),
+  picker: () => import("./picker"),
   html: mediaCollageToHTML,
   narrate: (fields, { describeMedia }) => {
     const descriptions = imagesOf(fields.images)

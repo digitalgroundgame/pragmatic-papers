@@ -12,4 +12,4 @@ const thumbnail = (
 )
 
 /** Its images in the block picker. */
-export const mediaCollagePicker: BlockPicker = { thumbnail, icon: LayoutDashboard }
+export default { thumbnail, icon: LayoutDashboard } satisfies BlockPicker

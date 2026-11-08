@@ -18,4 +18,4 @@ const thumbnail = (
 )
 
 /** Its images in the block picker. */
-export const squiggleRulePicker: BlockPicker = { thumbnail, icon: Waves }
+export default { thumbnail, icon: Waves } satisfies BlockPicker

@@ -9,7 +9,7 @@ import { interactiveMapToHTML } from "./converters"
 
 export const interactiveMapBlock = defineBlock<InteractiveMapBlock>({
   slug: "interactiveMap",
-  picker: () => import("./picker").then(({ interactiveMapPicker }) => interactiveMapPicker),
+  picker: () => import("./picker"),
   html: interactiveMapToHTML,
   narrate: (fields) => {
     const title = spokenText(fields.widgetTitle)

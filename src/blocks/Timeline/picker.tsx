@@ -34,4 +34,4 @@ const thumbnail = (
 )
 
 /** Its images in the block picker. */
-export const timelinePicker: BlockPicker = { thumbnail, icon: GitCommitVertical }
+export default { thumbnail, icon: GitCommitVertical } satisfies BlockPicker

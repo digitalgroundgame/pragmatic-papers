@@ -36,4 +36,4 @@ const thumbnail = (
 )
 
 /** Its images in the block picker. */
-export const volumeViewPicker: BlockPicker = { thumbnail, icon: BookOpen }
+export default { thumbnail, icon: BookOpen } satisfies BlockPicker

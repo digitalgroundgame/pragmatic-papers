@@ -36,4 +36,4 @@ const thumbnail = (
 )
 
 /** Its images in the block picker. */
-export const merchPicker: BlockPicker = { thumbnail, icon: Shirt }
+export default { thumbnail, icon: Shirt } satisfies BlockPicker

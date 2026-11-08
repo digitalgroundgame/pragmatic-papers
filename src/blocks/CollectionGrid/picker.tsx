@@ -22,4 +22,4 @@ const thumbnail = (
 )
 
 /** Its images in the block picker. */
-export const collectionGridPicker: BlockPicker = { thumbnail, icon: LayoutGrid }
+export default { thumbnail, icon: LayoutGrid } satisfies BlockPicker

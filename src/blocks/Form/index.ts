@@ -3,6 +3,6 @@ import { defineBlock } from "@/blocks/types"
 
 export const formBlock = defineBlock({
   slug: "formBlock",
-  picker: () => import("./picker").then(({ formPicker }) => formPicker),
+  picker: () => import("./picker"),
   narrate: narrateAs("form"),
 })

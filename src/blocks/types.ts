@@ -66,10 +66,11 @@ export interface BlockDescriptor<Fields = Record<string, unknown>> {
   /** Required for a block with an upload field, or media it uses can be deleted under it. */
   media?: BlockMedia
   /**
-   * The block's images in the admin's block picker (`picker.tsx`), loaded only by the route
-   * that draws them, so pages that read this list never download the drawings.
+   * The block's images in the admin's block picker: `() => import("./picker")`, whose default
+   * export draws them. Loaded only by the route that serves them, so pages that read this
+   * list never download the drawings.
    */
-  picker?: () => Promise<BlockPicker>
+  picker?: () => Promise<{ default: BlockPicker }>
 }
 
 /** A descriptor whose fields are no longer known: what the registry holds. */

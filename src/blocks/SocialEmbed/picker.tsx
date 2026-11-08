@@ -57,7 +57,7 @@ const SocialPost = ({ platform, video = false }: { platform?: string; video?: bo
 )
 
 /** Its images in the block picker. */
-export const socialEmbedPicker: BlockPicker = { thumbnail: <SocialPost />, icon: Share2 }
+export default { thumbnail: <SocialPost />, icon: Share2 } satisfies BlockPicker
 
 /** The legacy per-platform embeds, kept so old articles still load. */
 export const legacyEmbedPickers = {

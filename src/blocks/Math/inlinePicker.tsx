@@ -1,11 +1,10 @@
 /** @jsxImportSource @/blocks/blockImages/svg */
-import { Radical, Sigma } from "lucide"
+import { Radical } from "lucide"
 
 import {
   type BlockPicker,
   BRAND,
   BRAND_WASH,
-  INK,
   Line,
   Paragraph,
   SERIF,
@@ -32,25 +31,5 @@ const inlineMathThumbnail = (
   </>
 )
 
-export const inlineMathPicker: BlockPicker = { thumbnail: inlineMathThumbnail, icon: Radical }
-
-const displayMathThumbnail = (
-  <>
-    <Paragraph x={60} y={44} widths={[360, 300]} />
-    <rect x={90} y={110} width={300} height={100} rx={16} fill={BRAND_WASH} />
-    <text
-      x={240}
-      y={176}
-      textAnchor="middle"
-      fontFamily={SERIF}
-      fontStyle="italic"
-      fontSize={44}
-      fill={INK}
-    >
-      a² + b² = c²
-    </text>
-    <Paragraph x={60} y={240} widths={[340, 220]} />
-  </>
-)
-
-export const displayMathPicker: BlockPicker = { thumbnail: displayMathThumbnail, icon: Sigma }
+/** Its images in the block picker. */
+export default { thumbnail: inlineMathThumbnail, icon: Radical } satisfies BlockPicker

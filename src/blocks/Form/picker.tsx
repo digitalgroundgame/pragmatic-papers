@@ -14,4 +14,4 @@ const thumbnail = (
 )
 
 /** Its images in the block picker. */
-export const formPicker: BlockPicker = { thumbnail, icon: ClipboardList }
+export default { thumbnail, icon: ClipboardList } satisfies BlockPicker

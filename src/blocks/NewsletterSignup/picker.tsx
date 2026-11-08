@@ -32,4 +32,4 @@ const thumbnail = (
 )
 
 /** Its images in the block picker. */
-export const newsletterSignupPicker: BlockPicker = { thumbnail, icon: Mail }
+export default { thumbnail, icon: Mail } satisfies BlockPicker

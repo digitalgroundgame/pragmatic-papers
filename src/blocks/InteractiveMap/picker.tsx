@@ -59,4 +59,4 @@ const thumbnail = (
 )
 
 /** Its images in the block picker. */
-export const interactiveMapPicker: BlockPicker = { thumbnail, icon: MapIcon }
+export default { thumbnail, icon: MapIcon } satisfies BlockPicker

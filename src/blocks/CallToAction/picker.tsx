@@ -21,4 +21,4 @@ const thumbnail = (
 )
 
 /** Its images in the block picker. */
-export const ctaPicker: BlockPicker = { thumbnail, icon: Megaphone }
+export default { thumbnail, icon: Megaphone } satisfies BlockPicker

@@ -42,4 +42,4 @@ const thumbnail = (
 )
 
 /** Its images in the block picker. */
-export const footnotePicker: BlockPicker = { thumbnail, icon: Superscript }
+export default { thumbnail, icon: Superscript } satisfies BlockPicker

@@ -36,7 +36,7 @@ export async function renderBlockImages(): Promise<Record<string, string>> {
   const files: Record<string, string> = {}
   for (const { slug, picker: load } of BLOCKS) {
     if (!load) continue
-    const picker = await load()
+    const { default: picker } = await load()
     files[`${slug}.svg`] = String(<Thumbnail picker={picker} />)
     files[`${slug}-icon.svg`] = String(<Glyph icon={picker.icon} color={ICON_COLOR} />)
   }

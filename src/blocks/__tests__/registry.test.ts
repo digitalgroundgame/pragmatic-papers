@@ -236,7 +236,7 @@ describe("the block picker", () => {
     const missing = BLOCKS.filter(({ picker }) => !picker).map(({ slug }) => slug)
     expect(missing, "give these descriptors a `picker` (see `picker.tsx`)").toEqual([])
     for (const { picker } of BLOCKS) {
-      const { thumbnail, icon } = await picker!()
+      const { thumbnail, icon } = (await picker!()).default
       expect(String(thumbnail)).not.toBe("")
       expect(icon.length).toBeGreaterThan(0)
     }

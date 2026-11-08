@@ -35,7 +35,7 @@ function snapshotTitle(snapshot: unknown): string {
 // Narration never reads the URL aloud: a spoken URL is unintelligible.
 export const socialEmbedBlock = defineBlock<SocialEmbedBlock>({
   slug: "socialEmbed",
-  picker: () => import("./picker").then(({ socialEmbedPicker }) => socialEmbedPicker),
+  picker: () => import("./picker"),
   html: socialEmbedToHTML,
   narrate: (fields) => {
     const platform = spokenText(fields.platform)
@@ -55,7 +55,8 @@ export const socialEmbedBlock = defineBlock<SocialEmbedBlock>({
 const legacyEmbed = (slug: LegacyEmbedSlug, spoken: string) =>
   defineBlock<SocialEmbedBlock>({
     slug,
-    picker: () => import("./picker").then(({ legacyEmbedPickers }) => legacyEmbedPickers[slug]),
+    picker: () =>
+      import("./picker").then(({ legacyEmbedPickers }) => ({ default: legacyEmbedPickers[slug] })),
     html: socialEmbedToHTML,
     narrate: () => describeVisual(spoken),
     readingFeed,

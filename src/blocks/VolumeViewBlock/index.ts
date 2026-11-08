@@ -3,6 +3,6 @@ import { defineBlock } from "@/blocks/types"
 
 export const volumeViewBlock = defineBlock({
   slug: "volumeView",
-  picker: () => import("./picker").then(({ volumeViewPicker }) => volumeViewPicker),
+  picker: () => import("./picker"),
   narrate: narrateAs("volume view"),
 })

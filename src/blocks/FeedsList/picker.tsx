@@ -25,4 +25,4 @@ const thumbnail = (
 )
 
 /** Its images in the block picker. */
-export const feedsListPicker: BlockPicker = { thumbnail, icon: Rss }
+export default { thumbnail, icon: Rss } satisfies BlockPicker

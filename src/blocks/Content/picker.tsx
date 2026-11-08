@@ -13,4 +13,4 @@ const thumbnail = (
 )
 
 /** Its images in the block picker. */
-export const contentPicker: BlockPicker = { thumbnail, icon: Columns2 }
+export default { thumbnail, icon: Columns2 } satisfies BlockPicker

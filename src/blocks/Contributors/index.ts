@@ -3,6 +3,6 @@ import { defineBlock } from "@/blocks/types"
 
 export const contributorsBlock = defineBlock({
   slug: "contributors",
-  picker: () => import("./picker").then(({ contributorsPicker }) => contributorsPicker),
+  picker: () => import("./picker"),
   narrate: narrateAs("contributors block"),
 })

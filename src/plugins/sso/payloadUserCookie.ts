@@ -7,7 +7,8 @@ import type { ResolvedSsoConfig } from "./types"
 
 /**
  * Sets the cookie the cache rules look for whenever a sign-in makes a session for one of
- * Payload's users, and clears it for anyone else and on sign-out.
+ * Payload's users, and clears it for anyone else and on sign-out. Every session also gets the
+ * signed-in cookie the page's scripts read, which sign-out clears.
  */
 export function payloadUserCookiePlugin(
   payload: Payload,
@@ -27,6 +28,11 @@ export function payloadUserCookiePlugin(
 
             const created = ctx.context.newSession
             if (created) {
+              ctx.setCookie(config.signedInCookie, "1", {
+                ...attributes,
+                httpOnly: false,
+                maxAge: config.sessionSeconds,
+              })
               const user = await payload.findByID({
                 collection: config.usersSlug as CollectionSlug,
                 id:
@@ -45,6 +51,11 @@ export function payloadUserCookiePlugin(
               }
             } else if (ctx.path === "/sign-out") {
               clear()
+              ctx.setCookie(config.signedInCookie, "", {
+                ...attributes,
+                httpOnly: false,
+                maxAge: 0,
+              })
             }
           }),
         },

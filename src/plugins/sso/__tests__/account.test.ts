@@ -35,6 +35,7 @@ describe("accountEndpoints", () => {
     usersSlug: "users",
     cookieName: "pp-session",
     payloadUserCookie: "payload-token-sso",
+    signedInCookie: "pp-signed-in",
     isPayloadUser: (user: { roles?: string[] }) => !user.roles?.includes("member"),
   } as unknown as ResolvedSsoConfig
 
@@ -103,7 +104,7 @@ describe("accountEndpoints", () => {
     expect(payload.update).toHaveBeenCalledTimes(1)
   })
 
-  it("deletes a member's account and clears both cookies", async () => {
+  it("deletes a member's account and clears its cookies", async () => {
     const response = await call(remove)
 
     expect(response.status).toBe(200)
@@ -114,6 +115,8 @@ describe("accountEndpoints", () => {
     expect(cookies).toEqual([
       expect.stringMatching(/^pp-session=; Path=\/; Max-Age=0; HttpOnly; SameSite=Lax; Secure$/),
       expect.stringMatching(/^payload-token-sso=;/),
+      // The signed-in mark is the page's to read, so it isn't HttpOnly.
+      expect.stringMatching(/^pp-signed-in=; Path=\/; Max-Age=0; SameSite=Lax; Secure$/),
     ])
   })
 

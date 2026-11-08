@@ -188,6 +188,7 @@ export interface Config {
     'comment-violations': CommentViolation;
     achievements: Achievement;
     awards: Award;
+    'articles-read': ArticlesRead;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
@@ -221,6 +222,7 @@ export interface Config {
     'comment-violations': CommentViolationsSelect<false> | CommentViolationsSelect<true>;
     achievements: AchievementsSelect<false> | AchievementsSelect<true>;
     awards: AwardsSelect<false> | AwardsSelect<true>;
+    'articles-read': ArticlesReadSelect<false> | ArticlesReadSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -586,6 +588,15 @@ export interface User {
     docs?: (number | Award)[];
     hasNextPage?: boolean;
     totalDocs?: number;
+  };
+  /**
+   * Days this account visited the site while signed in, on its own calendar.
+   */
+  reading?: {
+    daysVisited?: number | null;
+    lastVisitOn?: string | null;
+    currentStreak?: number | null;
+    longestStreak?: number | null;
   };
   updatedAt: string;
   createdAt: string;
@@ -1615,6 +1626,16 @@ export interface CommentViolation {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "articles-read".
+ */
+export interface ArticlesRead {
+  id: number;
+  user: number | User;
+  article: number | Article;
+  readAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -1823,6 +1844,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'awards';
         value: number | Award;
+      } | null)
+    | ({
+        relationTo: 'articles-read';
+        value: number | ArticlesRead;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -2389,6 +2414,14 @@ export interface UsersSelect<T extends boolean = true> {
   avatarUrl?: T;
   ssoConnections?: T;
   awards?: T;
+  reading?:
+    | T
+    | {
+        daysVisited?: T;
+        lastVisitOn?: T;
+        currentStreak?: T;
+        longestStreak?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -2715,6 +2748,15 @@ export interface AwardsSelect<T extends boolean = true> {
   revokedBy?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "articles-read_select".
+ */
+export interface ArticlesReadSelect<T extends boolean = true> {
+  user?: T;
+  article?: T;
+  readAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import type { AccountSummary } from "@/plugins/sso/endpoints/account"
 
 import { Achievements } from "./Achievements"
+import { ReadingStats } from "./ReadingStats"
 import { LinkedSignIns } from "./LinkedSignIns"
 
 export interface AccountProps {
@@ -272,6 +273,7 @@ export const Account: React.FC<AccountProps> = ({ providers, apiPath = "/api" })
             onSaved={(saved) => setLoad({ state: "ready", account: saved })}
           />
           <Achievements apiPath={apiPath} />
+          <ReadingStats apiPath={apiPath} />
           {/* It reads the link callback's `?error=`, which a static page only has in the browser. */}
           <Suspense fallback={null}>
             <LinkedSignIns apiPath={apiPath} />

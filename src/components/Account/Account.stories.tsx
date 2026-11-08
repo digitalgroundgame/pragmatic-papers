@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, spyOn, userEvent, within } from "storybook/test"
 
 import type { HeldAchievement } from "@/plugins/achievements"
+import type { MyReading } from "@/plugins/readingHistory"
 import type { AccountSummary } from "@/plugins/sso/endpoints/account"
 import type { LinkedProvider } from "@/plugins/sso/types"
 
@@ -29,9 +30,17 @@ const achievements: HeldAchievement[] = [
   },
 ]
 
+const reading: MyReading = {
+  articlesRead: 14,
+  volumesRead: 2,
+  daysVisited: 23,
+  currentStreak: 4,
+  longestStreak: 9,
+}
+
 /**
  * Answers `/api/account` with `account` (401 when null), `/api/auth-links` with `links` and
- * `/api/achievements/mine` with `achievements`.
+ * `/api/achievements/mine` with `achievements` and `/api/reading/mine` with `reading`.
  */
 function serve(account: AccountSummary | null) {
   return () => {
@@ -39,6 +48,7 @@ function serve(account: AccountSummary | null) {
       const url = String(input)
       if (url.endsWith("/auth-links")) return Response.json({ providers: links })
       if (url.endsWith("/achievements/mine")) return Response.json({ achievements })
+      if (url.endsWith("/reading/mine")) return Response.json(reading)
       if (url.endsWith("/account") && init?.method === "PATCH") {
         const { name } = JSON.parse(String(init.body)) as { name: string }
         return Response.json({ ...member, name })
@@ -85,6 +95,9 @@ export const Member: Story = {
 
     await expect(await canvas.findByRole("heading", { name: "Achievements" })).toBeInTheDocument()
     await expect(canvas.getByText("Early member")).toBeInTheDocument()
+
+    await expect(await canvas.findByRole("heading", { name: "Your reading" })).toBeInTheDocument()
+    await expect(canvas.getByText("14 articles")).toBeInTheDocument()
 
     // Their only sign-in can't be disconnected.
     await expect(await canvas.findByRole("button", { name: "Disconnect Discord" })).toBeDisabled()

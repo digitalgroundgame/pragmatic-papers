@@ -322,6 +322,7 @@ export interface Article {
     description?: string | null;
   };
   narration?: (number | null) | Media;
+  canSeeStats?: boolean | null;
   heroImage?: (number | null) | Media;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
@@ -1882,6 +1883,7 @@ export interface ArticlesSelect<T extends boolean = true> {
         description?: T;
       };
   narration?: T;
+  canSeeStats?: T;
   heroImage?: T;
   generateSlug?: T;
   slug?: T;

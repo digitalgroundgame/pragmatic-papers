@@ -1,6 +1,7 @@
 import { blueskyAccounts } from "./bluesky"
 import { cloudflareWorker, cloudflareZone } from "./cloudflare"
 import { githubRepo } from "./github"
+import { googleAnalyticsProperty } from "./google/analytics"
 import { listmonkServer } from "./listmonk/connection"
 import { oauthApp } from "./oauth"
 import { shopifyStore } from "./shopify"
@@ -151,6 +152,19 @@ export const destinySignIn = oauthApp({
   clientSecretEnv: "DESTINY_CLIENT_SECRET",
 })
 
+/**
+ * The site's GA4 property, read back through the Data API with a service account that has
+ * Viewer on it: the Stats tab on each article (`collections/Articles/stats`). Only production
+ * has a property with readers in it. The recommendations job reads the same variables.
+ */
+export const googleAnalytics = googleAnalyticsProperty({
+  id: "google-analytics",
+  label: "Google Analytics reports",
+  propertyEnv: "GA4_PROPERTY_ID",
+  emailEnv: "GOOGLE_SERVICE_ACCOUNT_EMAIL",
+  keyEnv: "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY",
+})
+
 /** Declaration order is display order. */
 export const INTEGRATIONS: readonly Integration[] = [
   courtTracker,
@@ -161,6 +175,7 @@ export const INTEGRATIONS: readonly Integration[] = [
   blueskyPosts,
   xPosts,
   unsplash,
+  googleAnalytics,
   listmonkServer,
   cloudflareTurnstile,
   googleSignIn,

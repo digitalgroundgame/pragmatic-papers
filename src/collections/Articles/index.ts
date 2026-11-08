@@ -64,6 +64,8 @@ import {
 } from "@payloadcms/richtext-lexical"
 import type { CollectionBeforeChangeHook, CollectionConfig, FieldHook } from "payload"
 import { slugField } from "@/fields/slug"
+import { showStatsTab, statsFlagField } from "@/collections/Articles/stats/access"
+import { articleStatsEndpoints } from "@/collections/Articles/stats/endpoint"
 import { grantPublicProfile } from "@/collections/Users/hooks/grantPublicProfile"
 
 const setPublishedAtDefault: FieldHook<Article, Article["publishedAt"]> = ({
@@ -85,7 +87,7 @@ export const Articles: CollectionConfig = {
     read: isPublishedOrStaff,
     update: isDraftOrEditor,
   },
-  endpoints: [productionSearchEndpoint, cloneFromProductionEndpoint],
+  endpoints: [productionSearchEndpoint, cloneFromProductionEndpoint, ...articleStatsEndpoints],
   admin: {
     group: "Content",
     components: {
@@ -234,9 +236,27 @@ export const Articles: CollectionConfig = {
             },
           ],
         },
+        {
+          label: "Stats",
+          description:
+            "How many people read this article, from Google Analytics, and its comments. Writers see the stats of articles they're credited on, narrators of articles they narrated.",
+          admin: { condition: showStatsTab },
+          fields: [
+            {
+              name: "stats",
+              type: "ui",
+              admin: {
+                components: {
+                  Field: "@/collections/Articles/components/ArticleStats#ArticleStats",
+                },
+              },
+            },
+          ],
+        },
       ],
     },
     // END TABS FIELDS
+    statsFlagField,
     {
       name: "heroImage",
       type: "upload",

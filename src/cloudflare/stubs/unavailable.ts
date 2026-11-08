@@ -17,7 +17,8 @@ export const upPgSnapshot = unavailable("drizzle-kit/api")
 // `sharp`, through `../sharp.ts`.
 export default unavailable("sharp")
 
-// `@google-analytics/data`, which only the updateRecommendations job uses.
+// `@google-analytics/data`, which only the updateRecommendations job and the article Stats tab
+// (admin only, so never in the Worker) use.
 export class BetaAnalyticsDataClient {
   constructor() {
     unavailable("@google-analytics/data")()

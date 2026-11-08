@@ -1,0 +1,125 @@
+/* Admin panel styles: Payload's theme variables, not Tailwind (the admin doesn't load it). */
+.article-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 48rem;
+  color: var(--theme-text);
+}
+
+.article-stats__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.article-stats__table caption {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.article-stats__table th,
+.article-stats__table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--theme-elevation-100);
+  text-align: right;
+}
+
+.article-stats__table th[scope="row"] {
+  font-weight: normal;
+  text-align: left;
+}
+
+.article-stats__table thead th {
+  color: var(--theme-elevation-650);
+  font-size: 0.875rem;
+  font-weight: normal;
+}
+
+.article-stats__share,
+.article-stats__note {
+  color: var(--theme-elevation-650);
+}
+
+.article-stats__note,
+.article-stats__error {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.article-stats__error {
+  color: var(--theme-error-500, rgb(198, 40, 40));
+}
+
+.article-stats__heading {
+  margin: 0 0 0.5rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.article-stats__note a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.article-stats__referrers {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.article-stats__referrers li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.375rem 0;
+  border-bottom: 1px solid var(--theme-elevation-100);
+  font-variant-numeric: tabular-nums;
+}
+
+.article-stats__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.article-stats__footer .article-stats__note {
+  flex: 1 1 20rem;
+}
+
+.article-stats__refresh {
+  min-height: 2rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--theme-elevation-300);
+  border-radius: 4px;
+  background: var(--theme-bg);
+  color: var(--theme-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.article-stats__refresh:hover:not(:disabled) {
+  background: var(--theme-elevation-50);
+}
+
+.article-stats__refresh:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.article-stats__facts {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.article-stats__facts dt {
+  font-weight: 600;
+}
+
+.article-stats__facts dd {
+  margin: 0.125rem 0 0;
+}

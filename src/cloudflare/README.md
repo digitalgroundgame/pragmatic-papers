@@ -20,6 +20,11 @@ staging's database through Hyperdrive, while staging itself keeps running on Coo
 `pragmatic-papers-production` (`env.production` in `wrangler.jsonc`), on every push to
 `main` once [its setup](#production) is done. Production's stays on workers.dev until
 `pragmaticpapers.com` is moved onto it.
+`.github/workflows/worker-build.yml` builds it on PRs that change dependencies, the
+Next, OpenNext or wrangler config, or this folder, serves the build with `wrangler dev` and
+fails unless a few seeded pages answer 200. It deploys nothing. While a Worker's deploy
+keeps failing, `worker.yml` keeps one issue open for it ("Worker deploy failing: staging",
+labelled `ci`) and closes it when a deploy passes.
 
 ## Cloudflare setup (once)
 

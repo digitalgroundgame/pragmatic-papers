@@ -132,3 +132,33 @@ export const ArticleWithImages: Story = {
     await expect(within(dialog).getByRole("img")).toHaveAttribute("alt", portraitImage.alt)
   },
 }
+
+/** Selected text is white on the brand fill, so a highlight reads as the site's orange. */
+async function expectBrandSelection(canvasElement: HTMLElement) {
+  const paragraph = canvasElement.querySelector("p")!
+  const range = document.createRange()
+  range.selectNodeContents(paragraph)
+  const selection = window.getSelection()!
+  selection.removeAllRanges()
+  selection.addRange(range)
+
+  const swatch = document.createElement("div")
+  swatch.style.backgroundColor = "var(--brand-fill)"
+  swatch.style.color = "white"
+  canvasElement.append(swatch)
+  const expected = getComputedStyle(swatch)
+
+  const selected = getComputedStyle(paragraph, "::selection")
+  await expect(selected.backgroundColor).toBe(expected.backgroundColor)
+  await expect(selected.color).toBe(expected.color)
+  swatch.remove()
+}
+
+export const Selection: Story = {
+  play: async ({ canvasElement }) => expectBrandSelection(canvasElement),
+}
+
+export const SelectionDark: Story = {
+  globals: { theme: "dark" },
+  play: async ({ canvasElement }) => expectBrandSelection(canvasElement),
+}

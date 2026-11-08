@@ -1,13 +1,5 @@
-import { bannerToHTML } from "@/blocks/Banner/converters"
-import { codeToHTML } from "@/blocks/Code/converters"
-import { footnotesToHTML, footnoteToHTML } from "@/blocks/Footnote/converters"
-import { interactiveMapToHTML } from "@/blocks/InteractiveMap/converters"
-import { displayMathToHTML, inlineMathToHTML } from "@/blocks/Math/converters"
-import { mediaBlockToHTML } from "@/blocks/MediaBlock/converters"
-import { mediaCollageToHTML } from "@/blocks/MediaCollageBlock/converters"
-import { socialEmbedToHTML } from "@/blocks/SocialEmbed/converters"
-import { squiggleRuleToHTML } from "@/blocks/SquiggleRule/converters"
-import { timelineToHTML } from "@/blocks/Timeline/converters"
+import { footnotesToHTML } from "@/blocks/Footnote/converters"
+import { feedBlockConverters } from "@/blocks/registry"
 import { internalDocToHref } from "@/utilities/routes"
 import type { Article, Media, User, Volume } from "@/payload-types"
 import { isResolved } from "@/utilities/relationships"
@@ -18,7 +10,7 @@ import {
   type HTMLConvertersFunction,
 } from "@payloadcms/richtext-lexical/html"
 import { Feed } from "feed"
-import { escapeHTML, fromBlock } from "@/utilities/feedHTML"
+import { escapeHTML } from "@/utilities/feedHTML"
 import { absoluteURL, getSiteURL } from "@/utilities/getURL"
 
 const getMediaUrl = (url: string) => {
@@ -32,9 +24,8 @@ const getMediaUrl = (url: string) => {
 
 /**
  * Converters for the RSS feeds' rich text. Each block renders through the
- * converter in its own `src/blocks/<Name>/converters.ts`; this is the map from
- * block slug to the output format the RSS feeds want. Every node type and
- * block a feed-rendered field allows needs an entry here, or the feed prints
+ * `html` its descriptor in `src/blocks/registry.ts` declares. Every node type
+ * and block a feed-rendered field allows needs a converter, or the feed prints
  * "unknown node" in its place; `__tests__/generateRssFeed.converters.test.ts`
  * enforces that against the resolved Payload config.
  *
@@ -46,6 +37,7 @@ export const createHtmlConverters =
   (pageUrl: string): HTMLConvertersFunction =>
   ({ defaultConverters }) => {
     const context = { siteUrl: getSiteURL(), pageUrl }
+    const { blocks, inlineBlocks } = feedBlockConverters("html", context)
     return {
       ...defaultConverters,
       // Payload's default link converter has no `internalDocToHref`, so every
@@ -67,28 +59,8 @@ export const createHtmlConverters =
         const { children } = node as { children?: Parameters<typeof nodesToHTML>[0]["nodes"] }
         return children?.length ? nodesToHTML({ nodes: children }).join("") : ""
       },
-      blocks: {
-        ...defaultConverters.blocks,
-        banner: fromBlock(bannerToHTML, context),
-        code: fromBlock(codeToHTML, context),
-        displayMathBlock: fromBlock(displayMathToHTML, context),
-        interactiveMap: fromBlock(interactiveMapToHTML, context),
-        mediaBlock: fromBlock(mediaBlockToHTML, context),
-        mediaCollage: fromBlock(mediaCollageToHTML, context),
-        socialEmbed: fromBlock(socialEmbedToHTML, context),
-        blueSkyEmbed: fromBlock(socialEmbedToHTML, context),
-        redditEmbed: fromBlock(socialEmbedToHTML, context),
-        tiktokEmbed: fromBlock(socialEmbedToHTML, context),
-        twitterEmbed: fromBlock(socialEmbedToHTML, context),
-        youtubeEmbed: fromBlock(socialEmbedToHTML, context),
-        squiggleRule: fromBlock(squiggleRuleToHTML, context),
-        timeline: fromBlock(timelineToHTML, context),
-      },
-      inlineBlocks: {
-        ...defaultConverters.inlineBlocks,
-        footnote: fromBlock(footnoteToHTML, context),
-        inlineMathBlock: fromBlock(inlineMathToHTML, context),
-      },
+      blocks: { ...defaultConverters.blocks, ...blocks },
+      inlineBlocks: { ...defaultConverters.inlineBlocks, ...inlineBlocks },
     }
   }
 

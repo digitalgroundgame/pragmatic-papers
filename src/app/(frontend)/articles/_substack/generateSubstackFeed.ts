@@ -1,16 +1,9 @@
-import { bannerToHTML } from "@/blocks/Banner/converters"
-import { codeToHTML } from "@/blocks/Code/converters"
-import { footnotesToHTML, footnoteToHTML } from "@/blocks/Footnote/converters"
-import { interactiveMapToHTML } from "@/blocks/InteractiveMap/converters"
-import { displayMathToCode, inlineMathToCode } from "@/blocks/Math/converters"
-import { mediaBlockToHTML, mediaToFigure } from "@/blocks/MediaBlock/converters"
-import { mediaCollageToHTML } from "@/blocks/MediaCollageBlock/converters"
-import { socialEmbedToHTML } from "@/blocks/SocialEmbed/converters"
-import { squiggleRuleToHTML } from "@/blocks/SquiggleRule/converters"
-import { timelineToHTML } from "@/blocks/Timeline/converters"
+import { footnotesToHTML } from "@/blocks/Footnote/converters"
+import { mediaToFigure } from "@/blocks/MediaBlock/converters"
+import { feedBlockConverters } from "@/blocks/registry"
 import { internalDocToHref } from "@/utilities/routes"
 import type { Article, Media, User } from "@/payload-types"
-import { escapeHTML, fromBlock } from "@/utilities/feedHTML"
+import { escapeHTML } from "@/utilities/feedHTML"
 import { absoluteURL, getSiteURL } from "@/utilities/getURL"
 import { isResolved } from "@/utilities/relationships"
 import type {
@@ -127,6 +120,7 @@ const tableCellToHTML = ({
 export const createSubstackConverters = (url: string): HTMLConvertersFunction => {
   return ({ defaultConverters }) => {
     const context = { siteUrl: getSiteURL(), pageUrl: url }
+    const { blocks, inlineBlocks } = feedBlockConverters("substack", context)
     return {
       ...defaultConverters,
       ...LinkHTMLConverter({
@@ -157,30 +151,10 @@ export const createSubstackConverters = (url: string): HTMLConvertersFunction =>
       },
       // Drop anything without a converter instead of printing "unknown node".
       unknown: () => "",
-      // Each block renders through its own `src/blocks/<Name>/converters.ts`;
-      // this picks the format Substack's editor keeps.
-      blocks: {
-        ...defaultConverters.blocks,
-        banner: fromBlock(bannerToHTML, context),
-        code: fromBlock(codeToHTML, context),
-        displayMathBlock: fromBlock(displayMathToCode, context),
-        interactiveMap: fromBlock(interactiveMapToHTML, context),
-        mediaBlock: fromBlock(mediaBlockToHTML, context),
-        mediaCollage: fromBlock(mediaCollageToHTML, context),
-        squiggleRule: fromBlock(squiggleRuleToHTML, context),
-        socialEmbed: fromBlock(socialEmbedToHTML, context),
-        blueSkyEmbed: fromBlock(socialEmbedToHTML, context),
-        redditEmbed: fromBlock(socialEmbedToHTML, context),
-        tiktokEmbed: fromBlock(socialEmbedToHTML, context),
-        twitterEmbed: fromBlock(socialEmbedToHTML, context),
-        youtubeEmbed: fromBlock(socialEmbedToHTML, context),
-        timeline: fromBlock(timelineToHTML, context),
-      },
-      inlineBlocks: {
-        ...defaultConverters.inlineBlocks,
-        inlineMathBlock: fromBlock(inlineMathToCode, context),
-        footnote: fromBlock(footnoteToHTML, context),
-      },
+      // Each block renders through its own `src/blocks/<Name>/converters.ts`, in the
+      // `substack` format its descriptor declares where Substack's editor needs another.
+      blocks: { ...defaultConverters.blocks, ...blocks },
+      inlineBlocks: { ...defaultConverters.inlineBlocks, ...inlineBlocks },
     }
   }
 }

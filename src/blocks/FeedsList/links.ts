@@ -1,5 +1,4 @@
-import { SITEMAPS } from "@/app/(frontend)/(sitemaps)/sitemaps"
-import { FEEDS } from "@/app/(frontend)/feeds/feeds"
+import { FEEDS, SITEMAPS } from "@/data/feeds"
 import type { FeedsListBlock } from "@/payload-types"
 
 export interface FeedLink {

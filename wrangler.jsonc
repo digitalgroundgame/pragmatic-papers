@@ -82,7 +82,11 @@
         "BUILD_ENV": "production",
         // Production's media is in S3 (Supabase Storage), linked by its public URL, which
         // the deploy passes in SUPABASE_URL and S3_BUCKET. The Worker never uploads, so it
-        // has no S3 credentials.
+        // has no S3 credentials. Unset, USE_LOCAL_STORAGE would be whatever a stray .env at
+        // build time said (OpenNext compiles .env files in as fallbacks), so it's spelled out.
+        "USE_LOCAL_STORAGE": "false",
+        // GOOGLE_ANALYTICS_ID and TURNSTILE_SITE_KEY come from the deploy too
+        // (PRODUCTION_GOOGLE_ANALYTICS_ID and PRODUCTION_TURNSTILE_SITE_KEY in worker.yml).
         // Production's Coolify deploy seeds its database; this Worker's never does. An
         // environment doesn't inherit the top-level `vars`, so it needs its own copy.
         "DEPLOY_SEED": "false",

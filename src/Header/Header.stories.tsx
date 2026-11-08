@@ -111,6 +111,32 @@ export const Mobile: Story = {
   globals: { viewport: { value: "mobile1", isRotated: false } },
 }
 
+/** The settings sheet's buttons share one height and line up on both edges. */
+export const SettingsOpen: Story = {
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "User and Settings" }),
+    )
+    const sheet = await screen.findByRole("dialog")
+    const donate = within(sheet).getByRole("link", { name: /Donate/ })
+    const joinUs = within(sheet).getByRole("link", { name: /Join Us/ })
+    const logIn = within(sheet).getByRole("link", { name: "Log In" })
+    const theme = await within(sheet).findByRole("button", { name: /Toggle theme/ })
+    // Wait for the sheet's slide-in to finish before measuring.
+    await waitFor(() => expect(sheet.getAnimations({ subtree: true })).toHaveLength(0))
+
+    const [d, j, l, t] = [donate, joinUs, logIn, theme].map((el) => el.getBoundingClientRect())
+    for (const box of [d, j, l, t]) await expect(box!.height).toBe(32)
+    await expect(d!.left).toBe(l!.left)
+    await expect(j!.right).toBe(l!.right)
+    await expect(l!.left).toBe(t!.left)
+    await expect(l!.right).toBe(t!.right)
+    // The two actions split the row evenly.
+    await expect(Math.abs(d!.width - j!.width)).toBeLessThanOrEqual(1)
+  },
+}
+
 /** The mega menu's links are in the markup before it loads, and keep focus once it has. */
 export const MegaMenuByKeyboard: Story = {
   play: async ({ canvasElement }) => {

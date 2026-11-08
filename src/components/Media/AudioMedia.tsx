@@ -41,9 +41,11 @@ const audioLabelVariants = cva("shrink-0 overflow-hidden font-serif text-sm whit
       collapsible:
         "transition-[max-width,opacity,margin] duration-500 ease-out motion-reduce:transition-none",
     },
+    // Collapsed, the label is the player's last glyph, so its `mr-2` keeps the next
+    // icon button's glyph 16px away (that button pads its own icon by 8px).
     expanded: {
-      true: "ml-0 max-w-0 opacity-0",
-      false: "ml-2 max-w-48 opacity-100",
+      true: "mx-0 max-w-0 opacity-0",
+      false: "mr-2 ml-2 max-w-48 opacity-100",
     },
   },
   defaultVariants: {

@@ -105,7 +105,8 @@ export const WithComments: Story = {
 /**
  * The full action row. Every pair of neighbouring glyphs is 16px apart: Play and
  * "Listen", "Listen" and the comment icon (or more, when the row has room to spare),
- * and the comment and share icons.
+ * and the comment and share icons. Once Play expands the player, its settings icon
+ * keeps the same distance from the comment icon.
  */
 export const WithNarrationAndComments: Story = {
   args: {
@@ -126,5 +127,16 @@ export const WithNarrationAndComments: Story = {
     await expect(rect(label).left - rect(playIcon).right).toBeCloseTo(16, 0)
     await expect(rect(shareIcon).left - rect(commentIcon).right).toBeCloseTo(16, 0)
     await expect(rect(commentIcon).left - rect(label).right).toBeGreaterThanOrEqual(15.5)
+
+    // Expanded, the player ends with its settings button, an icon button like the rest.
+    await userEvent.click(canvas.getByRole("button", { name: "Play" }))
+    const settingsIcon = canvas
+      .getByRole("button", { name: "Player settings" })
+      .querySelector("svg")!
+    await waitFor(() => expect(rect(label).width).toBe(0))
+    await waitFor(() =>
+      expect(rect(commentIcon).left - rect(settingsIcon).right).toBeCloseTo(16, 0),
+    )
+    await userEvent.click(canvas.getByRole("button", { name: "Pause" }))
   },
 }

@@ -15,9 +15,6 @@ vi.mock("@/components/RichText", () => ({
     </div>
   ),
 }))
-vi.mock("@/blocks/Form/Component", () => ({
-  FormBlock: () => <form aria-label="Server form" />,
-}))
 
 const { renderFeedArticle } = await import("../renderFeedArticle")
 
@@ -57,12 +54,12 @@ describe("renderFeedArticle", () => {
       children: [{ type: "text", version: 1, text: "The data" }],
     }
     const { bodies } = renderFeedArticle(
-      makeFeedArticle({}, [heading, block("cta"), paragraph("after")]),
+      makeFeedArticle({}, [heading, block("socialEmbed"), paragraph("after")]),
     )
 
     renderBody(bodies[1])
     expect(screen.getByRole("heading", { name: "The data" })).toBeInTheDocument()
-    // No feed renderer for `cta`: it falls back to the RichText converters.
+    // No feed renderer for `socialEmbed`: it falls back to the RichText converters.
     expect(screen.getByTestId("rich-text")).toHaveTextContent("block")
   })
 
@@ -78,20 +75,5 @@ describe("renderFeedArticle", () => {
     const { bodies } = renderFeedArticle(makeFeedArticle({}, [block("mediaBlock", { media: 4 })]))
     renderBody(bodies[1])
     expect(screen.queryByRole("img")).not.toBeInTheDocument()
-  })
-
-  it("puts forms behind a button, rendering the form on the server", () => {
-    const { bodies } = renderFeedArticle(
-      makeFeedArticle({}, [block("formBlock", { form: { id: 1, title: "Join the list" } })]),
-    )
-    renderBody(bodies[1])
-    expect(screen.getByText("Join the list")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Open form" })).toBeInTheDocument()
-  })
-
-  it("drops a form that didn't resolve", () => {
-    const { bodies } = renderFeedArticle(makeFeedArticle({}, [block("formBlock", { form: 3 })]))
-    renderBody(bodies[1])
-    expect(screen.queryByRole("button")).not.toBeInTheDocument()
   })
 })

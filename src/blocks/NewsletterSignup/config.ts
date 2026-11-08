@@ -2,8 +2,11 @@ import type { Block } from "payload"
 
 import { lexicalEditor, LinkFeature } from "@payloadcms/richtext-lexical"
 
+import { blockImages } from "@/blocks/blockImages"
+
 export const NewsletterSignup: Block = {
   slug: "newsletterSignup",
+  admin: { images: blockImages("newsletterSignup") },
   interfaceName: "NewsletterSignupBlock",
   labels: {
     singular: "Newsletter Signup",

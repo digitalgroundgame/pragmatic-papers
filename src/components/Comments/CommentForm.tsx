@@ -55,9 +55,10 @@ export const CommentForm: React.FC<{
 
   const errorId = `${id}-error`
   const countId = `${id}-count`
-  // Counted only near the limit, where it helps; before that it's noise.
+  // Counted only near the limit, where it helps; before that it's noise. With a long limit,
+  // the last 500 characters are near enough.
   const left = maxLength - body.length
-  const nearLimit = left <= Math.ceil(maxLength / 10)
+  const nearLimit = left <= Math.min(500, Math.ceil(maxLength / 10))
   const describedBy = [error && errorId, nearLimit && countId].filter(Boolean).join(" ")
   return (
     <form className="space-y-2" onSubmit={(event) => void submit(event)}>

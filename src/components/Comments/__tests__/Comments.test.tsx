@@ -304,4 +304,15 @@ describe("Comments", () => {
     expect(screen.getByText("2 characters left")).toBeInTheDocument()
     expect(box).toHaveAccessibleDescription("2 characters left")
   })
+
+  it("leaves the countdown to the last 500 characters of a long limit", async () => {
+    fetchMock.mockResolvedValue(Response.json({ ...signedIn, maxLength: 10_000 }))
+
+    render(<Comments articleId={7} />)
+    const box = await screen.findByRole("textbox", { name: /Commenting as/ })
+    fireEvent.change(box, { target: { value: "x".repeat(9_000) } })
+    expect(screen.queryByText(/characters? left/)).not.toBeInTheDocument()
+    fireEvent.change(box, { target: { value: "x".repeat(9_600) } })
+    expect(screen.getByText("400 characters left")).toBeInTheDocument()
+  })
 })

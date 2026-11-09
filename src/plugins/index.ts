@@ -430,6 +430,8 @@ export const plugins: Plugin[] = [
     // A reader's highest achievement badge, when Staff doesn't apply. None while achievements are off.
     authorBadges: (authors, req) => readerAchievements.badgesFor(authors, req),
     signInProviders: signUpProviders,
+    // Room for an effort post: about 1,500 words, as much as Reddit allows.
+    maxLength: 10_000,
     baseURL: getSiteURL,
     moderators: editor,
     admins: admin,

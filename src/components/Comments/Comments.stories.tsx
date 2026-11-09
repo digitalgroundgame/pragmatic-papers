@@ -312,3 +312,53 @@ export const Badges: Story = {
     await expect(canvas.getByRole("img", { name: "Top commenter" })).toBeInTheDocument()
   },
 }
+
+/** A thread whose replies nest eight levels deep. */
+const chain = Array.from({ length: 8 }, (_, i) => ({
+  ...reply!,
+  id: 100 + i,
+  parentId: i === 0 ? null : 100 + i - 1,
+  depth: i,
+  createdAt: new Date(Date.parse(reply!.createdAt) + i * 60_000).toISOString(),
+  body: `Level ${i} of the conversation.`,
+}))
+
+/** Sets the page's hash for a story, and clears it after. */
+const atHash = (hash: string) => () => {
+  window.history.replaceState(null, "", hash)
+  return () =>
+    window.history.replaceState(null, "", window.location.pathname + window.location.search)
+}
+
+/** Arriving on a comment's link opens the way to it, scrolls to it and highlights it. */
+export const Permalink: Story = {
+  beforeEach: [serve(commentThread({ comments: longBranch })), atHash("#comment-25")],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const article = await canvas.findByText("Reply number 6.")
+    await waitFor(() => expect(article.closest("article")).toHaveFocus())
+    await expect(canvasElement.querySelector("#comment-25")).toHaveAttribute("data-highlighted")
+  },
+}
+
+/** Past five levels a branch continues on its own, with a way back. */
+export const ContinueThread: Story = {
+  beforeEach: serve(commentThread({ comments: chain })),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // Following a link here would navigate the test runner's own frame, so the story checks
+    // where each one points and moves the hash itself.
+    const follow = (link: HTMLElement) => {
+      window.history.replaceState(null, "", link.getAttribute("href"))
+      window.dispatchEvent(new HashChangeEvent("hashchange"))
+    }
+    const more = await canvas.findByRole("link", { name: /Continue this thread \(2 replies\)/ })
+    await expect(more).toHaveAttribute("href", "#thread-105")
+    follow(more)
+    await expect(await canvas.findByText("Level 7 of the conversation.")).toBeInTheDocument()
+    await expect(canvas.queryByText("Level 0 of the conversation.")).not.toBeInTheDocument()
+    follow(canvas.getByRole("link", { name: "Back to all comments" }))
+    await expect(await canvas.findByText("Level 0 of the conversation.")).toBeInTheDocument()
+    window.history.replaceState(null, "", window.location.pathname + window.location.search)
+  },
+}

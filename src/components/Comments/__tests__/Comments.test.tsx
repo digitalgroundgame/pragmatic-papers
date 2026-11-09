@@ -446,4 +446,98 @@ describe("Comments", () => {
     const list = screen.getAllByRole("list")[0]!
     expect(list.firstElementChild).toHaveTextContent("This comment was removed.")
   })
+
+  describe("links into the thread", () => {
+    const [first, reply] = commentThread().comments
+    /** A chain of replies, each under the one before: ids 100 (top level) to 100 + depth. */
+    const chain = (depth: number) =>
+      Array.from({ length: depth + 1 }, (_, i) => ({
+        ...reply!,
+        id: 100 + i,
+        parentId: i === 0 ? null : 100 + i - 1,
+        depth: i,
+        body: `Level ${i}`,
+      }))
+
+    beforeEach(() => {
+      Element.prototype.scrollIntoView = vi.fn()
+    })
+
+    it("scrolls to the linked comment, focuses it and highlights it for a moment", async () => {
+      window.history.replaceState(null, "", "/articles/x#comment-2")
+      fetchMock.mockResolvedValue(Response.json(commentThread()))
+
+      render(<Comments articleId={7} />)
+
+      const article = await screen.findByRole("article", { name: "Comment by Grace Hopper" })
+      await waitFor(() => expect(article).toHaveFocus())
+      expect(document.getElementById("comment-2")).toHaveAttribute("data-highlighted")
+      expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
+    })
+
+    it("opens what hides the linked comment: more replies, or a folded branch", async () => {
+      const replies = Array.from({ length: 5 }, (_, i) => ({
+        ...reply!,
+        id: 10 + i,
+        body: `Reply number ${i + 1}`,
+      }))
+      window.history.replaceState(null, "", "/articles/x#comment-14")
+      fetchMock.mockResolvedValue(Response.json(commentThread({ comments: [first!, ...replies] })))
+
+      render(<Comments articleId={7} />)
+      expect(await screen.findByText("Reply number 5")).toBeVisible()
+
+      // Fold the branch, then follow a link into it again.
+      fireEvent.click(screen.getAllByRole("button", { name: "Collapse Ada Reader's comment" })[0]!)
+      expect(screen.getByText("Reply number 5")).not.toBeVisible()
+      window.history.replaceState(null, "", "/articles/x#comment-13")
+      fireEvent(window, new HashChangeEvent("hashchange"))
+      await waitFor(() => expect(screen.getByText("Reply number 4")).toBeVisible())
+    })
+
+    it("continues a deep branch on its own, with a way back", async () => {
+      fetchMock.mockResolvedValue(Response.json(commentThread({ comments: chain(7) })))
+
+      render(<Comments articleId={7} />)
+
+      expect(await screen.findByText("Level 5")).toBeInTheDocument()
+      expect(screen.queryByText("Level 6")).not.toBeInTheDocument()
+      const more = screen.getByRole("link", { name: /Continue this thread \(2 replies\)/ })
+      expect(more).toHaveAttribute("href", "#thread-105")
+
+      window.history.replaceState(null, "", "/articles/x#thread-105")
+      fireEvent(window, new HashChangeEvent("hashchange"))
+
+      expect(await screen.findByText("Level 7")).toBeInTheDocument()
+      expect(screen.queryByText("Level 0")).not.toBeInTheDocument()
+      expect(screen.getByRole("link", { name: "Back to all comments" })).toHaveAttribute(
+        "href",
+        "#comments",
+      )
+    })
+
+    it("shows a link to a comment deeper than the thread goes in its branch's view", async () => {
+      window.history.replaceState(null, "", "/articles/x#comment-107")
+      fetchMock.mockResolvedValue(Response.json(commentThread({ comments: chain(7) })))
+
+      render(<Comments articleId={7} />)
+
+      expect(await screen.findByText("Level 7")).toBeInTheDocument()
+      // Rooted five levels above it, at level 2.
+      expect(screen.getByText("Level 2")).toBeInTheDocument()
+      expect(screen.queryByText("Level 1")).not.toBeInTheDocument()
+      expect(screen.getByRole("link", { name: "Back to all comments" })).toBeInTheDocument()
+    })
+
+    it("ignores a link to a comment that isn't in the thread", async () => {
+      window.history.replaceState(null, "", "/articles/x#comment-999")
+      fetchMock.mockResolvedValue(Response.json(commentThread()))
+
+      render(<Comments articleId={7} />)
+
+      await screen.findByText(/zoning reform/)
+      expect(screen.queryByRole("link", { name: "Back to all comments" })).not.toBeInTheDocument()
+      expect(document.querySelector("[data-highlighted]")).not.toBeInTheDocument()
+    })
+  })
 })

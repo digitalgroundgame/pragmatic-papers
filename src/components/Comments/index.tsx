@@ -1,20 +1,33 @@
 "use client"
 
+import { ArrowLeftIcon } from "lucide-react"
 import Link from "next/link"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
 import { ProviderSignInButton } from "@/components/ProviderSignInButton"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import type { CommentThread, SignInProvider } from "@/plugins/comments"
 import { useInView } from "@/hooks/useInView"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { formatLongDate } from "@/utilities/formatDate"
+import { cn } from "@/utilities/utils"
 
 import { CommentItem, type ReplyContext } from "./CommentItem"
 import { trackCommentSort, trackSignIn } from "./analytics"
 import { CommentForm, type Posted } from "./CommentForm"
 import { AuthorAvatar } from "./CommentMeta"
 import { SortMenu } from "./SortMenu.lazy"
+import {
+  CONTINUE_DEPTH,
+  indexTree,
+  parseTarget,
+  pathTo,
+  type ThreadNav,
+  ThreadNavContext,
+  useHash,
+  viewRoot,
+} from "./threadNav"
 import { buildTree, sortRoots, visibleCount } from "./tree"
 import { useCommentOrder } from "./useCommentOrder"
 
@@ -185,6 +198,45 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api",
     () => (thread ? sortRoots(buildTree(thread.comments), sort, seed, pinned) : []),
     [thread, sort, seed, pinned],
   )
+
+  // Links into the thread: `#comment-<id>` opens, scrolls to and highlights one comment;
+  // `#thread-<id>` shows one branch on its own ("Continue this thread").
+  const hash = useHash()
+  const target = useMemo(() => parseTarget(hash), [hash])
+  const continueDepth = useIsMobile() ? CONTINUE_DEPTH.narrow : CONTINUE_DEPTH.wide
+  const index = useMemo(() => indexTree(roots), [roots])
+  const rootId = viewRoot(index, target, continueDepth)
+  const shownRoots = rootId ? [index.get(rootId)!.node] : roots
+  const path = useMemo(
+    () => new Set(target?.kind === "comment" ? pathTo(index, target.id) : []),
+    [index, target],
+  )
+  const [highlighted, setHighlighted] = useState<string | null>(null)
+  const nav: ThreadNav = useMemo(
+    () => ({ continueDepth, path, highlighted }),
+    [continueDepth, path, highlighted],
+  )
+  const linked = target && index.has(target.id) ? target : null
+  useEffect(() => {
+    if (!linked) return
+    // After the render that opened the way to it.
+    const frame = requestAnimationFrame(() => {
+      const item = document.getElementById(`comment-${linked.id}`)
+      if (!item) return
+      item.scrollIntoView({ block: "start" })
+      if (linked.kind === "comment") {
+        item.querySelector<HTMLElement>("article")?.focus({ preventScroll: true })
+        setHighlighted(linked.id)
+      }
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [linked?.kind, linked?.id]) // eslint-disable-line react-hooks/exhaustive-deps -- a new link, not a new object
+  useEffect(() => {
+    if (!highlighted) return
+    const timer = setTimeout(() => setHighlighted(null), 2500)
+    return () => clearTimeout(timer)
+  }, [highlighted])
+
   const reply: ReplyContext | null = thread
     ? {
         canReply: Boolean(viewer && !viewer.locked && !viewer.needsVerifiedEmail),
@@ -307,13 +359,24 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api",
           {thread.comments.length === 0 ? (
             <p className="text-muted-foreground text-sm">No comments yet.</p>
           ) : (
-            <TooltipProvider>
-              <ol className="space-y-5">
-                {roots.map((node) => (
-                  <CommentItem key={node.comment.id} node={node} reply={reply} />
-                ))}
-              </ol>
-            </TooltipProvider>
+            <ThreadNavContext.Provider value={nav}>
+              <TooltipProvider>
+                {rootId ? (
+                  <a
+                    href="#comments"
+                    className={cn(buttonVariants({ variant: "link", size: "sm" }), "h-auto px-0")}
+                  >
+                    <ArrowLeftIcon aria-hidden="true" data-icon="inline-start" />
+                    Back to all comments
+                  </a>
+                ) : null}
+                <ol className="space-y-5">
+                  {shownRoots.map((node) => (
+                    <CommentItem key={node.comment.id} node={node} reply={reply} />
+                  ))}
+                </ol>
+              </TooltipProvider>
+            </ThreadNavContext.Provider>
           )}
         </>
       )}

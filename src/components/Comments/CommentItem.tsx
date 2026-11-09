@@ -1,13 +1,15 @@
 "use client"
 
-import { PlusIcon } from "lucide-react"
+import { CornerDownRightIcon, PlusIcon } from "lucide-react"
 import React, { useEffect, useRef, useState } from "react"
 
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { cn } from "@/utilities/utils"
 
 import { CommentActions } from "./CommentActions"
 import { CommentForm, type Posted } from "./CommentForm"
 import { AuthorAvatar, CommentMeta, CommentTime } from "./CommentMeta"
+import { useThreadNav } from "./threadNav"
 import { type CommentNode, replyCount } from "./tree"
 
 export { AuthorAvatar } from "./CommentMeta"
@@ -78,14 +80,21 @@ const CollapsedRow: React.FC<{
  * avatar runs down beside the replies, so a reader can follow a branch by eye, and clicking it
  * folds the comment and everything under it into one row.
  */
-export const CommentItem: React.FC<{ node: CommentNode; reply: ReplyContext }> = ({
-  node,
-  reply,
-}) => {
+export const CommentItem: React.FC<{
+  node: CommentNode
+  reply: ReplyContext
+  /** How many levels below the top of the view this comment sits. */
+  level?: number
+}> = ({ node, reply, level = 0 }) => {
   const { comment, replies } = node
+  const id = String(comment.id)
+  const { continueDepth, path, highlighted } = useThreadNav()
   const [replying, setReplying] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
-  const [showAll, setShowAll] = useState(false)
+  // A link to a reply past the first few opens them all, so it's there to scroll to.
+  const linkedPastPreview = () =>
+    replies.slice(REPLY_PREVIEW).some((child) => path.has(String(child.comment.id)))
+  const [showAll, setShowAll] = useState(linkedPastPreview)
   const atLimit = comment.depth >= reply.maxDepth
   const replyable = reply.canReply && !comment.removed && !comment.held
   const who = comment.author ? `${comment.author.name}'s comment` : "removed comment"
@@ -98,20 +107,34 @@ export const CommentItem: React.FC<{ node: CommentNode; reply: ReplyContext }> =
     if (!toggled.current) return
     ;(collapsed ? expandRef : collapseRef).current?.focus()
   }, [collapsed])
+  // Arriving on a link to this comment, or to one under it, opens what hides it.
+  useEffect(() => {
+    if (!path.has(id)) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the link arrives after mount
+    setCollapsed(false)
+    if (linkedPastPreview()) setShowAll(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a new link should reopen
+  }, [path])
   const toggle = (next: boolean) => {
     toggled.current = true
     setCollapsed(next)
   }
 
-  const shown = showAll ? replies : replies.slice(0, REPLY_PREVIEW)
-  const more = replies.slice(shown.length)
+  // Deep enough, a branch continues on its own instead of indenting further.
+  const continues = level >= continueDepth && replies.length > 0
+  const shown = continues ? [] : showAll ? replies : replies.slice(0, REPLY_PREVIEW)
+  const more = continues ? [] : replies.slice(shown.length)
   const moreCount = more.reduce(
     (total, child) => total + (child.comment.removed ? 0 : 1) + replyCount(child),
     0,
   )
 
   return (
-    <li id={`comment-${String(comment.id)}`} className="scroll-mt-24">
+    <li
+      id={`comment-${id}`}
+      data-highlighted={highlighted === id ? "" : undefined}
+      className="scroll-mt-24"
+    >
       {collapsed ? (
         <CollapsedRow node={node} who={who} expandRef={expandRef} onExpand={() => toggle(false)} />
       ) : null}
@@ -145,7 +168,15 @@ export const CommentItem: React.FC<{ node: CommentNode; reply: ReplyContext }> =
               This comment was removed.
             </p>
           ) : (
-            <article className="space-y-1" aria-label={`Comment by ${comment.author!.name}`}>
+            <article
+              // Focusable, so arriving on its link puts a screen reader on it.
+              tabIndex={-1}
+              className={cn(
+                "-mx-2 space-y-1 rounded-md px-2 transition-colors duration-700 outline-none",
+                highlighted === id && "bg-muted",
+              )}
+              aria-label={`Comment by ${comment.author!.name}`}
+            >
               <CommentMeta author={comment.author!} createdAt={comment.createdAt} />
               <p className="text-base break-words whitespace-pre-line">{comment.body}</p>
               {comment.held ? (
@@ -184,9 +215,18 @@ export const CommentItem: React.FC<{ node: CommentNode; reply: ReplyContext }> =
           {shown.length > 0 ? (
             <ol className="space-y-3">
               {shown.map((child) => (
-                <CommentItem key={child.comment.id} node={child} reply={reply} />
+                <CommentItem key={child.comment.id} node={child} reply={reply} level={level + 1} />
               ))}
             </ol>
+          ) : null}
+          {continues ? (
+            <a
+              href={`#thread-${id}`}
+              className={cn(buttonVariants({ variant: "link", size: "xs" }), "h-auto px-0")}
+            >
+              <CornerDownRightIcon aria-hidden="true" data-icon="inline-start" />
+              Continue this thread ({plural(replyCount(node), "reply", "replies")})
+            </a>
           ) : null}
           {more.length > 0 ? (
             <Button

@@ -240,8 +240,8 @@ importers:
         specifier: ^5.0.1
         version: 5.0.1(@vitest/browser@5.0.1)(vitest@5.0.1)
       chrome-launcher:
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^1.2.3
+        version: 1.2.3
       copyfiles:
         specifier: ^2.4.1
         version: 2.4.1
@@ -5242,8 +5242,8 @@ packages:
     resolution: {integrity: sha512-TQMmc3w+5AxjpL8iIiwebF73dRDF4fBIieAqGn9RGCWaEVwQ6Fb2cGe31Yns0RRIzii5goJ1Y7xbMwo1TxMplw==}
     engines: {node: '>= 20.19.0'}
 
-  chrome-launcher@1.2.2:
-    resolution: {integrity: sha512-sI90u5qf3854bTrWsQMMdsQfSjjMbeSn7QtxVb9zrikf+QgMfHQ71KepHW7ZfixQKrDlAFKb+qnVlSR+xepBzw==}
+  chrome-launcher@1.2.3:
+    resolution: {integrity: sha512-IpQuNUYnpXXq3VBRJInM7zTZDiAp/cu+zy0X74NjyQtFcZIQBbI64i0PYQO25wNwgmgw2cPBYitVmFz53N11Rg==}
     engines: {node: '>=12.13.0'}
     hasBin: true
 
@@ -15029,7 +15029,7 @@ snapshots:
     dependencies:
       readdirp: 5.1.1
 
-  chrome-launcher@1.2.2:
+  chrome-launcher@1.2.3:
     dependencies:
       '@types/node': 24.19.2
       escape-string-regexp: 4.0.0
@@ -17134,7 +17134,7 @@ snapshots:
       '@sentry/node': 11.10.0(rollup@4.61.0)(webpack@5.107.2(esbuild@0.28.2)(postcss@8.5.28))
       ajv-formats: 3.0.1(ajv@8.20.0)
       axe-core: 4.14.0
-      chrome-launcher: 1.2.2
+      chrome-launcher: 1.2.3
       configstore: 8.0.0
       csp_evaluator: 1.1.8
       devtools-protocol: 0.0.1727723

@@ -16,6 +16,8 @@ export interface AuthorDisplay {
   image: string | null
   /** A short label beside their name, like "Staff". */
   badge: string | null
+  /** One of the writers of what the comments are on (`targetWriters`). */
+  writer?: true
 }
 
 /** A way to sign in, as the comment box offers it. */
@@ -90,6 +92,11 @@ export interface CommentsPluginConfig {
    * Staff) wins. Default none.
    */
   authorBadges?: (authors: CommentAuthor[], req: PayloadRequest) => Promise<Map<string, string>>
+  /**
+   * The authors IDs of whoever wrote the document comments are on, so their comments show as
+   * the writer's. Asked once per request. Default none.
+   */
+  targetWriters?: (targetId: number | string, req: PayloadRequest) => Promise<(number | string)[]>
   /**
    * The ways to sign in that the comment box offers someone signed out, passed through as the
    * thread's `providers`. The site's own page starts the sign-in. Default none.

@@ -32,6 +32,8 @@ export interface CommentsProps {
   articleId: number | string
   /** Payload's API route. */
   apiPath?: string
+  /** The article's slug, which analytics events name it by. */
+  slug?: string
 }
 
 type Load =
@@ -70,7 +72,7 @@ const Locked: React.FC<{ until: string | null }> = ({ until }) => (
  * An article's comments, loaded once the reader scrolls near them, so the page itself stays
  * one cached copy for everyone and readers who never get this far cost nothing.
  */
-export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" }) => {
+export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api", slug }) => {
   const { ref, inView } = useInView<HTMLElement>({ rootMargin: "400px" })
   const [load, setLoad] = useState<Load>({ state: "idle" })
   const [signInError, setSignInError] = useState<string | null>(null)
@@ -174,6 +176,7 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
         maxLength: thread.maxLength,
         threadURL,
         onPosted: posted,
+        itemId: slug,
       }
     : null
 
@@ -190,7 +193,10 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
           {count > 0 ? (
             <>
               {" "}
-              <span className="text-muted-foreground">({count})</span>
+              {/* The heading's display face is for words; the count reads as plain text. */}
+              <span className="text-muted-foreground align-middle font-sans text-xl font-normal tracking-normal tabular-nums md:text-2xl">
+                ({count})
+              </span>
             </>
           ) : null}
         </h2>
@@ -234,6 +240,7 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
                   threadURL={threadURL}
                   maxLength={thread.maxLength}
                   onPosted={posted}
+                  itemId={slug}
                   label={
                     <span className="flex items-center gap-2">
                       <AuthorAvatar author={viewer} />

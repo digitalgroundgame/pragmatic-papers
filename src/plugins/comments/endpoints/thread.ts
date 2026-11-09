@@ -33,18 +33,25 @@ function parseId(req: PayloadRequest, raw: unknown): number | string | null {
 }
 
 /**
- * `describeAuthor`, with the badges `authorBadges` gives these authors, asked once. A badge
- * `describeAuthor` gives itself (like Staff) wins.
+ * `describeAuthor`, with the badges `authorBadges` gives these authors and the writer mark for
+ * `targetWriters`, each asked once. A badge `describeAuthor` gives itself (like Staff) wins.
  */
 export async function describerFor(
   config: ResolvedCommentsConfig,
   authors: CommentAuthor[],
   req: PayloadRequest,
+  targetId: number | string,
 ): Promise<(author: CommentAuthor) => AuthorDisplay> {
-  const badges = authors.length ? await config.authorBadges(authors, req) : new Map()
+  const [badges, writers] = authors.length
+    ? await Promise.all([config.authorBadges(authors, req), config.targetWriters(targetId, req)])
+    : [new Map<string, string>(), []]
+  const writerIds = new Set(writers.map(String))
   return (author) => {
     const display = config.describeAuthor(author)
-    return display.badge ? display : { ...display, badge: badges.get(String(author.id)) ?? null }
+    const described = display.badge
+      ? display
+      : { ...display, badge: badges.get(String(author.id)) ?? null }
+    return writerIds.has(String(author.id)) ? { ...described, writer: true } : described
   }
 }
 
@@ -108,6 +115,7 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
         ...(author ? [author] : []),
       ],
       req,
+      id,
     )
 
     let viewer: CommentViewer | null = null
@@ -266,7 +274,7 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       })
     }
 
-    const describe = await describerFor(config, [author], req)
+    const describe = await describerFor(config, [author], req, id)
     const [comment] = buildThread([{ ...created, author }], author.id, describe) as [PublicComment]
     return Response.json(
       { comment, ...(!check.ok && { held: check.reason }) },

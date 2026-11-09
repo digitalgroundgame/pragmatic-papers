@@ -50,6 +50,11 @@ export const CommentMeta: React.FC<{
 }> = ({ author, createdAt, children }) => (
   <p className="flex flex-wrap items-center gap-x-1.5 text-sm leading-6">
     <span className="font-semibold">{author.name}</span>
+    {author.writer ? (
+      <Badge variant="outline" title="Wrote this article">
+        Writer
+      </Badge>
+    ) : null}
     {author.badge ? <Badge variant="secondary">{author.badge}</Badge> : null}
     <Dot />
     <CommentTime createdAt={createdAt} />

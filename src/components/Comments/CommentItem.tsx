@@ -20,6 +20,8 @@ export interface ReplyContext {
   maxLength: number
   threadURL: string
   onPosted: (posted: Posted) => void
+  /** The article's slug, for analytics. */
+  itemId?: string
 }
 
 /** How many replies each level shows before "N more replies". */
@@ -154,6 +156,7 @@ export const CommentItem: React.FC<{ node: CommentNode; reply: ReplyContext }> =
               {comment.held ? null : (
                 <CommentActions
                   id={comment.id}
+                  itemId={reply.itemId}
                   replyLimit={replyable && atLimit ? depthLimitMessage(reply.maxDepth) : null}
                   onReply={replyable && !atLimit && !replying ? () => setReplying(true) : undefined}
                 />
@@ -166,6 +169,7 @@ export const CommentItem: React.FC<{ node: CommentNode; reply: ReplyContext }> =
               threadURL={reply.threadURL}
               maxLength={reply.maxLength}
               parentId={comment.id}
+              itemId={reply.itemId}
               label={`Reply to ${comment.author!.name}`}
               onCancel={() => setReplying(false)}
               onPosted={(posted) => {

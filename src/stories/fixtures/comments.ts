@@ -42,6 +42,16 @@ export const threadComments: PublicComment[] = [
   },
 ]
 
+/** A credited writer of the article, joining in under it. */
+export const writerComment: PublicComment = {
+  id: 5,
+  parentId: 1,
+  depth: 1,
+  body: "Glad it helped. The longer version is in the appendix.",
+  createdAt: hoursAgo(1),
+  author: { name: "Lin Writer", image: null, badge: "Staff", writer: true },
+}
+
 export const commentViewer: CommentViewer = { ...ada, locked: null, needsVerifiedEmail: false }
 
 export const commentThread = (overrides: Partial<CommentThread> = {}): CommentThread => ({

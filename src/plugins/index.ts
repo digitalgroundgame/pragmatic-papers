@@ -8,6 +8,7 @@ import { notificationsPlugin } from "@/plugins/notifications"
 import { toursPlugin } from "@/plugins/tours"
 import type { Article, Interactive, Page, Topic, User, Volume } from "@/payload-types"
 import { getSiteURL } from "@/utilities/getURL"
+import { relationshipId } from "@/utilities/relationships"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
 import { docPath } from "@/utilities/routes"
 import { describePlugin } from "@/utilities/registerPlugin"
@@ -429,6 +430,20 @@ export const plugins: Plugin[] = [
     }),
     // A reader's highest achievement badge, when Staff doesn't apply. None while achievements are off.
     authorBadges: (authors, req) => readerAchievements.badgesFor(authors, req),
+    // An article's credited writers, whose comments under it are marked as theirs.
+    targetWriters: async (id, req) => {
+      const article = await req.payload.findByID({
+        collection: "articles",
+        id,
+        depth: 0,
+        draft: false,
+        select: { authors: true },
+        overrideAccess: true,
+        disableErrors: true,
+        req,
+      })
+      return (article?.authors ?? []).map(relationshipId).filter((author) => author !== null)
+    },
     signInProviders: signUpProviders,
     // Room for an effort post: about 1,500 words, as much as Reddit allows.
     maxLength: 10_000,

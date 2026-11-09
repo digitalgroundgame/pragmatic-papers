@@ -1,16 +1,18 @@
 "use client"
 
-import { Link2Icon, MessageSquareIcon } from "lucide-react"
+import { ForwardIcon, MessageSquareIcon } from "lucide-react"
 import React, { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+
+import { trackCommentShare } from "./analytics"
 
 /** The permalink to one comment on the page the reader is on. */
 export const commentHref = (id: number | string): string =>
   `${window.location.origin}${window.location.pathname}#comment-${String(id)}`
 
 /** Copies a comment's link, and says so for a moment. */
-const ShareButton: React.FC<{ id: number | string }> = ({ id }) => {
+const ShareButton: React.FC<{ id: number | string; itemId?: string }> = ({ id, itemId }) => {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -23,6 +25,7 @@ const ShareButton: React.FC<{ id: number | string }> = ({ id }) => {
     try {
       await navigator.clipboard.writeText(commentHref(id))
       setCopied(true)
+      trackCommentShare(itemId)
     } catch {
       // No clipboard (an insecure origin, or permission refused): put the link in the address
       // bar instead, where the reader can copy it.
@@ -39,7 +42,7 @@ const ShareButton: React.FC<{ id: number | string }> = ({ id }) => {
         className="text-muted-foreground"
         onClick={() => void share()}
       >
-        <Link2Icon aria-hidden="true" data-icon="inline-start" />
+        <ForwardIcon aria-hidden="true" data-icon="inline-start" />
         Share
       </Button>
       {copied ? (
@@ -54,10 +57,12 @@ const ShareButton: React.FC<{ id: number | string }> = ({ id }) => {
 /** What a reader can do with a comment: reply to it, and share it. */
 export const CommentActions: React.FC<{
   id: number | string
+  /** The article's slug, for analytics. */
+  itemId?: string
   /** Shown where Reply would be when replies stop at this depth. */
   replyLimit?: string | null
   onReply?: () => void
-}> = ({ id, replyLimit, onReply }) => (
+}> = ({ id, itemId, replyLimit, onReply }) => (
   <div className="-ml-2 flex flex-wrap items-center gap-1">
     {onReply ? (
       <Button
@@ -73,6 +78,6 @@ export const CommentActions: React.FC<{
     ) : replyLimit ? (
       <span className="text-muted-foreground px-2 text-xs">{replyLimit}</span>
     ) : null}
-    <ShareButton id={id} />
+    <ShareButton id={id} itemId={itemId} />
   </div>
 )

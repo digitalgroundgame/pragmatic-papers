@@ -14,6 +14,7 @@ const currentUser = vi.fn()
 const isVerified = vi.fn()
 const extraCheck = vi.fn()
 const authorBadges = vi.fn()
+const targetWriters = vi.fn()
 
 const config = {
   enabled,
@@ -28,6 +29,7 @@ const config = {
     badge: author.staff ? "Staff" : null,
   }),
   authorBadges,
+  targetWriters,
   signInProviders: () => [{ id: "discord", label: "Discord" }],
   baseURL: () => site,
   checks: [extraCheck],
@@ -86,6 +88,7 @@ beforeEach(() => {
   isVerified.mockReturnValue(true)
   extraCheck.mockResolvedValue({ ok: true })
   authorBadges.mockResolvedValue(new Map())
+  targetWriters.mockResolvedValue([])
   db = {
     settings: {},
     comments: [],
@@ -190,6 +193,28 @@ describe("badges from outside the plugin", () => {
     // Staff wins over a badge from outside.
     expect(comments.map((c) => c.author.badge)).toEqual(["Early member", "Staff"])
     expect(body.viewer).toMatchObject({ badge: "Early member" })
+  })
+
+  it("marks the comments of the document's writers", async () => {
+    db.comments = [comment(2, grace), comment(1, ada)]
+    targetWriters.mockResolvedValue([8])
+
+    const body = await json(await call(get))
+
+    expect(targetWriters).toHaveBeenCalledOnce()
+    expect(targetWriters.mock.calls[0]![0]).toBe(5)
+    const comments = body.comments as { author: { writer?: true } }[]
+    expect(comments.map((c) => c.author.writer)).toEqual([undefined, true])
+  })
+
+  it("marks a writer's comment as theirs as soon as they post it", async () => {
+    targetWriters.mockResolvedValue([7])
+
+    const response = await call(post, { body: { body: "Thanks for reading." } })
+
+    expect(((await json(response)).comment as { author: object }).author).toMatchObject({
+      writer: true,
+    })
   })
 
   it("shows the author's badge on the comment they just posted", async () => {

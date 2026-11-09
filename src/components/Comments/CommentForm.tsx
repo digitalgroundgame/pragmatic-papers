@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import type { PublicComment } from "@/plugins/comments"
 
+import { trackComment } from "./analytics"
+
 export interface Posted {
   comment: PublicComment
   /** Why a check held it back, when one did. */
@@ -22,7 +24,9 @@ export const CommentForm: React.FC<{
   onCancel?: () => void
   /** Focus the box when it appears (a reply box, or the top box once a reader opens it). */
   autoFocus?: boolean
-}> = ({ threadURL, maxLength, parentId, label, onPosted, onCancel, autoFocus }) => {
+  /** The article's slug, for the analytics event a post sends. */
+  itemId?: string
+}> = ({ threadURL, maxLength, parentId, label, onPosted, onCancel, autoFocus, itemId }) => {
   const id = useId()
   const [body, setBody] = useState("")
   const [posting, setPosting] = useState(false)
@@ -44,6 +48,7 @@ export const CommentForm: React.FC<{
         setError(result.message ?? "Your comment didn't post. Try again.")
         return
       }
+      trackComment(itemId, { isReply: parentId !== undefined, held: Boolean(result.held) })
       onPosted({ comment: result.comment, held: result.held })
       setBody("")
     } catch {

@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { LinkButton } from "@/components/ui/link-button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { sendGAEvent } from "@next/third-parties/google"
-import { Check, Copy, Mail, Share2 } from "lucide-react"
+import { Check, Copy, Mail, Forward } from "lucide-react"
 import { useRef, useState } from "react"
 
 import { cn } from "@/utilities/utils"
@@ -114,7 +114,7 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
           />
         }
       >
-        <Share2 />
+        <Forward />
       </PopoverTrigger>
       <PopoverContent align="end" aria-label="Share">
         <div className="grid grid-cols-7 gap-1">

@@ -1,6 +1,10 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+vi.mock("@next/third-parties/google", () => ({ sendGAEvent: vi.fn() }))
+
+import { sendGAEvent } from "@next/third-parties/google"
+
 import { commentThread, commentViewer } from "@/stories/fixtures/comments"
 
 import { Comments } from ".."
@@ -42,6 +46,7 @@ beforeEach(() => {
   vi.stubGlobal("IntersectionObserver", InViewObserver)
   vi.stubGlobal("fetch", fetchMock)
   fetchMock.mockReset()
+  vi.mocked(sendGAEvent).mockClear()
   // Oldest first, so tests can count on where each comment is.
   window.localStorage.setItem(SORT_KEY, "old")
 })
@@ -314,5 +319,75 @@ describe("Comments", () => {
     expect(screen.queryByText(/characters? left/)).not.toBeInTheDocument()
     fireEvent.change(box, { target: { value: "x".repeat(9_600) } })
     expect(screen.getByText("400 characters left")).toBeInTheDocument()
+  })
+
+  it("tells analytics a comment was posted, with nothing about who wrote it", async () => {
+    fetchMock
+      .mockResolvedValueOnce(Response.json(signedIn))
+      .mockResolvedValueOnce(Response.json({ message: "nope" }, { status: 500 }))
+      .mockResolvedValueOnce(posted("Hi"))
+
+    render(<Comments articleId={7} slug="zoning" />)
+    const box = await screen.findByRole("textbox", { name: /Commenting as Ada Reader/ })
+    fireEvent.change(box, { target: { value: "Hi" } })
+    fireEvent.click(screen.getByRole("button", { name: "Post comment" }))
+    await screen.findByRole("alert")
+    expect(sendGAEvent).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole("button", { name: "Post comment" }))
+    await screen.findByText("Hi")
+    expect(sendGAEvent).toHaveBeenCalledOnce()
+    expect(sendGAEvent).toHaveBeenCalledWith("event", "comment", {
+      content_type: "article",
+      item_id: "zoning",
+      is_reply: false,
+      held: false,
+    })
+  })
+
+  it("tells analytics a reply was posted, and that a check held it", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json(signedIn)).mockResolvedValueOnce(
+      Response.json(
+        {
+          comment: { ...(await posted("x").json()).comment, parentId: 1, depth: 1, held: true },
+          held: "Links",
+        },
+        { status: 201 },
+      ),
+    )
+
+    render(<Comments articleId={7} slug="zoning" />)
+    fireEvent.click((await screen.findAllByRole("button", { name: "Reply" }))[0]!)
+    fireEvent.change(screen.getByRole("textbox", { name: "Reply to Ada Reader" }), {
+      target: { value: "x" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Post reply" }))
+
+    await waitFor(() =>
+      expect(sendGAEvent).toHaveBeenCalledWith("event", "comment", {
+        content_type: "article",
+        item_id: "zoning",
+        is_reply: true,
+        held: true,
+      }),
+    )
+  })
+
+  it("tells analytics a comment's link was copied", async () => {
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
+    })
+    fetchMock.mockResolvedValue(Response.json(commentThread()))
+
+    render(<Comments articleId={7} slug="zoning" />)
+    fireEvent.click((await screen.findAllByRole("button", { name: "Share" }))[0]!)
+
+    await screen.findByRole("status")
+    expect(sendGAEvent).toHaveBeenCalledWith("event", "share", {
+      method: "copy_link",
+      content_type: "comment",
+      item_id: "zoning",
+    })
   })
 })

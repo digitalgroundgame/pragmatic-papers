@@ -2,7 +2,12 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, spyOn, userEvent, waitFor, within } from "storybook/test"
 
 import type { CommentThread, PublicComment } from "@/plugins/comments"
-import { commentThread, commentViewer } from "@/stories/fixtures/comments"
+import {
+  commentThread,
+  commentViewer,
+  threadComments,
+  writerComment,
+} from "@/stories/fixtures/comments"
 
 import { Comments } from "."
 import { SEED_KEY, SORT_KEY } from "./useCommentOrder"
@@ -267,5 +272,17 @@ export const NearLimit: Story = {
     const box = await canvas.findByRole("textbox", { name: /Commenting as/ })
     await userEvent.type(box, "This is getting very close to the end")
     await expect(canvas.getByText("3 characters left")).toBeInTheDocument()
+  },
+}
+
+/** The article's writer replying: marked beside their name. */
+export const WriterMarker: Story = {
+  beforeEach: serve(commentThread({ comments: [...threadComments, writerComment] })),
+  play: async ({ canvasElement }) => {
+    const comment = within(
+      await within(canvasElement).findByRole("article", { name: "Comment by Lin Writer" }),
+    )
+    await expect(comment.getByText("Writer")).toBeInTheDocument()
+    await expect(comment.getByText("Staff")).toBeInTheDocument()
   },
 }

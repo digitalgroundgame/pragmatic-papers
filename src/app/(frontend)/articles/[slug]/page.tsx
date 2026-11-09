@@ -138,7 +138,11 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                   </div>
                   <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
                   {commentsEnabled &&
-                    (published ? <Comments articleId={article.id} /> : <CommentsUnpublished />)}
+                    (published ? (
+                      <Comments articleId={article.id} slug={article.slug ?? undefined} />
+                    ) : (
+                      <CommentsUnpublished />
+                    ))}
                 </ArticleFooter>
               </div>
             </div>

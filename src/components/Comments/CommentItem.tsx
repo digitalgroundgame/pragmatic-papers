@@ -177,7 +177,11 @@ export const CommentItem: React.FC<{
               )}
               aria-label={`Comment by ${comment.author!.name}`}
             >
-              <CommentMeta author={comment.author!} createdAt={comment.createdAt} />
+              <CommentMeta
+                author={comment.author!}
+                createdAt={comment.createdAt}
+                firstComment={comment.firstComment}
+              />
               <p className="text-base break-words whitespace-pre-line">{comment.body}</p>
               {comment.held ? (
                 <p className="text-muted-foreground text-sm">

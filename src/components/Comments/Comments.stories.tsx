@@ -297,7 +297,11 @@ export const WriterMarker: Story = {
   },
 }
 
-/** Every badge a commenter can carry, as colored icons with their names in tooltips. */
+/**
+ * Every badge a commenter can carry, as colored icons with their names in tooltips, and the
+ * markers that come and go: First comment, the New commenter star someone wears for a week
+ * after it, and New member for a new account's first month.
+ */
 export const Badges: Story = {
   beforeEach: serve(
     commentThread({
@@ -309,6 +313,19 @@ export const Badges: Story = {
           body: `A comment by someone with the ${badge} badge.`,
           author: { name: `Reader ${i + 1}`, image: null, badge },
         })),
+        {
+          ...threadComments[0]!,
+          id: 40,
+          body: "A first comment from someone who joined this week.",
+          author: {
+            name: "New Reader",
+            image: null,
+            badge: null,
+            newcomer: true as const,
+            newMember: true as const,
+          },
+          firstComment: true as const,
+        },
       ].map((comment) => ({ ...comment, parentId: null, depth: 0 })),
     }),
   ),
@@ -320,6 +337,9 @@ export const Badges: Story = {
       await within(canvasElement.ownerDocument.body).findByText(/Verified email address/),
     ).toBeInTheDocument()
     await expect(canvas.getByRole("img", { name: "Top commenter" })).toBeInTheDocument()
+    await expect(canvas.getByRole("img", { name: "New commenter" })).toBeInTheDocument()
+    await expect(canvas.getByRole("img", { name: "New member" })).toBeInTheDocument()
+    await expect(canvas.getByRole("img", { name: "First comment" })).toBeInTheDocument()
   },
 }
 

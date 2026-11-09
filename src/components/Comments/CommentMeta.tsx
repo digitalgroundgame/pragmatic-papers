@@ -43,15 +43,17 @@ const Dot: React.FC = () => (
   </span>
 )
 
-/** One line above a comment: who wrote it, their badge, and when. */
+/** One line above a comment: who wrote it, their badges, and when. */
 export const CommentMeta: React.FC<{
   author: AuthorDisplay
   createdAt: string
+  /** The comment is its author's first on the site. */
+  firstComment?: boolean
   children?: React.ReactNode
-}> = ({ author, createdAt, children }) => (
+}> = ({ author, createdAt, firstComment, children }) => (
   <p className="flex flex-wrap items-center gap-x-1.5 text-sm leading-6">
     <span className="font-semibold">{author.name}</span>
-    <AuthorBadges author={author} />
+    <AuthorBadges author={author} firstComment={firstComment} />
     <Dot />
     <CommentTime createdAt={createdAt} />
     {children ? (

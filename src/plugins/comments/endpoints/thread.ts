@@ -32,26 +32,111 @@ function parseId(req: PayloadRequest, raw: unknown): number | string | null {
   return Number.isSafeInteger(id) && id > 0 ? id : null
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
 /**
- * `describeAuthor`, with the badges `authorBadges` gives these authors and the writer mark for
- * `targetWriters`, each asked once. A badge `describeAuthor` gives itself (like Staff) wins.
+ * Which of these authors are new commenters: their first published comment is within the last
+ * `newCommenterDays`, so none of theirs is older. Pass only authors with a published comment.
+ * One count per author.
+ */
+export async function newCommenters(
+  config: ResolvedCommentsConfig,
+  authorIds: (number | string)[],
+  req: PayloadRequest,
+): Promise<Set<string>> {
+  if (config.newCommenterDays <= 0) return new Set()
+  const cutoff = new Date(Date.now() - config.newCommenterDays * DAY_MS).toISOString()
+  const ids = [...new Set(authorIds.map(String))]
+  const found = await Promise.all(
+    ids.map(async (id) => {
+      const older = await req.payload.count({
+        collection: COMMENTS_SLUG as CollectionSlug,
+        where: {
+          author: { equals: id },
+          status: { equals: "published" },
+          createdAt: { less_than: cutoff },
+        },
+        overrideAccess: true,
+        req,
+      })
+      return older.totalDocs === 0 ? id : null
+    }),
+  )
+  return new Set(found.filter((id): id is string => id !== null))
+}
+
+/**
+ * Which of these comments (oldest first) is its author's first published comment on the site:
+ * each author's earliest published one here, when they published nothing anywhere before it.
+ * One count per author shown.
+ */
+export async function findFirstComments(
+  stored: StoredComment[],
+  req: PayloadRequest,
+): Promise<Set<string>> {
+  const earliest = new Map<string, StoredComment>()
+  for (const comment of stored) {
+    if (comment.status !== "published" || !comment.author) continue
+    const authorId = String(typeof comment.author === "object" ? comment.author.id : comment.author)
+    if (!earliest.has(authorId)) earliest.set(authorId, comment)
+  }
+  const firsts = await Promise.all(
+    [...earliest].map(async ([authorId, comment]) => {
+      const before = await req.payload.count({
+        collection: COMMENTS_SLUG as CollectionSlug,
+        where: {
+          author: { equals: authorId },
+          status: { equals: "published" },
+          createdAt: { less_than: comment.createdAt },
+        },
+        overrideAccess: true,
+        req,
+      })
+      return before.totalDocs === 0 ? String(comment.id) : null
+    }),
+  )
+  return new Set(firsts.filter((id): id is string => id !== null))
+}
+
+/** Whether an account made at `createdAt` is within its first `days`. */
+function isNewMember(createdAt: unknown, days: number): boolean {
+  if (days <= 0 || (typeof createdAt !== "string" && !(createdAt instanceof Date))) return false
+  const made = new Date(createdAt).getTime()
+  return !Number.isNaN(made) && Date.now() - made < days * DAY_MS
+}
+
+/**
+ * `describeAuthor`, with the badges `authorBadges` gives these authors, the writer mark for
+ * `targetWriters`, and the New commenter mark for those of `commenters` (authors with a
+ * published comment) who are new, each asked once, and New member for a new account. A badge `describeAuthor` gives itself (like
+ * Staff) wins.
  */
 export async function describerFor(
   config: ResolvedCommentsConfig,
   authors: CommentAuthor[],
   req: PayloadRequest,
   targetId: number | string,
+  commenters: (number | string)[] = [],
 ): Promise<(author: CommentAuthor) => AuthorDisplay> {
-  const [badges, writers] = authors.length
-    ? await Promise.all([config.authorBadges(authors, req), config.targetWriters(targetId, req)])
-    : [new Map<string, string>(), []]
+  const [badges, writers, newcomers] = authors.length
+    ? await Promise.all([
+        config.authorBadges(authors, req),
+        config.targetWriters(targetId, req),
+        newCommenters(config, commenters, req),
+      ])
+    : [new Map<string, string>(), [], new Set<string>()]
   const writerIds = new Set(writers.map(String))
   return (author) => {
     const display = config.describeAuthor(author)
     const described = display.badge
       ? display
       : { ...display, badge: badges.get(String(author.id)) ?? null }
-    return writerIds.has(String(author.id)) ? { ...described, writer: true } : described
+    return {
+      ...described,
+      ...(writerIds.has(String(author.id)) && { writer: true as const }),
+      ...(newcomers.has(String(author.id)) && { newcomer: true as const }),
+      ...(isNewMember(author.createdAt, config.newMemberDays) && { newMember: true as const }),
+    }
   }
 }
 
@@ -88,7 +173,10 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
         limit: THREAD_LIMIT,
         depth: 1,
         populate: {
-          [config.authorsSlug]: Object.fromEntries(config.authorFields.map((f) => [f, true])),
+          // `createdAt` too, for the New member mark.
+          [config.authorsSlug]: Object.fromEntries(
+            [...config.authorFields, "createdAt"].map((f) => [f, true]),
+          ),
         },
         select: {
           body: true,
@@ -106,6 +194,7 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
     ])
 
     const stored = (found.docs as unknown as StoredComment[]).reverse()
+    const firstComments = await findFirstComments(stored, req)
     const describe = await describerFor(
       config,
       [
@@ -116,6 +205,11 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       ],
       req,
       id,
+      stored.flatMap((comment) =>
+        comment.status === "published" && comment.author && typeof comment.author === "object"
+          ? [comment.author.id]
+          : [],
+      ),
     )
 
     let viewer: CommentViewer | null = null
@@ -129,7 +223,7 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
 
     const thread: CommentThread = {
       // Oldest first, as readers read them.
-      comments: buildThread(stored, author?.id ?? null, describe),
+      comments: buildThread(stored, author?.id ?? null, describe, firstComments),
       viewer,
       providers: viewer ? [] : config.signInProviders(),
       maxDepth: settings.maxDepth,
@@ -274,8 +368,14 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       })
     }
 
-    const describe = await describerFor(config, [author], req, id)
-    const [comment] = buildThread([{ ...created, author }], author.id, describe) as [PublicComment]
+    const describe = await describerFor(config, [author], req, id, check.ok ? [author.id] : [])
+    const posted = { ...created, author }
+    const [comment] = buildThread(
+      [posted],
+      author.id,
+      describe,
+      await findFirstComments([posted], req),
+    ) as [PublicComment]
     return Response.json(
       { comment, ...(!check.ok && { held: check.reason }) },
       { status: 201, headers: noStore },

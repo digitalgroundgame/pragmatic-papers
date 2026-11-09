@@ -18,6 +18,10 @@ export interface AuthorDisplay {
   badge: string | null
   /** One of the writers of what the comments are on (`targetWriters`). */
   writer?: true
+  /** Published their first comment within the last `newCommenterDays`: a New commenter. */
+  newcomer?: true
+  /** Made their account within the last `newMemberDays`: a New member. */
+  newMember?: true
 }
 
 /** A way to sign in, as the comment box offers it. */
@@ -124,6 +128,16 @@ export interface CommentsPluginConfig {
   maxLength?: number
   /** How long an author waits between two comments, in seconds. Default 20. */
   cooldownSeconds?: number
+  /**
+   * How long after an author's first published comment their comments are marked New
+   * commenter, in days. 0 turns the marker off. Default 7.
+   */
+  newCommenterDays?: number
+  /**
+   * How long after an author makes their account (`createdAt`) they're marked New member, in
+   * days. 0 turns the marker off. Default 30.
+   */
+  newMemberDays?: number
 }
 
 /** Where each part of the plugin sits in the admin sidebar. */
@@ -157,6 +171,8 @@ export interface PublicComment {
   removed?: true
   /** The viewer's own comment, held back by a check: nobody else sees it. */
   held?: true
+  /** Its author's first published comment anywhere on the site. */
+  firstComment?: true
 }
 
 /** The signed-in author, as the thread endpoint describes them to themselves. */

@@ -5,8 +5,11 @@ import {
   BadgeCheckIcon,
   FeatherIcon,
   type LucideIcon,
+  MedalIcon,
+  PartyPopperIcon,
   ShieldCheckIcon,
   SparklesIcon,
+  SproutIcon,
 } from "lucide-react"
 import React from "react"
 
@@ -23,7 +26,8 @@ interface BadgeLook {
 
 /**
  * How each badge a commenter can carry looks: Staff (from the site), Writer (of the article),
- * and the starter achievements. An achievement editors add later gets the award icon until it
+ * the markers that come and go (First comment on someone's first, New commenter for a week
+ * after it, New member for a new account's first month), and the starter achievements. An achievement editors add later gets the award icon until it
  * has a look of its own here.
  */
 const LOOKS: Record<string, BadgeLook> = {
@@ -42,9 +46,24 @@ const LOOKS: Record<string, BadgeLook> = {
     className: "text-emerald-600 dark:text-emerald-400",
     description: "Verified email address",
   },
-  "Early member": {
+  "First comment": {
+    icon: PartyPopperIcon,
+    className: "text-sky-600 dark:text-sky-400",
+    description: "Their first comment on the site",
+  },
+  "New commenter": {
     icon: SparklesIcon,
     className: "text-amber-500 dark:text-amber-400",
+    description: "Started commenting in the last week",
+  },
+  "New member": {
+    icon: SproutIcon,
+    className: "text-lime-600 dark:text-lime-400",
+    description: "Joined in the last month",
+  },
+  "Early member": {
+    icon: MedalIcon,
+    className: "text-rose-600 dark:text-rose-400",
     description: "One of the site's first members",
   },
 }
@@ -70,13 +89,22 @@ export const AuthorBadge: React.FC<{ name: string }> = ({ name }) => {
   )
 }
 
-/** The badges beside a commenter's name: Writer first, then their own badge. */
-export const AuthorBadges: React.FC<{ author: Pick<AuthorDisplay, "badge" | "writer"> }> = ({
-  author,
-}) => {
-  const names = [author.writer ? "Writer" : null, author.badge].filter((name): name is string =>
-    Boolean(name),
-  )
+/**
+ * The badges beside a commenter's name: Writer, then the markers that come and go, then their
+ * own badge.
+ */
+export const AuthorBadges: React.FC<{
+  author: Pick<AuthorDisplay, "badge" | "writer" | "newcomer" | "newMember">
+  /** The comment is its author's first on the site. */
+  firstComment?: boolean
+}> = ({ author, firstComment = false }) => {
+  const names = [
+    author.writer ? "Writer" : null,
+    firstComment ? "First comment" : null,
+    author.newcomer ? "New commenter" : null,
+    author.newMember ? "New member" : null,
+    author.badge,
+  ].filter((name): name is string => Boolean(name))
   if (names.length === 0) return null
   return (
     <span className="inline-flex items-center gap-1">

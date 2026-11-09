@@ -64,6 +64,8 @@ export const commentsPlugin = registerPlugin<CommentsPluginConfig>({
       signInProviders: () => [],
       maxLength: 2000,
       cooldownSeconds: 20,
+      newCommenterDays: 7,
+      newMemberDays: 30,
       ...options,
       adminGroups: {
         comments: "Content",

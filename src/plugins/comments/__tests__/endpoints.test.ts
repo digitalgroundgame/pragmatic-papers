@@ -2,7 +2,7 @@ import type { PayloadRequest } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { COMMENTS_SLUG, DEFAULT_SETTINGS, SETTINGS_SLUG, VIOLATIONS_SLUG } from "../constants"
-import { THREAD_LIMIT, threadEndpoints } from "../endpoints/thread"
+import { isCakeDay, THREAD_LIMIT, threadEndpoints } from "../endpoints/thread"
 import { SKIP_MODERATION } from "../hooks/recordModeration"
 import type { ResolvedCommentsConfig } from "../types"
 
@@ -420,6 +420,56 @@ describe("new members", () => {
 
     const comments = (await json(response)).comments as { author: object }[]
     expect(comments[0]!.author).not.toHaveProperty("newMember")
+  })
+})
+
+describe("cake day", () => {
+  const on = (iso: string) => new Date(iso)
+
+  it("falls on each anniversary of the account, from its first year on", () => {
+    expect(isCakeDay("2025-11-09T23:00:00.000Z", on("2026-11-09T01:00:00.000Z"))).toBe(true)
+    expect(isCakeDay(new Date("2020-03-15T00:00:00.000Z"), on("2026-03-15T12:00:00.000Z"))).toBe(
+      true,
+    )
+  })
+
+  it("isn't the day the account was made, or any other day", () => {
+    expect(isCakeDay("2026-11-09T01:00:00.000Z", on("2026-11-09T12:00:00.000Z"))).toBe(false)
+    expect(isCakeDay("2025-11-09T00:00:00.000Z", on("2026-11-10T00:00:00.000Z"))).toBe(false)
+    expect(isCakeDay("2025-12-09T00:00:00.000Z", on("2026-11-09T00:00:00.000Z"))).toBe(false)
+  })
+
+  it("moves a 29 February account to the 28th outside leap years", () => {
+    expect(isCakeDay("2024-02-29T00:00:00.000Z", on("2025-02-28T00:00:00.000Z"))).toBe(true)
+    expect(isCakeDay("2024-02-29T00:00:00.000Z", on("2028-02-28T00:00:00.000Z"))).toBe(false)
+    expect(isCakeDay("2024-02-29T00:00:00.000Z", on("2028-02-29T00:00:00.000Z"))).toBe(true)
+  })
+
+  it("isn't anyone's without a readable date", () => {
+    expect(isCakeDay(undefined)).toBe(false)
+    expect(isCakeDay("soon")).toBe(false)
+  })
+
+  it("marks an author on their cake day in the thread", async () => {
+    currentUser.mockResolvedValue(null)
+    const now = new Date()
+    const yearAgo = new Date(now)
+    yearAgo.setUTCFullYear(now.getUTCFullYear() - 1)
+    db.comments = [
+      {
+        id: 1,
+        body: "Hi",
+        status: "published",
+        depth: 0,
+        parent: null,
+        createdAt: "2026-10-13T10:00:00.000Z",
+        author: { id: 8, name: "Grace", createdAt: yearAgo.toISOString() },
+      },
+    ]
+
+    const body = await json(await call(get))
+
+    expect((body.comments as { author: object }[])[0]!.author).toMatchObject({ cakeDay: true })
   })
 })
 

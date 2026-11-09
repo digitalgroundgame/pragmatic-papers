@@ -22,6 +22,8 @@ export interface AuthorDisplay {
   newcomer?: true
   /** Made their account within the last `newMemberDays`: a New member. */
   newMember?: true
+  /** Today (UTC) is the anniversary of the day they made their account. */
+  cakeDay?: true
 }
 
 /** A way to sign in, as the comment box offers it. */

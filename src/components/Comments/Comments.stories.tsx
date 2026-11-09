@@ -299,7 +299,7 @@ export const WriterMarker: Story = {
 
 /**
  * Every badge a commenter can carry, as colored icons with their names in tooltips, and the
- * markers that come and go: First comment, the New commenter star someone wears for a week
+ * markers that come and go: Cake day, First comment, the New commenter star someone wears for a week
  * after it, and New member for a new account's first month.
  */
 export const Badges: Story = {
@@ -313,6 +313,12 @@ export const Badges: Story = {
           body: `A comment by someone with the ${badge} badge.`,
           author: { name: `Reader ${i + 1}`, image: null, badge },
         })),
+        {
+          ...threadComments[0]!,
+          id: 41,
+          body: "A comment on the anniversary of the day they joined.",
+          author: { name: "Old Hand", image: null, badge: null, cakeDay: true as const },
+        },
         {
           ...threadComments[0]!,
           id: 40,
@@ -340,6 +346,7 @@ export const Badges: Story = {
     await expect(canvas.getByRole("img", { name: "New commenter" })).toBeInTheDocument()
     await expect(canvas.getByRole("img", { name: "New member" })).toBeInTheDocument()
     await expect(canvas.getByRole("img", { name: "First comment" })).toBeInTheDocument()
+    await expect(canvas.getByRole("img", { name: "Cake day" })).toBeInTheDocument()
   },
 }
 

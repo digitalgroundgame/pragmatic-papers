@@ -3,6 +3,7 @@
 import {
   AwardIcon,
   BadgeCheckIcon,
+  CakeIcon,
   FeatherIcon,
   type LucideIcon,
   MedalIcon,
@@ -26,8 +27,8 @@ interface BadgeLook {
 
 /**
  * How each badge a commenter can carry looks: Staff (from the site), Writer (of the article),
- * the markers that come and go (First comment on someone's first, New commenter for a week
- * after it, New member for a new account's first month), and the starter achievements. An achievement editors add later gets the award icon until it
+ * the markers that come and go (Cake day on an account's anniversary, First comment on someone's
+ * first, New commenter for a week after it, New member for a new account's first month), and the starter achievements. An achievement editors add later gets the award icon until it
  * has a look of its own here.
  */
 const LOOKS: Record<string, BadgeLook> = {
@@ -45,6 +46,11 @@ const LOOKS: Record<string, BadgeLook> = {
     icon: BadgeCheckIcon,
     className: "text-emerald-600 dark:text-emerald-400",
     description: "Verified email address",
+  },
+  "Cake day": {
+    icon: CakeIcon,
+    className: "text-pink-600 dark:text-pink-400",
+    description: "Joined on this day",
   },
   "First comment": {
     icon: PartyPopperIcon,
@@ -94,12 +100,13 @@ export const AuthorBadge: React.FC<{ name: string }> = ({ name }) => {
  * own badge.
  */
 export const AuthorBadges: React.FC<{
-  author: Pick<AuthorDisplay, "badge" | "writer" | "newcomer" | "newMember">
+  author: Pick<AuthorDisplay, "badge" | "writer" | "newcomer" | "newMember" | "cakeDay">
   /** The comment is its author's first on the site. */
   firstComment?: boolean
 }> = ({ author, firstComment = false }) => {
   const names = [
     author.writer ? "Writer" : null,
+    author.cakeDay ? "Cake day" : null,
     firstComment ? "First comment" : null,
     author.newcomer ? "New commenter" : null,
     author.newMember ? "New member" : null,

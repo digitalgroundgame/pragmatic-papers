@@ -6,7 +6,13 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { AuthorBadges } from "../AuthorBadges"
 
 const renderBadges = (
-  author: { badge: string | null; writer?: true; newcomer?: true; newMember?: true },
+  author: {
+    badge: string | null
+    writer?: true
+    newcomer?: true
+    newMember?: true
+    cakeDay?: true
+  },
   firstComment = false,
 ) =>
   render(
@@ -36,6 +42,15 @@ describe("AuthorBadges", () => {
     expect(names).toEqual(["Writer", "First comment", "New commenter", "New member", "Verified"])
     expect(screen.getByRole("img", { name: "New member" }).querySelector("svg")).toHaveClass(
       "lucide-sprout",
+    )
+  })
+
+  it("puts the cake right after the writer's mark on someone's cake day", () => {
+    renderBadges({ badge: "Early member", writer: true, cakeDay: true }, true)
+    const names = screen.getAllByRole("img").map((badge) => badge.getAttribute("aria-label"))
+    expect(names).toEqual(["Writer", "Cake day", "First comment", "Early member"])
+    expect(screen.getByRole("img", { name: "Cake day" }).querySelector("svg")).toHaveClass(
+      "lucide-cake",
     )
   })
 

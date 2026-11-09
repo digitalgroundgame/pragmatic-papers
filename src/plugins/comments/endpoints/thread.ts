@@ -106,9 +106,25 @@ function isNewMember(createdAt: unknown, days: number): boolean {
 }
 
 /**
+ * Whether `now` falls on an anniversary of `createdAt`, by the UTC calendar, from a year on.
+ * An account made on 29 February has its cake day on the 28th in other years.
+ */
+export function isCakeDay(createdAt: unknown, now: Date = new Date()): boolean {
+  if (typeof createdAt !== "string" && !(createdAt instanceof Date)) return false
+  const made = new Date(createdAt)
+  if (Number.isNaN(made.getTime()) || now.getUTCFullYear() <= made.getUTCFullYear()) return false
+  const year = now.getUTCFullYear()
+  const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
+  const month = made.getUTCMonth()
+  const day = month === 1 && made.getUTCDate() === 29 && !leap ? 28 : made.getUTCDate()
+  return now.getUTCMonth() === month && now.getUTCDate() === day
+}
+
+/**
  * `describeAuthor`, with the badges `authorBadges` gives these authors, the writer mark for
  * `targetWriters`, and the New commenter mark for those of `commenters` (authors with a
- * published comment) who are new, each asked once, and New member for a new account. A badge `describeAuthor` gives itself (like
+ * published comment) who are new, each asked once, New member for a new account, and Cake day
+ * on its anniversary. A badge `describeAuthor` gives itself (like
  * Staff) wins.
  */
 export async function describerFor(
@@ -136,6 +152,7 @@ export async function describerFor(
       ...(writerIds.has(String(author.id)) && { writer: true as const }),
       ...(newcomers.has(String(author.id)) && { newcomer: true as const }),
       ...(isNewMember(author.createdAt, config.newMemberDays) && { newMember: true as const }),
+      ...(isCakeDay(author.createdAt) && { cakeDay: true as const }),
     }
   }
 }

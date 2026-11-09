@@ -76,7 +76,7 @@
     "@payloadcms/ui": "^3.93.0",
     "@react-email/render": "^2.1.0",
     "@sentry/nextjs": "^11.8.0",
-    "@wrksz/themes": "^2.0.3",
+    "@wrksz/themes": "^2.1.1",
     "better-auth": "1.7.7",
     "better-react-mathjax": "^3.0.3",
     "class-variance-authority": "^0.7.1",

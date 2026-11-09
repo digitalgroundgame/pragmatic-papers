@@ -365,7 +365,7 @@ jobs:
     # build as the E2E suite and skip installing one. Keep the tag in step
     # with playwright.yml (scripts/check-playwright-image-pin.ts checks it).
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
 
     steps:
       - uses: actions/checkout@v7

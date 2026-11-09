@@ -330,6 +330,10 @@ export interface Article {
   slug: string;
   enableMathRendering?: boolean | null;
   publishedAt?: string | null;
+  /**
+   * When readers last saw a change to the title, text, hero image, authors or narration. The article shows it as "Updated".
+   */
+  contentUpdatedAt?: string | null;
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;
   /**
@@ -1887,6 +1891,7 @@ export interface ArticlesSelect<T extends boolean = true> {
   slug?: T;
   enableMathRendering?: T;
   publishedAt?: T;
+  contentUpdatedAt?: T;
   authors?: T;
   topics?: T;
   showTableOfContents?: T;

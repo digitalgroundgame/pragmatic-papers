@@ -28,7 +28,13 @@ const getNewsSitemap = unstable_cache(
         _status: { equals: "published" },
         publishedAt: { greater_than_equal: new Date(Date.now() - NEWS_WINDOW_MS).toISOString() },
       },
-      select: { slug: true, title: true, publishedAt: true, updatedAt: true },
+      select: {
+        slug: true,
+        title: true,
+        publishedAt: true,
+        updatedAt: true,
+        contentUpdatedAt: true,
+      },
     })
 
     return docs.flatMap((article) =>
@@ -36,7 +42,7 @@ const getNewsSitemap = unstable_cache(
         ? [
             {
               loc: `${siteUrl}/articles/${article.slug}`,
-              lastmod: article.updatedAt,
+              lastmod: article.contentUpdatedAt ?? article.updatedAt,
               news: {
                 title: article.title,
                 publicationName: "The Pragmatic Papers",

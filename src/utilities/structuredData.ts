@@ -59,7 +59,7 @@ export function buildArticleJsonLd(
     headline: article.meta?.title || article.title || undefined,
     description: article.meta?.description || undefined,
     datePublished: article.publishedAt ?? article.createdAt,
-    dateModified: article.updatedAt,
+    dateModified: article.contentUpdatedAt ?? article.updatedAt,
     inLanguage: "en-US",
     isAccessibleForFree: true,
     keywords: keywords.length > 0 ? keywords.join(", ") : undefined,

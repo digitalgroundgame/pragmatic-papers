@@ -23,7 +23,7 @@ const getArticlesSitemap = unstable_cache(
       pagination: false,
       sort: "-updatedAt",
       where: { _status: { equals: "published" } },
-      select: { slug: true, updatedAt: true },
+      select: { slug: true, updatedAt: true, contentUpdatedAt: true },
     })
 
     const dateFallback = new Date().toISOString()
@@ -32,7 +32,7 @@ const getArticlesSitemap = unstable_cache(
         ? [
             {
               url: `${siteUrl}/articles/${article.slug}`,
-              lastModified: article.updatedAt || dateFallback,
+              lastModified: article.contentUpdatedAt || article.updatedAt || dateFallback,
             },
           ]
         : [],

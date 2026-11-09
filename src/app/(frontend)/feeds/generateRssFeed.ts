@@ -145,7 +145,9 @@ export const generateArticleFeed = (articles: Article[]): string => {
         extensions: [
           {
             name: "updated",
-            objects: { updated: new Date(article.updatedAt).toISOString() },
+            objects: {
+              updated: new Date(article.contentUpdatedAt ?? article.updatedAt).toISOString(),
+            },
           },
         ],
       })

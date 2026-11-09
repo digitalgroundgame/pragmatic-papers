@@ -93,6 +93,18 @@ describe("buildArticleJsonLd", () => {
     })
   })
 
+  it("dates the modification from the content, not the last save", () => {
+    const result = buildArticleJsonLd(
+      makeArticle({
+        updatedAt: "2024-03-01T00:00:00.000Z",
+        contentUpdatedAt: "2024-02-01T00:00:00.000Z",
+      }),
+      "/articles/my-post",
+    )
+
+    expect(result.dateModified).toBe("2024-02-01T00:00:00.000Z")
+  })
+
   it("omits optional fields and falls back to title / createdAt when data is missing", () => {
     const result = buildArticleJsonLd(
       makeArticle({

@@ -8,7 +8,7 @@ afterEach(cleanup)
 
 interface RealProps {
   label: string
-  onPress: () => void
+  onPress: (event: React.MouseEvent) => void
 }
 
 /** Stands in for the interactive component: the same controls as the placeholder. */
@@ -85,6 +85,20 @@ describe("LoadOnInteraction", () => {
     expect(onPress).toHaveBeenCalledTimes(1)
   })
 
+  it.each([
+    ["a mouse click as a mouse click", 1],
+    ["a keyboard press as a keyboard press", 0],
+  ])("replays %s, so a menu opens the way it would have", async (_, detail) => {
+    // Menus read a click with no pointer and a `detail` of 0 as a keyboard press, and open with
+    // their first item focused, scrolling the page to it.
+    const { load, settle } = deferredLoad()
+    const { onPress } = renderGate(load)
+    fireEvent.click(screen.getByRole("button", { name: "Open" }), { detail })
+    await settle()
+    expect(onPress).toHaveBeenCalledTimes(1)
+    expect(onPress.mock.calls[0]![0].detail).toBe(detail)
+  })
+
   it("doesn't replay a click on a placeholder link, which has already navigated", async () => {
     const { load, settle } = deferredLoad()
     const { onPress } = renderGate(load)
@@ -104,6 +118,20 @@ describe("LoadOnInteraction", () => {
     const button = screen.getByRole("button", { name: "Open" })
     expect(button).toHaveAttribute("data-real")
     expect(button).toHaveFocus()
+  })
+
+  it("moves focus without scrolling the page", async () => {
+    const focus = vi.spyOn(HTMLElement.prototype, "focus")
+    try {
+      const { load, settle } = deferredLoad()
+      renderGate(load)
+      screen.getByRole("button", { name: "Open" }).focus()
+      focus.mockClear()
+      await settle()
+      expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+    } finally {
+      focus.mockRestore()
+    }
   })
 
   it("waits while a pointer is pressed, so the click lands on one element", async () => {

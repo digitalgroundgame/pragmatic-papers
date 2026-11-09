@@ -75,7 +75,7 @@
     "@payloadcms/storage-s3": "^3.93.0",
     "@payloadcms/ui": "^3.93.0",
     "@react-email/render": "^2.1.0",
-    "@sentry/nextjs": "^11.8.0",
+    "@sentry/nextjs": "^11.11.0",
     "@wrksz/themes": "^2.1.1",
     "better-auth": "1.7.7",
     "better-react-mathjax": "^3.0.3",
@@ -112,7 +112,7 @@
   "devDependencies": {
     "@opennextjs/cloudflare": "1.20.16",
     "@playwright/test": "^1.65.0",
-    "@sentry/cloudflare": "11.0.0",
+    "@sentry/cloudflare": "11.11.0",
     "@storybook/addon-a11y": "^10.6.6",
     "@storybook/addon-docs": "^10.6.6",
     "@storybook/addon-themes": "^10.6.6",

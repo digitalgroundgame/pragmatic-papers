@@ -9,6 +9,7 @@ import {
 } from "@/collections/Articles/stats/endpoint"
 import { articleFiguresCache } from "@/collections/Articles/stats/figures"
 import type { Article, Media, User } from "@/payload-types"
+import { getSiteURL } from "@/utilities/getURL"
 
 import { testFile } from "./fixtures/media"
 import { createArticle } from "./helpers/content"
@@ -225,11 +226,14 @@ describe("GET /api/articles/:id/stats", () => {
       data: { switches: { comments: true } },
     })
     try {
-      expect((await stats(writer, article.id)).body.comments).toEqual({ published: 2 })
+      const url = `${getSiteURL()}/articles/${article.slug}#comments`
+      expect((await stats(writer, article.id)).body.comments).toEqual({ published: 2, url })
       expect((await stats(await createUser("editor"), article.id)).body.comments).toEqual({
         published: 2,
         held: 1,
         hidden: 1,
+        url,
+        moderateUrl: `/admin/collections/comments?where%5Btarget%5D%5Bequals%5D=${article.id}`,
       })
     } finally {
       await payload.updateGlobal({

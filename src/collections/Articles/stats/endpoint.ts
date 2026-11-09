@@ -4,6 +4,7 @@ import { isEditor } from "@/access/roles"
 import { googleAnalytics, integrationStatus } from "@/integrations"
 import type { PageFigures } from "@/integrations/google/analytics"
 import type { User } from "@/payload-types"
+import { absoluteURL } from "@/utilities/getURL"
 import { docPath } from "@/utilities/routes"
 import { relationshipId } from "@/utilities/relationships"
 
@@ -36,6 +37,10 @@ export interface ArticleStats {
     /** Held by a check or hidden by a moderator; for editors only. */
     held?: number
     hidden?: number
+    /** The comment section under the article on the site. */
+    url: string
+    /** The admin's list of this article's comments; for editors only. */
+    moderateUrl?: string
   } | null
   /** Its place in the recommendations, or null when it isn't ranked. */
   ranking: { position: number; of: number } | null
@@ -80,6 +85,7 @@ async function analyticsFor(
 async function commentsFor(
   req: PayloadRequest,
   articleId: number,
+  slug: string,
 ): Promise<ArticleStats["comments"]> {
   const { payload } = req
   const plugins = await payload.findGlobal({ slug: "plugins", depth: 0, overrideAccess: true })
@@ -93,13 +99,17 @@ async function commentsFor(
         req,
       })
     ).totalDocs
-  if (!isEditor(req.user as User)) return { published: await count("published") }
+  const url = absoluteURL(`${docPath("articles", slug)}#comments`)
+  if (!isEditor(req.user as User)) return { published: await count("published"), url }
   const [published, held, hidden] = await Promise.all([
     count("published"),
     count("auto-hidden"),
     count("hidden"),
   ])
-  return { published, held, hidden }
+  const moderateUrl = `${payload.config.routes.admin}/collections/comments?${new URLSearchParams({
+    "where[target][equals]": String(articleId),
+  })}`
+  return { published, held, hidden, url, moderateUrl }
 }
 
 async function rankingFor(
@@ -153,7 +163,7 @@ async function statsHandler(req: PayloadRequest, refresh: boolean): Promise<Resp
       { id, slug: article.slug as string, publishedAt: article.publishedAt },
       refresh,
     ),
-    commentsFor(req, id),
+    commentsFor(req, id, article.slug as string),
     rankingFor(req, id),
   ])
   const body: ArticleStats = { published: true, analytics, comments, ranking }

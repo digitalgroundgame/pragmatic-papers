@@ -59,7 +59,8 @@
   font-weight: 600;
 }
 
-.article-stats__note a {
+.article-stats__note a,
+.article-stats__facts a {
   color: inherit;
   text-decoration: underline;
 }

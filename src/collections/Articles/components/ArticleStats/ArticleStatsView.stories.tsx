@@ -28,7 +28,7 @@ const loaded = (overrides: Partial<ArticleStats> = {}): ArticleStats => ({
       ],
     },
   },
-  comments: { published: 14 },
+  comments: { published: 14, url: "https://pragmaticpapers.com/articles/a-slug#comments" },
   ranking: { position: 3, of: 20 },
   ...overrides,
 })
@@ -56,6 +56,12 @@ export const Loaded: Story = {
     await expect(canvas.getByRole("list")).toHaveTextContent("google7,820 views")
     await expect(canvas.getByText(/Updated 12 minutes ago/)).toBeInTheDocument()
     await expect(canvas.getByText("14 published")).toBeInTheDocument()
+    // Comments opens the comment section under the article on the site.
+    await expect(canvas.getByRole("link", { name: "Comments" })).toHaveAttribute(
+      "href",
+      "https://pragmaticpapers.com/articles/a-slug#comments",
+    )
+    await expect(canvas.queryByRole("link", { name: "Moderate" })).not.toBeInTheDocument()
     await expect(canvas.getByText(/Number 3 of the 20 articles/)).toBeInTheDocument()
     await expect(
       canvas.queryByRole("link", { name: "Open Google Analytics" }),
@@ -70,7 +76,15 @@ export const Loaded: Story = {
 export const Editor: Story = {
   args: {
     load: fn<LoadArticleStats>(async () => {
-      const stats = loaded({ comments: { published: 14, held: 2, hidden: 1 } })
+      const stats = loaded({
+        comments: {
+          published: 14,
+          held: 2,
+          hidden: 1,
+          url: "https://pragmaticpapers.com/articles/a-slug#comments",
+          moderateUrl: "/admin/collections/comments?where%5Btarget%5D%5Bequals%5D=7",
+        },
+      })
       if (stats.analytics?.status === "ok") {
         stats.analytics.reportsUrl =
           "https://analytics.google.com/analytics/web/#/p123/reports/intelligenthome"
@@ -81,8 +95,12 @@ export const Editor: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(
-      await canvas.findByText("14 published, 2 held by a check, 1 hidden"),
+      await canvas.findByText(/14 published, 2 held by a check, 1 hidden/),
     ).toBeInTheDocument()
+    await expect(canvas.getByRole("link", { name: "Moderate" })).toHaveAttribute(
+      "href",
+      "/admin/collections/comments?where%5Btarget%5D%5Bequals%5D=7",
+    )
     await expect(canvas.getByRole("link", { name: "Open Google Analytics" })).toHaveAttribute(
       "rel",
       expect.stringContaining("noopener"),

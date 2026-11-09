@@ -231,7 +231,11 @@ export function ArticleStatsView({ load }: { load: LoadArticleStats }): React.Re
       <dl className="article-stats__facts">
         {stats.comments && (
           <div>
-            <dt>Comments</dt>
+            <dt>
+              <a href={stats.comments.url} target="_blank" rel="noopener noreferrer">
+                Comments
+              </a>
+            </dt>
             <dd>
               {number.format(stats.comments.published)} published
               {stats.comments.held !== undefined && (
@@ -239,6 +243,12 @@ export function ArticleStatsView({ load }: { load: LoadArticleStats }): React.Re
               )}
               {stats.comments.hidden !== undefined && (
                 <>, {number.format(stats.comments.hidden)} hidden</>
+              )}
+              {stats.comments.moderateUrl && (
+                <>
+                  {" · "}
+                  <a href={stats.comments.moderateUrl}>Moderate</a>
+                </>
               )}
             </dd>
           </div>

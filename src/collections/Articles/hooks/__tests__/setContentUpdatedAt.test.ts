@@ -1,7 +1,7 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { readerContentChanged } from "../setContentUpdatedAt"
+import { readerContentChanged, setContentUpdatedAt } from "../setContentUpdatedAt"
 
 const content = (text: string) => ({
   root: {
@@ -55,5 +55,144 @@ describe("readerContentChanged", () => {
         { title: "A", syndicateToSubstack: true, topics: [2] } as never,
       ),
     ).toBe(false)
+  })
+})
+
+const KEPT = "2026-01-01T00:00:00.000Z"
+const PUBLISHED_AT = "2026-01-01T00:00:00.000Z"
+const NOW = "2026-06-01T12:00:00.000Z"
+
+/** The article's row as readers are served it: published, with its reader fields. */
+const row = (overrides: Record<string, unknown> = {}) => ({
+  id: 1,
+  _status: "published",
+  contentUpdatedAt: KEPT,
+  title: "Headline",
+  content: content("Body"),
+  heroImage: 3,
+  authors: [7],
+  narration: null,
+  ...overrides,
+})
+
+function run({
+  stored = row(),
+  siblingData = {},
+  originalDoc = row(),
+  operation = "update",
+}: {
+  stored?: Record<string, unknown> | Error
+  siblingData?: Record<string, unknown>
+  originalDoc?: Record<string, unknown> | undefined
+  operation?: "create" | "update"
+} = {}) {
+  const findByID = vi.fn(() =>
+    stored instanceof Error ? Promise.reject(stored) : Promise.resolve(stored),
+  )
+  const result = setContentUpdatedAt({
+    operation,
+    originalDoc,
+    req: { payload: { findByID } },
+    siblingData,
+  } as never)
+  return { result, findByID }
+}
+
+describe("setContentUpdatedAt", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(NOW))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("reads the copy readers are served, not the latest draft", async () => {
+    const { result, findByID } = run({ siblingData: { _status: "published" } })
+    await result
+
+    expect(findByID).toHaveBeenCalledWith(
+      expect.objectContaining({ collection: "articles", id: 1, draft: false, depth: 0 }),
+    )
+  })
+
+  it("starts at publishedAt when an article is created published", async () => {
+    const { result, findByID } = run({
+      operation: "create",
+      originalDoc: undefined,
+      siblingData: { _status: "published", publishedAt: PUBLISHED_AT },
+    })
+
+    expect(await result).toBe(PUBLISHED_AT)
+    expect(findByID).not.toHaveBeenCalled()
+  })
+
+  it("falls back to now when a first publish has no publishedAt", async () => {
+    const { result } = run({ operation: "create", siblingData: { _status: "published" } })
+
+    expect(await result).toBe(NOW)
+  })
+
+  it("leaves a draft created never published without a date", async () => {
+    const { result } = run({ operation: "create", siblingData: { _status: "draft" } })
+
+    expect(await result).toBeNull()
+  })
+
+  it("carries the published value along on a draft save, even one that edits the title", async () => {
+    const { result } = run({ siblingData: { _status: "draft", title: "Typed into" } })
+
+    expect(await result).toBe(KEPT)
+  })
+
+  it("starts at publishedAt on the first publish of an existing draft", async () => {
+    const { result } = run({
+      stored: row({ _status: "draft", contentUpdatedAt: null }),
+      siblingData: { _status: "published", publishedAt: PUBLISHED_AT },
+    })
+
+    expect(await result).toBe(PUBLISHED_AT)
+  })
+
+  it("treats an article whose row can't be read as never published", async () => {
+    const { result } = run({
+      stored: new Error("not found"),
+      siblingData: { _status: "published", publishedAt: PUBLISHED_AT },
+    })
+
+    expect(await result).toBe(PUBLISHED_AT)
+  })
+
+  it("keeps the date when a publish changes only fields readers don't see", async () => {
+    const { result } = run({
+      siblingData: { ...row(), syndicateToSubstack: true, topics: [9] },
+    })
+
+    expect(await result).toBe(KEPT)
+  })
+
+  it("moves the date to now when a publish changes what readers see", async () => {
+    const { result } = run({ siblingData: { ...row(), title: "New headline" } })
+
+    expect(await result).toBe(NOW)
+  })
+
+  it("ignores a date the save sends", async () => {
+    const { result } = run({ siblingData: { ...row(), contentUpdatedAt: "2020-01-01" } })
+
+    expect(await result).toBe(KEPT)
+  })
+
+  it("fills fields a partial save leaves out from the document, and its status too", async () => {
+    // A Local API save sending only the checkbox: status and content come from the document.
+    const unchanged = run({ siblingData: { syndicateToSubstack: true } })
+    expect(await unchanged.result).toBe(KEPT)
+
+    // The draft being published holds an autosaved edit the row doesn't have yet.
+    const edited = run({
+      originalDoc: row({ title: "Autosaved headline" }),
+      siblingData: { syndicateToSubstack: true },
+    })
+    expect(await edited.result).toBe(NOW)
   })
 })

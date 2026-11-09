@@ -71,7 +71,6 @@ export function FeedActionColumn({ article }: FeedActionColumnProps): React.Reac
               <Link
                 key={author.id}
                 href={`/contributors/${author.slug}`}
-                aria-label={name}
                 className={cn(
                   "block",
                   // Stack vertically with a small overlap so multiple authors
@@ -80,7 +79,11 @@ export function FeedActionColumn({ article }: FeedActionColumnProps): React.Reac
                 )}
                 style={{ zIndex: MAX_VISIBLE_AVATARS - idx }}
               >
+                {/* The name is text, not an aria-label: the initials the fallback
+                    shows would be visible text missing from the label. */}
+                <span className="sr-only">{name}</span>
                 <Avatar
+                  aria-hidden
                   size="default"
                   className="size-9.5 rounded-full border-2 border-white/70 transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16]"
                 >

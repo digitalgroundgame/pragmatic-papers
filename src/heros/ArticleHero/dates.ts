@@ -76,8 +76,8 @@ export function formatTimeOfDay(timestamp: string): string {
   return `${hour}:${minute} ${period} ${zone}`
 }
 
-/** "Wednesday, August 20, 2026 at 6:56 p.m. ET" — the tooltip's spelled-out instant. */
-export function formatFullTimestamp(timestamp: string): string {
+/** "Wednesday, August 20, 2026" — the day half of the tooltip's spelled-out instant. */
+export function formatFullDate(timestamp: string): string {
   const { weekday, month, day, year } = zonedParts(timestamp, {
     weekday: "long",
     year: "numeric",
@@ -85,7 +85,12 @@ export function formatFullTimestamp(timestamp: string): string {
     day: "numeric",
   })
 
-  return `${weekday}, ${month} ${day}, ${year} at ${formatTimeOfDay(timestamp)}`
+  return `${weekday}, ${month} ${day}, ${year}`
+}
+
+/** "Wednesday, August 20, 2026 at 6:56 p.m. ET" — the tooltip's spelled-out instant. */
+export function formatFullTimestamp(timestamp: string): string {
+  return `${formatFullDate(timestamp)} at ${formatTimeOfDay(timestamp)}`
 }
 
 /** How close two saves have to be before the second one is the same save. */

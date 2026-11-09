@@ -9,6 +9,9 @@
  *   Coolify, so the build moves the folder aside and puts it back afterwards. If a build
  *   is killed before it can, the next run puts it back first.
  * - `OPENNEXT_BUILD=true` turns on `withCloudflare` in next.config.ts.
+ * - No type check (`SKIP_BUILD_TYPE_CHECK`): with the admin folder moved aside, tsc can't
+ *   resolve the files that import from it, such as tests of its routes. CI's Static checks
+ *   type-check the whole tree on every PR, as for the CI image's build.
  * - The static assets' headers (`src/cloudflare/_headers`) go into `.open-next/assets`.
  */
 import { spawnSync } from "node:child_process"
@@ -43,6 +46,7 @@ try {
   run("pnpm", ["exec", "next", "build", "--webpack"], {
     // Webpack needs more than Node's default heap for this app.
     NODE_OPTIONS: "--no-deprecation --max-old-space-size=12288",
+    SKIP_BUILD_TYPE_CHECK: "true",
   })
   run("pnpm", ["exec", "opennextjs-cloudflare", "build", "--skipNextBuild"])
   copyFileSync("src/cloudflare/_headers", ".open-next/assets/_headers")

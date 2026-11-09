@@ -91,6 +91,31 @@ describe("Substack feed queries", () => {
     expect(await single.text()).toContain(`/articles/${syndicated.slug}</link>`)
   })
 
+  it("leaves an imported article out of the bulk feed and keeps its own feed", async () => {
+    const imported = await seedArticle("imported", {
+      _status: "published",
+      syndicateToSubstack: true,
+      substackUrl: "https://thepragmaticpapers.substack.com/p/imported",
+    })
+    // Clearing the field in the admin can save an empty string, which isn't an import.
+    const cleared = await seedArticle("cleared", {
+      _status: "published",
+      syndicateToSubstack: true,
+      substackUrl: "",
+    })
+
+    const slugs = (await querySyndicatedArticles()).map(({ slug }) => slug)
+    expect(slugs).not.toContain(imported.slug)
+    expect(slugs).toContain(cleared.slug)
+    expect(slugs).toContain(syndicated.slug)
+
+    const single = await articleRoute.GET(new Request("http://localhost"), {
+      params: Promise.resolve({ slug: imported.slug }),
+    })
+    expect(single.status).toBe(200)
+    expect(await single.text()).toContain(`/articles/${imported.slug}</link>`)
+  })
+
   it("returns 404 from the single-article feed for an article that isn't syndicated", async () => {
     const response = await articleRoute.GET(new Request("http://localhost"), {
       params: Promise.resolve({ slug: notSyndicated.slug }),
@@ -146,5 +171,72 @@ describe("syndicateToSubstack field access", () => {
     const article = await create(writer, "writer-update")
     const updated = await setSyndicated(writer, article.id)
     expect(updated.syndicateToSubstack).toBe(false)
+  })
+})
+
+describe("substackUrl field", () => {
+  const substackUrl = "https://thepragmaticpapers.substack.com/p/an-article"
+
+  const setUrl = (user: User, id: Article["id"], value: string | null) =>
+    payload.update({
+      collection: "articles",
+      id,
+      overrideAccess: false,
+      user,
+      context: { disableRevalidate: true },
+      data: { substackUrl: value },
+    })
+
+  it("lets an editor record the post, trimmed", async () => {
+    const article = await seedArticle("url-editor", { _status: "draft", syndicateToSubstack: true })
+    const updated = await setUrl(editor, article.id, `  ${substackUrl} `)
+    expect(updated.substackUrl).toBe(substackUrl)
+  })
+
+  it("ignores it when a writer updates their own draft", async () => {
+    const article = await payload.create({
+      collection: "articles",
+      overrideAccess: false,
+      user: writer,
+      context: { disableRevalidate: true },
+      data: {
+        title: "Substack url writer",
+        slug: uniqueSlug("url-writer"),
+        generateSlug: false,
+        content: ARTICLE_CONTENT,
+        _status: "draft",
+      } as unknown as Article,
+    })
+    const updated = await setUrl(writer, article.id, substackUrl)
+    expect(updated.substackUrl ?? null).toBeNull()
+  })
+
+  it("refuses an address that isn't on Substack on a published article", async () => {
+    // Payload validates a field on publish (a draft save skips it), and only while its
+    // admin condition holds, so the article is syndicated.
+    const article = await seedArticle("url-invalid", {
+      _status: "published",
+      syndicateToSubstack: true,
+    })
+    await expect(
+      setUrl(editor, article.id, "https://example.org/p/an-article"),
+    ).rejects.toMatchObject({ name: "ValidationError" })
+  })
+
+  it("keeps the address through a save that doesn't send it, and clears it to null", async () => {
+    const article = await seedArticle("url-keep", { _status: "draft", substackUrl })
+
+    const retitled = await payload.update({
+      collection: "articles",
+      id: article.id,
+      overrideAccess: false,
+      user: editor,
+      context: { disableRevalidate: true },
+      data: { title: "Substack url kept" },
+    })
+    expect(retitled.substackUrl).toBe(substackUrl)
+
+    const cleared = await setUrl(editor, article.id, "  ")
+    expect(cleared.substackUrl).toBeNull()
   })
 })

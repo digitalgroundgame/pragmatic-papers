@@ -24,6 +24,7 @@ import {
   productionSearchEndpoint,
 } from "@/collections/Articles/endpoints/cloneFromProduction"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
+import { trimSubstackUrl, validateSubstackUrl } from "@/collections/Articles/substackUrl"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
 import { keepWritersOffLiveArticles } from "@/collections/Articles/hooks/keepWritersOffLiveArticles"
@@ -305,6 +306,27 @@ export const Articles: CollectionConfig = {
         description:
           "Adds the published article to the Substack import feed. Takes effect once the article is published.",
       },
+    },
+    {
+      name: "substackUrl",
+      type: "text",
+      label: "Substack post URL",
+      access: {
+        create: editorFieldLevel,
+        update: editorFieldLevel,
+      },
+      admin: {
+        position: "sidebar",
+        condition: (data, siblingData, context) =>
+          Boolean(data?.syndicateToSubstack) && shownToEditors(data, siblingData, context),
+        description:
+          "Once Substack has imported the article, paste the post's address here. It marks the article as imported, takes it out of the bulk import feed, and adds a Read on Substack link to the article.",
+        placeholder: "https://thepragmaticpapers.substack.com/p/…",
+      },
+      hooks: {
+        beforeValidate: [trimSubstackUrl],
+      },
+      validate: validateSubstackUrl,
     },
     {
       name: "substackImportUrl",

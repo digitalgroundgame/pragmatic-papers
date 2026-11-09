@@ -282,7 +282,33 @@ export const WriterMarker: Story = {
     const comment = within(
       await within(canvasElement).findByRole("article", { name: "Comment by Lin Writer" }),
     )
-    await expect(comment.getByText("Writer")).toBeInTheDocument()
-    await expect(comment.getByText("Staff")).toBeInTheDocument()
+    await expect(comment.getByRole("img", { name: "Writer" })).toBeInTheDocument()
+    await expect(comment.getByRole("img", { name: "Staff" })).toBeInTheDocument()
+  },
+}
+
+/** Every badge a commenter can carry, as colored icons with their names in tooltips. */
+export const Badges: Story = {
+  beforeEach: serve(
+    commentThread({
+      comments: [
+        writerComment,
+        ...["Staff", "Verified", "Early member", "Top commenter"].map((badge, i) => ({
+          ...threadComments[0]!,
+          id: 30 + i,
+          body: `A comment by someone with the ${badge} badge.`,
+          author: { name: `Reader ${i + 1}`, image: null, badge },
+        })),
+      ].map((comment) => ({ ...comment, parentId: null, depth: 0 })),
+    }),
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const verified = await canvas.findByRole("img", { name: "Verified" })
+    await userEvent.hover(verified)
+    await expect(
+      await within(canvasElement.ownerDocument.body).findByText(/Verified email address/),
+    ).toBeInTheDocument()
+    await expect(canvas.getByRole("img", { name: "Top commenter" })).toBeInTheDocument()
   },
 }

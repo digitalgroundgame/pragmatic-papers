@@ -3,12 +3,13 @@
 import React from "react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { formatFullTimestamp } from "@/heros/ArticleHero/dates"
 import type { AuthorDisplay } from "@/plugins/comments"
 import { formatTimeAgo } from "@/utilities/formatDate"
 import { getInitials } from "@/utilities/getInitials"
+
+import { AuthorBadges } from "./AuthorBadges"
 
 export const AuthorAvatar: React.FC<{
   author: Pick<AuthorDisplay, "name" | "image">
@@ -50,12 +51,7 @@ export const CommentMeta: React.FC<{
 }> = ({ author, createdAt, children }) => (
   <p className="flex flex-wrap items-center gap-x-1.5 text-sm leading-6">
     <span className="font-semibold">{author.name}</span>
-    {author.writer ? (
-      <Badge variant="outline" title="Wrote this article">
-        Writer
-      </Badge>
-    ) : null}
-    {author.badge ? <Badge variant="secondary">{author.badge}</Badge> : null}
+    <AuthorBadges author={author} />
     <Dot />
     <CommentTime createdAt={createdAt} />
     {children ? (

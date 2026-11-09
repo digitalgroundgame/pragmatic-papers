@@ -3,6 +3,7 @@
 import Link from "next/link"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
+import { ProviderSignInButton } from "@/components/ProviderSignInButton"
 import { Button } from "@/components/ui/button"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import type { CommentThread, SignInProvider } from "@/plugins/comments"
@@ -10,6 +11,7 @@ import { useInView } from "@/hooks/useInView"
 import { formatLongDate } from "@/utilities/formatDate"
 
 import { CommentItem, type ReplyContext } from "./CommentItem"
+import { trackCommentSort, trackSignIn } from "./analytics"
 import { CommentForm, type Posted } from "./CommentForm"
 import { AuthorAvatar } from "./CommentMeta"
 import { SortMenu } from "./SortMenu.lazy"
@@ -26,6 +28,9 @@ const SIGN_IN_ERRORS: Record<string, string> = {
     "That address already signed in with another provider, which this one couldn't confirm. Use the one you signed in with before.",
 }
 const SIGN_IN_FAILED = "Sign-in didn't complete. Try again."
+
+/** Marks the page a provider sends a signed-in reader back to, for the `login` event. */
+const SIGNED_IN_PARAM = "signed_in"
 
 export interface CommentsProps {
   /** The article's id. */
@@ -52,9 +57,7 @@ const SignIn: React.FC<{
       </p>
       <div className="flex flex-wrap gap-2">
         {providers.map(({ id, label }) => (
-          <Button key={id} variant="outline" onClick={() => onSignIn(id)}>
-            Sign in with {label}
-          </Button>
+          <ProviderSignInButton key={id} provider={id} label={label} onClick={() => onSignIn(id)} />
         ))}
       </div>
     </div>
@@ -101,8 +104,21 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api",
       .then((thread) => {
         if (cancelled) return
         setLoad({ state: "ready", thread })
+        const search = new URLSearchParams(window.location.search)
+        // Back from a provider that signed the reader in: count it, once, and tidy the URL.
+        const provider = search.get(SIGNED_IN_PARAM)
+        if (provider) {
+          if (thread.viewer) trackSignIn(provider, slug)
+          search.delete(SIGNED_IN_PARAM)
+          const query = search.toString()
+          window.history.replaceState(
+            window.history.state,
+            "",
+            `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
+          )
+        }
         // Back from a provider that didn't sign the reader in: say so, once.
-        const code = new URLSearchParams(window.location.search).get("error")
+        const code = search.get("error")
         if (code && !returnedError.current) {
           returnedError.current = true
           setSignInError(SIGN_IN_ERRORS[code] ?? SIGN_IN_FAILED)
@@ -114,7 +130,7 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api",
     return () => {
       cancelled = true
     }
-  }, [inView, threadURL, reloads])
+  }, [inView, threadURL, reloads, slug])
 
   const signIn = async (provider: string) => {
     setSignInError(null)
@@ -127,7 +143,7 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api",
           provider,
           // Someone new gets a member account; without this, only an existing one signs in.
           requestSignUp: true,
-          callbackURL: `${window.location.pathname}#comments`,
+          callbackURL: `${window.location.pathname}?${SIGNED_IN_PARAM}=${encodeURIComponent(provider)}#comments`,
           errorCallbackURL: window.location.pathname,
         }),
       })
@@ -200,7 +216,15 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api",
             </>
           ) : null}
         </h2>
-        {thread && thread.comments.length > 1 ? <SortMenu value={sort} onChange={setSort} /> : null}
+        {thread && thread.comments.length > 1 ? (
+          <SortMenu
+            value={sort}
+            onChange={(next) => {
+              setSort(next)
+              trackCommentSort(next, slug)
+            }}
+          />
+        ) : null}
       </div>
 
       {signInError ? (

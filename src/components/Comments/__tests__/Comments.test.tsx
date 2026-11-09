@@ -3,6 +3,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("@next/third-parties/google", () => ({ sendGAEvent: vi.fn() }))
 
+// The real menu is Base UI's select; a native one is enough to pick an order here.
+vi.mock("../SortMenu.lazy", () => ({
+  SortMenu: ({ value, onChange }: { value: string; onChange: (sort: string) => void }) => (
+    <select aria-label="Sort comments" value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="random">Random</option>
+      <option value="new">New</option>
+      <option value="old">Old</option>
+    </select>
+  ),
+}))
+
 import { sendGAEvent } from "@next/third-parties/google"
 
 import { commentThread, commentViewer } from "@/stories/fixtures/comments"
@@ -204,7 +215,7 @@ describe("Comments", () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       provider: "discord",
       requestSignUp: true,
-      callbackURL: "/articles/x#comments",
+      callbackURL: "/articles/x?signed_in=discord#comments",
       errorCallbackURL: "/articles/x",
     })
   })
@@ -389,5 +400,50 @@ describe("Comments", () => {
       content_type: "comment",
       item_id: "zoning",
     })
+  })
+
+  it("tells analytics the reader is back signed in, once, and tidies the address", async () => {
+    window.history.replaceState(null, "", "/articles/x?signed_in=google&ref=feed#comments")
+    fetchMock.mockResolvedValue(Response.json(signedIn))
+
+    render(<Comments articleId={7} slug="zoning" />)
+
+    await screen.findByRole("textbox", { name: /Commenting as/ })
+    expect(sendGAEvent).toHaveBeenCalledWith("event", "login", {
+      method: "google",
+      content_type: "comment",
+      item_id: "zoning",
+    })
+    expect(`${window.location.pathname}${window.location.search}${window.location.hash}`).toBe(
+      "/articles/x?ref=feed#comments",
+    )
+  })
+
+  it("sends no sign-in event when the reader came back without a session", async () => {
+    window.history.replaceState(null, "", "/articles/x?signed_in=google")
+    fetchMock.mockResolvedValue(Response.json(commentThread()))
+
+    render(<Comments articleId={7} />)
+
+    await screen.findByText(/zoning reform/)
+    expect(sendGAEvent).not.toHaveBeenCalled()
+    expect(window.location.search).toBe("")
+  })
+
+  it("re-orders when the reader picks a sort, remembers it, and tells analytics", async () => {
+    fetchMock.mockResolvedValue(Response.json(commentThread()))
+
+    render(<Comments articleId={7} slug="zoning" />)
+    fireEvent.change(await screen.findByRole("combobox", { name: "Sort comments" }), {
+      target: { value: "new" },
+    })
+
+    expect(window.localStorage.getItem(SORT_KEY)).toBe("new")
+    expect(sendGAEvent).toHaveBeenCalledWith("event", "comment_sort", {
+      sort: "new",
+      item_id: "zoning",
+    })
+    const list = screen.getAllByRole("list")[0]!
+    expect(list.firstElementChild).toHaveTextContent("This comment was removed.")
   })
 })

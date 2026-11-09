@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import React, { Suspense, useEffect, useState } from "react"
 
+import { ProviderSignInButton } from "@/components/ProviderSignInButton"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -64,9 +65,12 @@ const SignIn: React.FC<{ providers: AccountProps["providers"]; apiPath: string }
       ) : null}
       <div className="flex flex-wrap gap-2">
         {providers.map(({ id, label }) => (
-          <Button key={id} variant="outline" onClick={() => void signIn(id)}>
-            Sign in with {label}
-          </Button>
+          <ProviderSignInButton
+            key={id}
+            provider={id}
+            label={label}
+            onClick={() => void signIn(id)}
+          />
         ))}
       </div>
     </section>

@@ -19,6 +19,19 @@ export function trackComment(
   })
 }
 
+/**
+ * A reader back from a provider with a session, after signing in from the comment box. GA's
+ * own `login` event; the site can't tell a first sign-in (a new account) from a later one here.
+ */
+export function trackSignIn(method: string, itemId: string | undefined): void {
+  sendGAEvent("event", "login", { method, content_type: "comment", item_id: itemId ?? null })
+}
+
+/** The reader picked another order for the comments. */
+export function trackCommentSort(sort: string, itemId: string | undefined): void {
+  sendGAEvent("event", "comment_sort", { sort, item_id: itemId ?? null })
+}
+
 /** A comment's link copied with its Share button. */
 export function trackCommentShare(itemId: string | undefined): void {
   sendGAEvent("event", "share", {

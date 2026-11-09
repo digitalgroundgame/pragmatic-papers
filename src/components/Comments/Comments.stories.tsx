@@ -5,6 +5,7 @@ import type { CommentThread, PublicComment } from "@/plugins/comments"
 import { commentThread, commentViewer } from "@/stories/fixtures/comments"
 
 import { Comments } from "."
+import { SEED_KEY, SORT_KEY } from "./useCommentOrder"
 
 /**
  * Answers the thread endpoint with `body`, and a post with the comment it was sent (held,
@@ -15,6 +16,9 @@ function serve(
   { status = 200, held }: { status?: number; held?: string } = {},
 ) {
   return () => {
+    // A fixed seed, so the random order is the same on every run.
+    window.localStorage.setItem(SEED_KEY, "storybook")
+    window.localStorage.removeItem(SORT_KEY)
     const fetchSpy = spyOn(window, "fetch").mockImplementation(async (_input, init) => {
       if (init?.method === "POST") {
         const { body: text, parentId } = JSON.parse(String(init.body)) as {
@@ -35,7 +39,11 @@ function serve(
       }
       return Response.json(body, { status })
     })
-    return () => fetchSpy.mockRestore()
+    return () => {
+      fetchSpy.mockRestore()
+      window.localStorage.removeItem(SEED_KEY)
+      window.localStorage.removeItem(SORT_KEY)
+    }
   }
 }
 
@@ -177,5 +185,87 @@ export const Unavailable: Story = {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText(/Comments couldn.t load/)).toBeInTheDocument()
     await expect(canvas.getByRole("button", { name: "Try again" })).toBeInTheDocument()
+  },
+}
+
+/** The reader picks an order; replies stay under their comment, oldest first. */
+export const Sorted: Story = {
+  beforeEach: serve(commentThread()),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const page = within(canvasElement.ownerDocument.body)
+    const topLevel = () => [...canvasElement.querySelectorAll("section > ol > li")]
+    await userEvent.click(await canvas.findByRole("combobox", { name: "Sort comments" }))
+    await userEvent.click(await page.findByRole("option", { name: "Old" }))
+    await waitFor(() => expect(topLevel()[0]).toHaveTextContent(/zoning reform/))
+    await userEvent.click(canvas.getByRole("combobox", { name: "Sort comments" }))
+    await userEvent.click(await page.findByRole("option", { name: "New" }))
+    await waitFor(() => expect(topLevel()[0]).toHaveTextContent("This comment was removed."))
+    await expect(window.localStorage.getItem(SORT_KEY)).toBe("new")
+  },
+}
+
+/** The line beside a comment's replies folds it, and them, into one row. */
+export const Collapsed: Story = {
+  beforeEach: serve(commentThread()),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await canvas.findByText(/zoning reform/)
+    const comment = within(canvasElement.querySelector<HTMLElement>("#comment-1")!)
+    const [line] = comment.getAllByRole("button", { name: "Collapse Ada Reader's comment" })
+    await userEvent.click(line!)
+    const expand = comment.getByRole("button", { name: "Expand Ada Reader's comment" })
+    await expect(expand).toHaveAttribute("aria-expanded", "false")
+    await expect(expand).toHaveFocus()
+    await expect(canvas.getByText("(1 reply)")).toBeVisible()
+    await expect(canvas.getByText(/second chart's source/)).not.toBeVisible()
+  },
+}
+
+const [first, reply] = commentThread().comments
+const longBranch = [
+  first!,
+  ...Array.from({ length: 6 }, (_, i) => ({
+    ...reply!,
+    id: 20 + i,
+    createdAt: new Date(Date.parse(reply!.createdAt) + i * 60_000).toISOString(),
+    body: `Reply number ${i + 1}.`,
+  })),
+]
+
+/** A branch shows its first replies, and the rest on request. */
+export const LongBranch: Story = {
+  beforeEach: serve(commentThread({ comments: longBranch })),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText("Reply number 3.")).toBeInTheDocument()
+    await expect(canvas.queryByText("Reply number 4.")).not.toBeInTheDocument()
+    await userEvent.click(canvas.getByRole("button", { name: "3 more replies" }))
+    await expect(canvas.getByText("Reply number 6.")).toBeInTheDocument()
+  },
+}
+
+/** Share copies the comment's link. */
+export const Share: Story = {
+  beforeEach: serve(commentThread()),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const writeText = spyOn(navigator.clipboard, "writeText").mockResolvedValue()
+    const [share] = await canvas.findAllByRole("button", { name: "Share" })
+    await userEvent.click(share!)
+    await expect(await canvas.findByRole("status")).toHaveTextContent("Link copied")
+    await expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/#comment-\d+$/))
+    writeText.mockRestore()
+  },
+}
+
+/** Near the most a comment can hold, the box counts down what's left. */
+export const NearLimit: Story = {
+  beforeEach: serve(signedIn({ maxLength: 40 })),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const box = await canvas.findByRole("textbox", { name: /Commenting as/ })
+    await userEvent.type(box, "This is getting very close to the end")
+    await expect(canvas.getByText("3 characters left")).toBeInTheDocument()
   },
 }

@@ -1,16 +1,20 @@
 "use client"
 
 import Link from "next/link"
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import type { CommentThread, SignInProvider } from "@/plugins/comments"
 import { useInView } from "@/hooks/useInView"
 import { formatLongDate } from "@/utilities/formatDate"
 
-import { AuthorAvatar, CommentItem, type ReplyContext } from "./CommentItem"
+import { CommentItem, type ReplyContext } from "./CommentItem"
 import { CommentForm, type Posted } from "./CommentForm"
-import { buildTree, visibleCount } from "./tree"
+import { AuthorAvatar } from "./CommentMeta"
+import { SortMenu } from "./SortMenu.lazy"
+import { buildTree, sortRoots, visibleCount } from "./tree"
+import { useCommentOrder } from "./useCommentOrder"
 
 /** What Better Auth puts in `?error=` when a sign-in comes back without a session. */
 const SIGN_IN_ERRORS: Record<string, string> = {
@@ -72,6 +76,9 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
   const [signInError, setSignInError] = useState<string | null>(null)
   const [held, setHeld] = useState<string | null>(null)
   const returnedError = useRef(false)
+  const { sort, setSort, seed } = useCommentOrder()
+  // Top-level comments the reader posted here, which stay at the top whatever the order.
+  const [pinned, setPinned] = useState<ReadonlySet<string>>(new Set())
   const threadURL = `${apiPath}/comments/thread/${articleId}`
 
   // Bumped to load the thread again: after signing out, or to retry.
@@ -142,6 +149,7 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
 
   const posted = ({ comment, held: reason }: Posted) => {
     setHeld(reason ?? null)
+    if (comment.parentId === null) setPinned((ids) => new Set(ids).add(String(comment.id)))
     setLoad((current) =>
       current.state === "ready"
         ? {
@@ -155,6 +163,10 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
   const thread = load.state === "ready" ? load.thread : null
   const count = thread ? visibleCount(thread.comments) : 0
   const viewer = thread?.viewer ?? null
+  const roots = useMemo(
+    () => (thread ? sortRoots(buildTree(thread.comments), sort, seed, pinned) : []),
+    [thread, sort, seed, pinned],
+  )
   const reply: ReplyContext | null = thread
     ? {
         canReply: Boolean(viewer && !viewer.locked && !viewer.needsVerifiedEmail),
@@ -172,15 +184,18 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
       aria-labelledby="comments-heading"
       className="scroll-mt-24 space-y-6"
     >
-      <h2 id="comments-heading">
-        Comments
-        {count > 0 ? (
-          <>
-            {" "}
-            <span className="text-muted-foreground">({count})</span>
-          </>
-        ) : null}
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h2 id="comments-heading">
+          Comments
+          {count > 0 ? (
+            <>
+              {" "}
+              <span className="text-muted-foreground">({count})</span>
+            </>
+          ) : null}
+        </h2>
+        {thread && thread.comments.length > 1 ? <SortMenu value={sort} onChange={setSort} /> : null}
+      </div>
 
       {signInError ? (
         <p role="alert" className="text-destructive text-sm">
@@ -261,11 +276,13 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
           {thread.comments.length === 0 ? (
             <p className="text-muted-foreground text-sm">No comments yet.</p>
           ) : (
-            <ol className="space-y-6">
-              {buildTree(thread.comments).map((node) => (
-                <CommentItem key={node.comment.id} node={node} reply={reply} />
-              ))}
-            </ol>
+            <TooltipProvider>
+              <ol className="space-y-5">
+                {roots.map((node) => (
+                  <CommentItem key={node.comment.id} node={node} reply={reply} />
+                ))}
+              </ol>
+            </TooltipProvider>
           )}
         </>
       )}

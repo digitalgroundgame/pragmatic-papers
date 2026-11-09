@@ -20,7 +20,9 @@ export const CommentForm: React.FC<{
   label: React.ReactNode
   onPosted: (posted: Posted) => void
   onCancel?: () => void
-}> = ({ threadURL, maxLength, parentId, label, onPosted, onCancel }) => {
+  /** Focus the box when it appears (a reply box, or the top box once a reader opens it). */
+  autoFocus?: boolean
+}> = ({ threadURL, maxLength, parentId, label, onPosted, onCancel, autoFocus }) => {
   const id = useId()
   const [body, setBody] = useState("")
   const [posting, setPosting] = useState(false)
@@ -52,6 +54,11 @@ export const CommentForm: React.FC<{
   }
 
   const errorId = `${id}-error`
+  const countId = `${id}-count`
+  // Counted only near the limit, where it helps; before that it's noise.
+  const left = maxLength - body.length
+  const nearLimit = left <= Math.ceil(maxLength / 10)
+  const describedBy = [error && errorId, nearLimit && countId].filter(Boolean).join(" ")
   return (
     <form className="space-y-2" onSubmit={(event) => void submit(event)}>
       <label htmlFor={id} className="block text-sm">
@@ -63,9 +70,9 @@ export const CommentForm: React.FC<{
         maxLength={maxLength}
         required
         rows={parentId === undefined ? 3 : 2}
-        autoFocus={parentId !== undefined}
+        autoFocus={autoFocus ?? parentId !== undefined}
         aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
+        aria-describedby={describedBy || undefined}
         onChange={(event) => setBody(event.target.value)}
       />
       {error ? (
@@ -73,7 +80,12 @@ export const CommentForm: React.FC<{
           {error}
         </p>
       ) : null}
-      <div className="flex justify-end gap-2">
+      <div className="flex items-center justify-end gap-2">
+        {nearLimit ? (
+          <p id={countId} aria-live="polite" className="text-muted-foreground mr-auto text-xs">
+            {left === 1 ? "1 character left" : `${left} characters left`}
+          </p>
+        ) : null}
         {onCancel ? (
           <Button type="button" variant="ghost" onClick={onCancel}>
             Cancel

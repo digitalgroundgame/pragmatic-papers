@@ -10,11 +10,12 @@
 import type { NextConfig } from "next"
 import { fileURLToPath } from "url"
 
-/** Packages a Worker can't load and the public site never calls. */
+/**
+ * Packages a Worker can't load and the public site never calls. drizzle-kit isn't one:
+ * Payload loads it for migrations and schema push through a runtime `createRequire` that
+ * webpack never sees, so it stays external.
+ */
 export const WORKER_STUBS = [
-  // Migrations and schema push. withPayload leaves it out of Next's traces, so the
-  // Worker bundle couldn't resolve it anyway.
-  "drizzle-kit/api",
   // Native. Uploads, the only callers, run on Coolify.
   "sharp",
   // Only the updateRecommendations job uses it, and it's ~17 MB with its gRPC stack.
@@ -25,7 +26,7 @@ const STUB = fileURLToPath(new URL("./stubs/unavailable.ts", import.meta.url))
 const SENTRY_STUB = fileURLToPath(new URL("./stubs/sentry.ts", import.meta.url))
 
 const isStubbed = (external: unknown): boolean =>
-  typeof external === "string" && (external === "drizzle-kit" || WORKER_STUBS.includes(external))
+  typeof external === "string" && WORKER_STUBS.includes(external)
 
 export function withCloudflare(base: NextConfig): NextConfig {
   return {

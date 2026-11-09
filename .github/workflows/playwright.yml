@@ -270,7 +270,7 @@ jobs:
     # checks the tag). Node is only matched at the major version (24.x)
     # between setup-project and the image's bundled Node.
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
 
     permissions:
       # Reads the run's jobs and downloads the image (wait-for-app-image.sh).
@@ -341,7 +341,7 @@ jobs:
     timeout-minutes: 60
     # The E2E job's container, for its Chromium and the shared setup-e2e action.
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
     permissions:
       actions: read
       contents: read

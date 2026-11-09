@@ -11,15 +11,16 @@ const minutesAgo = (minutes: number): string =>
 
 const loaded = (overrides: Partial<ArticleStats> = {}): ArticleStats => ({
   published: true,
+  narration: true,
   analytics: {
     status: "ok",
     fetchedAt: minutesAgo(12),
     throttled: false,
     reportsUrl: null,
     figures: {
-      allTime: { views: 18_240, readers: 12_310, readersWhoFinished: 5_420 },
-      last30Days: { views: 2_150, readers: 1_640, readersWhoFinished: 690 },
-      last7Days: { views: 310, readers: 240, readersWhoFinished: 101 },
+      allTime: { views: 18_240, readers: 12_310, readersWhoFinished: 5_420, eventCount: 2_830 },
+      last30Days: { views: 2_150, readers: 1_640, readersWhoFinished: 690, eventCount: 410 },
+      last7Days: { views: 310, readers: 240, readersWhoFinished: 101, eventCount: 57 },
       referrers: [
         { source: "google", views: 7_820 },
         { source: "(direct)", views: 4_110 },
@@ -47,14 +48,19 @@ type Story = StoryObj<typeof meta>
 export const Loaded: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    const table = await canvas.findByRole("table", { name: "Readers, from Google Analytics" })
+    const table = await canvas.findByRole("table", { name: "Readers" })
     await expect(within(table).getByRole("row", { name: /Views/ })).toHaveTextContent("18,240")
     // The share who read to the end, out of the readers.
     await expect(within(table).getByRole("row", { name: /Read to the end/ })).toHaveTextContent(
       "5,420 (44%)",
     )
-    await expect(canvas.getByRole("list")).toHaveTextContent("google7,820 views")
-    await expect(canvas.getByText(/Updated 12 minutes ago/)).toBeInTheDocument()
+    // Plays of the article's narration, beside its readers.
+    await expect(within(table).getByRole("row", { name: /Narration plays/ })).toHaveTextContent(
+      "2,830",
+    )
+    const referrers = canvas.getByRole("table", { name: "Where readers came from" })
+    await expect(within(referrers).getByRole("row", { name: /google/ })).toHaveTextContent("7,820")
+    await expect(canvas.getByText(/updated 12 minutes ago/)).toBeInTheDocument()
     await expect(canvas.getByText("14 published")).toBeInTheDocument()
     // Comments opens the comment section under the article on the site.
     await expect(canvas.getByRole("link", { name: "Comments" })).toHaveAttribute(
@@ -130,6 +136,16 @@ export const RefreshTooSoon: Story = {
 }
 
 /** Staging, previews and local dev have no GA property: the rest still shows. */
+/** An article with no narration has no plays to count. */
+export const WithoutNarration: Story = {
+  args: { load: fn<LoadArticleStats>(async () => loaded({ narration: false })) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const table = await canvas.findByRole("table", { name: "Readers" })
+    await expect(within(table).queryByRole("row", { name: /Narration plays/ })).toBeNull()
+  },
+}
+
 export const NoGoogleAnalytics: Story = {
   args: {
     load: fn<LoadArticleStats>(async () =>
@@ -161,6 +177,7 @@ export const Unpublished: Story = {
   args: {
     load: fn<LoadArticleStats>(async () => ({
       published: false,
+      narration: false,
       analytics: null,
       comments: null,
       ranking: null,

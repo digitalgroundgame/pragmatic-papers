@@ -13,6 +13,8 @@ export interface PageRangeFigures {
   readers: number
   /** People who scrolled to 90% of it (`scrolledUsers`, GA's enhanced measurement). */
   readersWhoFinished: number
+  /** Times the query's `countEvent` was sent from the page; 0 when it named none. */
+  eventCount: number
 }
 
 export interface PageReferrer {
@@ -37,6 +39,8 @@ export interface PageFiguresQuery {
   since: string
   /** How many referrers to return. */
   referrerLimit?: number
+  /** A GA event to count on the page per range, such as `narration_play`. */
+  countEvent?: string
 }
 
 export interface GoogleAnalyticsIntegration extends Integration {
@@ -76,8 +80,14 @@ const RANGES = [
 /** The two reports `pageFigures` asks for: the figures per range, and the top referrers. */
 export function pageFiguresRequests(
   propertyId: string,
-  { path, since, referrerLimit = 5 }: PageFiguresQuery,
+  { path, since, referrerLimit = 5, countEvent }: PageFiguresQuery,
 ): RunReportRequest[] {
+  const dateRanges = [
+    { startDate: since, endDate: "today", name: "allTime" },
+    // Today plus the 29 days before it, as GA's own "Last 30 days".
+    { startDate: "29daysAgo", endDate: "today", name: "last30Days" },
+    { startDate: "6daysAgo", endDate: "today", name: "last7Days" },
+  ]
   const pagePath = {
     filter: {
       fieldName: "pagePath",
@@ -87,12 +97,7 @@ export function pageFiguresRequests(
   return [
     {
       property: `properties/${propertyId}`,
-      dateRanges: [
-        { startDate: since, endDate: "today", name: "allTime" },
-        // Today plus the 29 days before it, as GA's own "Last 30 days".
-        { startDate: "29daysAgo", endDate: "today", name: "last30Days" },
-        { startDate: "6daysAgo", endDate: "today", name: "last7Days" },
-      ],
+      dateRanges,
       metrics: [{ name: "screenPageViews" }, { name: "totalUsers" }, { name: "scrolledUsers" }],
       dimensionFilter: pagePath,
     },
@@ -105,6 +110,28 @@ export function pageFiguresRequests(
       orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
       limit: referrerLimit,
     },
+    ...(countEvent
+      ? [
+          {
+            property: `properties/${propertyId}`,
+            dateRanges,
+            metrics: [{ name: "eventCount" }],
+            dimensionFilter: {
+              andGroup: {
+                expressions: [
+                  pagePath,
+                  {
+                    filter: {
+                      fieldName: "eventName",
+                      stringFilter: { matchType: "EXACT" as const, value: countEvent },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        ]
+      : []),
   ]
 }
 
@@ -113,7 +140,24 @@ const toNumber = (value: string | null | undefined): number => {
   return Number.isFinite(n) ? n : 0
 }
 
-const zero = (): PageRangeFigures => ({ views: 0, readers: 0, readersWhoFinished: 0 })
+const zero = (): PageRangeFigures => ({
+  views: 0,
+  readers: 0,
+  readersWhoFinished: 0,
+  eventCount: 0,
+})
+
+/** A report's rows by the range each counts. */
+function rangeRows(report: RunReportResponse | null | undefined) {
+  const rangeColumn = (report?.dimensionHeaders ?? []).findIndex(
+    (header) => header.name === "dateRange",
+  )
+  return (report?.rows ?? []).flatMap((row) => {
+    const name = row.dimensionValues?.[rangeColumn === -1 ? 0 : rangeColumn]?.value
+    const range = RANGES.find((r) => r.name === name)
+    return range ? [{ range: range.key, metrics: row.metricValues ?? [] }] : []
+  })
+}
 
 /**
  * The reports `pageFiguresRequests` describes, as figures. A range with no row had no views.
@@ -122,6 +166,7 @@ const zero = (): PageRangeFigures => ({ views: 0, readers: 0, readersWhoFinished
 export function toPageFigures(
   figuresReport: RunReportResponse | null | undefined,
   referrersReport: RunReportResponse | null | undefined,
+  eventsReport?: RunReportResponse | null,
 ): PageFigures {
   const figures: PageFigures = {
     allTime: zero(),
@@ -129,19 +174,16 @@ export function toPageFigures(
     last7Days: zero(),
     referrers: [],
   }
-  const rangeColumn = (figuresReport?.dimensionHeaders ?? []).findIndex(
-    (header) => header.name === "dateRange",
-  )
-  for (const row of figuresReport?.rows ?? []) {
-    const name = row.dimensionValues?.[rangeColumn === -1 ? 0 : rangeColumn]?.value
-    const range = RANGES.find((r) => r.name === name)
-    if (!range) continue
-    const [views, readers, finished] = row.metricValues ?? []
-    figures[range.key] = {
+  for (const { range, metrics } of rangeRows(figuresReport)) {
+    const [views, readers, finished] = metrics
+    Object.assign(figures[range], {
       views: toNumber(views?.value),
       readers: toNumber(readers?.value),
       readersWhoFinished: toNumber(finished?.value),
-    }
+    })
+  }
+  for (const { range, metrics } of rangeRows(eventsReport)) {
+    figures[range].eventCount = toNumber(metrics[0]?.value)
   }
   for (const row of referrersReport?.rows ?? []) {
     const source = row.dimensionValues?.[0]?.value
@@ -192,8 +234,8 @@ export function googleAnalyticsProperty(
         property: `properties/${property}`,
         requests: pageFiguresRequests(property, query),
       })
-      const [figuresReport, referrersReport] = response.reports ?? []
-      return toPageFigures(figuresReport, referrersReport)
+      const [figuresReport, referrersReport, eventsReport] = response.reports ?? []
+      return toPageFigures(figuresReport, referrersReport, eventsReport)
     },
   }
 }

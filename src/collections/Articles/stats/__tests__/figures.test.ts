@@ -5,9 +5,9 @@ import type { PageFigures } from "@/integrations/google/analytics"
 import { createFiguresCache } from "../figures"
 
 const figures = (views: number): PageFigures => ({
-  allTime: { views, readers: 0, readersWhoFinished: 0 },
-  last30Days: { views, readers: 0, readersWhoFinished: 0 },
-  last7Days: { views, readers: 0, readersWhoFinished: 0 },
+  allTime: { views, readers: 0, readersWhoFinished: 0, eventCount: 0 },
+  last30Days: { views, readers: 0, readersWhoFinished: 0, eventCount: 0 },
+  last7Days: { views, readers: 0, readersWhoFinished: 0, eventCount: 0 },
   referrers: [],
 })
 

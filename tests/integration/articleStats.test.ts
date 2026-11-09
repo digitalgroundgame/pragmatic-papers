@@ -37,6 +37,10 @@ vi.mock("@google-analytics/data", () => ({
             {
               rows: [{ dimensionValues: [{ value: "google" }], metricValues: [{ value: "60" }] }],
             },
+            {
+              dimensionHeaders: [{ name: "dateRange" }],
+              rows: [{ dimensionValues: [{ value: "allTime" }], metricValues: [{ value: "12" }] }],
+            },
           ],
         },
       ]
@@ -121,6 +125,12 @@ describe("who sees an article's stats", () => {
     const narrated = await payload.findByID({ collection: "articles", id: article.id, depth: 0 })
     expect(await canSeeArticleStats(payload, narrator, narrated)).toBe(true)
     expect(await canSeeArticleStats(payload, otherNarrator, narrated)).toBe(false)
+
+    // The narrator's tab shows the narration's plays.
+    const { status, body } = await stats(narrator, article.id)
+    expect(status).toBe(200)
+    expect(body.narration).toBe(true)
+    expect((await stats(otherNarrator, article.id)).status).toBe(403)
   })
 
   it("flags the article for the tab when it's opened, not in lists", async () => {
@@ -155,7 +165,13 @@ describe("GET /api/articles/:id/stats", () => {
     const article = await createArticle({ authors: [writer.id], _status: "draft" })
     const { status, body } = await stats(writer, article.id)
     expect(status).toBe(200)
-    expect(body).toEqual({ published: false, analytics: null, comments: null, ranking: null })
+    expect(body).toEqual({
+      published: false,
+      narration: false,
+      analytics: null,
+      comments: null,
+      ranking: null,
+    })
   })
 
   it("says GA isn't connected where its credentials aren't set", async () => {
@@ -180,12 +196,15 @@ describe("GET /api/articles/:id/stats", () => {
       // Writers don't get the link to GA's own reports; editors do.
       reportsUrl: null,
       figures: {
-        allTime: { views: 100, readers: 80, readersWhoFinished: 40 },
+        allTime: { views: 100, readers: 80, readersWhoFinished: 40, eventCount: 12 },
         last7Days: { views: 0 },
         referrers: [{ source: "google", views: 60 }],
       },
     })
     expect(JSON.stringify(ga.calls[0])).toContain(`/articles/${article.slug}`)
+    // Narration plays are counted from the player's GA event.
+    expect(JSON.stringify(ga.calls[0])).toContain('"value":"narration_play"')
+    expect(first.body.narration).toBe(false)
 
     // Opening it again reads the cache.
     await stats(writer, article.id)

@@ -1,6 +1,7 @@
 import type { Endpoint, PayloadRequest } from "payload"
 
 import { isEditor } from "@/access/roles"
+import { NARRATION_PLAY_EVENT } from "@/components/NarrationPlayer/events"
 import { googleAnalytics, integrationStatus } from "@/integrations"
 import type { PageFigures } from "@/integrations/google/analytics"
 import type { User } from "@/payload-types"
@@ -29,6 +30,8 @@ export type GoogleAnalyticsStats =
 export interface ArticleStats {
   /** False for an article that's never been published: there's nothing to count yet. */
   published: boolean
+  /** Whether the article has narration audio, so the tab shows its plays. */
+  narration: boolean
   /** Null until the article is published. */
   analytics: GoogleAnalyticsStats | null
   /** Null while the comments switch is off. */
@@ -66,7 +69,7 @@ async function analyticsFor(
   try {
     const result = await articleFiguresCache.get(
       `${article.id}:${path}:${since}`,
-      () => googleAnalytics.pageFigures({ path, since }),
+      () => googleAnalytics.pageFigures({ path, since, countEvent: NARRATION_PLAY_EVENT }),
       { refresh },
     )
     return {
@@ -153,7 +156,13 @@ async function statsHandler(req: PayloadRequest, refresh: boolean): Promise<Resp
 
   const published = article._status === "published" && Boolean(article.slug)
   if (!published) {
-    const body: ArticleStats = { published: false, analytics: null, comments: null, ranking: null }
+    const body: ArticleStats = {
+      published: false,
+      narration: false,
+      analytics: null,
+      comments: null,
+      ranking: null,
+    }
     return Response.json(body, { headers: { "Cache-Control": "private, no-store" } })
   }
 
@@ -166,7 +175,8 @@ async function statsHandler(req: PayloadRequest, refresh: boolean): Promise<Resp
     commentsFor(req, id, article.slug as string),
     rankingFor(req, id),
   ])
-  const body: ArticleStats = { published: true, analytics, comments, ranking }
+  const narration = relationshipId(article.narration) !== null
+  const body: ArticleStats = { published: true, narration, analytics, comments, ranking }
   return Response.json(body, { headers: { "Cache-Control": "private, no-store" } })
 }
 

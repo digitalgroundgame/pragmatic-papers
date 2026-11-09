@@ -3,10 +3,18 @@
 import React, { useCallback, useEffect, useState } from "react"
 
 import type { ArticleStats, GoogleAnalyticsStats } from "@/collections/Articles/stats/endpoint"
+import { Button } from "@/components/ui/button"
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import type { PageRangeFigures } from "@/integrations/google/analytics"
 import { formatTimeAgo } from "@/utilities/formatDate"
-
-import "./ArticleStats.css"
 
 /** Fetches the article's stats; `refresh` asks GA again rather than reading the cache. */
 export type LoadArticleStats = (refresh: boolean) => Promise<ArticleStats>
@@ -20,132 +28,199 @@ const COLUMNS = [
   { key: "allTime", label: "Since publication" },
 ] as const
 
-const ROWS: { key: keyof PageRangeFigures; label: string }[] = [
+interface Row {
+  key: keyof PageRangeFigures
+  label: string
+}
+
+const ROWS: Row[] = [
   { key: "views", label: "Views" },
   { key: "readers", label: "Readers" },
   { key: "readersWhoFinished", label: "Read to the end" },
 ]
 
+const NARRATION_ROW: Row = { key: "eventCount", label: "Narration plays" }
+
+/** Cells flush with the card's own padding, so every section lines up. */
+const EDGE = "first:pl-0 last:pr-0"
+
 const finishedShare = (range: PageRangeFigures): string | null =>
   range.readers > 0 ? percent.format(range.readersWhoFinished / range.readers) : null
 
-function AnalyticsSection({
+const Note = ({ children, ...props }: React.ComponentProps<"p">): React.ReactNode => (
+  <p className="text-muted-foreground m-0 text-sm" {...props}>
+    {children}
+  </p>
+)
+
+const Problem = ({ children }: { children: React.ReactNode }): React.ReactNode => (
+  <p className="text-destructive m-0 text-sm" role="alert">
+    {children}
+  </p>
+)
+
+function ReadersCard({
   analytics,
+  narration,
   refreshing,
   onRefresh,
 }: {
   analytics: GoogleAnalyticsStats
+  narration: boolean
   refreshing: boolean
   onRefresh: () => void
 }): React.ReactNode {
+  const refresh = (
+    <CardAction>
+      <Button variant="outline" size="sm" onClick={onRefresh} disabled={refreshing}>
+        {refreshing ? "Refreshing…" : "Refresh"}
+      </Button>
+    </CardAction>
+  )
+
   if (analytics.status === "unconfigured") {
     return (
-      <p className="article-stats__note">
-        Google Analytics isn&apos;t connected on this site, so there are no reader figures here.
-        Only the production site counts readers.
-      </p>
+      <Card>
+        <CardHeader>
+          <CardTitle>Readers</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Note>
+            Google Analytics isn&apos;t connected on this site, so there are no reader figures here.
+            Only the production site counts readers.
+          </Note>
+        </CardContent>
+      </Card>
     )
   }
 
-  const refreshButton = (
-    <button
-      type="button"
-      className="article-stats__refresh"
-      onClick={onRefresh}
-      disabled={refreshing}
-    >
-      {refreshing ? "Refreshing…" : "Refresh"}
-    </button>
-  )
-
   if (analytics.status === "error") {
     return (
-      <div className="article-stats__footer">
-        <p className="article-stats__error" role="alert">
-          Google Analytics couldn&apos;t be reached. Try again in a moment.
-        </p>
-        {refreshButton}
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Readers</CardTitle>
+          {refresh}
+        </CardHeader>
+        <CardContent>
+          <Problem>Google Analytics couldn&apos;t be reached. Try again in a moment.</Problem>
+        </CardContent>
+      </Card>
     )
   }
 
   const { figures } = analytics
+  const rows = narration ? [...ROWS, NARRATION_ROW] : ROWS
   return (
     <>
-      <table className="article-stats__table">
-        <caption>Readers, from Google Analytics</caption>
-        <thead>
-          <tr>
-            <td />
-            {COLUMNS.map((column) => (
-              <th key={column.key} scope="col">
-                {column.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {ROWS.map((row) => (
-            <tr key={row.key}>
-              <th scope="row">{row.label}</th>
-              {COLUMNS.map((column) => {
-                const range = figures[column.key]
-                const share = row.key === "readersWhoFinished" ? finishedShare(range) : null
-                return (
-                  <td key={column.key}>
-                    {number.format(range[row.key])}
-                    {share && <span className="article-stats__share"> ({share})</span>}
-                  </td>
-                )
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <Card>
+        <CardHeader>
+          <CardTitle id="article-stats-readers">Readers</CardTitle>
+          {refresh}
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Table aria-labelledby="article-stats-readers" className="tabular-nums">
+            <TableHeader>
+              <TableRow>
+                <TableHead className={EDGE}>
+                  <span className="sr-only">Figure</span>
+                </TableHead>
+                {COLUMNS.map((column) => (
+                  <TableHead
+                    key={column.key}
+                    className={`text-muted-foreground text-right font-normal ${EDGE}`}
+                  >
+                    {column.label}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.key}>
+                  <TableHead scope="row" className={`font-normal ${EDGE}`}>
+                    {row.label}
+                  </TableHead>
+                  {COLUMNS.map((column) => {
+                    const range = figures[column.key]
+                    const share = row.key === "readersWhoFinished" ? finishedShare(range) : null
+                    return (
+                      <TableCell key={column.key} className={`text-right ${EDGE}`}>
+                        {number.format(range[row.key])}
+                        {share && <span className="text-muted-foreground"> ({share})</span>}
+                      </TableCell>
+                    )
+                  })}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <Note>
+            From Google Analytics, updated {formatTimeAgo(analytics.fetchedAt)}. It doesn&apos;t
+            count readers who block it, and can take a few hours to catch up.
+            {analytics.reportsUrl && (
+              <>
+                {" "}
+                <a
+                  href={analytics.reportsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-foreground underline"
+                >
+                  Open Google Analytics
+                </a>
+              </>
+            )}
+          </Note>
+          {analytics.throttled && (
+            <Note role="status">
+              These were fetched less than a minute ago, so Refresh kept them. Try again shortly.
+            </Note>
+          )}
+        </CardContent>
+      </Card>
 
       {figures.referrers.length > 0 && (
-        <section className="article-stats__section" aria-labelledby="article-stats-referrers">
-          <h4 id="article-stats-referrers" className="article-stats__heading">
-            Where readers came from
-          </h4>
-          <ol className="article-stats__referrers">
-            {figures.referrers.map((referrer) => (
-              <li key={referrer.source}>
-                <span>{referrer.source}</span>
-                <span>{number.format(referrer.views)} views</span>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
-
-      <div className="article-stats__footer">
-        <p className="article-stats__note">
-          Updated {formatTimeAgo(analytics.fetchedAt)}. Google Analytics doesn&apos;t count readers
-          who block it, and can take a few hours to catch up.
-          {analytics.reportsUrl && (
-            <>
-              {" "}
-              <a href={analytics.reportsUrl} target="_blank" rel="noopener noreferrer">
-                Open Google Analytics
-              </a>
-            </>
-          )}
-        </p>
-        {refreshButton}
-      </div>
-      {analytics.throttled && (
-        <p className="article-stats__note" role="status">
-          These were fetched less than a minute ago, so Refresh kept them. Try again shortly.
-        </p>
+        <Card>
+          <CardHeader>
+            <CardTitle id="article-stats-referrers">Where readers came from</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table aria-labelledby="article-stats-referrers" className="tabular-nums">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className={`text-muted-foreground font-normal ${EDGE}`}>
+                    Source
+                  </TableHead>
+                  <TableHead className={`text-muted-foreground text-right font-normal ${EDGE}`}>
+                    Views since publication
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {figures.referrers.map((referrer) => (
+                  <TableRow key={referrer.source}>
+                    <TableCell className={EDGE}>{referrer.source}</TableCell>
+                    <TableCell className={`text-right ${EDGE}`}>
+                      {number.format(referrer.views)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
     </>
   )
 }
 
+function Shell({ children }: { children: React.ReactNode }): React.ReactNode {
+  return <div className="flex max-w-3xl flex-col gap-4">{children}</div>
+}
+
 /**
  * An article's Stats tab: GA's reader figures (cached for an hour, with a Refresh button),
- * its comments and its place in the recommendations.
+ * its narration plays, its comments and its place in the recommendations.
  */
 export function ArticleStatsView({ load }: { load: LoadArticleStats }): React.ReactNode {
   const [stats, setStats] = useState<ArticleStats | null>(null)
@@ -180,88 +255,90 @@ export function ArticleStatsView({ load }: { load: LoadArticleStats }): React.Re
 
   if (failed && !stats) {
     return (
-      <div className="article-stats">
-        <p className="article-stats__error" role="alert">
-          The stats couldn&apos;t be loaded.
-        </p>
-        <button
-          type="button"
-          className="article-stats__refresh"
-          onClick={() => void fetchStats(false)}
-        >
-          Try again
-        </button>
-      </div>
+      <Shell>
+        <Problem>The stats couldn&apos;t be loaded.</Problem>
+        <div>
+          <Button variant="outline" size="sm" onClick={() => void fetchStats(false)}>
+            Try again
+          </Button>
+        </div>
+      </Shell>
     )
   }
 
   if (!stats) {
     return (
-      <div className="article-stats">
-        <p className="article-stats__note" role="status">
-          Loading stats…
-        </p>
-      </div>
+      <Shell>
+        <Note role="status">Loading stats…</Note>
+      </Shell>
     )
   }
 
   if (!stats.published) {
     return (
-      <div className="article-stats">
-        <p className="article-stats__note">Stats appear once the article is published.</p>
-      </div>
+      <Shell>
+        <Note>Stats appear once the article is published.</Note>
+      </Shell>
     )
   }
 
   return (
-    <div className="article-stats">
+    <Shell>
       {stats.analytics && (
-        <AnalyticsSection
+        <ReadersCard
           analytics={stats.analytics}
+          narration={stats.narration}
           refreshing={refreshing}
           onRefresh={() => void fetchStats(true)}
         />
       )}
-      {failed && (
-        <p className="article-stats__error" role="alert">
-          Refresh failed. These are the figures from before.
-        </p>
-      )}
+      {failed && <Problem>Refresh failed. These are the figures from before.</Problem>}
 
-      <dl className="article-stats__facts">
-        {stats.comments && (
-          <div>
-            <dt>
-              <a href={stats.comments.url} target="_blank" rel="noopener noreferrer">
-                Comments
-              </a>
-            </dt>
-            <dd>
-              {number.format(stats.comments.published)} published
-              {stats.comments.held !== undefined && (
-                <>, {number.format(stats.comments.held)} held by a check</>
-              )}
-              {stats.comments.hidden !== undefined && (
-                <>, {number.format(stats.comments.hidden)} hidden</>
-              )}
-              {stats.comments.moderateUrl && (
-                <>
-                  {" · "}
-                  <a href={stats.comments.moderateUrl}>Moderate</a>
-                </>
-              )}
-            </dd>
-          </div>
-        )}
-        <div>
-          <dt>Recommendations</dt>
-          <dd>
-            {stats.ranking
-              ? `Number ${stats.ranking.position} of the ${stats.ranking.of} articles recommended to readers`
-              : "Not among the articles recommended to readers right now"}
-          </dd>
-        </div>
-      </dl>
-    </div>
+      <Card>
+        <CardContent>
+          <dl className="m-0 grid gap-4">
+            {stats.comments && (
+              <div>
+                <dt className="font-medium">
+                  <a
+                    href={stats.comments.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    Comments
+                  </a>
+                </dt>
+                <dd className="m-0 mt-1">
+                  {number.format(stats.comments.published)} published
+                  {stats.comments.held !== undefined && (
+                    <>, {number.format(stats.comments.held)} held by a check</>
+                  )}
+                  {stats.comments.hidden !== undefined && (
+                    <>, {number.format(stats.comments.hidden)} hidden</>
+                  )}
+                  {stats.comments.moderateUrl && (
+                    <>
+                      {" · "}
+                      <a href={stats.comments.moderateUrl} className="underline">
+                        Moderate
+                      </a>
+                    </>
+                  )}
+                </dd>
+              </div>
+            )}
+            <div>
+              <dt className="font-medium">Recommendations</dt>
+              <dd className="m-0 mt-1">
+                {stats.ranking
+                  ? `Number ${stats.ranking.position} of the ${stats.ranking.of} articles recommended to readers`
+                  : "Not among the articles recommended to readers right now"}
+              </dd>
+            </div>
+          </dl>
+        </CardContent>
+      </Card>
+    </Shell>
   )
 }

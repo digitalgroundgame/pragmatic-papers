@@ -13,6 +13,11 @@ const figuresReport = {
   rows: [row(["allTime"], ["1200", "900", "450"]), row(["last30Days"], ["300", "250", "100"])],
 }
 
+const eventsReport = {
+  dimensionHeaders: [{ name: "dateRange" }],
+  rows: [row(["allTime"], ["75"]), row(["last7Days"], ["4"])],
+}
+
 const referrersReport = {
   dimensionHeaders: [{ name: "sessionSource" }],
   rows: [row(["google"], ["600"]), row(["(direct)"], ["400"]), row([""], ["5"])],
@@ -60,13 +65,43 @@ describe("pageFiguresRequests", () => {
   })
 })
 
+describe("pageFiguresRequests with countEvent", () => {
+  it("adds a report counting the event on the page per range", () => {
+    const requests = pageFiguresRequests("123", {
+      path: "/articles/a-slug",
+      since: "2026-10-01",
+      countEvent: "narration_play",
+    })
+    expect(requests).toHaveLength(3)
+    expect(requests[2]).toMatchObject({
+      metrics: [{ name: "eventCount" }],
+      dateRanges: requests[0]?.dateRanges,
+      dimensionFilter: {
+        andGroup: {
+          expressions: [
+            { filter: { fieldName: "pagePath" } },
+            {
+              filter: {
+                fieldName: "eventName",
+                stringFilter: { matchType: "EXACT", value: "narration_play" },
+              },
+            },
+          ],
+        },
+      },
+    })
+    // Without one, only the two reports.
+    expect(pageFiguresRequests("123", { path: "/a", since: "2026-10-01" })).toHaveLength(2)
+  })
+})
+
 describe("toPageFigures", () => {
   it("reads each range by name and lists the referrers", () => {
-    expect(toPageFigures(figuresReport, referrersReport)).toEqual({
-      allTime: { views: 1200, readers: 900, readersWhoFinished: 450 },
-      last30Days: { views: 300, readers: 250, readersWhoFinished: 100 },
-      // No row: nobody read it in the last week.
-      last7Days: { views: 0, readers: 0, readersWhoFinished: 0 },
+    expect(toPageFigures(figuresReport, referrersReport, eventsReport)).toEqual({
+      allTime: { views: 1200, readers: 900, readersWhoFinished: 450, eventCount: 75 },
+      last30Days: { views: 300, readers: 250, readersWhoFinished: 100, eventCount: 0 },
+      // No row: nobody read it in the last week, though a play still counts.
+      last7Days: { views: 0, readers: 0, readersWhoFinished: 0, eventCount: 4 },
       referrers: [
         { source: "google", views: 600 },
         { source: "(direct)", views: 400 },
@@ -76,9 +111,9 @@ describe("toPageFigures", () => {
 
   it("is all zeroes when GA sends no rows", () => {
     expect(toPageFigures({}, undefined)).toEqual({
-      allTime: { views: 0, readers: 0, readersWhoFinished: 0 },
-      last30Days: { views: 0, readers: 0, readersWhoFinished: 0 },
-      last7Days: { views: 0, readers: 0, readersWhoFinished: 0 },
+      allTime: { views: 0, readers: 0, readersWhoFinished: 0, eventCount: 0 },
+      last30Days: { views: 0, readers: 0, readersWhoFinished: 0, eventCount: 0 },
+      last7Days: { views: 0, readers: 0, readersWhoFinished: 0, eventCount: 0 },
       referrers: [],
     })
   })

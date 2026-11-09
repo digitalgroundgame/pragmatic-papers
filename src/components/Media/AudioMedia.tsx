@@ -8,6 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { sendGAEvent } from "@next/third-parties/google"
+
 import { cn } from "@/utilities/utils"
 import { useAudioGain } from "./useAudioGain"
 import type { AudioMediaType } from "./types"
@@ -270,6 +272,11 @@ export interface AudioMediaProps extends Pick<
   onDurationChange?: (duration: number) => void
   /** Extra content shown above the built-in settings, e.g. a narrator credit. */
   extraSettings?: React.ReactNode
+  /**
+   * A Google Analytics event sent the first time playback starts on this page, e.g. a
+   * narration play. Data rather than a callback, so a Server Component can pass it.
+   */
+  playEvent?: { name: string; params?: Record<string, string> }
   className?: string
 }
 
@@ -277,10 +284,12 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
   media,
   onDurationChange,
   extraSettings,
+  playEvent,
   variant = "default",
   className,
 }) => {
   const audioRef = useRef<HTMLAudioElement>(null)
+  const playReported = useRef(false)
   const { connect, setGain } = useAudioGain(audioRef)
   const durationRef = useRef(media.duration ?? 0)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -366,10 +375,16 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
       connect()
       void audio
         .play()
-        .then(() => setIsPlaying(true))
+        .then(() => {
+          setIsPlaying(true)
+          if (playEvent && !playReported.current) {
+            playReported.current = true
+            sendGAEvent("event", playEvent.name, playEvent.params ?? {})
+          }
+        })
         .catch(() => setIsPlaying(false))
     }
-  }, [isPlaying, connect])
+  }, [isPlaying, connect, playEvent])
 
   const handleSeek = useCallback((seconds: number) => {
     const audio = audioRef.current

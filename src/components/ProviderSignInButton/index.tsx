@@ -30,6 +30,8 @@ export interface ProviderSignInButtonProps {
   label: string
   onClick: () => void
   disabled?: boolean
+  /** Just the logo, in a square: for a row of them beside a line of text. */
+  iconOnly?: boolean
   className?: string
 }
 
@@ -39,22 +41,36 @@ export const ProviderSignInButton: React.FC<ProviderSignInButtonProps> = ({
   label,
   onClick,
   disabled,
+  iconOnly = false,
   className,
-}) => (
-  <Button
-    type="button"
-    variant="outline"
-    size="lg"
-    disabled={disabled}
-    onClick={onClick}
-    data-provider={provider}
-    className={cn("h-10 gap-3 px-4 font-medium", isBrand(provider) && BRANDS[provider], className)}
-  >
-    {isBrand(provider) ? (
-      <span className="inline-flex size-5 shrink-0 [&_svg]:size-full">
-        <ProviderLogo provider={provider} />
-      </span>
-    ) : null}
-    Sign in with {label}
-  </Button>
-)
+}) => {
+  const logo = isBrand(provider) ? (
+    <span className="inline-flex size-5 shrink-0 [&_svg]:size-full">
+      <ProviderLogo provider={provider} />
+    </span>
+  ) : null
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size={iconOnly && logo ? "icon-lg" : "lg"}
+      disabled={disabled}
+      onClick={onClick}
+      data-provider={provider}
+      title={iconOnly && logo ? `Sign in with ${label}` : undefined}
+      className={cn(
+        "font-medium",
+        iconOnly && logo ? "size-10" : "h-10 justify-start gap-3 px-4",
+        isBrand(provider) && BRANDS[provider],
+        className,
+      )}
+    >
+      {logo}
+      {iconOnly && logo ? (
+        <span className="sr-only">Sign in with {label}</span>
+      ) : (
+        <>Sign in with {label}</>
+      )}
+    </Button>
+  )
+}

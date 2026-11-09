@@ -58,6 +58,7 @@ export const commentThread = (overrides: Partial<CommentThread> = {}): CommentTh
   comments: threadComments,
   viewer: null,
   providers: [
+    { id: "destiny", label: "Destiny.gg" },
     { id: "google", label: "Google" },
     { id: "discord", label: "Discord" },
   ],

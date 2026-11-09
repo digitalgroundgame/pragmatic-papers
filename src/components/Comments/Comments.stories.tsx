@@ -52,6 +52,12 @@ function serve(
   }
 }
 
+/** Opens the one-line top box into the form and returns its box. */
+async function openComposer(canvas: ReturnType<typeof within>): Promise<HTMLElement> {
+  await userEvent.click(await canvas.findByRole("button", { name: "Add a comment" }))
+  return canvas.getByRole("textbox", { name: /Commenting as Ada Reader/ })
+}
+
 const signedIn = (overrides: Partial<CommentThread> = {}) =>
   commentThread({ viewer: commentViewer, providers: [], ...overrides })
 
@@ -87,12 +93,16 @@ export const SignedIn: Story = {
   beforeEach: serve(signedIn()),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const box = await canvas.findByRole("textbox", { name: /Commenting as Ada Reader/ })
+    const box = await openComposer(canvas)
     await userEvent.type(box, "Thanks for writing this.")
     await userEvent.click(canvas.getByRole("button", { name: "Post comment" }))
     await expect(await canvas.findByText("Thanks for writing this.")).toBeInTheDocument()
     await waitFor(() => expect(box).toHaveValue(""))
-    await expect(canvas.getByRole("link", { name: "Your account" })).toHaveAttribute(
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Account menu for Ada Reader" }),
+    )
+    const page = within(canvasElement.ownerDocument.body)
+    await expect(await page.findByRole("menuitem", { name: "Your account" })).toHaveAttribute(
       "href",
       "/account",
     )
@@ -127,7 +137,7 @@ export const Held: Story = {
   beforeEach: serve(signedIn(), { held: "More than 2 links" }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const box = await canvas.findByRole("textbox", { name: /Commenting as/ })
+    const box = await openComposer(canvas)
     await userEvent.type(box, "Links: a.test b.test c.test")
     await userEvent.click(canvas.getByRole("button", { name: "Post comment" }))
     await expect(await canvas.findByText(/waiting for a moderator \(more than/)).toBeInTheDocument()
@@ -269,7 +279,7 @@ export const NearLimit: Story = {
   beforeEach: serve(signedIn({ maxLength: 40 })),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const box = await canvas.findByRole("textbox", { name: /Commenting as/ })
+    const box = await openComposer(canvas)
     await userEvent.type(box, "This is getting very close to the end")
     await expect(canvas.getByText("3 characters left")).toBeInTheDocument()
   },

@@ -28,15 +28,34 @@ export const Destiny: Story = { args: { provider: "destiny", label: "Destiny.gg"
 /** A provider without its own look gets the plain outline button. */
 export const Other: Story = { args: { provider: "github", label: "GitHub" } }
 
-/** Every provider, side by side, as the comment box shows them. */
+/** Every provider, one above the other at one width, as the account page shows them. */
 export const All: Story = {
   render: (args) => (
-    <div className="flex flex-wrap gap-2">
+    <div className="grid w-72 gap-2">
+      <ProviderSignInButton {...args} provider="destiny" label="Destiny.gg" />
       <ProviderSignInButton {...args} provider="google" label="Google" />
       <ProviderSignInButton {...args} provider="discord" label="Discord" />
-      <ProviderSignInButton {...args} provider="destiny" label="Destiny.gg" />
     </div>
   ),
+}
+
+/** Logos only, in a row, as the comment box shows them. */
+export const IconOnly: Story = {
+  args: { iconOnly: true },
+  render: (args) => (
+    <div className="flex gap-2">
+      <ProviderSignInButton {...args} provider="destiny" label="Destiny.gg" />
+      <ProviderSignInButton {...args} provider="google" label="Google" />
+      <ProviderSignInButton {...args} provider="discord" label="Discord" />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole("button", { name: "Sign in with Destiny.gg" })).toHaveAttribute(
+      "title",
+      "Sign in with Destiny.gg",
+    )
+  },
 }
 
 export const Disabled: Story = {

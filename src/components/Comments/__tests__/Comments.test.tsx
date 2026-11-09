@@ -35,6 +35,12 @@ class InViewObserver {
 }
 
 const fetchMock = vi.fn<typeof fetch>()
+
+/** Opens the one-line top box into the form, once the thread is in, and returns its box. */
+async function openComposer(): Promise<HTMLElement> {
+  fireEvent.click(await screen.findByRole("button", { name: "Add a comment" }))
+  return screen.getByRole("textbox", { name: /Commenting as Ada Reader/ })
+}
 const signedIn = commentThread({ viewer: commentViewer, providers: [] })
 
 const posted = (body: string, overrides: Record<string, unknown> = {}) =>
@@ -93,7 +99,7 @@ describe("Comments", () => {
     fetchMock.mockResolvedValueOnce(Response.json(signedIn)).mockResolvedValueOnce(posted("Hi"))
 
     render(<Comments articleId={7} />)
-    const box = await screen.findByRole("textbox", { name: /Commenting as Ada Reader/ })
+    const box = await openComposer()
     fireEvent.change(box, { target: { value: "Hi" } })
     fireEvent.click(screen.getByRole("button", { name: "Post comment" }))
 
@@ -135,7 +141,7 @@ describe("Comments", () => {
 
     render(<Comments articleId={7} />)
 
-    await screen.findByRole("textbox", { name: /Commenting as/ })
+    await openComposer()
     expect(screen.getAllByText("Replies are limited to 1 levels here.")).toHaveLength(2)
     // The two top-level comments still take replies; the removed one doesn't.
     expect(screen.getAllByRole("button", { name: "Reply" })).toHaveLength(1)
@@ -153,7 +159,7 @@ describe("Comments", () => {
     )
 
     render(<Comments articleId={7} />)
-    const box = await screen.findByRole("textbox", { name: /Commenting as/ })
+    const box = await openComposer()
     fireEvent.change(box, { target: { value: "Spam?" } })
     fireEvent.click(screen.getByRole("button", { name: "Post comment" }))
 
@@ -183,7 +189,7 @@ describe("Comments", () => {
       .mockResolvedValueOnce(Response.json({ message: "Give it a few seconds." }, { status: 429 }))
 
     render(<Comments articleId={7} />)
-    const box = await screen.findByRole("textbox", { name: /Commenting as/ })
+    const box = await openComposer()
     fireEvent.change(box, { target: { value: "Again" } })
     fireEvent.click(screen.getByRole("button", { name: "Post comment" }))
 
@@ -301,7 +307,7 @@ describe("Comments", () => {
     // Newest first: the removed comment from 10 hours ago, then the one from 30.
     expect(topLevel()[0]).toHaveTextContent("This comment was removed.")
 
-    fireEvent.change(screen.getByRole("textbox", { name: /Commenting as/ }), {
+    fireEvent.change(await openComposer(), {
       target: { value: "First!" },
     })
     fireEvent.click(screen.getByRole("button", { name: "Post comment" }))
@@ -313,7 +319,7 @@ describe("Comments", () => {
     fetchMock.mockResolvedValue(Response.json({ ...signedIn, maxLength: 20 }))
 
     render(<Comments articleId={7} />)
-    const box = await screen.findByRole("textbox", { name: /Commenting as/ })
+    const box = await openComposer()
     fireEvent.change(box, { target: { value: "Short" } })
     expect(screen.queryByText(/characters? left/)).not.toBeInTheDocument()
     fireEvent.change(box, { target: { value: "Nearly at the end!" } })
@@ -325,7 +331,7 @@ describe("Comments", () => {
     fetchMock.mockResolvedValue(Response.json({ ...signedIn, maxLength: 10_000 }))
 
     render(<Comments articleId={7} />)
-    const box = await screen.findByRole("textbox", { name: /Commenting as/ })
+    const box = await openComposer()
     fireEvent.change(box, { target: { value: "x".repeat(9_000) } })
     expect(screen.queryByText(/characters? left/)).not.toBeInTheDocument()
     fireEvent.change(box, { target: { value: "x".repeat(9_600) } })
@@ -339,7 +345,7 @@ describe("Comments", () => {
       .mockResolvedValueOnce(posted("Hi"))
 
     render(<Comments articleId={7} slug="zoning" />)
-    const box = await screen.findByRole("textbox", { name: /Commenting as Ada Reader/ })
+    const box = await openComposer()
     fireEvent.change(box, { target: { value: "Hi" } })
     fireEvent.click(screen.getByRole("button", { name: "Post comment" }))
     await screen.findByRole("alert")
@@ -408,7 +414,7 @@ describe("Comments", () => {
 
     render(<Comments articleId={7} slug="zoning" />)
 
-    await screen.findByRole("textbox", { name: /Commenting as/ })
+    await openComposer()
     expect(sendGAEvent).toHaveBeenCalledWith("event", "login", {
       method: "google",
       content_type: "comment",
@@ -539,5 +545,30 @@ describe("Comments", () => {
       expect(screen.queryByRole("link", { name: "Back to all comments" })).not.toBeInTheDocument()
       expect(document.querySelector("[data-highlighted]")).not.toBeInTheDocument()
     })
+  })
+
+  it("opens the top box into the form, focused, and folds it back keeping the draft", async () => {
+    fetchMock.mockResolvedValue(Response.json(signedIn))
+
+    render(<Comments articleId={7} />)
+    const box = await openComposer()
+    await waitFor(() => expect(box).toHaveFocus())
+    expect(screen.queryByRole("button", { name: "Add a comment" })).not.toBeInTheDocument()
+    fireEvent.change(box, { target: { value: "Half a thought" } })
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    expect(box).not.toBeVisible()
+    expect(await openComposer()).toHaveValue("Half a thought")
+  })
+
+  it("puts the reader's account and sign-out behind their avatar", async () => {
+    fetchMock.mockResolvedValue(Response.json(signedIn))
+
+    render(<Comments articleId={7} />)
+
+    expect(
+      await screen.findByRole("button", { name: "Account menu for Ada Reader" }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Your account" })).not.toBeInTheDocument()
   })
 })

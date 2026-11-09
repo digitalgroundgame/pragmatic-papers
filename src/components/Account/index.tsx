@@ -63,7 +63,7 @@ const SignIn: React.FC<{ providers: AccountProps["providers"]; apiPath: string }
           {error}
         </p>
       ) : null}
-      <div className="flex flex-wrap gap-2">
+      <div className="grid w-full max-w-xs gap-2">
         {providers.map(({ id, label }) => (
           <ProviderSignInButton
             key={id}

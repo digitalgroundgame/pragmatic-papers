@@ -74,8 +74,17 @@ describe("signUpProviders", () => {
     vi.stubEnv("DESTINY_CLIENT_SECRET", "g")
 
     expect(signUpProviders()).toEqual([
-      { id: "discord", label: "Discord" },
       { id: "destiny", label: "Destiny.gg" },
+      { id: "discord", label: "Discord" },
     ])
+  })
+
+  it("puts Destiny.gg first", () => {
+    for (const name of ["GOOGLE", "DISCORD", "DESTINY"]) {
+      vi.stubEnv(`${name}_CLIENT_ID`, "x")
+      vi.stubEnv(`${name}_CLIENT_SECRET`, "x")
+    }
+
+    expect(signUpProviders().map(({ id }) => id)).toEqual(["destiny", "google", "discord"])
   })
 })

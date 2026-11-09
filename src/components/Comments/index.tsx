@@ -16,7 +16,7 @@ import { cn } from "@/utilities/utils"
 import { CommentItem, type ReplyContext } from "./CommentItem"
 import { trackCommentSort, trackSignIn } from "./analytics"
 import { CommentForm, type Posted } from "./CommentForm"
-import { AuthorAvatar } from "./CommentMeta"
+import { AccountMenu } from "./AccountMenu.lazy"
 import { SortMenu } from "./SortMenu.lazy"
 import {
   CONTINUE_DEPTH,
@@ -64,13 +64,19 @@ const SignIn: React.FC<{
   providers.length === 0 ? (
     <p className="text-muted-foreground text-sm">Commenting isn&apos;t open yet.</p>
   ) : (
-    <div className="space-y-3">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
       <p className="text-sm">
         Sign in to join the conversation. Your first sign-in makes an account.
       </p>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2">
         {providers.map(({ id, label }) => (
-          <ProviderSignInButton key={id} provider={id} label={label} onClick={() => onSignIn(id)} />
+          <ProviderSignInButton
+            key={id}
+            provider={id}
+            label={label}
+            iconOnly
+            onClick={() => onSignIn(id)}
+          />
         ))}
       </div>
     </div>
@@ -93,6 +99,12 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api",
   const [load, setLoad] = useState<Load>({ state: "idle" })
   const [signInError, setSignInError] = useState<string | null>(null)
   const [held, setHeld] = useState<string | null>(null)
+  // The top box starts as one line and opens into the form.
+  const [composing, setComposing] = useState(false)
+  const composerRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (composing) composerRef.current?.querySelector("textarea")?.focus()
+  }, [composing])
   const returnedError = useRef(false)
   const { sort, setSort, seed } = useCommentOrder()
   // Top-level comments the reader posted here, which stay at the top whatever the order.
@@ -299,53 +311,59 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api",
       ) : (
         <>
           {viewer ? (
-            <div className="space-y-3">
-              {viewer.locked ? (
-                <Locked until={viewer.locked.until} />
-              ) : viewer.needsVerifiedEmail ? (
-                <p className="text-muted-foreground text-sm" role="status">
-                  Commenting here needs a verified email address. Connect Google or Discord, which
-                  verify yours, from{" "}
-                  <Link href="/account" className="underline underline-offset-4">
-                    your account
-                  </Link>
-                  .
-                </p>
-              ) : (
-                <CommentForm
-                  threadURL={threadURL}
-                  maxLength={thread.maxLength}
-                  onPosted={posted}
-                  itemId={slug}
-                  label={
-                    <span className="flex items-center gap-2">
-                      <AuthorAvatar author={viewer} />
-                      <span>
-                        Commenting as <span className="font-semibold">{viewer.name}</span>
-                      </span>
-                    </span>
-                  }
-                />
-              )}
-              {held ? (
-                <p role="status" className="text-sm">
-                  Your comment is waiting for a moderator ({held.toLowerCase()}). Only you can see
-                  it until then.
-                </p>
-              ) : null}
-              <p className="text-muted-foreground flex gap-4 text-sm">
-                <Link href="/account" className="underline underline-offset-4">
-                  Your account
-                </Link>
-                <Button
-                  type="button"
-                  variant="link"
-                  className="h-auto p-0"
-                  onClick={() => void signOut()}
-                >
-                  Sign out
-                </Button>
-              </p>
+            <div className="flex items-start gap-3">
+              <AccountMenu viewer={viewer} onSignOut={() => void signOut()} />
+              <div className="min-w-0 flex-1 space-y-3">
+                {viewer.locked ? (
+                  <Locked until={viewer.locked.until} />
+                ) : viewer.needsVerifiedEmail ? (
+                  <p className="text-muted-foreground text-sm" role="status">
+                    Commenting here needs a verified email address. Connect Google or Discord, which
+                    verify yours, from{" "}
+                    <Link href="/account" className="underline underline-offset-4">
+                      your account
+                    </Link>
+                    .
+                  </p>
+                ) : (
+                  <>
+                    {composing ? null : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="text-muted-foreground h-9 w-full justify-start rounded-full px-4 font-normal"
+                        onClick={() => setComposing(true)}
+                      >
+                        Add a comment
+                      </Button>
+                    )}
+                    {/* Hidden, not unmounted, when closed: a half-written comment keeps its text. */}
+                    <div ref={composerRef} hidden={!composing}>
+                      <CommentForm
+                        threadURL={threadURL}
+                        maxLength={thread.maxLength}
+                        onPosted={(result) => {
+                          setComposing(false)
+                          posted(result)
+                        }}
+                        onCancel={() => setComposing(false)}
+                        itemId={slug}
+                        label={
+                          <>
+                            Commenting as <span className="font-semibold">{viewer.name}</span>
+                          </>
+                        }
+                      />
+                    </div>
+                  </>
+                )}
+                {held ? (
+                  <p role="status" className="text-sm">
+                    Your comment is waiting for a moderator ({held.toLowerCase()}). Only you can see
+                    it until then.
+                  </p>
+                ) : null}
+              </div>
             </div>
           ) : (
             <SignIn providers={thread.providers} onSignIn={(p) => void signIn(p)} />

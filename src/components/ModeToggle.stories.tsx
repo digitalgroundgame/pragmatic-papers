@@ -137,11 +137,6 @@ export const LoadsOnFocus: Story = {
 }
 
 /**
- * Scrolled down the page, the first click on the header's toggle opens the menu where the reader
- * is. The menu loads on that click, and the click replays on the real trigger; replayed as a
- * keyboard press, it focused the first item and scrolled the page up.
- */
-/**
  * A mouse click as the browser sends it. `userEvent.click` focuses the button with a plain
  * `focus()`, which scrolls a control under the page's `scroll-padding-top` into view where a real
  * click never does, so it can't tell whether the page moved.
@@ -154,6 +149,11 @@ function mouseClick(target: Element): void {
   target.dispatchEvent(new PointerEvent("click", { ...init, detail: 1 }))
 }
 
+/**
+ * Scrolled down the page, the first click on the header's toggle opens the menu where the reader
+ * is. The menu loads on that click, and the click replays on the real trigger; replayed as a
+ * keyboard press, it focused the first item and scrolled the page up.
+ */
 export const FirstClickKeepsScroll: Story = {
   render: (args) => (
     <div>

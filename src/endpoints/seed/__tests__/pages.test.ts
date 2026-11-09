@@ -62,15 +62,16 @@ describe("createOrUpdatePage", () => {
 })
 
 describe("createPages", () => {
-  it("lays out /feeds with a Feed list for the RSS feeds and one for the sitemaps", async () => {
+  it("publishes /feeds, which the footer links to, as a Content block naming each feed", async () => {
     mockCreate.mockImplementation(async ({ data }) => ({ id: 1, ...data }))
 
     const { feedsPage } = await createPages(mockPayload, undefined, undefined, context)
 
     expect(feedsPage.slug).toBe("feeds")
-    expect(feedsPage.layout.map((block) => block.blockType === "feedsList" && block.list)).toEqual([
-      "feeds",
-      "sitemaps",
-    ])
+    expect(feedsPage._status).toBe("published")
+    expect(feedsPage.layout.map((block) => block.blockType)).toEqual(["content"])
+    const text = JSON.stringify(feedsPage.layout)
+    expect(text).toContain("/articles/feed.xml")
+    expect(text).toContain("/volumes/feed.xml")
   })
 })

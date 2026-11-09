@@ -359,7 +359,7 @@ ESLint enforces the import rules for every folder under `src/plugins/` (`eslint.
 - Code with a request (hooks, endpoints, access functions, validation, jobs) reads Payload from `req.payload`, inside the request's transaction. Code without one (pages, layouts, route handlers, `generateMetadata`) uses `getPayloadClient` from `@/data/payload`, never `getPayload({ config })`
 - Wrap data queries in `React.cache()` for per-request deduplication
 - Use `unstable_cache` with cache tags for long-lived caching (globals, redirects, sitemaps)
-- Sitemaps: each is a `sitemap.ts` in the folder of the section it lists (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`), added with a title to `SITEMAPS` in `src/data/feeds.ts`, which `/sitemap_index.xml`, robots.txt and the Feed list block read (that block, `blocks/FeedsList`, lists them and the RSS feeds in `FEEDS` from the same file on the `/feeds` page, a Pages document editors own: a deploy creates it once per site as a draft for an editor to publish, then never touches it again, even once deleted (`STARTER_PAGES` in `collections/Pages/starterPages/`), and the seed creates it published locally). Pages live at the root, so theirs is the root `sitemap.ts` (`/sitemap.xml`), and the index of them all is `/sitemap_index.xml` (`(sitemaps)/sitemap_index.xml`), which robots.txt and Search Console point at; Google News reads `articles/news-sitemap.xml/route.ts`, a route handler (`sitemap.ts` can't write `news:` tags) listing only the last two days' articles, as Google asks. The old `/pages-sitemap.xml`, `/articles-sitemap.xml` and `/volumes-sitemap.xml` redirect permanently in `next.config.ts`
+- Sitemaps: each is a `sitemap.ts` in the folder of the section it lists (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`), added to `SITEMAPS` in `src/data/feeds.ts`, which `/sitemap_index.xml` and robots.txt read. Pages live at the root, so theirs is the root `sitemap.ts` (`/sitemap.xml`), and the index of them all is `/sitemap_index.xml` (`(sitemaps)/sitemap_index.xml`), which robots.txt and Search Console point at; Google News reads `articles/news-sitemap.xml/route.ts`, a route handler (`sitemap.ts` can't write `news:` tags) listing only the last two days' articles, as Google asks. The old `/pages-sitemap.xml`, `/articles-sitemap.xml` and `/volumes-sitemap.xml` redirect permanently in `next.config.ts`
 - Always respect `draftMode()` — pass `draft` and `overrideAccess: draft` into Payload queries
 - Next.js 15: `params` and `searchParams` are `Promise`s (must be `await`ed)
 - Metadata: use `generateMeta({ doc, canonicalPath })` from `@/utilities/generateMeta`
@@ -694,7 +694,7 @@ Staging's public site also runs as a Cloudflare Worker at `staging-worker.pragma
 production are in `src/cloudflare/README.md`.
 
 Each database has one seeder: the deploy of the Coolify app that runs its migrations. Its
-`/next/revalidate-all` seeds what a deploy seeds (starter pages, starter achievements); the Worker reads
+`/next/revalidate-all` seeds what a deploy seeds (the starter achievements); the Worker reads
 the same database and sets `DEPLOY_SEED=false` (`wrangler.jsonc`), so its deploy only throws
 pages away. Two seeders could each create the same content at once. Deploy-seeded content
 added later goes through that route, so it follows the same switch.

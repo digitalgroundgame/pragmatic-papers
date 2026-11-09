@@ -20,7 +20,6 @@ A page under **Pages** has a **Hero** tab for the top of the page and a **Conten
 - **Collection Grid**: articles and volumes in a designed arrangement ([more](/docs/editing/pages-and-volumes/collection-grid)).
 - **Timeline**: dated events ([more](/docs/writing/blocks/timeline-block)).
 - **Merch**: products from the store ([more](/docs/editing/pages-and-volumes/merch-block)).
-- **Feed list**: the site's RSS feeds or its sitemaps, each with its address. The links keep themselves up to date; you write only the heading and introduction. The **Feeds and sitemaps** page (`/feeds`, linked from the footer) is made of two of these, one for the feeds and one for the sitemaps.
 - **Contributors** and **Newsletter Signup** each have their own doc.
 
 ## Before publishing

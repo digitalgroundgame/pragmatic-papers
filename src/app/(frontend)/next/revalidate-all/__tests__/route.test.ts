@@ -1,17 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { revalidatePath, revalidateTag, createMissingStarterPages, seedAchievements } = vi.hoisted(
-  () => ({
-    revalidatePath: vi.fn(),
-    revalidateTag: vi.fn(),
-    createMissingStarterPages: vi.fn(),
-    seedAchievements: vi.fn(),
-  }),
-)
+const { revalidatePath, revalidateTag, seedAchievements } = vi.hoisted(() => ({
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+  seedAchievements: vi.fn(),
+}))
 const payload = { logger: { error: vi.fn() } }
 
 vi.mock("next/cache", () => ({ revalidatePath, revalidateTag }))
-vi.mock("@/collections/Pages/starterPages", () => ({ createMissingStarterPages }))
 vi.mock("@/plugins/readerAchievements", () => ({
   readerAchievements: { seed: seedAchievements },
 }))
@@ -30,22 +26,19 @@ describe("POST /next/revalidate-all", () => {
     vi.unstubAllEnvs()
     vi.stubEnv("PAYLOAD_SECRET", "s3cret")
     vi.clearAllMocks()
-    createMissingStarterPages.mockResolvedValue(["feeds"])
     seedAchievements.mockResolvedValue(["Early member"])
   })
 
-  it("creates the starter pages and achievements, then throws away every prerendered route", async () => {
+  it("creates the starter achievements, then throws away every prerendered route", async () => {
     const response = await POST(request("Bearer s3cret"))
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
       revalidated: true,
-      pages: { created: ["feeds"] },
       achievements: { created: ["Early member"] },
     })
     expect(seedAchievements).toHaveBeenCalledExactlyOnceWith(payload)
-    expect(createMissingStarterPages).toHaveBeenCalledExactlyOnceWith(payload)
-    expect(createMissingStarterPages.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(seedAchievements.mock.invocationCallOrder[0]).toBeLessThan(
       revalidatePath.mock.invocationCallOrder[0]!,
     )
     expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/", "layout")
@@ -56,7 +49,6 @@ describe("POST /next/revalidate-all", () => {
     const response = await POST(request("Bearer s3cret"))
 
     await expect(response.json()).resolves.toEqual({ revalidated: true, seeded: false })
-    expect(createMissingStarterPages).not.toHaveBeenCalled()
     expect(seedAchievements).not.toHaveBeenCalled()
     expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/", "layout")
   })
@@ -65,7 +57,6 @@ describe("POST /next/revalidate-all", () => {
     const response = await POST(request("Bearer s3cret", "?save=1&path=/articles/a"))
 
     await expect(response.json()).resolves.toEqual({ revalidated: true })
-    expect(createMissingStarterPages).not.toHaveBeenCalled()
     expect(seedAchievements).not.toHaveBeenCalled()
     expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/", "layout")
   })
@@ -85,7 +76,6 @@ describe("POST /next/revalidate-all", () => {
     })
     expect(revalidatePath).toHaveBeenCalledExactlyOnceWith("/articles/a")
     expect(revalidateTag).toHaveBeenCalledExactlyOnceWith("articles-sitemap", "max")
-    expect(createMissingStarterPages).not.toHaveBeenCalled()
   })
 
   it("revalidates nothing in Next's cache for a save that revalidated nothing there", async () => {
@@ -113,7 +103,6 @@ describe("POST /next/revalidate-all", () => {
     const response = await POST(request(authorization))
 
     expect(response.status).toBe(401)
-    expect(createMissingStarterPages).not.toHaveBeenCalled()
     expect(revalidatePath).not.toHaveBeenCalled()
   })
 

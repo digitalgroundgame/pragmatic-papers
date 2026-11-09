@@ -1,8 +1,6 @@
 import type { Page } from "@/payload-types"
 import type { Payload, RequiredDataFromCollectionSlug } from "payload"
 
-import { feedsPage as starterFeedsPage } from "@/collections/Pages/starterPages/feeds"
-
 import { createContactForm } from "./forms"
 import { devMerchCatalogue, seedMerchProducts } from "./merch"
 import {
@@ -114,7 +112,7 @@ export const createPages = async (
   context?: Record<string, unknown>,
 ): Promise<CreatePagesResult> => {
   const pageConfigs: Record<
-    "about" | "articles" | "contact" | "privacyPolicy" | "termsOfUse" | "volumes",
+    "about" | "articles" | "contact" | "feeds" | "privacyPolicy" | "termsOfUse" | "volumes",
     PageConfig
   > = {
     about: {
@@ -137,6 +135,13 @@ export const createPages = async (
       content:
         "We would love to hear from you. Please reach out to us if you have any questions, suggestions, or inquiries.",
       description: "Get in touch with the Pragmatic Papers team.",
+    },
+    feeds: {
+      title: "Feeds",
+      slug: "feeds",
+      content:
+        "Follow Pragmatic Papers in a feed reader. Articles: /articles/feed.xml. Volumes: /volumes/feed.xml.",
+      description: "Follow Pragmatic Papers in a feed reader.",
     },
     privacyPolicy: {
       title: "Privacy Policy",
@@ -161,7 +166,7 @@ export const createPages = async (
     },
   }
 
-  const { about, articles, contact, privacyPolicy, termsOfUse, volumes } = pageConfigs
+  const { about, articles, contact, feeds, privacyPolicy, termsOfUse, volumes } = pageConfigs
 
   const aboutBody = [
     about.content,
@@ -430,11 +435,23 @@ export const createPages = async (
     context,
   )
 
-  // Deployed sites get this page as a draft on deploy (createMissingStarterPages); a local
-  // database gets it published.
+  // The footer links here. Deployed sites have their own, written by an editor.
   const feedsPage = await createOrUpdatePage(
     payload,
-    { ...starterFeedsPage, _status: "published", publishedAt: new Date().toISOString() },
+    {
+      title: feeds.title,
+      slug: feeds.slug,
+      hero: { type: "lowImpact", richText: null, links: [], media: null },
+      layout: [
+        {
+          blockType: "content",
+          columns: [{ size: "full", richText: createRichTextFromString(feeds.content) }],
+        },
+      ],
+      meta: { title: feeds.title, description: feeds.description, image: null },
+      _status: "published",
+      publishedAt: new Date().toISOString(),
+    },
     context,
   )
 

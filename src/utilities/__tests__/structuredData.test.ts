@@ -53,7 +53,7 @@ describe("buildArticleJsonLd", () => {
         },
         publishedAt: "2024-01-01T00:00:00.000Z",
         createdAt: "2023-12-01T00:00:00.000Z",
-        updatedAt: "2024-02-01T00:00:00.000Z",
+        contentUpdatedAt: "2024-02-01T00:00:00.000Z",
         authors: [{ id: 1, name: "Alice", slug: "alice" } as User],
         topics: [
           { id: 1, name: "Economics" },

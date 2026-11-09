@@ -32,7 +32,6 @@ const getNewsSitemap = unstable_cache(
         slug: true,
         title: true,
         publishedAt: true,
-        updatedAt: true,
         contentUpdatedAt: true,
       },
     })
@@ -42,7 +41,7 @@ const getNewsSitemap = unstable_cache(
         ? [
             {
               loc: `${siteUrl}/articles/${article.slug}`,
-              lastmod: article.contentUpdatedAt ?? article.updatedAt,
+              lastmod: article.contentUpdatedAt ?? undefined,
               news: {
                 title: article.title,
                 publicationName: "The Pragmatic Papers",

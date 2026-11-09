@@ -138,18 +138,11 @@ export const generateArticleFeed = (articles: Article[]): string => {
         link: `${getSiteURL()}/articles/${article.slug}`,
         published: new Date(article.publishedAt),
         description: article.meta?.description ? article.meta.description : "",
-        date: new Date(article.publishedAt),
+        // Atom's <updated>: when readers last saw the content change, which starts at publishedAt.
+        date: new Date(article.contentUpdatedAt ?? article.publishedAt),
         image: imageUrl(article.meta?.image),
         author: authorsOf(article),
         content: articleContentHTML(article),
-        extensions: [
-          {
-            name: "updated",
-            objects: {
-              updated: new Date(article.contentUpdatedAt ?? article.updatedAt).toISOString(),
-            },
-          },
-        ],
       })
     }
   })

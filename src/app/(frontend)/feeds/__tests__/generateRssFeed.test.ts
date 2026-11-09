@@ -223,6 +223,25 @@ describe("generateArticleFeed", () => {
     expect(entry).toContain("<p>Body text</p>")
   })
 
+  it("dates an entry's update from the content, not the last save", () => {
+    const [entry] = entries(
+      generateArticleFeed([
+        makeArticle([], {
+          updatedAt: "2026-09-05T12:00:00.000Z",
+          contentUpdatedAt: "2026-09-03T12:00:00.000Z",
+        }),
+      ]),
+    )
+
+    expect(entry).toContain("<updated>2026-09-03T12:00:00.000Z</updated>")
+  })
+
+  it("dates an entry whose content hasn't been dated by its publish date", () => {
+    const [entry] = entries(generateArticleFeed([makeArticle([])]))
+
+    expect(entry).toContain("<updated>2026-09-01T12:00:00.000Z</updated>")
+  })
+
   it("skips drafts and articles without a publish date", () => {
     const feed = generateArticleFeed([
       makeArticle([], { slug: "draft", _status: "draft" }),

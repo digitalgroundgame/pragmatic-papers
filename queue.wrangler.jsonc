@@ -1,0 +1,28 @@
+// The queue Worker (src/cloudflare/queue.mjs), which holds OpenNext's revalidation queue for
+// the site's Worker in wrangler.jsonc. .github/workflows/worker.yml deploys it from the same
+// build, before the site, passing `--env production` for production's, as for the site.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": "src/cloudflare/queue.mjs",
+  "name": "pragmatic-papers-staging-queue",
+  "compatibility_date": "2026-09-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  // The queue re-renders a page by requesting it from the site with this binding.
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "pragmatic-papers-staging" }],
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }],
+  "env": {
+    "production": {
+      "name": "pragmatic-papers-production-queue",
+      "workers_dev": false,
+      "preview_urls": false,
+      "observability": { "enabled": true },
+      "services": [
+        { "binding": "WORKER_SELF_REFERENCE", "service": "pragmatic-papers-production" },
+      ],
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }],
+    },
+  },
+}

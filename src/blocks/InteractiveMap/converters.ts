@@ -1,5 +1,11 @@
-import type { InteractiveMapBlock } from "@/payload-types"
+import type { InteractiveMapBlock, Media } from "@/payload-types"
 import { escapeHTML, type FeedContext } from "@/utilities/feedHTML"
+import { absoluteURL } from "@/utilities/getURL"
+import { isResolved } from "@/utilities/relationships"
+
+import { resolveInlineSvgMap } from "./adapters/inlineSvg"
+import { getDivergingRedBlueLegend, staticColor, STATIC_NEUTRAL } from "./colorScale"
+import type { ResolvedMap } from "./types"
 
 const SITE_NAME = "The Pragmatic Papers"
 
@@ -13,4 +19,198 @@ export const interactiveMapToHTML = (
 ): string => {
   const title = widgetTitle ? `“${escapeHTML(widgetTitle)}” ` : ""
   return `<p><a href="${escapeHTML(pageUrl)}">View the interactive map ${title}on ${SITE_NAME} →</a></p>`
+}
+
+type MapFields = Pick<
+  InteractiveMapBlock,
+  "widgetTitle" | "layout" | "colorScale" | "colorBias" | "maps"
+>
+
+/** What the image says in words: the widget's title, or else its maps' titles. */
+export const interactiveMapAlt = ({ widgetTitle, maps }: MapFields): string => {
+  const titles = (maps ?? []).map(({ title }) => title?.trim()).filter(Boolean)
+  const name = widgetTitle?.trim() || titles.join(", ")
+  return name ? `Map: ${name}` : "Map"
+}
+
+/** A map block whose image the feed's query found (`attachMapImages`). */
+export type InteractiveMapWithImage = InteractiveMapBlock & { feedImage?: Media | null }
+
+/**
+ * The map as a picture: the image rendered when the article was published, captioned with a
+ * link to the interactive version. A map with no image yet gets `interactiveMapToHTML`'s link.
+ * This only points at the stored image; it never draws one.
+ */
+export const interactiveMapToImage = (
+  fields: InteractiveMapWithImage,
+  context: Pick<FeedContext, "pageUrl" | "siteUrl">,
+): string => {
+  const image = fields.feedImage
+  if (!isResolved(image) || !image.url) return interactiveMapToHTML(fields, context)
+
+  const src = escapeHTML(absoluteURL(image.url, context.siteUrl))
+  const alt = escapeHTML(image.alt || interactiveMapAlt(fields))
+  const size = image.width && image.height ? ` width="${image.width}" height="${image.height}"` : ""
+  const caption = `<a href="${escapeHTML(context.pageUrl)}">View the interactive version on ${SITE_NAME}</a>`
+  return `<figure><img src="${src}" alt="${alt}"${size} /><figcaption>${caption}</figcaption></figure>`
+}
+
+// The drawing's own units. Substack's column is about 680px wide, and the image is drawn
+// at twice that for dense screens.
+const WIDTH = 680
+const PIXEL_DENSITY = 2
+const PADDING = 16
+const GAP = 12
+// What the deployed image has (dockerfiles/) comes first, so a picture drawn in
+// development looks like production's wherever that font is installed.
+const FONT = "'DejaVu Sans', Helvetica, Arial, sans-serif"
+const INK = "#171717"
+const QUIET_INK = "#525252"
+const OUTLINE = "#ffffff"
+
+const TITLE = { size: 18, line: 24, weight: 600 }
+const MAP_TITLE = { size: 14, line: 20, weight: 500 }
+const LEGEND = { swatch: 16, size: 11, line: 16, gap: 4 }
+
+const round = (n: number): number => Math.round(n * 100) / 100
+
+/** Break a title into lines that fit `width`, judging by an average character's width. */
+function wrap(title: string, size: number, width: number): string[] {
+  const perLine = Math.max(8, Math.floor(width / (size * 0.6)))
+  const lines: string[] = []
+  let line = ""
+  for (const word of title.trim().split(/\s+/)) {
+    if (line && line.length + 1 + word.length > perLine) {
+      lines.push(line)
+      line = word
+    } else {
+      line = line ? `${line} ${word}` : word
+    }
+  }
+  if (line) lines.push(line)
+  return lines
+}
+
+function text(
+  lines: string[],
+  { size, line, weight }: { size: number; line: number; weight?: number },
+  x: number,
+  y: number,
+  fill = INK,
+): string {
+  return lines
+    .map(
+      (content, i) =>
+        `<text x="${round(x)}" y="${round(y + i * line + size)}" font-size="${size}"${
+          weight ? ` font-weight="${weight}"` : ""
+        } fill="${fill}" text-anchor="middle">${escapeHTML(content)}</text>`,
+    )
+    .join("")
+}
+
+/** A viewBox's size, or a square when it can't be read. */
+function viewBoxSize(viewBox: string): { width: number; height: number } {
+  const [, , width, height] = viewBox
+    .trim()
+    .split(/[\s,]+/)
+    .map(Number)
+  return width && height && width > 0 && height > 0 ? { width, height } : { width: 1, height: 1 }
+}
+
+const ATTRIBUTE_NAME = /^[A-Za-z_][\w:.-]*$/
+
+function attributes(attrs: Record<string, string>): string {
+  return Object.entries(attrs)
+    .filter(([name]) => ATTRIBUTE_NAME.test(name))
+    .map(([name, value]) => ` ${name}="${escapeHTML(value)}"`)
+    .join("")
+}
+
+/** One map, shaded, fitted into the box at (x, y). */
+function mapMarkup(map: ResolvedMap, x: number, y: number, width: number, height: number): string {
+  const paths = map.paths
+    .map((path) =>
+      path.region
+        ? `<path d="${escapeHTML(path.d)}" fill="${escapeHTML(staticColor(path.region.color))}" stroke="${OUTLINE}" stroke-width="1" vector-effect="non-scaling-stroke" />`
+        : `<path d="${escapeHTML(path.d)}"${attributes(path.extraAttrs)} />`,
+    )
+    .join("")
+  const transform = map.transform ? ` transform="${escapeHTML(map.transform)}"` : ""
+  return `<svg x="${round(x)}" y="${round(y)}" width="${round(width)}" height="${round(height)}" viewBox="${escapeHTML(map.viewBox)}" preserveAspectRatio="xMidYMid meet"><g${transform}>${paths}</g></svg>`
+}
+
+/**
+ * The block as one standalone SVG: its title, each map shaded as the page shades it
+ * (`resolveInlineSvgMap`, the component's own resolver), and the legend, which a picture
+ * needs since nobody can hover it. Colors are the light theme's, on white. Null when no map
+ * has its SVG loaded. Plain markup with no stylesheet, so an image library can rasterize it.
+ */
+export const interactiveMapToSVG = (fields: MapFields): string | null => {
+  const scaleType = fields.colorScale ?? "divergingRedBlue"
+  const maps = (fields.maps ?? []).flatMap((map) => {
+    const svg = isResolved(map.svgAsset) ? map.svgAsset.svgContent : null
+    if (!svg) return []
+    return [
+      resolveInlineSvgMap({
+        title: map.title,
+        svg,
+        dataAttribute: map.dataAttribute,
+        overrides: map.overrides,
+        scaleType,
+        colorBias: fields.colorBias,
+        invertColors: map.invertColors,
+        neutralFill: STATIC_NEUTRAL,
+      }),
+    ]
+  })
+  if (maps.length === 0) return null
+
+  const inner = WIDTH - PADDING * 2
+  const parts: string[] = []
+  let y = PADDING
+
+  if (fields.widgetTitle?.trim()) {
+    const lines = wrap(fields.widgetTitle, TITLE.size, inner)
+    parts.push(text(lines, TITLE, WIDTH / 2, y))
+    y += lines.length * TITLE.line + GAP
+  }
+
+  // Side by side, or one under another. Maps in a row start level, under the tallest title.
+  const perRow = fields.layout === "stacked" ? 1 : maps.length
+  const column = (inner - GAP * (perRow - 1)) / perRow
+  for (let start = 0; start < maps.length; start += perRow) {
+    const row = maps.slice(start, start + perRow).map((map) => {
+      const label = map.title && map.invertColors ? `${map.title} (Inverted)` : map.title
+      const size = viewBoxSize(map.viewBox)
+      return {
+        map,
+        lines: label?.trim() ? wrap(label, MAP_TITLE.size, column) : [],
+        height: (column * size.height) / size.width,
+      }
+    })
+    const titleLines = Math.max(...row.map(({ lines }) => lines.length))
+    const titleHeight = titleLines ? titleLines * MAP_TITLE.line + GAP / 2 : 0
+    row.forEach(({ map, lines, height }, i) => {
+      const x = PADDING + i * (column + GAP)
+      parts.push(text(lines, MAP_TITLE, x + column / 2, y))
+      parts.push(mapMarkup(map, x, y + titleHeight, column, height))
+    })
+    y += titleHeight + Math.max(...row.map(({ height }) => height)) + GAP
+  }
+
+  if (scaleType === "divergingRedBlue") {
+    const legend = getDivergingRedBlueLegend(fields.colorBias)
+    const swatch = (inner - LEGEND.gap * (legend.length - 1)) / legend.length
+    legend.forEach(({ color, label }, i) => {
+      const x = PADDING + i * (swatch + LEGEND.gap)
+      parts.push(
+        `<rect x="${round(x)}" y="${round(y)}" width="${round(swatch)}" height="${LEGEND.swatch}" rx="2" fill="${escapeHTML(staticColor(color))}" />`,
+      )
+      parts.push(text([label], LEGEND, x + swatch / 2, y + LEGEND.swatch + 2, QUIET_INK))
+    })
+    y += LEGEND.swatch + 2 + LEGEND.line + GAP
+  }
+
+  const height = Math.ceil(y - GAP + PADDING)
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH * PIXEL_DENSITY}" height="${height * PIXEL_DENSITY}" viewBox="0 0 ${WIDTH} ${height}" font-family="${FONT}"><rect width="${WIDTH}" height="${height}" fill="#ffffff" />${parts.join("")}</svg>`
 }

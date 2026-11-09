@@ -151,8 +151,10 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME="0.0.0.0"
 
-# Install runtime dependencies and create non-root user
-RUN apk add --no-cache dumb-init libc6-compat \
+# Install runtime dependencies and create non-root user. fontconfig and a font are for
+# the text sharp draws on a map's picture (renderImage.ts): the image has no font of
+# its own, and without one the titles and legend labels come out blank.
+RUN apk add --no-cache dumb-init libc6-compat fontconfig ttf-dejavu \
     && addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs
 

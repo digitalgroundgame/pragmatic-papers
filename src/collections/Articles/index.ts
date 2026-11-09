@@ -24,6 +24,7 @@ import {
   productionSearchEndpoint,
 } from "@/collections/Articles/endpoints/cloneFromProduction"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
+import { generateBlockImages } from "@/collections/Articles/hooks/generateBlockImages"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
 import { keepWritersOffLiveArticles } from "@/collections/Articles/hooks/keepWritersOffLiveArticles"
@@ -355,6 +356,7 @@ export const Articles: CollectionConfig = {
       grantPublicProfile<Article>((doc) =>
         doc._status === "published" ? (doc.authors ?? []) : [],
       ),
+      generateBlockImages,
     ],
     beforeDelete: [removeFromRankings],
     afterDelete: [revalidateDelete, revalidateNavLinksDelete],

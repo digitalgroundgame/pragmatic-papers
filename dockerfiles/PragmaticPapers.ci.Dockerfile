@@ -133,8 +133,9 @@ ENV NODE_ENV=production \
 
 # The PostgreSQL client for copy-database.sh, now run here rather than while building.
 # Pinned to the server's major version, as in PragmaticPapers.Dockerfile's builder:
-# its pg_dump fallback refuses any other.
-RUN apk add --no-cache dumb-init libc6-compat postgresql17-client \
+# its pg_dump fallback refuses any other. fontconfig and a font are for the text sharp
+# draws on a map's picture, as in PragmaticPapers.Dockerfile's runner.
+RUN apk add --no-cache dumb-init libc6-compat postgresql17-client fontconfig ttf-dejavu \
     && addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs
 

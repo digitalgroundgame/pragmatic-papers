@@ -5,8 +5,9 @@ import type { MapAsset } from "@/payload-types"
 import { FeedHTML } from "@/stories/FeedHTML"
 import { interactiveMapBlock, mapAsset } from "@/stories/fixtures/blocks"
 import { storyFeedContext } from "@/stories/fixtures/feedContext"
+import { mediaFixture } from "@/stories/fixtures/media"
 
-import { interactiveMapToHTML } from "./converters"
+import { interactiveMapToHTML, interactiveMapToImage } from "./converters"
 import { InteractiveMapBlock } from "./InteractiveMapBlock"
 
 // The seed's district maps, served from the static dir in .storybook/main.ts: an
@@ -87,11 +88,36 @@ export const Biased: Story = {
   args: { colorBias: 8 },
 }
 
-/** The map in the feeds: a link back to the page, since no feed reader runs the map. */
+/** The map in the RSS feeds: a link back to the page, since no feed reader runs the map. */
 export const Feed: Story = {
   render: (args) => <FeedHTML html={interactiveMapToHTML(args, storyFeedContext())} />,
   play: async ({ canvasElement }) => {
     const link = within(canvasElement).getByRole("link", { name: /View the interactive map/ })
     await expect(link).toHaveAttribute("href", storyFeedContext().pageUrl)
+  },
+}
+
+/**
+ * The map in the Substack feed: the picture drawn of it when the article was published,
+ * linking to the interactive version. A fixture stands in for the picture, which the server
+ * draws.
+ */
+export const SubstackFeed: Story = {
+  render: (args) => (
+    <FeedHTML
+      html={interactiveMapToImage(
+        { ...args, feedImage: mediaFixture({ alt: "Map: Missouri congressional districts" }) },
+        storyFeedContext(),
+      )}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByRole("img", { name: "Map: Missouri congressional districts" }),
+    ).toHaveAttribute("src", expect.stringContaining("/storybook-assets/"))
+    await expect(
+      canvas.getByRole("link", { name: /View the interactive version/ }),
+    ).toHaveAttribute("href", storyFeedContext().pageUrl)
   },
 }

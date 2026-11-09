@@ -666,6 +666,19 @@ Two things live there, and they are not two modes of one block:
   presentation in code; the feed owns facts and records; `syncInteractiveData`
   pulls it daily into draft snapshots an editor publishes.
 
+The Substack feed can't run a map, so it shows a picture of it
+(`interactiveMapToImage`). `generateBlockImages` (an Articles `afterChange`
+hook) draws it when the article is published, never while a feed is built:
+`interactiveMapToSVG` shades the map with the component's own resolver,
+`renderImage.ts` rasterizes it with `sharp` (on the Coolify app, where articles
+are saved; the Worker only reads the result), and it's stored as a Media upload
+named for a hash of the block's data and its maps' SVG (`feedImage.ts`). The
+feed's query looks that name up, so an unchanged map isn't drawn twice, a
+changed one gets a new picture, and the old one stays for posts Substack
+already imported. A map with no picture gets the RSS feeds' link back to the
+article. The text in the picture needs a font in the image
+(`fontconfig ttf-dejavu` in both Dockerfiles).
+
 An SVG never carries records. A drilldown's SVG is checked in, parsed once at
 snapshot time into `geometry/*.json`, and never parsed again;
 `scripts/snapshot-federal-courts.ts` regenerates the Federal Courts geometry

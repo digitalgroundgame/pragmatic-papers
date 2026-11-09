@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 
-import type { MyReading } from "@/plugins/readingHistory"
+import type { MyReading } from "@/plugins/achievements"
 
 export interface ReadingStatsProps {
   /** Payload's API route. */
@@ -14,7 +14,7 @@ const plural = (count: number, one: string, many: string) =>
 
 /**
  * The signed-in reader's reading, from `/api/reading/mine`: what's kept about them, shown to
- * them. Renders nothing when it can't load (sign-in switched off, or the request failed).
+ * them. Renders nothing when it can't load (achievements switched off, or the request failed).
  */
 export const ReadingStats: React.FC<ReadingStatsProps> = ({ apiPath = "/api" }) => {
   const [reading, setReading] = useState<MyReading | null>(null)

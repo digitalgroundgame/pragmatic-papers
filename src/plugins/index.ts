@@ -33,7 +33,6 @@ import { type Payload, type Plugin } from "payload"
 import { achievementsPlugin } from "./achievements"
 import { commentsPlugin } from "./comments"
 import { achievementsOptions, readerAchievements } from "./readerAchievements"
-import { readingHistoryPlugin } from "./readingHistory"
 import { commentsOn, signUpProviders, ssoOptions } from "./signIn"
 import { getSignedInUser, ssoPlugin } from "./sso"
 import { staffByDefault } from "./staffByDefault"
@@ -436,16 +435,6 @@ export const plugins: Plugin[] = [
     admins: admin,
   }),
   achievementsPlugin(achievementsOptions),
-  readingHistoryPlugin({
-    // Kept from the start, achievements switch or not, so rules added later can count what
-    // readers read before them. Only signed-in readers are recorded, so it runs with sign-in,
-    // reading its switch the same way.
-    enabled: ssoOptions.enabled,
-    currentUser: (req) => getSignedInUser(req, ssoOptions),
-    // A volume is read once every article in it is.
-    groups: { slug: "volumes", field: "articles" },
-    readers: admin,
-  }),
   // Last, so it sees every other plugin's collections.
   describePlugin(staffByDefault, {
     slug: "staff-by-default",

@@ -2,7 +2,7 @@ import type { CollectionSlug, Payload, PayloadRequest, Where } from "payload"
 
 import { READS_SLUG, VISITS_FIELD } from "./constants"
 import { afterVisit, visitsOf } from "./days"
-import type { ReadingUser, ResolvedReadingHistoryConfig } from "./types"
+import type { ReadingUser, ResolvedReadingConfig } from "./types"
 
 /**
  * Counts a visit on `day`, the reader's calendar day. A second visit the same day changes
@@ -14,7 +14,7 @@ export async function recordVisit(
   payload: Payload,
   user: ReadingUser,
   day: string,
-  config: ResolvedReadingHistoryConfig,
+  config: ResolvedReadingConfig,
   req?: Partial<PayloadRequest>,
 ): Promise<boolean> {
   const next = afterVisit(visitsOf(user, VISITS_FIELD), day)
@@ -33,7 +33,7 @@ export async function recordVisit(
 async function isPublished(
   payload: Payload,
   id: number | string,
-  config: ResolvedReadingHistoryConfig,
+  config: ResolvedReadingConfig,
   req?: Partial<PayloadRequest>,
 ): Promise<boolean> {
   const { totalDocs } = await payload.count({
@@ -53,7 +53,7 @@ export async function recordRead(
   payload: Payload,
   user: ReadingUser,
   article: number | string,
-  config: ResolvedReadingHistoryConfig,
+  config: ResolvedReadingConfig,
   req?: Partial<PayloadRequest>,
 ): Promise<boolean> {
   if (!(await isPublished(payload, article, config, req))) return false

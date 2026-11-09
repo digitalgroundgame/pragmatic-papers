@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, spyOn, userEvent, within } from "storybook/test"
 
 import type { HeldAchievement } from "@/plugins/achievements"
-import type { MyReading } from "@/plugins/readingHistory"
+import type { MyReading } from "@/plugins/achievements"
 import type { AccountSummary } from "@/plugins/sso/endpoints/account"
 import type { LinkedProvider } from "@/plugins/sso/types"
 

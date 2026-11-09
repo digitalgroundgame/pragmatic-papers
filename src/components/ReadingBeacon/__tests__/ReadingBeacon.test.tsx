@@ -2,7 +2,7 @@ import { act, render } from "@testing-library/react"
 import React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { localDay } from "@/plugins/readingHistory/days"
+import { localDay } from "@/plugins/achievements/reading/days"
 
 import { READ_AFTER_MS, ReadingBeacon } from ".."
 

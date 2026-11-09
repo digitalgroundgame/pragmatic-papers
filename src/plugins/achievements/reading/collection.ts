@@ -1,7 +1,7 @@
 import type { CollectionConfig, Field } from "payload"
 
 import { READS_SLUG, VISITS_FIELD } from "./constants"
-import type { ResolvedReadingHistoryConfig } from "./types"
+import type { ResolvedReadingConfig } from "./types"
 
 const nobody = () => false
 
@@ -10,7 +10,7 @@ const nobody = () => false
  * a count, so a rule can ask which articles someone read (every article in a volume) and a new
  * one can count what they read before it existed.
  */
-export function readsCollection(config: ResolvedReadingHistoryConfig): CollectionConfig {
+export function readsCollection(config: ResolvedReadingConfig): CollectionConfig {
   return {
     slug: READS_SLUG,
     labels: { singular: "Article read", plural: "Articles read" },
@@ -57,7 +57,7 @@ export function readsCollection(config: ResolvedReadingHistoryConfig): Collectio
  * The days a reader visited, kept on their account: a row per day would only ever be counted.
  * Written by the plugin's endpoint alone, at most once a day.
  */
-export const visitsField = (config: ResolvedReadingHistoryConfig): Field => ({
+export const visitsField = (config: ResolvedReadingConfig): Field => ({
   name: VISITS_FIELD,
   label: "Visits",
   type: "group",

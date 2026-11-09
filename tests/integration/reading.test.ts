@@ -2,7 +2,7 @@ import config from "@payload-config"
 import { handleEndpoints, type Payload } from "payload"
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
-import type { MyReading } from "@/plugins/readingHistory"
+import type { MyReading } from "@/plugins/achievements"
 import { getSiteURL } from "@/utilities/getURL"
 import type { Article, User } from "@/payload-types"
 import { createArticle, createVolume } from "./helpers/content"
@@ -104,10 +104,10 @@ const readsOf = async (user: User) =>
     })
   ).docs.map((row) => row.article)
 
-const setSso = (sso: boolean) =>
+const setAchievements = (achievements: boolean) =>
   payload.updateGlobal({
     slug: "plugins",
-    data: { switches: { sso, comments: true } },
+    data: { switches: { sso: true, comments: true, achievements } },
     context: { disableRevalidate: true },
   })
 
@@ -127,7 +127,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   vi.stubEnv("DISCORD_CLIENT_ID", "discord-client")
   vi.stubEnv("DISCORD_CLIENT_SECRET", "discord-secret")
-  await setSso(true)
+  await setAchievements(true)
 })
 
 afterEach(() => {
@@ -135,7 +135,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe("reading history", () => {
+describe("reading, for achievements", () => {
   it("tells the page someone is signed in, with a cookie it can read", async () => {
     const { setCookies } = await signUp()
     const mark = setCookies.find((cookie) => cookie.startsWith("pp-signed-in=1"))
@@ -177,9 +177,9 @@ describe("reading history", () => {
     expect((await report("", { article: first.id })).status).toBe(401)
   })
 
-  it("keeps nothing while sign-in is switched off", async () => {
+  it("keeps nothing while achievements are switched off", async () => {
     const { cookie, user } = await signUp()
-    await setSso(false)
+    await setAchievements(false)
     expect((await report(cookie, { article: first.id })).status).toBe(404)
     expect((await mine(cookie)).status).toBe(404)
     expect(await readsOf(user)).toEqual([])

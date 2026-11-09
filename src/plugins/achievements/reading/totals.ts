@@ -4,7 +4,7 @@ import { relationshipId } from "@/utilities/relationships"
 
 import { READS_SLUG, VISITS_FIELD } from "./constants"
 import { streakAt, visitsOf } from "./days"
-import type { MyReading, ReadingUser, ResolvedReadingHistoryConfig } from "./types"
+import type { MyReading, ReadingUser, ResolvedReadingConfig } from "./types"
 
 /** The articles `user` has read, by ID. */
 export async function articlesReadBy(
@@ -31,7 +31,7 @@ export async function articlesReadBy(
 export async function groupsFinished(
   payload: Payload,
   read: Set<string>,
-  config: ResolvedReadingHistoryConfig,
+  config: ResolvedReadingConfig,
   req?: Partial<PayloadRequest>,
 ): Promise<number | null> {
   if (!config.groups) return null
@@ -60,7 +60,7 @@ export async function groupsFinished(
 export async function readingTotals(
   payload: Payload,
   user: ReadingUser,
-  config: ResolvedReadingHistoryConfig,
+  config: ResolvedReadingConfig,
   now: number,
   req?: Partial<PayloadRequest>,
 ): Promise<MyReading> {

@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, spyOn, within } from "storybook/test"
 
-import type { MyReading } from "@/plugins/readingHistory"
+import type { MyReading } from "@/plugins/achievements"
 
 import { ReadingStats } from "./ReadingStats"
 
-/** Answers `/api/reading/mine` with `reading`, or 404 (sign-in switched off) when null. */
+/** Answers `/api/reading/mine` with `reading`, or 404 (achievements switched off) when null. */
 function serve(reading: MyReading | null) {
   return () => {
     const fetchSpy = spyOn(window, "fetch").mockImplementation(async () =>

@@ -1,15 +1,20 @@
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { READS_SLUG } from "../constants"
-import { resolveReadingHistoryConfig } from "../index"
+import type { ResolvedReadingConfig } from "../types"
 import { recordRead, recordVisit } from "../record"
 import { readingTotals } from "../totals"
 import { fakePayload } from "./fakePayload"
 
-const config = resolveReadingHistoryConfig({
-  currentUser: async () => null,
+const config: ResolvedReadingConfig = {
+  usersSlug: "users",
+  articlesSlug: "articles",
   groups: { slug: "volumes", field: "articles" },
-})
+  currentUser: async () => null,
+  readers: () => false,
+  disabled: false,
+  enabled: async () => true,
+}
 
 const published = (id: number) => ({ id, _status: "published" })
 
@@ -96,7 +101,7 @@ describe("readingTotals", () => {
   })
 
   it("has no volumes to count when the site has none", async () => {
-    const withoutGroups = resolveReadingHistoryConfig({ currentUser: async () => null })
+    const withoutGroups = { ...config, groups: undefined }
     expect(await readingTotals(fake.payload, reader(), withoutGroups, now)).toMatchObject({
       articlesRead: 0,
       volumesRead: null,

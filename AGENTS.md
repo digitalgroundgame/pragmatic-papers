@@ -502,33 +502,28 @@ join field, on each user's record. Only admins delete either.
   with a badge shows, and a badge `describeAuthor` gives (Staff) wins.
   `/api/achievements/mine` lists the signed-in reader's for `/account`. Switched off, no
   achievement shows anywhere.
-- The host's options (roles, access, the starter limit) are `achievementsOptions` in
+- **Reading** (`reading/`): while the switch is on, the plugin also keeps what signed-in readers
+  read, for reading achievements to count. Nothing is kept for readers who aren't signed in, or
+  while it's off.
+  - **Articles read** are rows (`articles-read`, one per reader per published article, unique on
+    the pair), so a rule can ask which articles someone read: a volume counts as read once every
+    article in it is (the `reading.groups` option).
+  - **Visits** are fields on the user (the `reading` group: days visited, last visit day, current
+    and longest streak), written at most once a day with `payload.db.updateOne`, past the users
+    collection's revalidation hooks. A day is the reader's own calendar day, which the browser
+    sends; the server accepts any day some time zone is on (`isCurrentDay`).
+  - Pages are one cached copy for everyone, so the browser reports: `ReadingBeacon`
+    (`src/components/ReadingBeacon`) in the frontend layout sends the day's visit, and after an
+    article's text it sends the read once the reader reaches the end or stays two minutes in
+    view. It sends nothing unless the `pp-signed-in` cookie is there: sign-in sets it beside the
+    session for the page's scripts to read (the session cookie is httpOnly), and it carries no
+    identity or authority. `POST /api/reading` takes `{ day, article? }`; `GET
+/api/reading/mine` is the account page's totals.
+  - Deleting an account, or an article, deletes its reads. Only admins see them in the admin.
+  - `tests/integration/reading.test.ts` signs a reader up with Discord stubbed, and reads.
+- The host's options (roles, access, the starter limit, what's read) are `achievementsOptions` in
   `src/plugins/readerAchievements.ts`. `tests/integration/achievements.test.ts` covers defining,
   giving and revoking, access, and filling a first-members achievement.
-
-### Reading history
-
-`src/plugins/readingHistory/` keeps what signed-in readers read, for achievement rules to
-count later. It runs whenever Single sign-on is on (its switch, read through
-`ssoOptions.enabled`), not behind the achievements switch, so history starts before the rules
-that use it. Nothing is kept for readers who aren't signed in.
-
-- **Articles read** are rows (`articles-read`, one per reader per published article, unique on
-  the pair), so a rule can ask which articles someone read: a volume counts as read once every
-  article in it is (the plugin's `groups` option).
-- **Visits** are fields on the user (the `reading` group: days visited, last visit day, current
-  and longest streak), written at most once a day with `payload.db.updateOne`, past the users
-  collection's revalidation hooks. A day is the reader's own calendar day, which the browser
-  sends; the server accepts any day some time zone is on (`isCurrentDay`).
-- Pages are one cached copy for everyone, so the browser reports: `ReadingBeacon`
-  (`src/components/ReadingBeacon`) in the frontend layout sends the day's visit, and after an
-  article's text it sends the read once the reader reaches the end or stays two minutes in view.
-  It sends nothing unless the `pp-signed-in` cookie is there: sign-in sets it beside the session
-  for the page's scripts to read (the session cookie is httpOnly), and it carries no identity or
-  authority. `POST /api/reading` takes `{ day, article? }`; `GET /api/reading/mine` is the
-  account page's totals.
-- Deleting an account deletes its reads, and deleting an article deletes its reads.
-- `tests/integration/readingHistory.test.ts` signs a reader up with Discord stubbed, and reads.
 
 ### Integrations
 

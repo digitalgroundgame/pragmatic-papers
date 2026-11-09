@@ -4,7 +4,7 @@ import { MINE_PATH, READING_PATH } from "../constants"
 import { isCurrentDay } from "../days"
 import { recordRead, recordVisit } from "../record"
 import { readingTotals } from "../totals"
-import type { ReadingUser, ResolvedReadingHistoryConfig } from "../types"
+import type { ReadingUser, ResolvedReadingConfig } from "../types"
 
 const noStore = { "Cache-Control": "private, no-store" }
 
@@ -13,7 +13,7 @@ const notFound = () => Response.json({ message: "Not Found" }, { status: 404, he
 /** The signed-in reader, or the response that turns the request away. */
 async function reader(
   req: PayloadRequest,
-  config: ResolvedReadingHistoryConfig,
+  config: ResolvedReadingConfig,
 ): Promise<ReadingUser | Response> {
   if (!(await config.enabled(req.payload))) return notFound()
   const user = await config.currentUser(req)
@@ -32,7 +32,7 @@ const articleId = (value: unknown): number | string | null => {
  * calendar day), and, with `article`, read it to the end. 204 whether or not it changed
  * anything; 400 for a day that isn't today anywhere; 401 signed out; 404 while it's off.
  */
-export const readingEndpoint = (config: ResolvedReadingHistoryConfig): Endpoint => ({
+export const readingEndpoint = (config: ResolvedReadingConfig): Endpoint => ({
   path: READING_PATH,
   method: "post",
   handler: async (req) => {
@@ -62,7 +62,7 @@ export const readingEndpoint = (config: ResolvedReadingHistoryConfig): Endpoint 
 })
 
 /** `GET /api/reading/mine`: the signed-in reader's totals, for their account page. */
-export const mineEndpoint = (config: ResolvedReadingHistoryConfig): Endpoint => ({
+export const mineEndpoint = (config: ResolvedReadingConfig): Endpoint => ({
   path: MINE_PATH,
   method: "get",
   handler: async (req) => {

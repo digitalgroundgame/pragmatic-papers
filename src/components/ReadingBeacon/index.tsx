@@ -2,8 +2,8 @@
 
 import React, { useEffect, useRef } from "react"
 
-import { READING_PATH } from "@/plugins/readingHistory/constants"
-import { localDay } from "@/plugins/readingHistory/days"
+import { READING_PATH } from "@/plugins/achievements/reading/constants"
+import { localDay } from "@/plugins/achievements/reading/days"
 import { DEFAULT_SIGNED_IN_COOKIE } from "@/plugins/sso/constants"
 
 /** How long a reader has to stay on an article, visible, for it to count as read. */

@@ -3008,7 +3008,7 @@ export interface Plugin {
      */
     comments?: boolean | null;
     /**
-     * Badges beside readers' names on comments, and achievements on their account page. First-members achievements are still awarded while it's off.
+     * Badges beside readers' names on comments, achievements and reading totals on their account page, and recording what signed-in readers read. First-members achievements are still awarded while it's off.
      */
     achievements?: boolean | null;
   };

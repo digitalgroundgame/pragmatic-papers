@@ -3,21 +3,56 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { READS_SLUG } from "../constants"
 import { deleteArticlesReads, deleteUsersReads } from "../hooks/deleteReads"
-import { type ReadingUser, readingHistoryPlugin, resolveReadingHistoryConfig } from "../index"
+import { resolveAchievementsConfig } from "../../index"
+import { resolveReadingConfig, withReading } from "../index"
+import type { ReadingUser, ResolvedReadingConfig } from "../types"
 import { fakePayload } from "./fakePayload"
 
 const users: CollectionConfig = { slug: "users", fields: [] }
 const articles: CollectionConfig = { slug: "articles", fields: [] }
 const base: Config = { collections: [users, articles], endpoints: [] } as unknown as Config
 
-const install = async (options: Parameters<typeof readingHistoryPlugin>[0]) =>
-  (await readingHistoryPlugin(options)(base)) as Config
+const reading = (overrides: Partial<ResolvedReadingConfig> = {}): ResolvedReadingConfig => ({
+  usersSlug: "users",
+  articlesSlug: "articles",
+  currentUser: async () => null,
+  readers: () => false,
+  disabled: false,
+  enabled: async () => true,
+  ...overrides,
+})
 
-describe("readingHistoryPlugin", () => {
-  const options = { currentUser: async () => null }
+const install = async (overrides: Partial<ResolvedReadingConfig> = {}) =>
+  withReading(base, reading(overrides))
 
+describe("resolveReadingConfig", () => {
+  it("takes the achievements plugin's options: its switch, its users and its admins", async () => {
+    const admins = () => true
+    const enabled = vi.fn(async () => true)
+    const achievements = resolveAchievementsConfig({
+      enabled,
+      currentUser: async () => null,
+      isMember: () => true,
+      moderators: () => true,
+      admins,
+      reading: { groups: { slug: "volumes", field: "articles" } },
+    })
+    const resolved = resolveReadingConfig(achievements)
+    expect(resolved).toMatchObject({
+      usersSlug: "users",
+      articlesSlug: "articles",
+      groups: { slug: "volumes", field: "articles" },
+      readers: admins,
+      disabled: false,
+    })
+    expect(await resolved.enabled({} as never)).toBe(true)
+    expect(enabled).toHaveBeenCalled()
+  })
+})
+
+describe("withReading", () => {
   it("adds the reads, the visits on each user, and the endpoints", async () => {
-    const config = await install(options)
+    const config = await install()
     const slugs = config.collections!.map((collection) => collection.slug)
     expect(slugs).toEqual(["users", "articles", READS_SLUG])
 
@@ -34,7 +69,7 @@ describe("readingHistoryPlugin", () => {
   })
 
   it("keeps its schema, and nothing else, when it's disabled", async () => {
-    const config = await install({ ...options, disabled: true })
+    const config = await install({ disabled: true })
     const usersAfter = config.collections!.find((c) => c.slug === "users")!
     expect(usersAfter.fields).toEqual([expect.objectContaining({ name: "reading" })])
     expect(usersAfter.hooks?.beforeDelete).toBeUndefined()
@@ -43,7 +78,7 @@ describe("readingHistoryPlugin", () => {
   })
 
   it("lets only the plugin write reads, and nobody read them unless the site says", async () => {
-    const config = await install(options)
+    const config = await install()
     const reads = config.collections!.find((c) => c.slug === READS_SLUG)!
     const req = {} as never
     for (const operation of ["read", "create", "update", "delete"] as const) {
@@ -74,10 +109,6 @@ describe("the endpoints", () => {
   const now = Date.parse("2026-11-08T18:00:00Z")
   let signedIn: ReadingUser | null
   let on: boolean
-  const config = resolveReadingHistoryConfig({
-    enabled: async () => on,
-    currentUser: async () => signedIn,
-  })
   let fake: ReturnType<typeof fakePayload>
 
   beforeEach(() => {
@@ -94,11 +125,9 @@ describe("the endpoints", () => {
   })
 
   const endpoint = async (method: string, path: string): Promise<Endpoint> =>
-    (
-      await readingHistoryPlugin({ enabled: async () => on, currentUser: async () => signedIn })(
-        base,
-      )
-    ).endpoints!.find((e) => e.method === method && e.path === path)!
+    (await install({ enabled: async () => on, currentUser: async () => signedIn })).endpoints!.find(
+      (e) => e.method === method && e.path === path,
+    )!
 
   const call = async (method: "post" | "get", path: string, body?: unknown) =>
     (await endpoint(method, path)).handler({
@@ -146,6 +175,5 @@ describe("the endpoints", () => {
       currentStreak: 1,
       longestStreak: 1,
     })
-    expect(config.usersSlug).toBe("users")
   })
 })

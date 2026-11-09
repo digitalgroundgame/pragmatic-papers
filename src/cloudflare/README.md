@@ -99,12 +99,13 @@ The same steps, for production's database and hostname:
      `PRODUCTION_ORIGIN_URL` to it. The Worker sends the admin panel, the API and Coolify's
      own `/next/` routes there (`ORIGIN_ROUTES` in `origin.ts`), so `start.sh`'s
      `/next/purge-edge` and the deploy records' `/next/version` still reach Coolify;
-   - add `pragmaticpapers.com` (and `www`) as Custom Domains on
-     `pragmatic-papers-production`, which replaces their DNS records, and set
-     `WORKER_PRODUCTION_URL` to `https://pragmaticpapers.com`;
+   - add Routes `pragmaticpapers.com/*` and `www.pragmaticpapers.com/*` (zone
+     `pragmaticpapers.com`; the `/*` matters, or only the home page matches) on the gateway,
+     `pragmatic-papers-production-gateway`, as staging-worker's is. Routes keep the existing
+     proxied DNS records. Then set `WORKER_PRODUCTION_URL` and Coolify's `WORKER_URL` to
+     `https://pragmaticpapers.com`, and check Turnstile's Hostname management lists it;
    - the zone's Cache Rules (`cloudflare/rulesets/`) no longer apply to the site's pages,
-     which Workers Cache holds instead (`edgeCache.ts`). Moving the Custom Domain back to
-     Coolify's DNS record undoes it.
+     which Workers Cache holds instead (`edgeCache.ts`). Removing the Routes undoes it.
 
 ## Each deploy
 

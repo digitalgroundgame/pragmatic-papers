@@ -16,11 +16,7 @@ import {
 } from "payload"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 
-import {
-  clientIp,
-  sentryPayloadPlugin,
-  skipPluginErrorsInPino,
-} from "../sentryPayload"
+import { clientIp, sentryPayloadPlugin, skipPluginErrorsInPino } from "../sentryPayload"
 
 // Payload's own pino, which isn't a dependency of ours.
 const pino = createRequire(import.meta.resolve("payload"))("pino") as (

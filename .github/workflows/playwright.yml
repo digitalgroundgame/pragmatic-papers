@@ -109,22 +109,26 @@ jobs:
             echo "queued=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # Whether this run deploys a preview, and how. Previews go to the PRs
-      # Coolify would preview itself: same-repo PRs from owners, members and
-      # collaborators, not titled [skip ci] / [skip cd]. Fork PRs get no
-      # secrets, and fork and Dependabot runs can't push to GHCR.
+      # Whether this run deploys a preview, and how. Previews go to same-repo
+      # PRs not opened by a bot and not titled [skip ci] / [skip cd]. Only
+      # someone with write access can push a branch here, so that's who a
+      # preview runs code from; the author's author_association isn't checked,
+      # since it says CONTRIBUTOR for an org member whose membership is
+      # private. Fork PRs get no secrets, and fork and Dependabot runs can't
+      # push to GHCR.
       #   - image: the preview app runs the image "Build image" builds
       #     (COOLIFY_PREVIEW_IMAGE_APP_UUID set).
       #   - coolify: the fallback, where staging builds previews on its own
       #     webhook and "Deploy preview" only mirrors that build onto the PR
       #     (dockerfiles/README.md, "Falling back to Coolify-built previews").
-      - id: plan
+      - name: Plan the preview
+        id: plan
         env:
           ELIGIBLE: >-
             ${{
               github.event_name == 'pull_request' &&
               github.event.pull_request.head.repo.full_name == github.repository &&
-              contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
+              github.event.pull_request.user.type != 'Bot' &&
               !contains(github.event.pull_request.title, '[skip ci]') &&
               !contains(github.event.pull_request.title, '[skip cd]')
             }}

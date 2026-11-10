@@ -27,6 +27,7 @@ import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
 import { ssoAfterSchemaInit } from "@/plugins/sso"
+import { articleViewsAfterSchemaInit } from "@/collections/Articles/stats/views/schema"
 import { sentryPayloadPlugin, skipPluginErrorsInPino } from "@/sentryPayload"
 import { getSiteURL } from "@/utilities/getURL"
 import { describePlugin } from "@/utilities/registerPlugin"
@@ -132,7 +133,11 @@ export default buildConfig({
     // touch the real database while building, so they migrate when Payload starts (Payload
     // only does under NODE_ENV=production). Coolify's builds run `payload migrate` instead.
     prodMigrations: process.env.BUILT_WITHOUT_DATABASE === "true" ? migrations : undefined,
-    afterSchemaInit: [searchVectorAfterSchemaInit, ssoAfterSchemaInit()],
+    afterSchemaInit: [
+      searchVectorAfterSchemaInit,
+      ssoAfterSchemaInit(),
+      articleViewsAfterSchemaInit,
+    ],
   }),
   /**
    * The admin saves a document as multipart, and busboy — which parses it — truncates any

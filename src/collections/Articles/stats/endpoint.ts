@@ -11,6 +11,8 @@ import { relationshipId } from "@/utilities/relationships"
 
 import { canSeeArticleStats } from "./access"
 import { articleFiguresCache } from "./figures"
+import { type ViewCounts, viewCounts } from "./views/count"
+import { recordArticleViewHandler } from "./views/endpoint"
 
 export type GoogleAnalyticsStats =
   | {
@@ -32,6 +34,13 @@ export interface ArticleStats {
   published: boolean
   /** Whether the article has narration audio, so the tab shows its plays. */
   narration: boolean
+  /** The day it was first published (YYYY-MM-DD), or null until it is. */
+  publishedOn: string | null
+  /**
+   * Our own count of its views, which ad blockers don't stop (`ArticleViewBeacon`). Null
+   * until it's published, or when the count couldn't be read.
+   */
+  views: ViewCounts | null
   /** Null until the article is published. */
   analytics: GoogleAnalyticsStats | null
   /** Null while the comments switch is off. */
@@ -49,14 +58,16 @@ export interface ArticleStats {
   ranking: { position: number; of: number } | null
 }
 
-/** The day (YYYY-MM-DD) GA should start counting from: the day it was published. */
-const sinceDay = (publishedAt: string | null | undefined): string => {
+/** The day (YYYY-MM-DD) it was published, in UTC, or null without a valid date. */
+const publishedDay = (publishedAt: string | null | undefined): string | null => {
   const date = publishedAt ? new Date(publishedAt) : null
-  return date && !Number.isNaN(date.getTime())
-    ? date.toISOString().slice(0, 10)
-    : // GA4's earliest date.
-      "2015-08-14"
+  return date && !Number.isNaN(date.getTime()) ? date.toISOString().slice(0, 10) : null
 }
+
+/** The day (YYYY-MM-DD) GA should start counting from: the day it was published. */
+const sinceDay = (publishedAt: string | null | undefined): string =>
+  // GA4's earliest date.
+  publishedDay(publishedAt) ?? "2015-08-14"
 
 async function analyticsFor(
   req: PayloadRequest,
@@ -159,6 +170,8 @@ async function statsHandler(req: PayloadRequest, refresh: boolean): Promise<Resp
     const body: ArticleStats = {
       published: false,
       narration: false,
+      publishedOn: null,
+      views: null,
       analytics: null,
       comments: null,
       ranking: null,
@@ -166,7 +179,11 @@ async function statsHandler(req: PayloadRequest, refresh: boolean): Promise<Resp
     return Response.json(body, { headers: { "Cache-Control": "private, no-store" } })
   }
 
-  const [analytics, comments, ranking] = await Promise.all([
+  const [views, analytics, comments, ranking] = await Promise.all([
+    viewCounts(req.payload, id).catch((err: unknown) => {
+      req.payload.logger.warn({ err }, `Reading the view count of article ${id} failed`)
+      return null
+    }),
     analyticsFor(
       req,
       { id, slug: article.slug as string, publishedAt: article.publishedAt },
@@ -176,7 +193,15 @@ async function statsHandler(req: PayloadRequest, refresh: boolean): Promise<Resp
     rankingFor(req, id),
   ])
   const narration = relationshipId(article.narration) !== null
-  const body: ArticleStats = { published: true, narration, analytics, comments, ranking }
+  const body: ArticleStats = {
+    published: true,
+    narration,
+    publishedOn: publishedDay(article.publishedAt),
+    views,
+    analytics,
+    comments,
+    ranking,
+  }
   return Response.json(body, { headers: { "Cache-Control": "private, no-store" } })
 }
 
@@ -191,4 +216,5 @@ export const refreshArticleStatsHandler = (req: PayloadRequest): Promise<Respons
 export const articleStatsEndpoints: Endpoint[] = [
   { path: "/:id/stats", method: "get", handler: articleStatsHandler },
   { path: "/:id/stats/refresh", method: "post", handler: refreshArticleStatsHandler },
+  { path: "/:id/view", method: "post", handler: recordArticleViewHandler },
 ]

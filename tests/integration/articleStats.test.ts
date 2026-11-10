@@ -8,6 +8,8 @@ import {
   type ArticleStats,
 } from "@/collections/Articles/stats/endpoint"
 import { articleFiguresCache } from "@/collections/Articles/stats/figures"
+import { recordArticleViewHandler, viewLimiter } from "@/collections/Articles/stats/views/endpoint"
+import { sql } from "@payloadcms/db-postgres"
 import type { Article, Media, User } from "@/payload-types"
 import { getSiteURL } from "@/utilities/getURL"
 
@@ -89,8 +91,19 @@ beforeAll(async () => {
   payload = await getPayload()
 })
 
+async function view(
+  articleId: number,
+  headers: Record<string, string> = { "user-agent": "Mozilla/5.0 Firefox/140.0" },
+): Promise<number> {
+  const req = await createLocalReq({}, payload)
+  req.routeParams = { id: String(articleId) }
+  req.headers = new Headers(headers)
+  return (await recordArticleViewHandler(req)).status
+}
+
 beforeEach(() => {
   articleFiguresCache.clear()
+  viewLimiter.clear()
   ga.calls.length = 0
   ga.views = 0
 })
@@ -168,6 +181,8 @@ describe("GET /api/articles/:id/stats", () => {
     expect(body).toEqual({
       published: false,
       narration: false,
+      publishedOn: null,
+      views: null,
       analytics: null,
       comments: null,
       ranking: null,
@@ -279,5 +294,83 @@ describe("GET /api/articles/:id/stats", () => {
     })
 
     expect((await stats(writer, article.id)).body.ranking).toEqual({ position: 2, of: 2 })
+  })
+})
+
+describe("POST /api/articles/:id/view", () => {
+  it("counts each visit to a published article, and the Stats tab shows it", async () => {
+    const writer = await createUser("writer")
+    const article = await createArticle({ authors: [writer.id] })
+
+    expect(await view(article.id)).toBe(204)
+    expect(await view(article.id)).toBe(204)
+    expect(
+      await view(article.id, { "user-agent": "Safari/605", "x-forwarded-for": "10.0.0.2" }),
+    ).toBe(204)
+
+    const { body } = await stats(writer, article.id)
+    expect(body.views).toMatchObject({ allTime: 3, last30Days: 3, last7Days: 3 })
+    expect(body.views?.countingSince).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it("leaves out drafts, bots and an address past its limit", async () => {
+    const writer = await createUser("writer")
+    const draft = await createArticle({ authors: [writer.id], _status: "draft" })
+    const article = await createArticle({ authors: [writer.id] })
+
+    expect(await view(draft.id)).toBe(204)
+    expect(await view(article.id, { "user-agent": "Googlebot/2.1" })).toBe(204)
+    expect(await view(article.id, { "user-agent": "HeadlessChrome/140" })).toBe(204)
+    for (let i = 0; i < 25; i++) {
+      await view(article.id, { "user-agent": "Firefox/140", "cf-connecting-ip": "203.0.113.9" })
+    }
+
+    const rows = await payload.db.drizzle.execute<{ article_id: number; views: number }>(sql`
+      SELECT article_id, views FROM article_views WHERE article_id IN (${draft.id}, ${article.id})
+    `)
+    expect(rows.rows).toEqual([{ article_id: article.id, views: 20 }])
+  })
+
+  it("refuses an id that isn't one, and ignores one that doesn't exist", async () => {
+    expect(await view(Number.NaN)).toBe(400)
+    expect(await view(999_999_999)).toBe(204)
+  })
+
+  it("sums the ranges over the days counted, and says when counting began", async () => {
+    const writer = await createUser("writer")
+    const article = await createArticle({ authors: [writer.id] })
+    const today = sql`(now() at time zone 'utc')::date`
+    await payload.db.drizzle.execute(sql`
+      INSERT INTO article_views (article_id, day, views) VALUES
+        (${article.id}, ${today}, 1),
+        (${article.id}, ${today} - 6, 2),
+        (${article.id}, ${today} - 7, 4),
+        (${article.id}, ${today} - 29, 8),
+        (${article.id}, ${today} - 30, 16),
+        (${article.id}, DATE '2020-01-02', 32)
+    `)
+
+    const { body } = await stats(writer, article.id)
+    expect(body.views).toEqual({
+      allTime: 63,
+      last30Days: 15,
+      last7Days: 3,
+      countingSince: "2020-01-02",
+    })
+  })
+
+  it("forgets an article's views when it's deleted", async () => {
+    const article = await createArticle({ authors: [(await createUser("writer")).id] })
+    await view(article.id)
+    await payload.delete({
+      collection: "articles",
+      id: article.id,
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+    })
+    const rows = await payload.db.drizzle.execute(sql`
+      SELECT 1 FROM article_views WHERE article_id = ${article.id}
+    `)
+    expect(rows.rows).toHaveLength(0)
   })
 })

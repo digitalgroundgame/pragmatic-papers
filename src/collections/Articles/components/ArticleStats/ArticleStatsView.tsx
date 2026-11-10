@@ -3,7 +3,8 @@
 import React, { useCallback, useEffect, useState } from "react"
 
 import type { ArticleStats, GoogleAnalyticsStats } from "@/collections/Articles/stats/endpoint"
-import { Info } from "lucide-react"
+import type { ViewCounts } from "@/collections/Articles/stats/views/count"
+import { CalendarClock, Info } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -17,7 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { PageRangeFigures } from "@/integrations/google/analytics"
-import { formatTimeAgo } from "@/utilities/formatDate"
+import { formatLongDate, formatTimeAgo } from "@/utilities/formatDate"
 
 /** Fetches the article's stats; `refresh` asks GA again rather than reading the cache. */
 export type LoadArticleStats = (refresh: boolean) => Promise<ArticleStats>
@@ -31,24 +32,49 @@ const COLUMNS = [
   { key: "allTime", label: "Since publication" },
 ] as const
 
+type RangeKey = (typeof COLUMNS)[number]["key"]
+
 interface Row {
-  key: keyof PageRangeFigures
+  key: string
   label: string
+  value: (range: RangeKey) => number
+  /** A share to show after the number, such as the readers who finished. */
+  share?: (range: RangeKey) => string | null
 }
-
-const ROWS: Row[] = [
-  { key: "views", label: "Views" },
-  { key: "readers", label: "Readers" },
-  { key: "readersWhoFinished", label: "Read to the end" },
-]
-
-const NARRATION_ROW: Row = { key: "eventCount", label: "Narration plays" }
 
 /** Cells flush with the card's own padding, so every section lines up. */
 const EDGE = "first:pl-0 last:pr-0"
 
 const finishedShare = (range: PageRangeFigures): string | null =>
   range.readers > 0 ? percent.format(range.readersWhoFinished / range.readers) : null
+
+/** The rows the figures make: our own view count first, then GA's. */
+function figureRows(
+  views: ViewCounts | null,
+  analytics: GoogleAnalyticsStats | null,
+  narration: boolean,
+): Row[] {
+  const rows: Row[] = []
+  if (views) rows.push({ key: "views", label: "Views", value: (range) => views[range] })
+  if (analytics?.status !== "ok") return rows
+  const ga = (field: keyof PageRangeFigures) => (range: RangeKey) => analytics.figures[range][field]
+  rows.push(
+    {
+      key: "gaViews",
+      label: views ? "Views in Google Analytics" : "Views",
+      value: ga("views"),
+    },
+    { key: "readers", label: "Readers", value: ga("readers") },
+    {
+      key: "readersWhoFinished",
+      label: "Read to the end",
+      value: ga("readersWhoFinished"),
+      share: (range) => finishedShare(analytics.figures[range]),
+    },
+  )
+  if (narration) rows.push({ key: "narration", label: "Narration plays", value: ga("eventCount") })
+  return rows
+}
 
 const Note = ({ children, ...props }: React.ComponentProps<"p">): React.ReactNode => (
   <p className="text-muted-foreground m-0 text-sm" {...props}>
@@ -64,18 +90,54 @@ const Problem = ({ children }: { children: React.ReactNode }): React.ReactNode =
 
 /**
  * Above the figures, so a writer reads it before the numbers: GA misses many readers, so
- * the real readership is higher than what's shown.
+ * its figures run lower than our own count, and lower than the real readership.
  */
-function UndercountNotice(): React.ReactNode {
+function UndercountNotice({ counted }: { counted: boolean }): React.ReactNode {
   return (
     <Alert>
       <Info aria-hidden />
-      <AlertTitle>More people read this than these numbers show</AlertTitle>
+      <AlertTitle>More people read this than Google Analytics shows</AlertTitle>
       <AlertDescription>
         <p className="m-0">
           Google Analytics can&apos;t count readers who use ad blockers or privacy tools, and a lot
-          of readers do. Treat these figures as a floor, and use them to compare your articles with
-          each other rather than as an exact count. New visits can take a few hours to show up.
+          of readers do.{" "}
+          {counted
+            ? "Views is our own count, which they don't stop, so it runs higher. Use Google Analytics for how far people read and where they came from, and to compare your articles with each other."
+            : "Treat its figures as a floor, and use them to compare your articles with each other rather than as an exact count."}{" "}
+          New visits can take a few hours to reach Google Analytics.
+        </p>
+      </AlertDescription>
+    </Alert>
+  )
+}
+
+/** Our count began after the article came out, so its earlier views aren't in it. */
+const countStartedLate = (stats: ArticleStats): boolean =>
+  Boolean(
+    stats.views &&
+    stats.publishedOn &&
+    (stats.views.countingSince === null || stats.publishedOn < stats.views.countingSince),
+  )
+
+function CountStartedNotice({
+  countingSince,
+  publishedOn,
+  analytics,
+}: {
+  countingSince: string | null
+  publishedOn: string
+  analytics: boolean
+}): React.ReactNode {
+  return (
+    <Alert>
+      <CalendarClock aria-hidden />
+      <AlertTitle>Views only counts visits since we started counting</AlertTitle>
+      <AlertDescription>
+        <p className="m-0">
+          {countingSince
+            ? `We started counting views on ${formatLongDate(countingSince)}, and this article came out on ${formatLongDate(publishedOn)}, so visits before then aren't in it.`
+            : "We've only just started counting views, so this article's earlier visits aren't in it."}
+          {analytics && " Google Analytics' figures since publication include them."}
         </p>
       </AlertDescription>
     </Alert>
@@ -83,126 +145,120 @@ function UndercountNotice(): React.ReactNode {
 }
 
 function ReadersCard({
-  analytics,
-  narration,
+  stats,
   refreshing,
   onRefresh,
 }: {
-  analytics: GoogleAnalyticsStats
-  narration: boolean
+  stats: ArticleStats
   refreshing: boolean
   onRefresh: () => void
 }): React.ReactNode {
-  const refresh = (
-    <CardAction>
-      <Button variant="outline" size="sm" onClick={onRefresh} disabled={refreshing}>
-        {refreshing ? "Refreshing…" : "Refresh"}
-      </Button>
-    </CardAction>
-  )
+  const { views, analytics } = stats
+  const rows = figureRows(views, analytics, stats.narration)
+  const gaOk = analytics?.status === "ok"
 
-  if (analytics.status === "unconfigured") {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Readers</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Note>
-            Google Analytics isn&apos;t connected on this site, so there are no reader figures here.
-            Only the production site counts readers.
-          </Note>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (analytics.status === "error") {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Readers</CardTitle>
-          {refresh}
-        </CardHeader>
-        <CardContent>
-          <Problem>Google Analytics couldn&apos;t be reached. Try again in a moment.</Problem>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  const { figures } = analytics
-  const rows = narration ? [...ROWS, NARRATION_ROW] : ROWS
   return (
     <>
-      <UndercountNotice />
+      {gaOk && <UndercountNotice counted={views !== null} />}
+      {countStartedLate(stats) && (
+        <CountStartedNotice
+          countingSince={views?.countingSince ?? null}
+          publishedOn={stats.publishedOn as string}
+          analytics={gaOk}
+        />
+      )}
       <Card>
         <CardHeader>
           <CardTitle id="article-stats-readers">Readers</CardTitle>
-          {refresh}
+          <CardAction>
+            <Button variant="outline" size="sm" onClick={onRefresh} disabled={refreshing}>
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </Button>
+          </CardAction>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Table aria-labelledby="article-stats-readers" className="tabular-nums">
-            <TableHeader>
-              <TableRow>
-                <TableHead className={EDGE}>
-                  <span className="sr-only">Figure</span>
-                </TableHead>
-                {COLUMNS.map((column) => (
-                  <TableHead
-                    key={column.key}
-                    className={`text-muted-foreground text-right font-normal ${EDGE}`}
-                  >
-                    {column.label}
+          {rows.length > 0 && (
+            <Table aria-labelledby="article-stats-readers" className="tabular-nums">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className={EDGE}>
+                    <span className="sr-only">Figure</span>
                   </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.key}>
-                  <TableHead scope="row" className={`font-normal ${EDGE}`}>
-                    {row.label}
-                  </TableHead>
-                  {COLUMNS.map((column) => {
-                    const range = figures[column.key]
-                    const share = row.key === "readersWhoFinished" ? finishedShare(range) : null
-                    return (
-                      <TableCell key={column.key} className={`text-right ${EDGE}`}>
-                        {number.format(range[row.key])}
-                        {share && <span className="text-muted-foreground"> ({share})</span>}
-                      </TableCell>
-                    )
-                  })}
+                  {COLUMNS.map((column) => (
+                    <TableHead
+                      key={column.key}
+                      className={`text-muted-foreground text-right font-normal ${EDGE}`}
+                    >
+                      {column.label}
+                    </TableHead>
+                  ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <Note>
-            From Google Analytics, updated {formatTimeAgo(analytics.fetchedAt)}.
-            {analytics.reportsUrl && (
-              <>
-                {" "}
-                <a
-                  href={analytics.reportsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-foreground underline"
-                >
-                  Open Google Analytics
-                </a>
-              </>
-            )}
-          </Note>
-          {analytics.throttled && (
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow key={row.key}>
+                    <TableHead scope="row" className={`font-normal ${EDGE}`}>
+                      {row.label}
+                    </TableHead>
+                    {COLUMNS.map((column) => {
+                      const share = row.share?.(column.key)
+                      return (
+                        <TableCell key={column.key} className={`text-right ${EDGE}`}>
+                          {number.format(row.value(column.key))}
+                          {share && <span className="text-muted-foreground"> ({share})</span>}
+                        </TableCell>
+                      )
+                    })}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          {views ? (
+            <Note>
+              Views is our own count: one for each visit to the article, with no cookies and nothing
+              kept about the reader.
+            </Note>
+          ) : (
+            <Problem>Our view count couldn&apos;t be read. Try again in a moment.</Problem>
+          )}
+          {analytics?.status === "ok" && (
+            <Note>
+              The rest is from Google Analytics, updated {formatTimeAgo(analytics.fetchedAt)}.
+              {analytics.reportsUrl && (
+                <>
+                  {" "}
+                  <a
+                    href={analytics.reportsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-foreground underline"
+                  >
+                    Open Google Analytics
+                  </a>
+                </>
+              )}
+            </Note>
+          )}
+          {analytics?.status === "unconfigured" && (
+            <Note>
+              Google Analytics isn&apos;t connected on this site, so there are no reader figures
+              from it here. Only the production site counts readers there.
+            </Note>
+          )}
+          {analytics?.status === "error" && (
+            <Problem>Google Analytics couldn&apos;t be reached. Try again in a moment.</Problem>
+          )}
+          {analytics?.status === "ok" && analytics.throttled && (
             <Note role="status">
-              These were fetched less than a minute ago, so Refresh kept them. Try again shortly.
+              Google Analytics&apos; figures were fetched less than a minute ago, so Refresh kept
+              them. Try again shortly.
             </Note>
           )}
         </CardContent>
       </Card>
 
-      {figures.referrers.length > 0 && (
+      {analytics?.status === "ok" && analytics.figures.referrers.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle id="article-stats-referrers">Where readers came from</CardTitle>
@@ -220,7 +276,7 @@ function ReadersCard({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {figures.referrers.map((referrer) => (
+                {analytics.figures.referrers.map((referrer) => (
                   <TableRow key={referrer.source}>
                     <TableCell className={EDGE}>{referrer.source}</TableCell>
                     <TableCell className={`text-right ${EDGE}`}>
@@ -242,8 +298,8 @@ function Shell({ children }: { children: React.ReactNode }): React.ReactNode {
 }
 
 /**
- * An article's Stats tab: GA's reader figures (cached for an hour, with a Refresh button),
- * its narration plays, its comments and its place in the recommendations.
+ * An article's Stats tab: our own view count, GA's reader figures (cached for an hour, with a
+ * Refresh button), its narration plays, its comments and its place in the recommendations.
  */
 export function ArticleStatsView({ load }: { load: LoadArticleStats }): React.ReactNode {
   const [stats, setStats] = useState<ArticleStats | null>(null)
@@ -307,14 +363,7 @@ export function ArticleStatsView({ load }: { load: LoadArticleStats }): React.Re
 
   return (
     <Shell>
-      {stats.analytics && (
-        <ReadersCard
-          analytics={stats.analytics}
-          narration={stats.narration}
-          refreshing={refreshing}
-          onRefresh={() => void fetchStats(true)}
-        />
-      )}
+      <ReadersCard stats={stats} refreshing={refreshing} onRefresh={() => void fetchStats(true)} />
       {failed && <Problem>Refresh failed. These are the figures from before.</Problem>}
 
       <Card>

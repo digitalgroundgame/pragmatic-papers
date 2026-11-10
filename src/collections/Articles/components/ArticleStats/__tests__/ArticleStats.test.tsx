@@ -15,6 +15,8 @@ const range = (views: number) => ({ views, readers: 4, readersWhoFinished: 1, ev
 const stats = (views: number): Stats => ({
   published: true,
   narration: false,
+  publishedOn: "2026-11-01",
+  views: { allTime: 9, last30Days: 9, last7Days: 9, countingSince: "2026-10-01" },
   analytics: {
     status: "ok",
     figures: { allTime: range(views), last30Days: range(2), last7Days: range(1), referrers: [] },

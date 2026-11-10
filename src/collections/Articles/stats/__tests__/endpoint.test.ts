@@ -37,6 +37,7 @@ interface Setup {
   comments?: boolean
   rankings?: { article: number | { id: number } }[]
   narrator?: number
+  views?: Record<string, unknown> | Error
 }
 
 const editor = { id: 1, roles: ["editor"] }
@@ -58,6 +59,7 @@ function request({
   comments = true,
   rankings = [],
   narrator,
+  views = { all_time: 50, last_30_days: 40, last_7_days: 12, counting_since: "2026-10-20" },
 }: Setup = {}) {
   const counts: Record<string, number> = { published: 4, "auto-hidden": 2, hidden: 1 }
   const payload = {
@@ -69,6 +71,14 @@ function request({
     findGlobal: vi.fn(async ({ slug }: { slug: string }) =>
       slug === "plugins" ? { switches: { comments } } : { rankings },
     ),
+    db: {
+      drizzle: {
+        execute: vi.fn(async () => {
+          if (views instanceof Error) throw views
+          return { rows: [views] }
+        }),
+      },
+    },
     count: vi.fn(async ({ where }: { where: { status: { equals: string } } }) => ({
       totalDocs: counts[where.status.equals] ?? 0,
     })),
@@ -94,6 +104,7 @@ describe("article stats endpoints", () => {
     expect(articleStatsEndpoints.map(({ path, method }) => [method, path])).toEqual([
       ["get", "/:id/stats"],
       ["post", "/:id/stats/refresh"],
+      ["post", "/:id/view"],
     ])
   })
 
@@ -126,6 +137,8 @@ describe("article stats endpoints", () => {
     expect(await body(response)).toEqual({
       published: false,
       narration: false,
+      publishedOn: null,
+      views: null,
       analytics: null,
       comments: null,
       ranking: null,
@@ -162,6 +175,25 @@ describe("article stats endpoints", () => {
       moderateUrl: "/admin/collections/comments?where%5Btarget%5D%5Bequals%5D=7",
     })
     expect(stats.ranking).toEqual({ position: 2, of: 3 })
+    expect(stats.publishedOn).toBe("2026-11-01")
+    expect(stats.views).toEqual({
+      allTime: 50,
+      last30Days: 40,
+      last7Days: 12,
+      countingSince: "2026-10-20",
+    })
+  })
+
+  it("still shows the rest when our view count can't be read, and logs it", async () => {
+    const { req, payload } = request({ views: new Error("connection reset") })
+    const stats = await body(await articleStatsHandler(req))
+
+    expect(stats.views).toBeNull()
+    expect(stats.analytics).toMatchObject({ status: "ok" })
+    expect(payload.logger.warn).toHaveBeenCalledWith(
+      { err: expect.any(Error) },
+      "Reading the view count of article 7 failed",
+    )
   })
 
   it("gives a credited writer published comments only, and no link into GA", async () => {
@@ -189,8 +221,10 @@ describe("article stats endpoints", () => {
   })
 
   it("counts from GA's first day when the article has no publication date", async () => {
-    await articleStatsHandler(request({ article: { ...published, publishedAt: null } }).req)
+    const { req } = request({ article: { ...published, publishedAt: null } })
+    const stats = await body(await articleStatsHandler(req))
     expect(ga.pageFigures).toHaveBeenCalledWith(expect.objectContaining({ since: "2015-08-14" }))
+    expect(stats.publishedOn).toBeNull()
   })
 
   it("says GA isn't connected when this site has no credentials", async () => {

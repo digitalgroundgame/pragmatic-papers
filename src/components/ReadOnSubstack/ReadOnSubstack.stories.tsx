@@ -43,6 +43,8 @@ export const Icon: Story = {
 
 /** An article that isn't on Substack yet shows nothing. */
 export const NotImported: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   args: { article: { syndicateToSubstack: true, substackUrl: null } },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).queryByRole("link")).not.toBeInTheDocument()

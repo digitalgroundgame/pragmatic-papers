@@ -40,17 +40,9 @@ interface MenuProps
 }
 
 /**
- * Menu component renders a navigation menu based on menu data.
- *
- * @param menu - The array of menu items to display.
- * @param label - Accessible name for the `nav` landmark.
- * @param className - Additional classes for the menu container.
- * @param layout - Specifies the menu layout variant ('inline', 'stacked', or 'responsive').
- * @param props - All other HTML div props.
- *
- * @example
- * <Menu menu={menuData} label="Footer" layout="inline" />
- * <Menu menu={menuData} label="Main" layout="stacked" />
+ * A navigation menu built from a menu field's items, in a `nav` landmark named
+ * by `label`. `layout` lays the links out in a row (`inline`), a column
+ * (`stacked`), or a column that becomes a row on wider screens (`responsive`).
  */
 export const Menu: React.FC<MenuProps> = ({ menu, label, className, layout, ...props }) => {
   if (!menu) return null

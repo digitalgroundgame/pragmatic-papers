@@ -13,6 +13,7 @@ import {
   SENTENCES,
   TextFormat,
 } from "@/stories/fixtures/richText"
+import { isolatedDocs } from "@/stories/isolatedDocs"
 
 import RichText from "."
 
@@ -160,5 +161,6 @@ export const Selection: Story = {
 
 export const SelectionDark: Story = {
   globals: { theme: "dark" },
+  parameters: isolatedDocs("560px"),
   play: async ({ canvasElement }) => expectBrandSelection(canvasElement),
 }

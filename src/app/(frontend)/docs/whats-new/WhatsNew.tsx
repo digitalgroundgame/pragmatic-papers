@@ -1,6 +1,8 @@
 import type { Crumb } from "@/components/Breadcrumbs"
 import { DocsLayout } from "@/components/DocsNav"
 import { JsonLd } from "@/components/JsonLd"
+import { cn } from "@/utilities/utils"
+import { cardGroup, cardImageHover, cardTitleHover } from "@/components/cardHover"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import type { queryPublishedDocs } from "@/plugins/docs/queries"
 import {
@@ -53,7 +55,10 @@ export function WhatsNew({ docs }: { docs: WhatsNewDoc[] }): React.ReactNode {
                   <li key={doc.id} className="border-b py-6">
                     <HoverPrefetchLink
                       href={paths.get(doc.slug) ?? `${DOCS_PATH}/${doc.slug}`}
-                      className="group flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6"
+                      className={cn(
+                        cardGroup,
+                        "flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6",
+                      )}
                     >
                       {thumbnail && (
                         // Decorative: the title beside it says what the doc is about.
@@ -64,11 +69,19 @@ export function WhatsNew({ docs }: { docs: WhatsNewDoc[] }): React.ReactNode {
                           loading="lazy"
                           width={300}
                           height={158}
-                          className="aspect-40/21 w-full shrink-0 rounded-sm border object-cover transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16] sm:w-60"
+                          className={cn(
+                            "aspect-40/21 w-full shrink-0 rounded-sm border object-cover sm:w-60",
+                            cardImageHover,
+                          )}
                         />
                       )}
                       <span className="flex flex-col gap-2">
-                        <span className="font-sans text-xl leading-tight font-semibold tracking-tight text-balance decoration-2 underline-offset-4 group-focus-visible:underline hover:underline md:text-2xl">
+                        <span
+                          className={cn(
+                            "font-sans text-xl leading-tight font-semibold tracking-tight text-balance md:text-2xl",
+                            cardTitleHover,
+                          )}
+                        >
                           {doc.title}
                         </span>
                         <time

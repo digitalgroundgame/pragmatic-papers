@@ -2,6 +2,7 @@ import type { Volume } from "@/payload-types"
 import { cn } from "@/utilities/utils"
 import React from "react"
 
+import { cardGroup, cardTitleHover } from "@/components/cardHover"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Separator } from "@/components/ui/separator"
 import { formatLongDate } from "@/utilities/formatDate"
@@ -31,9 +32,9 @@ export const Entry: React.FC<{
   const href = docPath(relationTo, slug ?? "")
 
   return (
-    <div className={cn("group space-y-3 overflow-hidden", className)}>
+    <div className={cn(cardGroup, "space-y-3 overflow-hidden", className)}>
       {titleToUse && (
-        <h3 className="text-foreground decoration-2 underline-offset-4 hover:underline has-focus-visible:underline">
+        <h3 className={cn("text-foreground", cardTitleHover)}>
           <HoverPrefetchLink href={href}>{titleToUse}</HoverPrefetchLink>
         </h3>
       )}

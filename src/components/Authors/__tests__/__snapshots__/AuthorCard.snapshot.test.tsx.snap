@@ -41,7 +41,7 @@ exports[`AuthorCard > renders minimal author with no bio, image, or affiliation 
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline"
+              class="text-foreground hover:text-foreground/80"
               href="/contributors/alice-smith"
             >
               Alice Smith
@@ -98,7 +98,7 @@ exports[`AuthorCard > renders with affiliation and short biography 1`] = `
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline"
+              class="text-foreground hover:text-foreground/80"
               href="/contributors/bob-jones"
             >
               Bob Jones
@@ -165,7 +165,7 @@ exports[`AuthorCard > renders with biography longer than 255 characters (truncat
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline"
+              class="text-foreground hover:text-foreground/80"
               href="/contributors/carol-white"
             >
               Carol White
@@ -227,7 +227,7 @@ exports[`AuthorCard > renders with null name using fallback 1`] = `
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline"
+              class="text-foreground hover:text-foreground/80"
               href="/contributors/alice-smith"
             />
           </h3>
@@ -282,7 +282,7 @@ exports[`AuthorCard > renders with profileImage as a numeric id 1`] = `
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline"
+              class="text-foreground hover:text-foreground/80"
               href="/contributors/alice-smith"
             >
               Alice Smith
@@ -339,7 +339,7 @@ exports[`AuthorCard > renders with profileImage object containing a square URL 1
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline"
+              class="text-foreground hover:text-foreground/80"
               href="/contributors/alice-smith"
             >
               Alice Smith
@@ -396,7 +396,7 @@ exports[`AuthorCard > renders with profileImage object without a square URL 1`] 
             class="text-pretty md:text-2xl"
           >
             <a
-              class="text-foreground decoration-2 underline-offset-4 hover:underline focus-visible:underline"
+              class="text-foreground hover:text-foreground/80"
               href="/contributors/alice-smith"
             >
               Alice Smith

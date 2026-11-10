@@ -1,5 +1,6 @@
 import React from "react"
 
+import { cardGroup, cardImageHover, cardTitleHover } from "@/components/cardHover"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
 import { Card, CardContent } from "@/components/ui/card"
@@ -23,14 +24,11 @@ export const AuthorArticleCard: React.FC<AuthorArticleCardProps> = ({
   const href = `/articles/${slug}`
 
   return (
-    <Card className={cn("rounded-sm", className)}>
+    <Card className={cn(cardGroup, "rounded-sm", className)}>
       <CardContent className="flex flex-col items-center gap-4 md:flex-row">
         <div className="bg-muted shrink-0 overflow-hidden rounded-sm border md:h-24 md:w-32">
           {metaImage && typeof metaImage !== "string" && (
-            <HoverPrefetchLink
-              href={href}
-              className="transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16]"
-            >
+            <HoverPrefetchLink href={href} className={cardImageHover}>
               <Media
                 media={metaImage}
                 className="aspect-3/2 object-cover md:aspect-4/3"
@@ -42,7 +40,9 @@ export const AuthorArticleCard: React.FC<AuthorArticleCardProps> = ({
         </div>
         <div className="flex flex-col gap-1">
           {title && (
-            <h3 className="text-foreground line-clamp-3 pb-1 text-pretty decoration-2 underline-offset-4 hover:underline has-focus-visible:underline md:text-2xl">
+            <h3
+              className={cn("text-foreground line-clamp-3 text-pretty md:text-2xl", cardTitleHover)}
+            >
               <HoverPrefetchLink href={href}>{title}</HoverPrefetchLink>
             </h3>
           )}

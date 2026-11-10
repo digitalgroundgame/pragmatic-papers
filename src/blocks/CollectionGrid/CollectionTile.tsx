@@ -1,6 +1,7 @@
 import type { CollectionGridSlots, Media as MediaType, User } from "@/payload-types"
 import React from "react"
 
+import { cardGroup, cardImageHover, cardTitleHover } from "@/components/cardHover"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { isMedia, Media } from "@/components/Media"
 import type { ImageVariant } from "@/components/Media/CMSImage"
@@ -65,7 +66,8 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
       href={href}
       id={id ?? undefined}
       className={cn(
-        "group @container flex flex-col gap-x-6 gap-y-2",
+        cardGroup,
+        "@container flex flex-col gap-x-6 gap-y-2",
         isHorizontal && "flex-col items-start md:flex-row",
         className,
       )}
@@ -81,7 +83,7 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
         >
           <Media
             media={heroImage}
-            className="h-full w-full object-cover object-center transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16]"
+            className={cn("h-full w-full object-cover object-center", cardImageHover)}
             variant={variant}
             sizes={sizes}
             preload={preload}
@@ -102,7 +104,12 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
         )}
 
         {/* Title — uses container queries to scale with available space */}
-        <h2 className="text-foreground text-2xl text-balance decoration-2 underline-offset-4 group-focus-visible:underline hover:underline @xs:text-2xl @sm:text-3xl @md:text-4xl @lg:text-5xl">
+        <h2
+          className={cn(
+            "text-foreground text-2xl text-balance @xs:text-2xl @sm:text-3xl @md:text-4xl @lg:text-5xl",
+            cardTitleHover,
+          )}
+        >
           {overrideTitle || title}
         </h2>
 

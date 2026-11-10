@@ -1,6 +1,8 @@
 "use client"
 
 import type { RecommendedArticleCandidate } from "@/app/(frontend)/recommended-articles.json/route"
+import { cn } from "@/utilities/utils"
+import { cardGroup, cardImageHover, cardTitleHover } from "@/components/cardHover"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
 import { TimeAgo } from "@/components/TimeAgo"
@@ -93,7 +95,7 @@ export function RecommendedArticles({
               <HoverPrefetchLink
                 key={article.slug}
                 href={`/articles/${article.slug}`}
-                className="group flex flex-row gap-x-4 gap-y-2 md:flex-col"
+                className={cn(cardGroup, "flex flex-row gap-x-4 gap-y-2 md:flex-col")}
                 onClick={() => {
                   sendGAEvent("event", "recommended_article_click", {
                     source_slug: currentArticleSlug,
@@ -108,12 +110,12 @@ export function RecommendedArticles({
                       media={article.metaImage}
                       variant="medium"
                       sizes="(min-width: 640px) 320px, 100vw"
-                      className="h-full w-full object-cover object-center transition-[filter] duration-300 ease-out hover:brightness-[1.02] hover:contrast-[1.16] hover:saturate-[1.16]"
+                      className={cn("h-full w-full object-cover object-center", cardImageHover)}
                     />
                   </div>
                 )}
                 <div className="flex flex-col gap-2">
-                  <h3 className="text-foreground decoration-2 underline-offset-4 group-focus-visible:underline hover:underline md:text-2xl">
+                  <h3 className={cn("text-foreground md:text-2xl", cardTitleHover)}>
                     {article.title}
                   </h3>
                   {article.metaDescription && (

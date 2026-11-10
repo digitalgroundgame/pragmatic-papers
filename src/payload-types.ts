@@ -2920,6 +2920,23 @@ export interface IntegrationSettings {
   /**
    * Whose posts run in the ticker.
    */
+  substack?: {
+    /**
+     * Empty uses SUBSTACK_PUBLICATIONS, or thepragmaticpapers.
+     */
+    publications?:
+      | {
+          /**
+           * Its address, a custom domain, or its name. Posts are read from its RSS feed.
+           */
+          publication: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  /**
+   * Whose posts run in the ticker.
+   */
   x?: {
     /**
      * Empty uses X_USERNAMES, or PragPapers.
@@ -3131,6 +3148,16 @@ export interface IntegrationsSelect<T extends boolean = true> {
           | T
           | {
               handle?: T;
+              id?: T;
+            };
+      };
+  substack?:
+    | T
+    | {
+        publications?:
+          | T
+          | {
+              publication?: T;
               id?: T;
             };
       };

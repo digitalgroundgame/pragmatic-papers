@@ -12,15 +12,15 @@ audience: [editor]
 The ticker is the strip under the site's header. It shows readers what we're doing outside the site:
 
 - **A live broadcast**, when one of our YouTube channels is live or about to go live.
-- **Our latest posts** from Bluesky and X, scrolling past.
+- **Our latest posts** from Bluesky, X and Substack, scrolling past.
 
-It fills itself in: YouTube is checked every few minutes, Bluesky every few minutes and X about every half hour. There's nothing to publish.
+It fills itself in: YouTube is checked every few minutes, Bluesky every few minutes, Substack every quarter hour and X about every half hour. There's nothing to publish.
 
 ## Hide a post
 
 If a post shouldn't run on the site, an editor can take it out:
 
-1. Copy the post's link with its **Share** button on Bluesky or X.
+1. Copy the post's link with its **Share** button on Bluesky or X, or from the address bar on Substack.
 2. In the admin, open **Site → Header** and go to the **Ticker** tab.
 3. Click **Hide** beside the post under **Posts right now**, or paste its link under **Hidden posts**.
 4. Save. It's gone from the ticker straight away.
@@ -29,7 +29,7 @@ The link has to be a bsky.app or x.com post link; anything else is refused with 
 
 ## Choosing whose posts run
 
-Admins choose the YouTube channels, Bluesky accounts and X accounts in **System → Integrations**. See [Change the header, footer and other site-wide settings](/docs/editing/site-settings/globals).
+Admins choose the YouTube channels, Bluesky accounts, Substack publications and X accounts in **System → Integrations**. See [Change the header, footer and other site-wide settings](/docs/editing/site-settings/globals).
 
 ## Where it's switched on
 

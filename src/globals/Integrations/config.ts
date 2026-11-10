@@ -1,6 +1,7 @@
 import type { GlobalConfig } from "payload"
 
 import { isAdmin } from "@/access/roles"
+import { publicationHost } from "@/integrations/substack"
 
 import { revalidateIntegrations } from "./hooks/revalidateIntegrations"
 
@@ -94,6 +95,39 @@ export const Integrations: GlobalConfig = {
               type: "text",
               required: true,
               admin: { placeholder: "thepragmaticpapers.bsky.social" },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: "substack",
+      label: "Substack publications",
+      type: "group",
+      admin: { description: "Whose posts run in the ticker." },
+      fields: [
+        {
+          name: "publications",
+          type: "array",
+          labels: { singular: "Publication", plural: "Publications" },
+          maxRows: 5,
+          admin: {
+            description: "Empty uses SUBSTACK_PUBLICATIONS, or thepragmaticpapers.",
+            initCollapsed: false,
+          },
+          fields: [
+            {
+              name: "publication",
+              type: "text",
+              required: true,
+              admin: {
+                placeholder: "thepragmaticpapers.substack.com",
+                description:
+                  "Its address, a custom domain, or its name. Posts are read from its RSS feed.",
+              },
+              validate: (value: string | null | undefined) =>
+                publicationHost(value ?? "") !== "" ||
+                "Enter the publication's address, like thepragmaticpapers.substack.com.",
             },
           ],
         },

@@ -67,7 +67,7 @@ const posts = postSources.map((source) => cached(source.integration.id, source, 
  * the admin never costs a source an extra read.
  */
 const getTickerSources = cache(async () => {
-  const [{ youtube, bluesky, x }, ticker] = await Promise.all([
+  const [{ youtube, bluesky, substack, x }, ticker] = await Promise.all([
     getGlobal("integrations"),
     getTickerSettings(),
   ])
@@ -75,6 +75,7 @@ const getTickerSources = cache(async () => {
     youtubeChannelIds: youtube?.channels?.map((channel) => channel.channelId),
     youtubeUpcomingHours: ticker?.upcomingHours,
     blueskyHandles: bluesky?.handles?.map((account) => account.handle),
+    substackPublications: substack?.publications?.map((entry) => entry.publication),
     xUsernames: x?.usernames?.map((account) => account.username),
   }
   const [current, ...lists] = await Promise.all([

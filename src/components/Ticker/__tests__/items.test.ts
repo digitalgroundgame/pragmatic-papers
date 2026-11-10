@@ -137,6 +137,15 @@ describe("postKey", () => {
     ["https://x.com/PragPapers/status/42", "x:42"],
     ["https://twitter.com/PragPapers/status/42?s=20", "x:42"],
     ["https://mobile.x.com/i/status/42", "x:42"],
+    [
+      "https://ThePragmaticPapers.substack.com/p/Hello-World",
+      "substack:thepragmaticpapers.substack.com/hello-world",
+    ],
+    [
+      "https://thepragmaticpapers.substack.com/p/hello-world?utm_source=x",
+      "substack:thepragmaticpapers.substack.com/hello-world",
+    ],
+    ["https://www.example.com/p/hello-world", "substack:example.com/hello-world"],
   ])("reads %s as one post however it's written", (link, key) => {
     expect(postKey(link)).toBe(key)
   })
@@ -144,6 +153,7 @@ describe("postKey", () => {
   it.each([
     ["a profile", "https://bsky.app/profile/pp.bsky.social"],
     ["another site", "https://example.com/profile/pp/post/1"],
+    ["a publication's home page", "https://thepragmaticpapers.substack.com/"],
     ["not a link", "PragPapers 42"],
   ])("is null for %s", (_, link) => {
     expect(postKey(link)).toBeNull()

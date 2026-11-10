@@ -73,9 +73,24 @@ const FONT = "Geist, 'DejaVu Sans', Helvetica, Arial, sans-serif"
 // The article's text, which the map's title and its sources sit in on the page: the
 // system serif (Tailwind's `font-serif`), then the image's own.
 const SERIF = "ui-serif, Georgia, Cambria, 'Times New Roman', 'DejaVu Serif', serif"
-const INK = "#171717"
-const QUIET_INK = "#525252"
-const OUTLINE = "#ffffff"
+/** The colors a picture is drawn in. `LIGHT` is the light theme's, on white. */
+export interface MapPalette {
+  background: string
+  ink: string
+  quietInk: string
+  /** The lines between regions. */
+  outline: string
+  /** A region's or legend swatch's color as the page gives it (`var(--map-…, fallback)`). */
+  color: (color: string) => string
+}
+
+const LIGHT: MapPalette = {
+  background: "#ffffff",
+  ink: "#171717",
+  quietInk: "#525252",
+  outline: "#ffffff",
+  color: staticColor,
+}
 
 const TITLE = { size: 18, line: 24, weight: 600, family: SERIF }
 const MAP_TITLE = { size: 14, line: 20, weight: 500, family: SERIF }
@@ -105,7 +120,7 @@ function text(
   { size, line, weight, family }: { size: number; line: number; weight?: number; family?: string },
   x: number,
   y: number,
-  fill = INK,
+  fill: string,
   anchor: "start" | "middle" = "middle",
 ): string {
   return lines
@@ -137,11 +152,18 @@ function attributes(attrs: Record<string, string>): string {
 }
 
 /** One map, shaded, fitted into the box at (x, y). */
-function mapMarkup(map: ResolvedMap, x: number, y: number, width: number, height: number): string {
+function mapMarkup(
+  map: ResolvedMap,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  palette: MapPalette,
+): string {
   const paths = map.paths
     .map((path) =>
       path.region
-        ? `<path d="${escapeHTML(path.d)}" fill="${escapeHTML(staticColor(path.region.color))}" stroke="${OUTLINE}" stroke-width="1" vector-effect="non-scaling-stroke" />`
+        ? `<path d="${escapeHTML(path.d)}" fill="${escapeHTML(palette.color(path.region.color))}" stroke="${escapeHTML(palette.outline)}" stroke-width="1" vector-effect="non-scaling-stroke" />`
         : `<path d="${escapeHTML(path.d)}"${attributes(path.extraAttrs)} />`,
     )
     .join("")
@@ -170,6 +192,8 @@ export interface MapDrawing {
    * no fonts of the page's, so a picture drawn there brings its own.
    */
   fontFaces?: string
+  /** The theme to draw in; the light theme's colors when left out. */
+  palette?: MapPalette
 }
 
 const FOOTER = { size: 11, line: 16, logo: 10, family: SERIF }
@@ -192,13 +216,14 @@ function logoBox(logo: string): { viewBox: string; width: number; inner: string 
 /** Resolved maps drawn as one standalone SVG (see `interactiveMapToSVG`). */
 export const drawInteractiveMapSVG = (fields: MapDrawing): string => {
   const { scaleType, maps } = fields
+  const palette = fields.palette ?? LIGHT
   const inner = WIDTH - PADDING * 2
   const parts: string[] = []
   let y = PADDING
 
   if (fields.widgetTitle?.trim()) {
     const lines = wrap(fields.widgetTitle, TITLE.size, inner)
-    parts.push(text(lines, TITLE, WIDTH / 2, y))
+    parts.push(text(lines, TITLE, WIDTH / 2, y, palette.ink))
     y += lines.length * TITLE.line + GAP
   }
 
@@ -219,8 +244,8 @@ export const drawInteractiveMapSVG = (fields: MapDrawing): string => {
     const titleHeight = titleLines ? titleLines * MAP_TITLE.line + GAP / 2 : 0
     row.forEach(({ map, lines, height }, i) => {
       const x = PADDING + i * (column + GAP)
-      parts.push(text(lines, MAP_TITLE, x + column / 2, y))
-      parts.push(mapMarkup(map, x, y + titleHeight, column, height))
+      parts.push(text(lines, MAP_TITLE, x + column / 2, y, palette.ink))
+      parts.push(mapMarkup(map, x, y + titleHeight, column, height, palette))
     })
     y += titleHeight + Math.max(...row.map(({ height }) => height)) + GAP
   }
@@ -231,9 +256,9 @@ export const drawInteractiveMapSVG = (fields: MapDrawing): string => {
     legend.forEach(({ color, label }, i) => {
       const x = PADDING + i * (swatch + LEGEND.gap)
       parts.push(
-        `<rect x="${round(x)}" y="${round(y)}" width="${round(swatch)}" height="${LEGEND.swatch}" rx="2" fill="${escapeHTML(staticColor(color))}" />`,
+        `<rect x="${round(x)}" y="${round(y)}" width="${round(swatch)}" height="${LEGEND.swatch}" rx="2" fill="${escapeHTML(palette.color(color))}" />`,
       )
-      parts.push(text([label], LEGEND, x + swatch / 2, y + LEGEND.swatch + 2, QUIET_INK))
+      parts.push(text([label], LEGEND, x + swatch / 2, y + LEGEND.swatch + 2, palette.quietInk))
     })
     y += LEGEND.swatch + 2 + LEGEND.line + GAP
   }
@@ -245,7 +270,7 @@ export const drawInteractiveMapSVG = (fields: MapDrawing): string => {
       const label = `Source${sources.length > 1 ? "s" : ""}: ${sources.join(", ")}`
       const room = inner - (logoSize ? logoSize.width + GAP : 0)
       const lines = wrap(label, FOOTER.size, room)
-      parts.push(text(lines, FOOTER, PADDING, y, QUIET_INK, "start"))
+      parts.push(text(lines, FOOTER, PADDING, y, palette.quietInk, "start"))
       y += Math.max(lines.length * FOOTER.line, FOOTER.line) + GAP
     } else if (logoSize) {
       y += FOOTER.line + GAP
@@ -260,7 +285,7 @@ export const drawInteractiveMapSVG = (fields: MapDrawing): string => {
 
   const height = Math.ceil(y - GAP + PADDING)
   const defs = fields.fontFaces ? `<defs><style>${fields.fontFaces}</style></defs>` : ""
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH * PIXEL_DENSITY}" height="${height * PIXEL_DENSITY}" viewBox="0 0 ${WIDTH} ${height}" font-family="${FONT}">${defs}<rect width="${WIDTH}" height="${height}" fill="#ffffff" />${parts.join("")}</svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH * PIXEL_DENSITY}" height="${height * PIXEL_DENSITY}" viewBox="0 0 ${WIDTH} ${height}" font-family="${FONT}">${defs}<rect width="${WIDTH}" height="${height}" fill="${escapeHTML(palette.background)}" />${parts.join("")}</svg>`
 }
 
 /**

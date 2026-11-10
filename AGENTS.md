@@ -677,8 +677,8 @@ feed's query looks that name up, so an unchanged map isn't drawn twice, a
 changed one gets a new picture, and the old one stays for posts Substack
 already imported. A map with no picture gets the RSS feeds' link back to the
 article. The block's download button (`download/`) draws the same picture in the
-reader's browser, with the sources and the logo in a footer and the font embedded, and saves
-it as a PNG for sharing. The text in the picture needs a font in the image
+reader's browser, with the sources and the logo in a footer and the font embedded, in the theme the
+page shows (`themePalette`), and saves it as a PNG for sharing. The text in the picture needs a font in the image
 (both Dockerfiles install fontconfig, the site's Geist as a TTF from the `geist` package, since fontconfig can't read woff2, and DejaVu). Like the page, the titles and sources are in the system serif (DejaVu Serif in the image; the reader's own serif in a download) and the legend in Geist.
 
 An SVG never carries records. A drilldown's SVG is checked in, parsed once at

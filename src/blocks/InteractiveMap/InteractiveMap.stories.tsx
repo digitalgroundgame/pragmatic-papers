@@ -8,6 +8,7 @@ import { storyFeedContext } from "@/stories/fixtures/feedContext"
 import { mediaFixture } from "@/stories/fixtures/media"
 
 import { interactiveMapToHTML, interactiveMapToImage } from "./converters"
+import { logoMarkup } from "./download/downloadMapImage"
 import { InteractiveMapBlock } from "./InteractiveMapBlock"
 
 // The seed's district maps, served from the static dir in .storybook/main.ts: an
@@ -54,30 +55,65 @@ export const SingleMap: Story = {
   },
 }
 
+/** Saves the map with the download button, and returns the picture and its file name. */
+async function download(canvasElement: HTMLElement): Promise<{ name: string; image: ImageBitmap }> {
+  const save = spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined)
+  try {
+    const button = await within(canvasElement).findByRole("button", {
+      name: "Download map as an image",
+    })
+    await userEvent.click(button)
+    await waitFor(() => expect(save).toHaveBeenCalledOnce())
+    const link = save.mock.contexts[0] as HTMLAnchorElement
+    const png = await fetch(link.href).then((res) => res.blob())
+    await expect(png.type).toBe("image/png")
+    return { name: link.download, image: await createImageBitmap(png) }
+  } finally {
+    save.mockRestore()
+  }
+}
+
+/** The picture's top-left pixel, its background. */
+function corner(image: ImageBitmap): number[] {
+  const canvas = document.createElement("canvas")
+  canvas.width = canvas.height = 1
+  const context = canvas.getContext("2d")!
+  context.drawImage(image, 0, 0)
+  return [...context.getImageData(0, 0, 1, 1).data]
+}
+
 /**
  * The download button under the map saves it as a PNG, at twice Substack's column width, with
- * the title, legend, sources and logo, named for the widget's title.
+ * the title, legend, sources and logo, named for the widget's title, in the theme the page
+ * shows. The logo keeps its brand-colored paper.
  */
 export const Download: Story = {
   args: { widgetTitle: "Missouri's districts" },
   play: async ({ canvasElement }) => {
-    const save = spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined)
-    try {
-      const button = await within(canvasElement).findByRole("button", {
-        name: "Download map as an image",
-      })
-      await userEvent.click(button)
-      await waitFor(() => expect(save).toHaveBeenCalledOnce())
+    const { name, image } = await download(canvasElement)
+    await expect(name).toBe("missouris-districts.png")
+    await expect(image.width).toBe(1360)
+    await expect(corner(image)).toEqual([255, 255, 255, 255])
 
-      const link = save.mock.contexts[0] as HTMLAnchorElement
-      await expect(link.download).toBe("missouris-districts.png")
-      const png = await fetch(link.href).then((res) => res.blob())
-      await expect(png.type).toBe("image/png")
-      const image = await createImageBitmap(png)
-      await expect(image.width).toBe(1360)
-    } finally {
-      save.mockRestore()
-    }
+    const logo = canvasElement.querySelector("[data-map-logo] svg")
+    await expect(logoMarkup(logo, "#171717")).toMatch(/fill="rgb\(25\d, 6\d, 2\d\)"/)
+  },
+}
+
+/** In dark mode the download is dark too. */
+export const DownloadDark: Story = {
+  args: Download.args,
+  decorators: [
+    (Story) => (
+      <div className="dark bg-background text-foreground p-4">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const { image } = await download(canvasElement)
+    const [r, g, b] = corner(image)
+    await expect(Math.max(r!, g!, b!)).toBeLessThan(40)
   },
 }
 

@@ -2,7 +2,8 @@
  * The hover and keyboard-focus effects a card's image and headline share. The card's
  * outer element carries `cardGroup`, so pointing anywhere on the card (eyebrow, image,
  * headline, description, byline) or tabbing to any link in it lifts the image and dims
- * the headline together. `group-focus-visible` covers a card that is itself the link;
+ * the headline together. The site's `Card` (`ui/card`) is already `group/card`, so a card
+ * built on it needs nothing more. `group-focus-visible` covers a card that is itself the link;
  * `group-has-focus-visible` covers a card whose links sit inside it.
  */
 export const cardGroup = "group/card"

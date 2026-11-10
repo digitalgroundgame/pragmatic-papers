@@ -4,7 +4,7 @@ import React from "react"
 
 import { AuthorLinks } from "@/components/Authors/AuthorLinks"
 import { cn } from "@/utilities/utils"
-import { cardGroup, cardImageHover, cardTitleHover } from "@/components/cardHover"
+import { cardImageHover, cardTitleHover } from "@/components/cardHover"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { isMedia, Media } from "@/components/Media"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -32,7 +32,7 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({ author }) => {
     : undefined
 
   return (
-    <Card className={cn(cardGroup, "rounded-sm")}>
+    <Card className="rounded-sm">
       <CardContent className="flex flex-col gap-4 sm:flex-row">
         {/* The name below is the card's link; this one is for pointers only. */}
         <HoverPrefetchLink href={`/contributors/${slug}`} aria-hidden="true" tabIndex={-1}>

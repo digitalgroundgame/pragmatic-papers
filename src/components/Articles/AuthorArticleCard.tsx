@@ -1,6 +1,6 @@
 import React from "react"
 
-import { cardGroup, cardImageHover, cardTitleHover } from "@/components/cardHover"
+import { cardImageHover, cardTitleHover } from "@/components/cardHover"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
 import { Card, CardContent } from "@/components/ui/card"
@@ -24,7 +24,7 @@ export const AuthorArticleCard: React.FC<AuthorArticleCardProps> = ({
   const href = `/articles/${slug}`
 
   return (
-    <Card className={cn(cardGroup, "rounded-sm", className)}>
+    <Card className={cn("rounded-sm", className)}>
       <CardContent className="flex flex-col items-center gap-4 md:flex-row">
         <div className="bg-muted shrink-0 overflow-hidden rounded-sm border md:h-24 md:w-32">
           {metaImage && typeof metaImage !== "string" && (

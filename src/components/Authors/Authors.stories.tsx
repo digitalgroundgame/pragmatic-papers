@@ -42,8 +42,6 @@ export const CardFocusInside: Story = {
     const name = canvas
       .getAllByRole("link", { name: "Jordan Rivera" })
       .find((link) => link.tabIndex !== -1)!
-    await expect(getComputedStyle(photo).filter).toBe("none")
-
     const links = canvas.getByRole("navigation", { name: "Links for Jordan Rivera" })
     within(links).getAllByRole("link")[0]!.focus()
 

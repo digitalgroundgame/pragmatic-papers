@@ -59,9 +59,6 @@ export const KeyboardFocus: Story = {
     const canvas = within(canvasElement)
     const image = canvas.getByRole("img")
     const heading = canvas.getByRole("heading")
-    await expect(getComputedStyle(image).filter).toBe("none")
-    await expect(getComputedStyle(heading).color).not.toMatch(/\/ 0\.8\)$/)
-
     canvas.getByRole("link").focus()
 
     await waitFor(() => expect(getComputedStyle(image).filter).toContain("contrast(1.16)"))

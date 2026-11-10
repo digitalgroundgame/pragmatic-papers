@@ -4,13 +4,17 @@ import {
   AwardIcon,
   BadgeCheckIcon,
   CakeIcon,
+  CrownIcon,
   FeatherIcon,
   type LucideIcon,
   MedalIcon,
+  MicIcon,
   PartyPopperIcon,
+  PenLineIcon,
   ShieldCheckIcon,
   SparklesIcon,
   SproutIcon,
+  SquarePenIcon,
 } from "lucide-react"
 import React from "react"
 
@@ -26,7 +30,7 @@ interface BadgeLook {
 }
 
 /**
- * How each badge a commenter can carry looks: Staff (from the site), Writer (of the article),
+ * How each badge a commenter can carry looks: their staff role (from the site), Writer (of the article),
  * the markers that come and go (Cake day on an account's anniversary, First comment on someone's
  * first, New commenter for a week after it, New member for a new account's first month), and the starter achievements. An achievement editors add later gets the award icon until it
  * has a look of its own here.
@@ -36,6 +40,28 @@ const LOOKS: Record<string, BadgeLook> = {
     icon: FeatherIcon,
     className: "text-blue-600 dark:text-blue-400",
     description: "Wrote this article",
+  },
+  // Staff roles share the brand color, so staff read as staff at a glance.
+  Admin: { icon: ShieldCheckIcon, className: "text-brand-text", description: "Site admin" },
+  "Chief editor": {
+    icon: CrownIcon,
+    className: "text-brand-text",
+    description: "Pragmatic Papers' chief editor",
+  },
+  Editor: {
+    icon: SquarePenIcon,
+    className: "text-brand-text",
+    description: "Pragmatic Papers editor",
+  },
+  "Staff writer": {
+    icon: PenLineIcon,
+    className: "text-brand-text",
+    description: "Writes for Pragmatic Papers",
+  },
+  Narrator: {
+    icon: MicIcon,
+    className: "text-brand-text",
+    description: "Narrates Pragmatic Papers articles",
   },
   Staff: {
     icon: ShieldCheckIcon,

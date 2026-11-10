@@ -60,6 +60,13 @@ describe("AuthorBadges", () => {
     expect(badge.querySelector("svg")).toHaveClass("lucide-medal")
   })
 
+  it("gives each staff role its own icon in the brand color", () => {
+    renderBadges({ badge: "Chief editor" })
+    const badge = screen.getByRole("img", { name: "Chief editor" })
+    expect(badge).toHaveClass("text-brand-text")
+    expect(badge.querySelector("svg")).toHaveClass("lucide-crown")
+  })
+
   it("colors each known badge its own way", () => {
     renderBadges({ badge: "Verified" })
     expect(screen.getByRole("img", { name: "Verified" })).toHaveClass("text-emerald-600")

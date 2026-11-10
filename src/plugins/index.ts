@@ -36,6 +36,7 @@ import { commentsPlugin } from "./comments"
 import { achievementsOptions, readerAchievements } from "./readerAchievements"
 import { commentsOn, signUpProviders, ssoOptions } from "./signIn"
 import { getSignedInUser, ssoPlugin } from "./sso"
+import { staffBadge } from "./staffBadge"
 import { staffByDefault } from "./staffByDefault"
 
 // Reads the plugin's switch on System → Plugins when called. Imported then, not here: the
@@ -426,7 +427,8 @@ export const plugins: Plugin[] = [
     describeAuthor: (author) => ({
       name: typeof author.name === "string" && author.name ? author.name : "Anonymous",
       image: typeof author.avatarUrl === "string" ? author.avatarUrl : null,
-      badge: isStaff(author as unknown as User) ? "Staff" : null,
+      // Staff show their role; readers show an achievement's badge, if any.
+      badge: staffBadge(author.roles),
     }),
     // A reader's highest achievement badge, when Staff doesn't apply. None while achievements are off.
     authorBadges: (authors, req) => readerAchievements.badgesFor(authors, req),

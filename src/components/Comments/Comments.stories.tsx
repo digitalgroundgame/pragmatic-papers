@@ -293,7 +293,7 @@ export const WriterMarker: Story = {
       await within(canvasElement).findByRole("article", { name: "Comment by Lin Writer" }),
     )
     await expect(comment.getByRole("img", { name: "Writer" })).toBeInTheDocument()
-    await expect(comment.getByRole("img", { name: "Staff" })).toBeInTheDocument()
+    await expect(comment.getByRole("img", { name: "Staff writer" })).toBeInTheDocument()
   },
 }
 
@@ -307,7 +307,15 @@ export const Badges: Story = {
     commentThread({
       comments: [
         writerComment,
-        ...["Staff", "Verified", "Early member", "Top commenter"].map((badge, i) => ({
+        ...[
+          "Admin",
+          "Chief editor",
+          "Editor",
+          "Narrator",
+          "Verified",
+          "Early member",
+          "Top commenter",
+        ].map((badge, i) => ({
           ...threadComments[0]!,
           id: 30 + i,
           body: `A comment by someone with the ${badge} badge.`,

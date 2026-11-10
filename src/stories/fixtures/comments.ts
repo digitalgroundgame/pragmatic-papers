@@ -3,7 +3,7 @@ import type { CommentThread, CommentViewer, PublicComment } from "@/plugins/comm
 const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString()
 
 const ada = { name: "Ada Reader", image: null, badge: null }
-const grace = { name: "Grace Hopper", image: null, badge: "Staff" }
+const grace = { name: "Grace Hopper", image: null, badge: "Editor" }
 
 /** A short thread: a comment, a reply under it, a reply to a removed comment, and another. */
 export const threadComments: PublicComment[] = [
@@ -49,7 +49,7 @@ export const writerComment: PublicComment = {
   depth: 1,
   body: "Glad it helped. The longer version is in the appendix.",
   createdAt: hoursAgo(1),
-  author: { name: "Lin Writer", image: null, badge: "Staff", writer: true },
+  author: { name: "Lin Writer", image: null, badge: "Staff writer", writer: true },
 }
 
 export const commentViewer: CommentViewer = { ...ada, locked: null, needsVerifiedEmail: false }

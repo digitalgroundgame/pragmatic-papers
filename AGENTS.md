@@ -503,7 +503,7 @@ join field, on each user's record. Only admins delete either.
   (`readerAchievements.seed`, recorded with `markSeeded`), so one an editor deletes stays deleted.
 - **Badges on comments**: the comments plugin's `authorBadges` option asks
   `readerAchievements.badgesFor` once per thread; the first achievement in the editors' order
-  with a badge shows, and a badge `describeAuthor` gives (Staff) wins.
+  with a badge shows, and a badge `describeAuthor` gives (a staff role's, `staffBadge`) wins.
   `/api/achievements/mine` lists the signed-in reader's for `/account`. Switched off, no
   achievement shows anywhere.
 - The host's options (roles, access, the starter limit) are `achievementsOptions` in

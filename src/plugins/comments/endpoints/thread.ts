@@ -125,7 +125,7 @@ export function isCakeDay(createdAt: unknown, now: Date = new Date()): boolean {
  * `targetWriters`, and the New commenter mark for those of `commenters` (authors with a
  * published comment) who are new, each asked once, New member for a new account, and Cake day
  * on its anniversary. A badge `describeAuthor` gives itself (like
- * Staff) wins.
+ * a staff role) wins.
  */
 export async function describerFor(
   config: ResolvedCommentsConfig,

@@ -14,7 +14,7 @@ export type CommentAuthor = Record<string, unknown> & { id: number | string }
 export interface AuthorDisplay {
   name: string
   image: string | null
-  /** A short label beside their name, like "Staff". */
+  /** A short label beside their name, like "Editor". */
   badge: string | null
   /** One of the writers of what the comments are on (`targetWriters`). */
   writer?: true
@@ -95,7 +95,7 @@ export interface CommentsPluginConfig {
   /**
    * A badge for each author who has one from outside the plugin (readers' achievements), by author ID,
    * asked once per request for every author shown. A badge `describeAuthor` gives (like
-   * Staff) wins. Default none.
+   * a staff role) wins. Default none.
    */
   authorBadges?: (authors: CommentAuthor[], req: PayloadRequest) => Promise<Map<string, string>>
   /**

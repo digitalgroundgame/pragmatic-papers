@@ -88,7 +88,7 @@ describe("Comments", () => {
     // The reply sits in the list under its parent's item.
     const reply = screen.getByText(/second chart's source/)
     expect(reply.closest("ol")?.closest("li")).toHaveTextContent("zoning reform")
-    expect(screen.getByRole("img", { name: "Staff" })).toBeInTheDocument()
+    expect(screen.getByRole("img", { name: "Editor" })).toBeInTheDocument()
     expect(screen.getByText("This comment was removed.")).toBeInTheDocument()
     // Placeholders don't count.
     expect(screen.getByRole("heading", { name: "Comments (3)" })).toBeInTheDocument()

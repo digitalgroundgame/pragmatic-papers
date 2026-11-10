@@ -88,7 +88,6 @@ export const WithTableOfContents: Story = {
   },
 }
 
-/** The page shows the button while comments are on; it jumps to the Comments heading below the article. */
 /** An article already on Substack gets a button to its post there, before Share. */
 export const OnSubstack: Story = {
   args: {
@@ -112,6 +111,7 @@ export const OnSubstack: Story = {
   },
 }
 
+/** The page shows the button while comments are on; it jumps to the Comments heading below the article. */
 export const WithComments: Story = {
   args: { showComments: true },
   play: async ({ canvasElement }) => {

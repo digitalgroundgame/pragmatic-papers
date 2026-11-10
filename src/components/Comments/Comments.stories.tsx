@@ -348,7 +348,9 @@ export const Badges: Story = {
     const verified = await canvas.findByRole("img", { name: "Verified" })
     await userEvent.hover(verified)
     await expect(
-      await within(canvasElement.ownerDocument.body).findByText(/Verified email address/),
+      await within(canvasElement.ownerDocument.body).findByText(
+        /The editors confirmed who this is/,
+      ),
     ).toBeInTheDocument()
     await expect(canvas.getByRole("img", { name: "Top commenter" })).toBeInTheDocument()
     await expect(canvas.getByRole("img", { name: "New commenter" })).toBeInTheDocument()

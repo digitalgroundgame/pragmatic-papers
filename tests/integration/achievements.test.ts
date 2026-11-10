@@ -152,7 +152,7 @@ beforeAll(async () => {
   olderMember = await createUser("member")
   await readerAchievements.seed(payload)
   early = await idOf("Early member")
-  verified = await idOf("Verified")
+  verified = await idOf("Email verified")
 })
 
 beforeEach(async () => {
@@ -200,7 +200,7 @@ describe("achievements", () => {
     expect(await badgeOnComment(cookie)).toBe("Early member")
     const { status, body } = await mine(cookie)
     expect(status).toBe(200)
-    expect(body.achievements.map((a) => a.label)).toEqual(["Early member", "Verified"])
+    expect(body.achievements.map((a) => a.label)).toEqual(["Early member", "Email verified"])
   })
 
   it("awards staff Early member too, those already there and those made later", async () => {
@@ -234,9 +234,11 @@ describe("achievements", () => {
     expect(typeof revoked.revokedBy === "object" ? revoked.revokedBy?.id : revoked.revokedBy).toBe(
       editor.id,
     )
-    expect(await badgeOnComment(cookie)).toBe("Verified")
+    // Email verified is still held, but shows no badge.
+    expect(await badgeOnComment(cookie)).toBeNull()
+    expect((await mine(cookie)).body.achievements.map((a) => a.label)).toEqual(["Email verified"])
 
-    // Verified has no row: revoking it is a new one.
+    // Email verified has no row: revoking it is a new one.
     await payload.create({
       collection: "awards",
       data: { user: user.id, achievement: verified, revoked: true, revokedReason: "Spam" },
@@ -283,6 +285,20 @@ describe("achievements", () => {
         overrideAccess: false,
       }),
     ).rejects.toMatchObject(invalid(/already has a row/))
+  })
+
+  it("lets a moderator give the hand-given Verified, whose badge shows first", async () => {
+    const { cookie, user } = await signUp()
+    expect(await badgeOnComment(cookie)).toBe("Early member")
+
+    await payload.create({
+      collection: "awards",
+      data: { user: user.id, achievement: await idOf("Verified") },
+      user: editor,
+      overrideAccess: false,
+    })
+
+    expect(await badgeOnComment(cookie)).toBe("Verified")
   })
 
   it("keeps rows from members and anyone signed out", async () => {
@@ -346,7 +362,7 @@ describe("achievements", () => {
     })
     expect(given.earnedAt).toEqual(expect.any(String))
     const labels = (await mine(cookie)).body.achievements.map((a) => a.label)
-    expect(labels).toEqual(["Early member", "Verified", "Helper"])
+    expect(labels).toEqual(["Early member", "Email verified", "Helper"])
 
     const record = await payload.findByID({
       collection: "users",

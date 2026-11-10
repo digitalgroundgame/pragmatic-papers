@@ -69,7 +69,7 @@ describe("AuthorBadges", () => {
 
   it("colors each known badge its own way", () => {
     renderBadges({ badge: "Verified" })
-    expect(screen.getByRole("img", { name: "Verified" })).toHaveClass("text-emerald-600")
+    expect(screen.getByRole("img", { name: "Verified" })).toHaveClass("text-blue-500")
   })
 
   it("gives an achievement without a look of its own the award icon", () => {

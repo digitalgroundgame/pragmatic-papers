@@ -14,9 +14,9 @@ const earlyMember: HeldAchievement = {
 }
 const verified: HeldAchievement = {
   key: "verified",
-  label: "Verified",
+  label: "Email verified",
   description: "Your sign-in provider verified your email address.",
-  badge: "Verified",
+  badge: null,
   earnedAt: null,
 }
 
@@ -53,7 +53,7 @@ export const Several: Story = {
     const items = canvas.getAllByRole("listitem")
     await expect(items).toHaveLength(2)
     await expect(items[0]).toHaveTextContent("Early member")
-    await expect(items[1]).toHaveTextContent("Verified")
+    await expect(items[1]).toHaveTextContent("Email verified")
   },
 }
 

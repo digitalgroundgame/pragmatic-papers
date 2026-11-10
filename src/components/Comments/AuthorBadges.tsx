@@ -7,6 +7,7 @@ import {
   CrownIcon,
   FeatherIcon,
   type LucideIcon,
+  MailCheckIcon,
   MedalIcon,
   MicIcon,
   PartyPopperIcon,
@@ -70,6 +71,11 @@ const LOOKS: Record<string, BadgeLook> = {
   },
   Verified: {
     icon: BadgeCheckIcon,
+    className: "text-blue-500 dark:text-blue-400",
+    description: "The editors confirmed who this is",
+  },
+  "Email verified": {
+    icon: MailCheckIcon,
     className: "text-emerald-600 dark:text-emerald-400",
     description: "Verified email address",
   },

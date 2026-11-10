@@ -498,8 +498,9 @@ join field, on each user's record. Only admins delete either.
   (`markFilled`), so an award an admin deletes stays deleted. Revoked rows, and rows whose account
   was deleted (kept with no user), still count, so nobody moves up. They're awarded even while
   the switch is off.
-- **Starter achievements**: Early member (`earlyMemberLimit`, 1000) and Verified
-  (`starterAchievements`) are created once per site by `/next/revalidate-all` and the seed
+- **Starter achievements** (`starterAchievements`): Verified (given by hand to someone the
+  editors vouch for, first so its badge wins), Early member (`earlyMemberLimit`, 1000) and Email
+  verified (the `verified` rule, no badge: nearly everyone has it) are created once per site by `/next/revalidate-all` and the seed
   (`readerAchievements.seed`, recorded with `markSeeded`), so one an editor deletes stays deleted.
 - **Badges on comments**: the comments plugin's `authorBadges` option asks
   `readerAchievements.badgesFor` once per thread; the first achievement in the editors' order

@@ -7,7 +7,7 @@ import { ACHIEVEMENTS_SLUG, AWARDING, AWARDS_SLUG } from "../constants"
 import { awardOnMembership, deleteUsersAwards } from "../hooks/users"
 import type { AchievementDoc, AchievementsPluginConfig } from "../types"
 
-import { fakePayload } from "./fakePayload"
+import { fakePayload, starter } from "./fakePayload"
 
 const options: AchievementsPluginConfig = {
   currentUser: async () => null,
@@ -114,13 +114,20 @@ describe("fillFirstMembers", () => {
 })
 
 describe("seedAchievements", () => {
-  it("creates Verified and Early member once per site, and never again once deleted", async () => {
+  it("creates the starter achievements once per site, and never again once deleted", async () => {
     const { payload, store } = fakePayload({ achievements: [] })
 
-    expect(await seedAchievements(payload, config)).toEqual(["Early member", "Verified"])
+    expect(await seedAchievements(payload, config)).toEqual([
+      "Verified",
+      "Early member",
+      "Email verified",
+    ])
     expect(store[ACHIEVEMENTS_SLUG]).toEqual([
+      // Given by hand to someone the editors vouch for, so it's the badge that shows first.
+      expect.objectContaining({ name: "Verified", rule: "manual", badge: true }),
       expect.objectContaining({ name: "Early member", rule: "firstMembers", limit: 2 }),
-      expect.objectContaining({ name: "Verified", rule: "verified", badge: true }),
+      // Nearly everyone has it, so it shows no badge.
+      expect.objectContaining({ name: "Email verified", rule: "verified", badge: false }),
     ])
     expect(store[ACHIEVEMENTS_SLUG]![0]).not.toHaveProperty("key")
 
@@ -130,16 +137,35 @@ describe("seedAchievements", () => {
   })
 
   it("takes one another deploy already created as seeded, rather than making a second", async () => {
-    const { payload, store, kv } = fakePayload()
+    const { payload, store, kv } = fakePayload({
+      achievements: [
+        { id: 3, name: "Verified", rule: "manual", badge: true, _order: "a0" },
+        ...starter().map((row) =>
+          row.rule === "verified" ? { ...row, name: "Email verified", badge: false } : row,
+        ),
+      ],
+    })
 
     expect(await seedAchievements(payload, config)).toEqual([])
-    expect(store[ACHIEVEMENTS_SLUG]).toHaveLength(2)
+    expect(store[ACHIEVEMENTS_SLUG]).toHaveLength(3)
     expect(payload.create).not.toHaveBeenCalled()
     expect([...kv.keys()]).toEqual([
+      "seeded:achievements:vouched",
       "seeded:achievements:early-member",
       "seeded:achievements:verified",
       "seeded:awards:filled-1",
     ])
+  })
+
+  it("adds only the hand-given Verified to a site seeded before it existed", async () => {
+    const { payload, store, kv } = fakePayload()
+    kv.set("seeded:achievements:early-member", true)
+    kv.set("seeded:achievements:verified", true)
+
+    expect(await seedAchievements(payload, config)).toEqual(["Verified"])
+    expect(store[ACHIEVEMENTS_SLUG]).toContainEqual(
+      expect.objectContaining({ name: "Verified", rule: "manual", badge: true }),
+    )
   })
 
   it("fills an Early member that was never filled, once, so a deleted award stays deleted", async () => {

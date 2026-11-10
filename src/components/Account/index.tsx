@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import React, { Suspense, useEffect, useState } from "react"
 
 import { ProviderSignInButton } from "@/components/ProviderSignInButton"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { AccountSummary } from "@/plugins/sso/endpoints/account"
@@ -196,6 +197,29 @@ const DeleteAccount: React.FC<{ url: string }> = ({ url }) => {
 }
 
 /**
+ * Asks a member with no email address (a Destiny.gg sign-up) to connect a provider that
+ * verifies one, which earns them the Email verified achievement.
+ */
+const VerifyEmailNudge: React.FC = () => (
+  <Card size="sm" role="region" aria-labelledby="verify-email-heading">
+    <CardHeader>
+      <CardTitle>
+        <h2 id="verify-email-heading">Verify your email</h2>
+      </CardTitle>
+      <CardDescription>
+        Your account has no email address yet. Connect Google or Discord to add the one they&apos;ve
+        verified, and earn the Email verified achievement.
+      </CardDescription>
+    </CardHeader>
+    <CardContent>
+      <a href="#sign-ins" className={buttonVariants({ size: "sm" })}>
+        Connect an account
+      </a>
+    </CardContent>
+  </Card>
+)
+
+/**
  * The account page's content: who is signed in, read from `/api/account` (never cached, so
  * the page around it can be), with their name, sign-ins, sign out and, for members, delete.
  */
@@ -264,12 +288,7 @@ export const Account: React.FC<AccountProps> = ({ providers, apiPath = "/api" })
         </p>
       ) : (
         <>
-          {account.email ? null : (
-            <p className="text-sm" role="status">
-              Your account has no email address yet. Connect Google or Discord below to add the one
-              they&apos;ve verified.
-            </p>
-          )}
+          {account.email ? null : <VerifyEmailNudge />}
           <NameForm
             name={account.name}
             url={url}

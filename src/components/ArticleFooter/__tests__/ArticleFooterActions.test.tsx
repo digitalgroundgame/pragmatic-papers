@@ -24,7 +24,8 @@ describe("ArticleFooterActions", () => {
   it("keeps the share button on an article that isn't on Substack", () => {
     render(<ArticleFooterActions article={{ ...article, syndicateToSubstack: false }} />)
 
-    expect(screen.getByRole("button", { name: "Share" })).toBeInTheDocument()
+    // Under the article there's room for the word, where the actions bar shows only the icon.
+    expect(screen.getByRole("button", { name: "Share" })).toHaveTextContent("Share")
     expect(screen.queryByRole("link", { name: "Read on Substack" })).not.toBeInTheDocument()
   })
 })

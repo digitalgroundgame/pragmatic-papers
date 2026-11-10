@@ -26,6 +26,10 @@ export const ArticleFooterActions: React.FC<ArticleFooterActionsProps> = ({
     {...props}
   >
     <ReadOnSubstack article={article} />
-    <ShareButtons url={`${getSiteURL()}/articles/${article.slug}`} title={article.title} />
+    <ShareButtons
+      url={`${getSiteURL()}/articles/${article.slug}`}
+      title={article.title}
+      showLabel
+    />
   </div>
 )

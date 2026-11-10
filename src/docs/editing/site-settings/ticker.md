@@ -25,7 +25,7 @@ If a post shouldn't run on the site, an editor can take it out:
 3. Click **Hide** beside the post under **Posts right now**, or paste its link under **Hidden posts**.
 4. Save. It's gone from the ticker straight away.
 
-The link has to be a bsky.app or x.com post link; anything else is refused with a message saying so. Remove the row to let the post back in.
+The link has to be a bsky.app or x.com post link, or a Substack post link (one with `/p/` in it); anything else is refused with a message saying so. Remove the row to let the post back in.
 
 ## Choosing whose posts run
 

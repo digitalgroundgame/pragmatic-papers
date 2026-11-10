@@ -5,6 +5,7 @@ import type { HeldAchievement } from "@/plugins/achievements"
 import type { MyReading } from "@/plugins/achievements"
 import type { AccountSummary } from "@/plugins/sso/endpoints/account"
 import type { LinkedProvider } from "@/plugins/sso/types"
+import { isolatedDocs } from "@/stories/isolatedDocs"
 
 import { Account } from "."
 
@@ -65,6 +66,7 @@ function serve(account: AccountSummary | null) {
 const meta = {
   title: "Components/Account",
   component: Account,
+  parameters: isolatedDocs("480px"),
   args: {
     providers: [
       { id: "google", label: "Google" },

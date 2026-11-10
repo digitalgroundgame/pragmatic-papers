@@ -39,7 +39,11 @@ export const Country: React.FC<
         name={name}
         render={({ field: { onChange, value } }) => {
           return (
-            <Select items={countryOptions} onValueChange={(val) => onChange(val)} value={value}>
+            <Select
+              items={countryOptions}
+              onValueChange={(val) => onChange(val)}
+              value={value ?? null}
+            >
               <SelectTrigger className="w-full" id={name} {...errorProps}>
                 <SelectValue placeholder={label} />
               </SelectTrigger>

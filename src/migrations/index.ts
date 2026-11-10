@@ -67,7 +67,10 @@ import * as migration_20261013_220247_comments from "./20261013_220247_comments"
 import * as migration_20261014_182013_achievements from "./20261014_182013_achievements"
 import * as migration_20261017_181523_docs_sections from "./20261017_181523_docs_sections"
 import * as migration_20261021_011206_docs_tree from "./20261021_011206_docs_tree"
-import * as migration_20261108_225410_reading_history from "./20261108_225410_reading_history"
+import * as migration_20261109_234427_add_article_substack_url from "./20261109_234427_add_article_substack_url"
+import * as migration_20261110_063538_ticker_substack from "./20261110_063538_ticker_substack"
+import * as migration_20261110_082331_ticker_substack_types from "./20261110_082331_ticker_substack_types"
+import * as migration_20261110_235415_reading_history from "./20261110_235415_reading_history"
 
 export const migrations = [
   {
@@ -416,8 +419,23 @@ export const migrations = [
     name: "20261021_011206_docs_tree",
   },
   {
-    up: migration_20261108_225410_reading_history.up,
-    down: migration_20261108_225410_reading_history.down,
-    name: "20261108_225410_reading_history",
+    up: migration_20261109_234427_add_article_substack_url.up,
+    down: migration_20261109_234427_add_article_substack_url.down,
+    name: "20261109_234427_add_article_substack_url",
+  },
+  {
+    up: migration_20261110_063538_ticker_substack.up,
+    down: migration_20261110_063538_ticker_substack.down,
+    name: "20261110_063538_ticker_substack",
+  },
+  {
+    up: migration_20261110_082331_ticker_substack_types.up,
+    down: migration_20261110_082331_ticker_substack_types.down,
+    name: "20261110_082331_ticker_substack_types",
+  },
+  {
+    up: migration_20261110_235415_reading_history.up,
+    down: migration_20261110_235415_reading_history.down,
+    name: "20261110_235415_reading_history",
   },
 ]

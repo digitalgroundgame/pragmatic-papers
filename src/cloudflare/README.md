@@ -14,12 +14,18 @@ Nothing here changes the Coolify build: everything Worker-specific is behind
 `OPENNEXT_BUILD=true`, which only `pnpm build:worker` sets.
 
 Today it runs as **staging's Worker**, `pragmatic-papers-staging` at
-`staging-worker.pragmaticpapers.com` (a Custom Domain) and on workers.dev, reading
+`staging-worker.pragmaticpapers.com` (behind its gateway) and on workers.dev, reading
 staging's database through Hyperdrive, while staging itself keeps running on Coolify.
 `.github/workflows/worker.yml` deploys it on every push to `dev`, and production's,
 `pragmatic-papers-production` (`env.production` in `wrangler.jsonc`), on every push to
-`main` once [its setup](#production) is done. Production's stays on workers.dev until
-`pragmaticpapers.com` is moved onto it.
+`main` once [its setup](#production) is done. Production's answers at
+`production-worker.pragmaticpapers.com` (behind its gateway) until `pragmaticpapers.com` is
+moved onto it.
+`.github/workflows/worker-build.yml` builds it on PRs that change dependencies, the
+Next, OpenNext or wrangler config, or this folder, serves the build with `wrangler dev` and
+fails unless a few seeded pages answer 200. It deploys nothing. While a Worker's deploy
+keeps failing, `worker.yml` keeps one issue open for it ("Worker deploy failing: staging",
+labelled `ci`) and closes it when a deploy passes.
 
 ## Cloudflare setup (once)
 
@@ -44,10 +50,13 @@ the R2 bucket and D1 database by name if they're missing. The rest is set up by 
 3. **API token** with Workers Scripts, Workers R2 Storage, D1 and Hyperdrive, all Edit:
    the repo secret `CLOUDFLARE_WORKERS_TOKEN`. `CLOUDFLARE_ACCOUNT_ID` is shared with the
    Storybook deploy.
-4. **Custom Domain** `staging-worker.pragmaticpapers.com`: Workers & Pages →
-   `pragmatic-papers-staging` → Settings → Domains & Routes → Add → Custom Domain, enabled
-   for Production. Cloudflare creates its DNS record and certificate. It isn't in
-   `wrangler.jsonc`, which would need the deploy token to have zone permissions.
+4. **Hostname** `staging-worker.pragmaticpapers.com`, on the gateway: Workers & Pages →
+   `pragmatic-papers-staging-gateway` → Settings → Domains & Routes → Add → Route
+   `staging-worker.pragmaticpapers.com/*` on zone `pragmaticpapers.com` (the `/*` matters,
+   or only the home page matches), over a proxied DNS record for the hostname. Add Domain
+   found no zone for staging; production's gateway took a Custom Domain, which creates the
+   DNS record and certificate itself. Neither is in `wrangler.jsonc`, which would need the
+   deploy token to have zone permissions.
 5. **Repo secret** `STAGING_PAYLOAD_SECRET` (staging's `PAYLOAD_SECRET`), and **variables**
    `WORKER_STAGING_URL` (`https://staging-worker.pragmaticpapers.com`) and
    `SHOWCASE_STAGING_URL` (staging's Coolify URL, which the Worker sends `/admin` and
@@ -79,7 +88,8 @@ The same steps, for production's database and hostname:
    limit) to 10, and lower it if the pooler's size is raised. Staging's is 10 too.
 2. **Repo secret** `PRODUCTION_PAYLOAD_SECRET` (production's `PAYLOAD_SECRET`) and
    **variables** `PRODUCTION_ORIGIN_URL` (production's Coolify URL),
-   `WORKER_PRODUCTION_URL` (the Worker's URL: its workers.dev address until it takes over),
+   `WORKER_PRODUCTION_URL` (the Worker's URL: `https://production-worker.pragmaticpapers.com`
+   until it takes over),
    and `PRODUCTION_SUPABASE_URL` and `PRODUCTION_S3_BUCKET` (production's `SUPABASE_URL` and
    `S3_BUCKET`, which media links are built from; the Worker never uploads, so it has no S3
    credentials). Optional: `PRODUCTION_GOOGLE_ANALYTICS_ID` and
@@ -94,12 +104,17 @@ The same steps, for production's database and hostname:
      `PRODUCTION_ORIGIN_URL` to it. The Worker sends the admin panel, the API and Coolify's
      own `/next/` routes there (`ORIGIN_ROUTES` in `origin.ts`), so `start.sh`'s
      `/next/purge-edge` and the deploy records' `/next/version` still reach Coolify;
-   - add `pragmaticpapers.com` (and `www`) as Custom Domains on
-     `pragmatic-papers-production`, which replaces their DNS records, and set
-     `WORKER_PRODUCTION_URL` to `https://pragmaticpapers.com`;
+   - add `pragmaticpapers.com` and `www.pragmaticpapers.com` as Custom Domains on the
+     gateway, `pragmatic-papers-production-gateway` (Settings, Domains & Routes, Add, Custom
+     Domain), as `production-worker.pragmaticpapers.com` is. A Custom Domain replaces the
+     hostname's DNS record, so note the record's target (Coolify's server) first. If Add
+     Domain finds no zone, add Routes `pragmaticpapers.com/*` and `www.pragmaticpapers.com/*`
+     instead (the `/*` matters, or only the home page matches), which keep the records (they must be proxied). Then
+     set `WORKER_PRODUCTION_URL` and Coolify's `WORKER_URL` to `https://pragmaticpapers.com`,
+     and check Turnstile's Hostname management lists it;
    - the zone's Cache Rules (`cloudflare/rulesets/`) no longer apply to the site's pages,
-     which Workers Cache holds instead (`edgeCache.ts`). Moving the Custom Domain back to
-     Coolify's DNS record undoes it.
+     which Workers Cache holds instead (`edgeCache.ts`). Removing the Custom Domains and
+     restoring the DNS records to Coolify's (or removing the Routes) undoes it.
 
 ## Each deploy
 
@@ -142,21 +157,21 @@ deployment.
 
 ## How it works
 
-| Piece                                  | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scripts/build-worker.mjs`             | Builds with webpack (Turbopack copies the Payload config into every route group: 2.4×, ~20 MiB) and without `src/app/(payload)`, which it moves aside and puts back                                                                                                                                                                                                                                                                                                    |
-| `withCloudflare.ts`                    | The Next config for the Worker: stubs, `pg` handling and traces, applied by `next.config.ts` when `OPENNEXT_BUILD=true`. Unit-tested in `__tests__/`                                                                                                                                                                                                                                                                                                                   |
-| `worker.mjs`, `origin.ts`              | The Worker's entry: OpenNext's handler, behind one that sends `/admin`, `/api` and the admin's `/_next/static` files to `ORIGIN_URL`, reads media for next/image from there too, and points Payload at Hyperdrive. Unit-tested                                                                                                                                                                                                                                         |
-| `open-next.config.ts`                  | OpenNext's caches: pages in R2 keyed by route, a Durable Object queue that re-renders pages past their `revalidate` time, and D1 for `revalidatePath` / `revalidateTag`                                                                                                                                                                                                                                                                                                |
-| `stubs/unavailable.ts`                 | Stands in for `sharp` and `@google-analytics/data` (~17 MB with its gRPC stack), which only Coolify's code paths call. Calling one in the Worker throws                                                                                                                                                                                                                                                                                             |
-| `stubs/sentry.ts`                      | Stands in for `@sentry/nextjs` in the server code. The Worker has no `SENTRY_DSN`, so it reported nothing, and its Node SDK and OpenTelemetry were ~1.8 MiB gzipped of what every new isolate loads. The browser's SDK is kept                                                                                                                                                                                                                                         |
-| `_headers`                             | Copied into `.open-next/assets` by the build: hashed `/_next/static` files are cached for a year, where Workers Static Assets would send `max-age=0, must-revalidate`                                                                                                                                                                                                                                                                                                  |
-| `edgeCache.ts`, `CachedSite`           | Workers Cache, on the `CachedSite` entrypoint (`exports` in `wrangler.jsonc`). The default entrypoint is a gateway that sends it anonymous full pages and images only: logins, drafts, `Authorization`, Server Actions, OpenNext's revalidations and navigations (RSC) skip it. Only a 2xx or 3xx with caching headers is kept, tagged with its path (and `shared` for listings); `/next/revalidate-all` purges the paths it names (`?path=`, `?shared`), or all of it |
-| `gateway.ts`, `gateway.wrangler.jsonc` | A Worker of its own (`pragmatic-papers-<env>-gateway`, about 3 KB) that makes the same choice in front of the site, over service bindings to its two entrypoints, so a page the edge cache holds is answered without a new isolate loading the site's 22 MB. It serves the site's assets too, and adds a `gateway` entry to `Server-Timing` that says whether its isolate was cold. Deployed after the site; the hostnames move onto it once it's measured             |
-| `withImageCaching` in `origin.ts`      | Gives `/_next/image` responses the `Cache-Control` Next's optimizer sends on Coolify. OpenNext sets one only on images it can call immutable, which Payload's media never are                                                                                                                                                                                                                                                                                          |
-| `sharp.ts`                             | Payload's `sharp`, imported from here because Next keeps `sharp` external however it's aliased; the Worker build swaps this module instead                                                                                                                                                                                                                                                                                                                             |
-| `pg` external, `pg-cloudflare` traced  | Bundled by webpack, `pg` would get `pg-cloudflare`'s empty Node build. Left external, OpenNext's esbuild bundles it with the `workerd` condition                                                                                                                                                                                                                                                                                                                       |
-| `maxUses: 1` in `payload.config.ts`    | A Worker can't reuse a socket opened during another request; without it every request after the first hangs. Applies only when running in a Worker                                                                                                                                                                                                                                                                                                                     |
+| Piece                                  | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/build-worker.mjs`             | Builds with webpack (Turbopack copies the Payload config into every route group: 2.4×, ~20 MiB) and without `src/app/(payload)`, which it moves aside and puts back                                                                                                                                                                                                                                                                                                         |
+| `withCloudflare.ts`                    | The Next config for the Worker: stubs, `pg` handling and traces, applied by `next.config.ts` when `OPENNEXT_BUILD=true`. Unit-tested in `__tests__/`                                                                                                                                                                                                                                                                                                                        |
+| `worker.mjs`, `origin.ts`              | The Worker's entry: OpenNext's handler, behind one that sends `/admin`, `/api` and the admin's `/_next/static` files to `ORIGIN_URL`, reads media for next/image from there too, and points Payload at Hyperdrive. Unit-tested                                                                                                                                                                                                                                              |
+| `open-next.config.ts`                  | OpenNext's caches: pages in R2 keyed by route, a Durable Object queue that re-renders pages past their `revalidate` time, and D1 for `revalidatePath` / `revalidateTag`                                                                                                                                                                                                                                                                                                     |
+| `stubs/unavailable.ts`                 | Stands in for `sharp` and `@google-analytics/data` (~17 MB with its gRPC stack), which only Coolify's code paths call. Calling one in the Worker throws                                                                                                                                                                                                                                                                                                                     |
+| `stubs/sentry.ts`                      | Stands in for `@sentry/nextjs` in the server code. The Worker has no `SENTRY_DSN`, so it reported nothing, and its Node SDK and OpenTelemetry were ~1.8 MiB gzipped of what every new isolate loads. The browser's SDK is kept                                                                                                                                                                                                                                              |
+| `_headers`                             | Copied into `.open-next/assets` by the build: hashed `/_next/static` files are cached for a year, where Workers Static Assets would send `max-age=0, must-revalidate`                                                                                                                                                                                                                                                                                                       |
+| `edgeCache.ts`, `CachedSite`           | Workers Cache, on the `CachedSite` entrypoint (`exports` in `wrangler.jsonc`). The default entrypoint is a gateway that sends it anonymous full pages and images only: logins, drafts, `Authorization`, Server Actions, OpenNext's revalidations and navigations (RSC) skip it. Only a 2xx or 3xx with caching headers is kept, tagged with its path (and `shared` for listings); `/next/revalidate-all` purges the paths it names (`?path=`, `?shared`), or all of it      |
+| `gateway.ts`, `gateway.wrangler.jsonc` | A Worker of its own (`pragmatic-papers-<env>-gateway`, about 3 KB) that makes the same choice in front of the site, over service bindings to its two entrypoints, so a page the edge cache holds is answered without a new isolate loading the site's 22 MB. It serves the site's assets too, and adds a `gateway` entry to `Server-Timing` that says whether its isolate was cold. Deployed after the site; staging-worker's and production-worker's hostnames point at it |
+| `withImageCaching` in `origin.ts`      | Gives `/_next/image` responses the `Cache-Control` Next's optimizer sends on Coolify. OpenNext sets one only on images it can call immutable, which Payload's media never are                                                                                                                                                                                                                                                                                               |
+| `sharp.ts`                             | Payload's `sharp`, imported from here because Next keeps `sharp` external however it's aliased; the Worker build swaps this module instead                                                                                                                                                                                                                                                                                                                                  |
+| `pg` external, `pg-cloudflare` traced  | Bundled by webpack, `pg` would get `pg-cloudflare`'s empty Node build. Left external, OpenNext's esbuild bundles it with the `workerd` condition                                                                                                                                                                                                                                                                                                                            |
+| `maxUses: 1` in `payload.config.ts`    | A Worker can't reuse a socket opened during another request; without it every request after the first hangs. Applies only when running in a Worker                                                                                                                                                                                                                                                                                                                          |
 
 ## Measured
 

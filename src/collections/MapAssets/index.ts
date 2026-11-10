@@ -12,6 +12,8 @@ import { isCreatedByOrEditor } from "@/access/policies"
 import { link } from "@/fields/link"
 import type { MapAsset } from "@/payload-types"
 
+import { regenerateMapImages } from "./hooks/regenerateMapImages"
+
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
@@ -128,6 +130,7 @@ export const MapAssets: CollectionConfig = {
   hooks: {
     beforeValidate: [captureSvgContent],
     beforeChange: [populateCreatedBy],
+    afterChange: [regenerateMapImages],
   },
   upload: {
     // Inside public/media, the folder a deployment with local storage mounts to keep its

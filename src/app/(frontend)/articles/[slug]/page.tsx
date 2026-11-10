@@ -5,6 +5,7 @@ import React from "react"
 
 import { EndRule } from "@/blocks/SquiggleRule/EndRule"
 import { ArticleFooter } from "@/components/ArticleFooter"
+import { ArticleFooterActions } from "@/components/ArticleFooter/ArticleFooterActions"
 import { ArticleSidebar } from "@/components/ArticleSidebar"
 import { AuthorList } from "@/components/Authors/AuthorList"
 import { Comments } from "@/components/Comments"
@@ -138,6 +139,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                   <div className="space-y-4">
                     <Separator />
                     <TopicsList topics={topics} label="Topics:" />
+                    <ArticleFooterActions article={article} />
                   </div>
                   <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
                   {commentsEnabled &&

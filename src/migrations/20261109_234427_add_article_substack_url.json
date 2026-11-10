@@ -220,6 +220,12 @@
           "notNull": false,
           "default": false
         },
+        "substack_url": {
+          "name": "substack_url",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_by_id": {
           "name": "created_by_id",
           "type": "integer",
@@ -887,6 +893,12 @@
           "primaryKey": false,
           "notNull": false,
           "default": false
+        },
+        "version_substack_url": {
+          "name": "version_substack_url",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
         },
         "version_created_by_id": {
           "name": "version_created_by_id",
@@ -10562,33 +10574,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "reading_days_visited": {
-          "name": "reading_days_visited",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "reading_last_visit_on": {
-          "name": "reading_last_visit_on",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "reading_current_streak": {
-          "name": "reading_current_streak",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "reading_longest_streak": {
-          "name": "reading_longest_streak",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -15327,114 +15312,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.articles_read": {
-      "name": "articles_read",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "article_id": {
-          "name": "article_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "read_at": {
-          "name": "read_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "articles_read_user_idx": {
-          "name": "articles_read_user_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "articles_read_article_idx": {
-          "name": "articles_read_article_idx",
-          "columns": [
-            {
-              "expression": "article_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "user_article_idx": {
-          "name": "user_article_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "article_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "articles_read_user_id_users_id_fk": {
-          "name": "articles_read_user_id_users_id_fk",
-          "tableFrom": "articles_read",
-          "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "articles_read_article_id_articles_id_fk": {
-          "name": "articles_read_article_id_articles_id_fk",
-          "tableFrom": "articles_read",
-          "tableTo": "articles",
-          "columnsFrom": ["article_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.payload_kv": {
       "name": "payload_kv",
       "schema": "",
@@ -16076,12 +15953,6 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
-        },
-        "articles_read_id": {
-          "name": "articles_read_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -16444,21 +16315,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "payload_locked_documents_rels_articles_read_id_idx": {
-          "name": "payload_locked_documents_rels_articles_read_id_idx",
-          "columns": [
-            {
-              "expression": "articles_read_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -16656,15 +16512,6 @@
           "tableFrom": "payload_locked_documents_rels",
           "tableTo": "awards",
           "columnsFrom": ["awards_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "payload_locked_documents_rels_articles_read_fk": {
-          "name": "payload_locked_documents_rels_articles_read_fk",
-          "tableFrom": "payload_locked_documents_rels",
-          "tableTo": "articles_read",
-          "columnsFrom": ["articles_read_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -19668,6 +19515,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "5e02ed8f-c952-45a2-8832-71bb3ff2c1c5",
+  "id": "795f22b0-fc04-4f6c-9c51-b20d417bc779",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

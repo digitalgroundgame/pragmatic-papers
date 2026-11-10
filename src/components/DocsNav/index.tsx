@@ -51,7 +51,7 @@ function TopLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "block py-1 font-bold no-underline underline-offset-4 hover:underline",
+        "block py-1 font-bold underline-offset-4 hover:underline",
         active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
         className,
       )}

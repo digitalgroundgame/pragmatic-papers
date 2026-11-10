@@ -34,7 +34,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:e2e` — run Playwright E2E tests against a throwaway Postgres in Docker (see [Test databases](#test-databases)). Functional assertions only; visual changes are reviewed in Storybook and the PR's site preview (see `tests/e2e/README.md`). CI runs the suite in the merge queue, on PRs into `main`, and on a PR into `dev` only once it has the `e2e` label
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`). CI's coverage report adds the stories' coverage: the Unit tests and Storybook jobs each upload a `coverage-final.json`, and the Coverage job's `scripts/merge-coverage.ts` adds the stories' hits onto the unit run's map, matching entries by start line (the two transforms disagree on columns, so istanbul's own merge would count them twice). Integration tests aren't counted
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
-- `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
+- `pnpm test:unit-snapshot` — regenerate snapshot baselines after intentional UI changes (`pnpm test:unit -u`). It accepts every changed snapshot as the new baseline and stays in watch mode, so review the `.snap` diff before committing
 - `pnpm coverage:report` — post the coverage section of CI's PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
 - `pnpm bundle-size` — measure the gzipped client JS and CSS each public page loads, from the build in `.next` (run `pnpm build` first), and compare it with dev's last measurement when `BASE_BUNDLE_SIZE_PATH` names one (see [Page speed](#page-speed))
 - `pnpm analyze` — Turbopack's bundle analyzer, in the browser (it compiles but doesn't leave a build behind): each route's client and server modules, and the import chain that brings each one in. `pnpm analyze --output` writes it to `.next/diagnostics/analyze/` instead, which the next `pnpm build` deletes
@@ -686,6 +686,21 @@ Two things live there, and they are not two modes of one block:
   presentation in code; the feed owns facts and records; `syncInteractiveData`
   pulls it daily into draft snapshots an editor publishes.
 
+The Substack feed can't run a map, so it shows a picture of it
+(`interactiveMapToImage`). `generateBlockImages` (an Articles `afterChange`
+hook) draws it when the article is published, never while a feed is built:
+`interactiveMapToSVG` shades the map with the component's own resolver,
+`renderImage.ts` rasterizes it with `sharp` (on the Coolify app, where articles
+are saved; the Worker only reads the result), and it's stored as a Media upload
+named for a hash of the block's data and its maps' SVG (`feedImage.ts`). The
+feed's query looks that name up, so an unchanged map isn't drawn twice, a
+changed one gets a new picture, and the old one stays for posts Substack
+already imported. A map with no picture gets the RSS feeds' link back to the
+article. The block's download button (`download/`) draws the same picture in the
+reader's browser, with the sources and the logo in a footer and the font embedded, in the theme the
+page shows (`themePalette`), and saves it as a PNG for sharing. The text in the picture needs a font in the image
+(both Dockerfiles install fontconfig and the site's own fonts as TTFs from their packages, Geist and Libertinus Serif, since fontconfig can't read woff2; a download embeds the site's woff2). Like the page, the titles and sources are in Libertinus Serif, scaled 112% as `fonts.ts` scales it, and the legend in Geist.
+
 An SVG never carries records. A drilldown's SVG is checked in, parsed once at
 snapshot time into `geometry/*.json`, and never parsed again;
 `scripts/snapshot-federal-courts.ts` regenerates the Federal Courts geometry
@@ -709,8 +724,9 @@ applications are set up and what's been verified about them; read it first.
 
 Staging's public site also runs as a Cloudflare Worker at `staging-worker.pragmaticpapers.com`
 (OpenNext, reading staging's database through Hyperdrive), deployed on every push to `dev` by
-`.github/workflows/worker.yml`; setup and what's left before production are in
-`src/cloudflare/README.md`.
+`.github/workflows/worker.yml`; PRs that could break its build get it built and served by
+`.github/workflows/worker-build.yml`, which deploys nothing. Setup and what's left before
+production are in `src/cloudflare/README.md`.
 
 Each database has one seeder: the deploy of the Coolify app that runs its migrations. Its
 `/next/revalidate-all` seeds what a deploy seeds (starter pages, starter achievements); the Worker reads

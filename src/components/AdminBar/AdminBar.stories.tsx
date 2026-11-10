@@ -56,6 +56,8 @@ export const LoggedIn: Story = {
 
 /** A reader: no bar, no gap, and the bar's code is never fetched. */
 export const Reader: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   beforeEach: session(null, { hinted: false }),
   play: async ({ canvasElement }) => {
     await waitFor(() => expect(window.fetch).toHaveBeenCalled())
@@ -76,6 +78,8 @@ export const FirstVisit: Story = {
 
 /** The session expired since the last page: the slot collapses, and the hint is forgotten. */
 export const SessionExpired: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   beforeEach: session(null, { hinted: true }),
   play: async ({ canvasElement }) => {
     await waitFor(() => expect(slotHeight(canvasElement)).toBe(0))

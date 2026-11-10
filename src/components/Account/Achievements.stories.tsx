@@ -69,6 +69,8 @@ export const NoneYet: Story = {
 }
 
 export const SwitchedOff: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   beforeEach: serve(null),
   play: async ({ canvasElement }) => {
     // Nothing to wait for: give the request a moment, then check nothing rendered.

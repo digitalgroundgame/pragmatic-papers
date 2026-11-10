@@ -50,6 +50,8 @@ export const Loading: Story = {
 }
 
 export const Unavailable: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   beforeEach: respondWith(async () => new Response("", { status: 500 })),
   play: async ({ canvasElement }) => {
     await waitFor(() => expect(canvasElement).toBeEmptyDOMElement())

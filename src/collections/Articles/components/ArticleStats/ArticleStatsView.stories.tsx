@@ -61,6 +61,13 @@ export const Loaded: Story = {
     const referrers = canvas.getByRole("table", { name: "Where readers came from" })
     await expect(within(referrers).getByRole("row", { name: /google/ })).toHaveTextContent("7,820")
     await expect(canvas.getByText(/updated 12 minutes ago/)).toBeInTheDocument()
+    // The undercount notice comes before the figures, so writers read it first.
+    const notice = canvas.getByRole("note")
+    await expect(notice).toHaveTextContent("More people read this than these numbers show")
+    await expect(notice).toHaveTextContent("ad blockers")
+    await expect(
+      notice.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
     await expect(canvas.getByText("14 published")).toBeInTheDocument()
     // Comments opens the comment section under the article on the site.
     await expect(canvas.getByRole("link", { name: "Comments" })).toHaveAttribute(
@@ -156,6 +163,8 @@ export const NoGoogleAnalytics: Story = {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText(/isn't connected on this site/)).toBeInTheDocument()
     await expect(canvas.queryByRole("table")).not.toBeInTheDocument()
+    // No figures, so nothing to caveat.
+    await expect(canvas.queryByRole("note")).not.toBeInTheDocument()
     await expect(canvas.queryByText("Comments")).not.toBeInTheDocument()
     await expect(canvas.getByText(/Not among the articles recommended/)).toBeInTheDocument()
   },

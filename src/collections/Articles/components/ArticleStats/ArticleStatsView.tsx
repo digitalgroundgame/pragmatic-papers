@@ -3,6 +3,9 @@
 import React, { useCallback, useEffect, useState } from "react"
 
 import type { ArticleStats, GoogleAnalyticsStats } from "@/collections/Articles/stats/endpoint"
+import { Info } from "lucide-react"
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -59,6 +62,26 @@ const Problem = ({ children }: { children: React.ReactNode }): React.ReactNode =
   </p>
 )
 
+/**
+ * Above the figures, so a writer reads it before the numbers: GA misses many readers, so
+ * the real readership is higher than what's shown.
+ */
+function UndercountNotice(): React.ReactNode {
+  return (
+    <Alert>
+      <Info aria-hidden />
+      <AlertTitle>More people read this than these numbers show</AlertTitle>
+      <AlertDescription>
+        <p className="m-0">
+          Google Analytics can&apos;t count readers who use ad blockers or privacy tools, and a lot
+          of readers do. Treat these figures as a floor, and use them to compare your articles with
+          each other rather than as an exact count. New visits can take a few hours to show up.
+        </p>
+      </AlertDescription>
+    </Alert>
+  )
+}
+
 function ReadersCard({
   analytics,
   narration,
@@ -112,6 +135,7 @@ function ReadersCard({
   const rows = narration ? [...ROWS, NARRATION_ROW] : ROWS
   return (
     <>
+      <UndercountNotice />
       <Card>
         <CardHeader>
           <CardTitle id="article-stats-readers">Readers</CardTitle>
@@ -155,8 +179,7 @@ function ReadersCard({
             </TableBody>
           </Table>
           <Note>
-            From Google Analytics, updated {formatTimeAgo(analytics.fetchedAt)}. It doesn&apos;t
-            count readers who block it, and can take a few hours to catch up.
+            From Google Analytics, updated {formatTimeAgo(analytics.fetchedAt)}.
             {analytics.reportsUrl && (
               <>
                 {" "}

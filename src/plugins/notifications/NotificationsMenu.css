@@ -11,7 +11,7 @@
 @import "tw-animate-css";
 
 @source "./NotificationsMenu.tsx";
-@source "../../components/ui/{badge,button,card,checkbox,empty,field,label,link-button,popover,separator,table}.tsx";
+@source "../../components/ui/{alert,badge,button,card,checkbox,empty,field,label,link-button,popover,separator,table}.tsx";
 @source "../../collections/Articles/components/ArticleStats/*.tsx";
 
 /*

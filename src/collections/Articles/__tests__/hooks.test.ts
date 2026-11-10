@@ -3,6 +3,7 @@ import type { Field } from "payload"
 import { describe, expect, it } from "vitest"
 
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
+import { generateBlockImages } from "@/collections/Articles/hooks/generateBlockImages"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { grantAuthorsPublicProfile } from "@/collections/Articles/hooks/grantAuthorsPublicProfile"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
@@ -24,8 +25,9 @@ describe("Articles hooks", () => {
     ])
   })
 
-  it("grants public profiles after revalidating", () => {
+  it("draws the feed's block images before revalidating, then grants public profiles", () => {
     expect(Articles.hooks?.afterChange).toEqual([
+      generateBlockImages,
       revalidateArticle,
       revalidateNavLinks,
       grantAuthorsPublicProfile,

@@ -24,6 +24,7 @@ import {
   productionSearchEndpoint,
 } from "@/collections/Articles/endpoints/cloneFromProduction"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
+import { generateBlockImages } from "@/collections/Articles/hooks/generateBlockImages"
 import { trimSubstackUrl, validateSubstackUrl } from "@/collections/Articles/substackUrl"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
@@ -352,7 +353,13 @@ export const Articles: CollectionConfig = {
       detectMathBlocks,
       populateMetaImageFromHero,
     ],
-    afterChange: [revalidateArticle, revalidateNavLinks, grantAuthorsPublicProfile],
+    // The feed pictures are drawn first, so the Substack feeds revalidated after them name them.
+    afterChange: [
+      generateBlockImages,
+      revalidateArticle,
+      revalidateNavLinks,
+      grantAuthorsPublicProfile,
+    ],
     beforeDelete: [removeFromRankings],
     afterDelete: [revalidateDelete, revalidateNavLinksDelete],
   },

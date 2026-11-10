@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, within } from "storybook/test"
+import { expect, waitFor, within } from "storybook/test"
 
 import { articles } from "@/stories/fixtures/docs"
 
@@ -50,5 +50,18 @@ export const Lazy: Story = {
     const image = within(canvasElement).getByRole("img")
     await expect(image).toHaveAttribute("loading", "lazy")
     await expect(image).not.toHaveAttribute("fetchpriority")
+  },
+}
+
+/** Tabbing to the card lifts its image and dims its headline, as pointing at it does. */
+export const KeyboardFocus: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const image = canvas.getByRole("img")
+    const heading = canvas.getByRole("heading")
+    canvas.getByRole("link").focus()
+
+    await waitFor(() => expect(getComputedStyle(image).filter).toContain("contrast(1.16)"))
+    await expect(getComputedStyle(heading).color).toMatch(/\/ 0\.8\)$/)
   },
 }

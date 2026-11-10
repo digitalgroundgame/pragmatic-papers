@@ -13,6 +13,10 @@ const syndicated = {
   and: [{ _status: { equals: "published" } }, { syndicateToSubstack: { equals: true } }],
 }
 
+const notImported = {
+  or: [{ substackUrl: { exists: false } }, { substackUrl: { equals: "" } }],
+}
+
 afterEach(() => {
   find.mockReset()
   logger.error.mockReset()
@@ -53,7 +57,7 @@ const findArticlesThenImages = (articles: object[], images: object[] | Error) =>
 // against a real database; these pin the query itself, so it can't silently widen to
 // drafts or articles nobody opted in.
 describe("querySyndicatedArticles", () => {
-  it("asks for every published, syndicated article, newest first, as the public", async () => {
+  it("asks for every published, syndicated article not yet on Substack, newest first, as the public", async () => {
     find.mockResolvedValue({ docs: [{ slug: "one" }] })
 
     await expect(querySyndicatedArticles()).resolves.toEqual([{ slug: "one" }])
@@ -63,7 +67,7 @@ describe("querySyndicatedArticles", () => {
         draft: false,
         limit: 0,
         overrideAccess: false,
-        where: syndicated,
+        where: { and: [syndicated, notImported] },
         sort: "-publishedAt",
       }),
     )

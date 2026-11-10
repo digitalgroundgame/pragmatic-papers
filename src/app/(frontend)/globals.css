@@ -6,6 +6,21 @@
 @custom-variant dark (&:is(.dark *));
 /* An ancestor of an expanded TableOfContents (it renders data-slot="toc", hidden when collapsed). */
 @custom-variant toc-open (&:has([data-slot="toc"]:not([hidden])));
+/*
+ * Inside a card (an element with `group/card`; the site's Card already is one) that is
+ * pointed at, or that is or holds the keyboard focus: the image and headline react to the
+ * whole card together, not each to itself.
+ */
+@custom-variant card-hover {
+  @media (hover: hover) {
+    &:is(:where(.group\/card):hover *) {
+      @slot;
+    }
+  }
+  &:is(:where(.group\/card):is(:focus-visible, :has(:focus-visible)) *) {
+    @slot;
+  }
+}
 
 /*
  * Stand-ins for FKScreamer (fonts.ts) while it loads, so a heading wraps onto the same

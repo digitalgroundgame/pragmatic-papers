@@ -40,6 +40,7 @@
     "test": "vitest",
     "test:ci": "vitest run",
     "test:unit": "vitest --project unit",
+    "test:unit-snapshot": "vitest --project unit --update",
     "test:integration": "vitest --project integration",
     "test:scripts": "vitest --project scripts",
     "test:storybook": "vitest --project storybook",

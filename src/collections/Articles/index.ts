@@ -25,6 +25,7 @@ import {
 } from "@/collections/Articles/endpoints/cloneFromProduction"
 import { detectMathBlocks } from "@/collections/Articles/hooks/detectMathBlocks"
 import { generateBlockImages } from "@/collections/Articles/hooks/generateBlockImages"
+import { trimSubstackUrl, validateSubstackUrl } from "@/collections/Articles/substackUrl"
 import { generateFootnotes } from "@/collections/Articles/hooks/generateFootnotes"
 import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populateMetaImageFromHero"
 import { keepWritersOffLiveArticles } from "@/collections/Articles/hooks/keepWritersOffLiveArticles"
@@ -34,7 +35,6 @@ import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidate
 import { populateTableOfContentsAnchors, tableOfContentsField } from "@/components/TableOfContents"
 import { TableOfContentsLabelsFeature } from "@/components/TableOfContents/feature"
 import { footnotesArrayField } from "@/fields/footnotes"
-import { type Article } from "@/payload-types"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 import { rememberReadersCopy } from "@/utilities/readersCopy"
 
@@ -63,20 +63,11 @@ import {
   SuperscriptFeature,
   UnorderedListFeature,
 } from "@payloadcms/richtext-lexical"
-import type { CollectionBeforeChangeHook, CollectionConfig, FieldHook } from "payload"
+import type { CollectionConfig } from "payload"
 import { slugField } from "@/fields/slug"
-import { grantPublicProfile } from "@/collections/Users/hooks/grantPublicProfile"
-
-const setPublishedAtDefault: FieldHook<Article, Article["publishedAt"]> = ({
-  siblingData,
-  value,
-}) => {
-  if (siblingData && siblingData._status === "published" && !value) {
-    return new Date().toISOString()
-  }
-
-  return value
-}
+import { grantAuthorsPublicProfile } from "@/collections/Articles/hooks/grantAuthorsPublicProfile"
+import { setCreatedBy } from "@/collections/Articles/hooks/setCreatedBy"
+import { setPublishedAtDefault } from "@/collections/Articles/hooks/setPublishedAtDefault"
 
 export const Articles: CollectionConfig = {
   slug: "articles",
@@ -308,6 +299,27 @@ export const Articles: CollectionConfig = {
       },
     },
     {
+      name: "substackUrl",
+      type: "text",
+      label: "Substack post URL",
+      access: {
+        create: editorFieldLevel,
+        update: editorFieldLevel,
+      },
+      admin: {
+        position: "sidebar",
+        condition: (data, siblingData, context) =>
+          Boolean(data?.syndicateToSubstack) && shownToEditors(data, siblingData, context),
+        description:
+          "Once Substack has imported the article, paste the post's address here. It marks the article as imported, takes it out of the bulk import feed, and adds a Read on Substack link to the article.",
+        placeholder: "https://thepragmaticpapers.substack.com/p/…",
+      },
+      hooks: {
+        beforeValidate: [trimSubstackUrl],
+      },
+      validate: validateSubstackUrl,
+    },
+    {
       name: "substackImportUrl",
       type: "ui",
       admin: {
@@ -336,15 +348,7 @@ export const Articles: CollectionConfig = {
     beforeOperation: [keepWritersOffLiveArticles],
     beforeChange: [
       rememberReadersCopy,
-      (args: Parameters<CollectionBeforeChangeHook<Article>>[0]): Partial<Article> | void => {
-        const { req, operation, data } = args
-        if (operation === "create") {
-          if (req.user) {
-            data.createdBy = req.user.id
-            return data
-          }
-        }
-      },
+      setCreatedBy,
       generateFootnotes,
       detectMathBlocks,
       populateMetaImageFromHero,
@@ -352,10 +356,7 @@ export const Articles: CollectionConfig = {
     afterChange: [
       revalidateArticle,
       revalidateNavLinks,
-      // Only a published byline links to a contributor page, so drafts and autosaves credit no one.
-      grantPublicProfile<Article>((doc) =>
-        doc._status === "published" ? (doc.authors ?? []) : [],
-      ),
+      grantAuthorsPublicProfile,
       generateBlockImages,
     ],
     beforeDelete: [removeFromRankings],

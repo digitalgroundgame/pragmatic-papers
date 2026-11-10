@@ -66,6 +66,8 @@ export const KeyboardJump: Story = {
 
 /** A one-page article has nothing to page through, so no bar at all. */
 export const SinglePage: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   args: { total: 1, activeIndex: 0 },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).queryByRole("tablist")).not.toBeInTheDocument()

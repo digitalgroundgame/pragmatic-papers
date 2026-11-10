@@ -34,7 +34,6 @@ import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidate
 import { populateTableOfContentsAnchors, tableOfContentsField } from "@/components/TableOfContents"
 import { TableOfContentsLabelsFeature } from "@/components/TableOfContents/feature"
 import { footnotesArrayField } from "@/fields/footnotes"
-import { type Article } from "@/payload-types"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 import { rememberReadersCopy } from "@/utilities/readersCopy"
 
@@ -63,20 +62,11 @@ import {
   SuperscriptFeature,
   UnorderedListFeature,
 } from "@payloadcms/richtext-lexical"
-import type { CollectionBeforeChangeHook, CollectionConfig, FieldHook } from "payload"
+import type { CollectionConfig } from "payload"
 import { slugField } from "@/fields/slug"
-import { grantPublicProfile } from "@/collections/Users/hooks/grantPublicProfile"
-
-const setPublishedAtDefault: FieldHook<Article, Article["publishedAt"]> = ({
-  siblingData,
-  value,
-}) => {
-  if (siblingData && siblingData._status === "published" && !value) {
-    return new Date().toISOString()
-  }
-
-  return value
-}
+import { grantAuthorsPublicProfile } from "@/collections/Articles/hooks/grantAuthorsPublicProfile"
+import { setCreatedBy } from "@/collections/Articles/hooks/setCreatedBy"
+import { setPublishedAtDefault } from "@/collections/Articles/hooks/setPublishedAtDefault"
 
 export const Articles: CollectionConfig = {
   slug: "articles",
@@ -357,27 +347,12 @@ export const Articles: CollectionConfig = {
     beforeOperation: [keepWritersOffLiveArticles],
     beforeChange: [
       rememberReadersCopy,
-      (args: Parameters<CollectionBeforeChangeHook<Article>>[0]): Partial<Article> | void => {
-        const { req, operation, data } = args
-        if (operation === "create") {
-          if (req.user) {
-            data.createdBy = req.user.id
-            return data
-          }
-        }
-      },
+      setCreatedBy,
       generateFootnotes,
       detectMathBlocks,
       populateMetaImageFromHero,
     ],
-    afterChange: [
-      revalidateArticle,
-      revalidateNavLinks,
-      // Only a published byline links to a contributor page, so drafts and autosaves credit no one.
-      grantPublicProfile<Article>((doc) =>
-        doc._status === "published" ? (doc.authors ?? []) : [],
-      ),
-    ],
+    afterChange: [revalidateArticle, revalidateNavLinks, grantAuthorsPublicProfile],
     beforeDelete: [removeFromRankings],
     afterDelete: [revalidateDelete, revalidateNavLinksDelete],
   },

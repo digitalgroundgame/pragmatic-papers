@@ -204,7 +204,9 @@ const VerifyEmailNudge: React.FC = () => (
   <Card size="sm" role="region" aria-labelledby="verify-email-heading">
     <CardHeader>
       <CardTitle>
-        <h2 id="verify-email-heading">Verify your email</h2>
+        <h2 id="verify-email-heading" className="text-lg font-semibold">
+          Verify your email
+        </h2>
       </CardTitle>
       <CardDescription>
         Your account has no email address yet. Connect Google or Discord to add the one they&apos;ve

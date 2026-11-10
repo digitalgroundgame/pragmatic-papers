@@ -66,16 +66,19 @@ const WIDTH = 680
 const PIXEL_DENSITY = 2
 const PADDING = 16
 const GAP = 12
-// The site's body font, which the deployed image installs (dockerfiles/), then the
-// image's fallback, so a picture drawn in development looks like production's wherever
-// those fonts are installed.
+// The site's sans, which the legend uses on the page and the deployed image installs
+// (dockerfiles/), then the image's fallback, so a picture drawn in development looks like
+// production's wherever those fonts are installed.
 const FONT = "Geist, 'DejaVu Sans', Helvetica, Arial, sans-serif"
+// The article's text, which the map's title and its sources sit in on the page: the
+// system serif (Tailwind's `font-serif`), then the image's own.
+const SERIF = "ui-serif, Georgia, Cambria, 'Times New Roman', 'DejaVu Serif', serif"
 const INK = "#171717"
 const QUIET_INK = "#525252"
 const OUTLINE = "#ffffff"
 
-const TITLE = { size: 18, line: 24, weight: 600 }
-const MAP_TITLE = { size: 14, line: 20, weight: 500 }
+const TITLE = { size: 18, line: 24, weight: 600, family: SERIF }
+const MAP_TITLE = { size: 14, line: 20, weight: 500, family: SERIF }
 const LEGEND = { swatch: 16, size: 11, line: 16, gap: 4 }
 
 const round = (n: number): number => Math.round(n * 100) / 100
@@ -99,7 +102,7 @@ function wrap(title: string, size: number, width: number): string[] {
 
 function text(
   lines: string[],
-  { size, line, weight }: { size: number; line: number; weight?: number },
+  { size, line, weight, family }: { size: number; line: number; weight?: number; family?: string },
   x: number,
   y: number,
   fill = INK,
@@ -108,9 +111,9 @@ function text(
   return lines
     .map(
       (content, i) =>
-        `<text x="${round(x)}" y="${round(y + i * line + size)}" font-size="${size}"${
-          weight ? ` font-weight="${weight}"` : ""
-        } fill="${fill}" text-anchor="${anchor}">${escapeHTML(content)}</text>`,
+        `<text x="${round(x)}" y="${round(y + i * line + size)}"${
+          family ? ` font-family="${family}"` : ""
+        } font-size="${size}"${weight ? ` font-weight="${weight}"` : ""} fill="${fill}" text-anchor="${anchor}">${escapeHTML(content)}</text>`,
     )
     .join("")
 }
@@ -169,7 +172,7 @@ export interface MapDrawing {
   fontFaces?: string
 }
 
-const FOOTER = { size: 11, line: 16, logo: 10 }
+const FOOTER = { size: 11, line: 16, logo: 10, family: SERIF }
 
 /** A logo's viewBox, its width at the footer's height, and the markup inside its `<svg>`. */
 function logoBox(logo: string): { viewBox: string; width: number; inner: string } | null {

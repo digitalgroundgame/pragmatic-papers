@@ -197,8 +197,12 @@ describe("comments", () => {
       badge: null,
       locked: null,
       needsVerifiedEmail: false,
+      // A new account that just made its first comment.
+      newcomer: true,
+      newMember: true,
     })
     expect(own.providers).toEqual([])
+    expect(own.comments.find((c) => c.id === comment.id)).toMatchObject({ firstComment: true })
   })
 
   it("badges staff, who comment through their Payload login", async () => {

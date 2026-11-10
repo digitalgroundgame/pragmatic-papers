@@ -69,10 +69,10 @@ const GAP = 12
 // The site's sans, which the legend uses on the page and the deployed image installs
 // (dockerfiles/), then the image's fallback, so a picture drawn in development looks like
 // production's wherever those fonts are installed.
-const FONT = "Geist, 'DejaVu Sans', Helvetica, Arial, sans-serif"
-// The article's text, which the map's title and its sources sit in on the page: the
-// system serif (Tailwind's `font-serif`), then the image's own.
-const SERIF = "ui-serif, Georgia, Cambria, 'Times New Roman', 'DejaVu Serif', serif"
+const FONT = "Geist, Helvetica, Arial, sans-serif"
+// The article's serif, which the map's title and its sources sit in on the page: Libertinus
+// Serif, which the deployed image installs and a download embeds.
+const SERIF = "'Libertinus Serif', Georgia, 'Times New Roman', serif"
 /** The colors a picture is drawn in. `LIGHT` is the light theme's, on white. */
 export interface MapPalette {
   background: string
@@ -92,11 +92,16 @@ const LIGHT: MapPalette = {
   color: staticColor,
 }
 
-const TITLE = { size: 18, line: 24, weight: 600, family: SERIF }
-const MAP_TITLE = { size: 14, line: 20, weight: 500, family: SERIF }
-const LEGEND = { swatch: 16, size: 11, line: 16, gap: 4 }
-
 const round = (n: number): number => Math.round(n * 100) / 100
+// The page draws Libertinus at 112% (`size-adjust` in fonts.ts), so a serif size here is
+// scaled the same way to match it.
+const serif = (size: number): number => round(size * 1.12)
+
+// Libertinus comes in regular and bold, so the page's semibold title is drawn bold and its
+// medium map titles regular, as a browser picks them.
+const TITLE = { size: serif(18), line: 24, weight: 700, family: SERIF }
+const MAP_TITLE = { size: serif(14), line: 20, weight: 400, family: SERIF }
+const LEGEND = { swatch: 16, size: 11, line: 16, gap: 4 }
 
 /** Break a title into lines that fit `width`, judging by an average character's width. */
 function wrap(title: string, size: number, width: number): string[] {
@@ -196,7 +201,7 @@ export interface MapDrawing {
   palette?: MapPalette
 }
 
-const FOOTER = { size: 11, line: 16, logo: 10, family: SERIF }
+const FOOTER = { size: serif(11), line: 16, logo: 10, family: SERIF }
 
 /** A logo's viewBox, its width at the footer's height, and the markup inside its `<svg>`. */
 function logoBox(logo: string): { viewBox: string; width: number; inner: string } | null {

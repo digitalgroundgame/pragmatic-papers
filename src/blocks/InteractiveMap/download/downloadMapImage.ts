@@ -1,7 +1,11 @@
 import { drawInteractiveMapSVG, type MapDrawing, type MapPalette } from "../converters"
 
-/** The site's body font, which `scripts/install-fonts.ts` puts in `public/fonts`. */
-const FONT_URL = "/fonts/Geist-latin.woff2"
+/** The site's fonts the picture draws in, which `scripts/install-fonts.ts` puts in `public/fonts`. */
+const FONTS = [
+  { family: "Geist", weight: "100 900", url: "/fonts/Geist-latin.woff2" },
+  { family: "Libertinus Serif", weight: "400", url: "/fonts/LibertinusSerif-400Regular.woff2" },
+  { family: "Libertinus Serif", weight: "700", url: "/fonts/LibertinusSerif-700Bold.woff2" },
+]
 
 type Download = Omit<MapDrawing, "footer" | "fontFaces" | "palette"> & {
   sources?: readonly string[]
@@ -65,22 +69,26 @@ export function mapFileName(title: string | null | undefined): string {
 }
 
 /**
- * The font as an `@font-face` rule with the file inlined: a browser drawing an SVG as an
+ * A font as an `@font-face` rule with the file inlined: a browser drawing an SVG as an
  * image loads nothing outside it. Without it, the picture falls back to a system font.
  */
-async function fontFace(): Promise<string | undefined> {
+async function fontFace({ family, weight, url }: (typeof FONTS)[number]): Promise<string> {
   try {
-    const response = await fetch(FONT_URL)
-    if (!response.ok) return undefined
+    const response = await fetch(url)
+    if (!response.ok) return ""
     const bytes = new Uint8Array(await response.arrayBuffer())
     let binary = ""
     for (let i = 0; i < bytes.length; i += 0x8000) {
       binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
     }
-    return `@font-face{font-family:Geist;font-weight:100 900;src:url(data:font/woff2;base64,${btoa(binary)}) format("woff2")}`
+    return `@font-face{font-family:"${family}";font-weight:${weight};src:url(data:font/woff2;base64,${btoa(binary)}) format("woff2")}`
   } catch {
-    return undefined
+    return ""
   }
+}
+
+async function fontFaces(): Promise<string | undefined> {
+  return (await Promise.all(FONTS.map(fontFace))).join("") || undefined
 }
 
 /**
@@ -119,7 +127,7 @@ export async function downloadMapImage({ sources, logo, ...drawing }: Download):
     ...drawing,
     palette,
     footer: { sources, logo: logoMarkup(logo, palette?.ink ?? "#171717") },
-    fontFaces: await fontFace(),
+    fontFaces: await fontFaces(),
   })
   const svgUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }))
   try {

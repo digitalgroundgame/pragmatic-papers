@@ -7,6 +7,19 @@ const syndicated: Where = {
   and: [{ _status: { equals: "published" } }, { syndicateToSubstack: { equals: true } }],
 }
 
+/**
+ * Not yet recorded as a post on Substack. An empty string counts: clearing the field in the
+ * admin can save one.
+ */
+const notImported: Where = {
+  or: [{ substackUrl: { exists: false } }, { substackUrl: { equals: "" } }],
+}
+
+/**
+ * The bulk feed: every syndicated article Substack hasn't imported yet, so importing it again
+ * doesn't repeat posts. An article with a Substack post URL stays in its own feed
+ * (`querySyndicatedArticleBySlug`), for a deliberate re-import.
+ */
 export const querySyndicatedArticles = cache(async (): Promise<Article[]> => {
   const payload = await getPayloadClient()
 
@@ -16,7 +29,7 @@ export const querySyndicatedArticles = cache(async (): Promise<Article[]> => {
     limit: 0,
     overrideAccess: false,
     pagination: false,
-    where: syndicated,
+    where: { and: [syndicated, notImported] },
     sort: "-publishedAt",
   })
 

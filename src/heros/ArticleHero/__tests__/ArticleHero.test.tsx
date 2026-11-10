@@ -175,6 +175,20 @@ describe("ArticleHero", () => {
     expect(screen.getByRole("link", { name: "Comments" })).toHaveAttribute("href", "#comments")
   })
 
+  it("leaves the Substack button out of an article that isn't on Substack", () => {
+    render(<ArticleHero article={baseArticle} />)
+    expect(screen.queryByRole("link", { name: "Read on Substack" })).not.toBeInTheDocument()
+  })
+
+  it("links the Substack button to the article's Substack post", () => {
+    const substackUrl = "https://thepragmaticpapers.substack.com/p/an-article"
+    render(<ArticleHero article={{ ...baseArticle, syndicateToSubstack: true, substackUrl }} />)
+
+    const link = screen.getByRole("link", { name: "Read on Substack" })
+    expect(link).toHaveAttribute("href", substackUrl)
+    expect(link.closest("[data-slot=article-meta-controls]")).toBeInTheDocument()
+  })
+
   it("matches snapshot", () => {
     const { container } = render(<ArticleHero article={baseArticle} />)
     expect(container.firstChild).toMatchSnapshot()

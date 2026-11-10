@@ -67,6 +67,7 @@ import * as migration_20261013_220247_comments from "./20261013_220247_comments"
 import * as migration_20261014_182013_achievements from "./20261014_182013_achievements"
 import * as migration_20261017_181523_docs_sections from "./20261017_181523_docs_sections"
 import * as migration_20261021_011206_docs_tree from "./20261021_011206_docs_tree"
+import * as migration_20261109_234427_add_article_substack_url from "./20261109_234427_add_article_substack_url"
 
 export const migrations = [
   {
@@ -413,5 +414,10 @@ export const migrations = [
     up: migration_20261021_011206_docs_tree.up,
     down: migration_20261021_011206_docs_tree.down,
     name: "20261021_011206_docs_tree",
+  },
+  {
+    up: migration_20261109_234427_add_article_substack_url.up,
+    down: migration_20261109_234427_add_article_substack_url.down,
+    name: "20261109_234427_add_article_substack_url",
   },
 ]

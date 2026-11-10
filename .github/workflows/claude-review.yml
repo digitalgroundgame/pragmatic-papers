@@ -68,6 +68,20 @@ jobs:
           ref: ${{ env.HEAD_SHA }}
           fetch-depth: 0
 
+      # The review's effort follows the PR: medium for a small one, high for
+      # most, xhigh for a large one, and a level higher where a mistake is
+      # costly (CI, migrations, access, sign-in). Without it every review ran
+      # at Opus's default, medium. See scripts/review-effort.ts.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      - name: Pick the review's effort
+        id: effort
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/review-effort.ts "$BASE_SHA" "$HEAD_SHA"
+
       # Under the job's limit: a job timeout cancels the run, which skips the
       # steps below and leaves the label on. A step timeout only stops this
       # step, so the verdict is still reported.
@@ -95,6 +109,7 @@ jobs:
             post no other top-level comment. Return the same verdict as your structured output.
           claude_args: |
             --model opus
+            --effort ${{ steps.effort.outputs.effort }}
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Bash(git blame:*)"
             --json-schema '{"type":"object","properties":{"verdict":{"type":"string","enum":["pass","blocker"]}},"required":["verdict"]}'
 

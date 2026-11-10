@@ -9,13 +9,17 @@ vi.mock("@/blocks/InteractiveMap/feedImage", async (importOriginal) => ({
   generateMapImages,
 }))
 
+const revalidateForReaders = vi.fn()
+vi.mock("@/hooks/revalidateForReaders", () => ({ revalidateForReaders }))
+
 const { regenerateMapImages } = await import("../regenerateMapImages")
 
 const mapBlock = (...assets: (number | { id: number })[]) => ({
   blockType: "interactiveMap",
   maps: assets.map((svgAsset) => ({ svgAsset })),
 })
-const article = (...blocks: object[]) => ({
+const article = (slug: string, ...blocks: object[]) => ({
+  slug,
   content: {
     root: { type: "root", children: blocks.map((fields) => ({ type: "block", fields })) },
   },
@@ -23,7 +27,10 @@ const article = (...blocks: object[]) => ({
 
 const find = vi.fn()
 const logger = { error: vi.fn() }
-const req = { payload: { find, logger } }
+const req: { payload: object; context: Record<string, unknown> } = {
+  payload: { find, logger },
+  context: {},
+}
 
 const asset = (svgContent: string): MapAsset => ({
   id: 4,
@@ -46,6 +53,8 @@ beforeEach(() => {
   find.mockReset()
   generateMapImages.mockReset()
   logger.error.mockReset()
+  revalidateForReaders.mockReset()
+  req.context = {}
 })
 
 describe("regenerateMapImages", () => {
@@ -54,8 +63,11 @@ describe("regenerateMapImages", () => {
     const usesLoaded = mapBlock(7, { id: 4 })
     const another = mapBlock(7)
     find
-      .mockResolvedValueOnce({ docs: [article(uses, another)], hasNextPage: true })
-      .mockResolvedValueOnce({ docs: [article(usesLoaded), article()], hasNextPage: false })
+      .mockResolvedValueOnce({ docs: [article("one", uses, another)], hasNextPage: true })
+      .mockResolvedValueOnce({
+        docs: [article("two", usesLoaded), article("three")],
+        hasNextPage: false,
+      })
 
     const doc = await run({})
 
@@ -75,6 +87,24 @@ describe("regenerateMapImages", () => {
       req,
       assets: [doc],
     })
+    // Their Substack feeds are cached, so they're revalidated to name the new pictures.
+    expect(revalidateForReaders).toHaveBeenCalledWith(logger, "map 4", {
+      paths: ["/articles/substack.xml", "/articles/one/substack.xml", "/articles/two/substack.xml"],
+    })
+  })
+
+  it("revalidates nothing when no article uses the map", async () => {
+    find.mockResolvedValueOnce({ docs: [article("one", mapBlock(7))], hasNextPage: false })
+    await run({})
+    expect(revalidateForReaders).not.toHaveBeenCalled()
+  })
+
+  it("leaves revalidating to the caller that asked it not to", async () => {
+    req.context = { disableRevalidate: true }
+    find.mockResolvedValueOnce({ docs: [article("one", mapBlock(4))], hasNextPage: false })
+    await run({})
+    expect(generateMapImages).toHaveBeenCalled()
+    expect(revalidateForReaders).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -83,6 +113,7 @@ describe("regenerateMapImages", () => {
   ])("does nothing for %s", async (_label, args) => {
     await run(args)
     expect(find).not.toHaveBeenCalled()
+    expect(revalidateForReaders).not.toHaveBeenCalled()
   })
 
   it("logs a failure instead of failing the save", async () => {

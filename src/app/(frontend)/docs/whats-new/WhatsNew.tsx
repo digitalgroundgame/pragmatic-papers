@@ -1,8 +1,6 @@
 import type { Crumb } from "@/components/Breadcrumbs"
 import { DocsLayout } from "@/components/DocsNav"
 import { JsonLd } from "@/components/JsonLd"
-import { cn } from "@/utilities/utils"
-import { cardGroup, cardImageHover, cardTitleHover } from "@/components/cardHover"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import type { queryPublishedDocs } from "@/plugins/docs/queries"
 import {
@@ -55,10 +53,7 @@ export function WhatsNew({ docs }: { docs: WhatsNewDoc[] }): React.ReactNode {
                   <li key={doc.id} className="border-b py-6">
                     <HoverPrefetchLink
                       href={paths.get(doc.slug) ?? `${DOCS_PATH}/${doc.slug}`}
-                      className={cn(
-                        cardGroup,
-                        "flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6",
-                      )}
+                      className="group/card flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6"
                     >
                       {thumbnail && (
                         // Decorative: the title beside it says what the doc is about.
@@ -69,19 +64,11 @@ export function WhatsNew({ docs }: { docs: WhatsNewDoc[] }): React.ReactNode {
                           loading="lazy"
                           width={300}
                           height={158}
-                          className={cn(
-                            "aspect-40/21 w-full shrink-0 rounded-sm border object-cover sm:w-60",
-                            cardImageHover,
-                          )}
+                          className="card-hover:brightness-[1.02] card-hover:contrast-[1.16] card-hover:saturate-[1.16] aspect-40/21 w-full shrink-0 rounded-sm border object-cover transition-[filter] duration-300 ease-out sm:w-60"
                         />
                       )}
                       <span className="flex flex-col gap-2">
-                        <span
-                          className={cn(
-                            "font-sans text-xl leading-tight font-semibold tracking-tight text-balance md:text-2xl",
-                            cardTitleHover,
-                          )}
-                        >
+                        <span className="card-hover:text-foreground/80 font-sans text-xl leading-tight font-semibold tracking-tight text-balance md:text-2xl">
                           {doc.title}
                         </span>
                         <time

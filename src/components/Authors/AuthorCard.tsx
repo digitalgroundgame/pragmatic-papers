@@ -3,8 +3,6 @@ import { convertLexicalToPlaintext } from "@payloadcms/richtext-lexical/plaintex
 import React from "react"
 
 import { AuthorLinks } from "@/components/Authors/AuthorLinks"
-import { cn } from "@/utilities/utils"
-import { cardImageHover, cardTitleHover } from "@/components/cardHover"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { isMedia, Media } from "@/components/Media"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -36,7 +34,10 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({ author }) => {
       <CardContent className="flex flex-col gap-4 sm:flex-row">
         {/* The name below is the card's link; this one is for pointers only. */}
         <HoverPrefetchLink href={`/contributors/${slug}`} aria-hidden="true" tabIndex={-1}>
-          <Avatar size="xl" className={cn("aspect-square border", cardImageHover)}>
+          <Avatar
+            size="xl"
+            className="card-hover:brightness-[1.02] card-hover:contrast-[1.16] card-hover:saturate-[1.16] aspect-square border transition-[filter] duration-300 ease-out"
+          >
             <AvatarImage
               src={profileImageUrl}
               render={<Media media={profileImage} sizes="96px" variant="square" />}
@@ -50,7 +51,7 @@ export const AuthorCard: React.FC<AuthorCardProps> = ({ author }) => {
               <h3 className="text-pretty md:text-2xl">
                 <HoverPrefetchLink
                   href={`/contributors/${slug}`}
-                  className={cn("text-foreground", cardTitleHover)}
+                  className="text-foreground card-hover:text-foreground/80"
                 >
                   {name}
                 </HoverPrefetchLink>

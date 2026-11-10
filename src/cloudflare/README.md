@@ -18,8 +18,9 @@ Today it runs as **staging's Worker**, `pragmatic-papers-staging` at
 staging's database through Hyperdrive, while staging itself keeps running on Coolify.
 `.github/workflows/worker.yml` deploys it on every push to `dev`, and production's,
 `pragmatic-papers-production` (`env.production` in `wrangler.jsonc`), on every push to
-`main` once [its setup](#production) is done. Production's stays on workers.dev until
-`pragmaticpapers.com` is moved onto it.
+`main` once [its setup](#production) is done. Production's answers at
+`production-worker.pragmaticpapers.com` (behind its gateway) until `pragmaticpapers.com` is
+moved onto it.
 `.github/workflows/worker-build.yml` builds it on PRs that change dependencies, the
 Next, OpenNext or wrangler config, or this folder, serves the build with `wrangler dev` and
 fails unless a few seeded pages answer 200. It deploys nothing. While a Worker's deploy
@@ -87,7 +88,8 @@ The same steps, for production's database and hostname:
    limit) to 10, and lower it if the pooler's size is raised. Staging's is 10 too.
 2. **Repo secret** `PRODUCTION_PAYLOAD_SECRET` (production's `PAYLOAD_SECRET`) and
    **variables** `PRODUCTION_ORIGIN_URL` (production's Coolify URL),
-   `WORKER_PRODUCTION_URL` (the Worker's URL: its workers.dev address until it takes over),
+   `WORKER_PRODUCTION_URL` (the Worker's URL: `https://production-worker.pragmaticpapers.com`
+   until it takes over),
    and `PRODUCTION_SUPABASE_URL` and `PRODUCTION_S3_BUCKET` (production's `SUPABASE_URL` and
    `S3_BUCKET`, which media links are built from; the Worker never uploads, so it has no S3
    credentials). Optional: `PRODUCTION_GOOGLE_ANALYTICS_ID` and
@@ -107,7 +109,7 @@ The same steps, for production's database and hostname:
      Domain), as `production-worker.pragmaticpapers.com` is. A Custom Domain replaces the
      hostname's DNS record, so note the record's target (Coolify's server) first. If Add
      Domain finds no zone, add Routes `pragmaticpapers.com/*` and `www.pragmaticpapers.com/*`
-     instead (the `/*` matters, or only the home page matches), which keep the records. Then
+     instead (the `/*` matters, or only the home page matches), which keep the records (they must be proxied). Then
      set `WORKER_PRODUCTION_URL` and Coolify's `WORKER_URL` to `https://pragmaticpapers.com`,
      and check Turnstile's Hostname management lists it;
    - the zone's Cache Rules (`cloudflare/rulesets/`) no longer apply to the site's pages,

@@ -86,7 +86,7 @@ export const PAGE_LAYOUTS: PageLayout[] = [
     bottomGap: 1,
     deviations: [
       "The header (avatar, name, role) is centered; every other page's header is left-aligned.",
-      "A Separator with my-16 between the bio and the articles: four times the gap other pages leave around one (my-6).",
+      "A Separator with my-16 between the bio and the articles: 64px, where other pages leave 24px around one (my-6).",
       "No space under the last article card before the footer.",
       "An author with no articles shows “Search produced no results.” (PageRange) beside “Look out for this author's debut!”.",
     ],
@@ -198,7 +198,7 @@ export const PAGE_LAYOUTS: PageLayout[] = [
     deviations: [
       "Full container width, with full-width breadcrumbs, so its title starts at the page's edge (16px) rather than the column's (272px). Intended for the map; the header and intro could still sit in the column.",
       "pt-8 above the title on top of the breadcrumbs' gap, and its own pb-16.",
-      "A text-xs uppercase brand eyebrow (“Interactive”) above the title, which no other page has.",
+      "A text-xs uppercase brand eyebrow (“Interactive”) above the title, which no other page title has.",
     ],
   },
   {
@@ -240,4 +240,5 @@ export const SITE_WIDE_FINDINGS: string[] = [
   "Three content widths for a page's main text: max-w-xl (account), max-w-2xl (article and doc bodies) and max-w-3xl (everything else).",
   "Section spacing is space-y-3, space-y-6 or space-y-8 depending on the page, and Separators sit at my-6 or my-16.",
   "Two reds for errors: destructive (components) and error (the Banner block).",
+  "From lg up the header is 59px tall, not the 57px --header-height says (the logo link is 34px there, the buttons 32px), so the sticky ticker, the article sidebar and anchor links sit 2px under it.",
 ]

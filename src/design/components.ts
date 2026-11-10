@@ -48,7 +48,12 @@ export const PRIMITIVES: ComponentUse[] = [
     components: [ui("Input"), ui("Textarea"), ui("Field"), ui("Label")],
     notes: "h-8, rounded-sm.",
   },
-  { need: "Nothing to show", components: [ui("Empty")], notes: "The 404 page, empty lists." },
+  {
+    need: "Nothing to show",
+    components: [ui("Empty")],
+    notes:
+      "The 404 pages and the notifications bell. Empty lists on pages are plain muted text today.",
+  },
   { need: "Loading", components: [ui("Skeleton")], notes: "Match the loaded layout's shapes." },
   {
     need: "Menus and panels",

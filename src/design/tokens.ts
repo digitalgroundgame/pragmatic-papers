@@ -47,7 +47,7 @@ export const COLOR_GROUPS: ColorGroup[] = [
   {
     title: "Surfaces and text",
     description:
-      "shadcn's neutral palette. Body text is foreground; secondary text is muted-foreground. The off-white primary isn't used for text any more: it reads dingy in dark mode.",
+      "shadcn's neutral palette. Body text is foreground; secondary text is muted-foreground. The off-white primary reads dingy in dark mode, so only the link variants of Button and Badge still set text in it.",
     tokens: [
       { name: "background", utility: "bg-background", use: "The page." },
       {

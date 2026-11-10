@@ -11,7 +11,8 @@ Every public page is the root layout (`src/app/(frontend)/layout.tsx`): the admi
 staff are signed in, the header, `<main>`, and the footer, in a full-height column.
 
 - **Header**: sticky at the top, `container`, a three-column grid (menu · logo · actions)
-  with a bottom border. Its height is `--header-height`, 57px. Routes can ask for the
+  with a bottom border. `--header-height` is 57px, which is its height below `lg`; from `lg`
+  up it's 59px (the logo link is 34px tall there), so what sticks under it sits 2px too high. Routes can ask for the
   minimal header instead (the docs do).
 - **Mega menu**: under the header from `md` up, `my-2`.
 - **Ticker**: under that. It sticks below the header while it scrolls (tablets and up, or

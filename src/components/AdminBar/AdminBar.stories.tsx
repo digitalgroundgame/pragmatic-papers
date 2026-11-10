@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, spyOn, waitFor, within } from "storybook/test"
 
+import { isolatedDocs } from "@/stories/isolatedDocs"
+
 import { LazyAdminBar } from "./client.lazy"
 import { ADMIN_BAR_ATTRIBUTE, ADMIN_BAR_HINT_KEY, ADMIN_BAR_HINT_SCRIPT } from "./hint"
 
@@ -35,7 +37,7 @@ const slotHeight = (canvasElement: HTMLElement) =>
 const meta = {
   title: "Components/AdminBar",
   component: LazyAdminBar,
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: "fullscreen", ...isolatedDocs("160px") },
 } satisfies Meta<typeof LazyAdminBar>
 
 export default meta

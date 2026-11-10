@@ -2811,7 +2811,7 @@ export interface Header {
      */
     upcomingHours?: number | null;
     /**
-     * Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky or X. It's gone from the ticker as soon as you save.
+     * Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky, X or Substack. It's gone from the ticker as soon as you save.
      */
     hidden?:
       | {
@@ -2913,6 +2913,27 @@ export interface IntegrationSettings {
     handles?:
       | {
           handle: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  /**
+   * Whose posts run in the ticker.
+   */
+  substack?: {
+    /**
+     * Which of the publications' posts run in the ticker. Empty shows podcast episodes and videos: written posts are mostly our own articles, syndicated.
+     */
+    types?: ('podcast' | 'video' | 'post')[] | null;
+    /**
+     * Empty uses SUBSTACK_PUBLICATIONS, or thepragmaticpapers.
+     */
+    publications?:
+      | {
+          /**
+           * Its address, a custom domain, or its name. Posts are read from its RSS feed.
+           */
+          publication: string;
           id?: string | null;
         }[]
       | null;
@@ -3131,6 +3152,17 @@ export interface IntegrationsSelect<T extends boolean = true> {
           | T
           | {
               handle?: T;
+              id?: T;
+            };
+      };
+  substack?:
+    | T
+    | {
+        types?: T;
+        publications?:
+          | T
+          | {
+              publication?: T;
               id?: T;
             };
       };

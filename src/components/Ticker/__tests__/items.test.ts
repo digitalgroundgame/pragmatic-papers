@@ -146,6 +146,10 @@ describe("postKey", () => {
       "substack:thepragmaticpapers.substack.com/hello-world",
     ],
     ["https://www.example.com/p/hello-world", "substack:example.com/hello-world"],
+    [
+      "https://open.substack.com/pub/ThePragmaticPapers/p/hello-world?r=abc&utm_medium=ios",
+      "substack:thepragmaticpapers.substack.com/hello-world",
+    ],
   ])("reads %s as one post however it's written", (link, key) => {
     expect(postKey(link)).toBe(key)
   })
@@ -154,6 +158,7 @@ describe("postKey", () => {
     ["a profile", "https://bsky.app/profile/pp.bsky.social"],
     ["another site", "https://example.com/profile/pp/post/1"],
     ["a publication's home page", "https://thepragmaticpapers.substack.com/"],
+    ["a shared publication page", "https://open.substack.com/pub/thepragmaticpapers"],
     ["not a link", "PragPapers 42"],
   ])("is null for %s", (_, link) => {
     expect(postKey(link)).toBeNull()

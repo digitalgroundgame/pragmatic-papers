@@ -3,7 +3,7 @@ title: Change the header, footer and other site-wide settings
 navTitle: Site-wide settings
 summary: The menus, footer, ticker and system settings each have one page in the admin. Saving one changes every page on the site within a minute.
 publishedAt: 2025-06-20
-revisedAt: 2026-10-18
+revisedAt: 2026-11-15
 heroImage: globals-hero.webp
 heroAlt: The site's menu, with its links and social icons
 audience: [admin, editor]

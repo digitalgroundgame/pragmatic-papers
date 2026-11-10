@@ -3,7 +3,7 @@ title: Hide a post from the ticker
 navTitle: Ticker
 summary: The ticker under the header shows our live broadcasts and latest posts. Editors can keep a post out of it by pasting its link.
 publishedAt: 2026-10-09
-revisedAt: 2026-10-18
+revisedAt: 2026-11-15
 heroImage: ticker-hero.webp
 heroAlt: The ticker showing a live YouTube broadcast beside our latest posts
 audience: [editor]
@@ -20,7 +20,7 @@ It fills itself in: YouTube is checked every few minutes, Bluesky every few minu
 
 If a post shouldn't run on the site, an editor can take it out:
 
-1. Copy the post's link with its **Share** button on Bluesky or X, or from the address bar on Substack.
+1. Copy the post's link with its **Share** button on Bluesky, X or Substack.
 2. In the admin, open **Site → Header** and go to the **Ticker** tab.
 3. Click **Hide** beside the post under **Posts right now**, or paste its link under **Hidden posts**.
 4. Save. It's gone from the ticker straight away.

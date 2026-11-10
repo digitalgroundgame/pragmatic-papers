@@ -6,7 +6,9 @@ import { interactiveMapBlock } from "@/stories/fixtures/blocks"
 import { feedContext } from "@/stories/fixtures/feedContext"
 import { mediaFixture } from "@/stories/fixtures/media"
 
+import { resolveInlineSvgMap } from "../adapters/inlineSvg"
 import {
+  drawInteractiveMapSVG,
   interactiveMapAlt,
   interactiveMapToHTML,
   interactiveMapToImage,
@@ -207,5 +209,61 @@ describe("interactiveMapToSVG", () => {
     expect(svg).toContain("&lt;script&gt;alert(1)&lt;/script&gt;")
     expect(svg).toContain(">A &amp; B</text>")
     expect(svg).not.toContain("<script")
+  })
+})
+
+describe("drawInteractiveMapSVG", () => {
+  const maps = [
+    resolveInlineSvgMap({
+      title: "2024",
+      svg: DISTRICTS,
+      dataAttribute: "data-margin",
+      scaleType: "divergingRedBlue",
+    }),
+  ]
+  const drawing = { widgetTitle: "Districts", scaleType: "divergingRedBlue" as const, maps }
+  const LOGO =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 12" fill="#171717"><path d="M0 0H100V12H0Z"/></svg>'
+  const height = (markup: string) => Number(/viewBox="0 0 680 (\d+)"/.exec(markup)![1])
+
+  it("draws the page's resolved maps with the theme's colors as the light theme's", () => {
+    const svg = drawInteractiveMapSVG(drawing)
+    expect(svg).not.toContain("var(")
+    expect(svg).toContain('fill="#f2efe9"')
+  })
+
+  it("adds a footer with the sources on the left and the logo on the right", () => {
+    const svg = drawInteractiveMapSVG({
+      ...drawing,
+      footer: { sources: ["U.S. Census", "MIT Election Lab"], logo: LOGO },
+    })
+    expect(svg).toContain(
+      '<text x="16" y="471" font-size="11" fill="#525252" text-anchor="start">Sources: U.S. Census, MIT Election Lab</text>',
+    )
+    // 10 units tall and as wide as its viewBox allows, against the right edge.
+    expect(svg).toContain(
+      '<svg x="580.67" y="463" width="83.33" height="10" viewBox="0 0 100 12"><path d="M0 0H100V12H0Z"/></svg>',
+    )
+    expect(height(svg)).toBe(height(drawInteractiveMapSVG(drawing)) + 28)
+  })
+
+  it("gives a logo with no sources a row of its own, and skips a logo it can't size", () => {
+    const logoOnly = drawInteractiveMapSVG({ ...drawing, footer: { logo: LOGO } })
+    expect(logoOnly).toContain('viewBox="0 0 100 12"')
+    expect(height(logoOnly)).toBe(height(drawInteractiveMapSVG(drawing)) + 28)
+
+    const unsized = drawInteractiveMapSVG({
+      ...drawing,
+      footer: { sources: ["Census"], logo: "<svg><path/></svg>" },
+    })
+    expect(unsized).toContain(">Source: Census</text>")
+    expect(unsized).not.toContain("<path/>")
+  })
+
+  it("embeds the font faces it's given", () => {
+    const face = "@font-face{font-family:Geist;src:url(data:font/woff2;base64,AA==)}"
+    expect(drawInteractiveMapSVG({ ...drawing, fontFaces: face })).toContain(
+      `<defs><style>${face}</style></defs>`,
+    )
   })
 })

@@ -58,9 +58,19 @@ export const InteractiveMapBlock: React.FC<Props> = ({
       {widgetTitle && (
         <figcaption className="text-center text-lg font-semibold">{widgetTitle}</figcaption>
       )}
-      <InteractiveMapClient layout={layout} maps={resolvedMaps} />
-      <Legend legend={legend} layout={layout} />
-      <Sources sources={sources} colorBias={colorBias} />
+      <InteractiveMapClient
+        layout={layout}
+        maps={resolvedMaps}
+        download={{
+          widgetTitle,
+          scaleType,
+          colorBias,
+          sources: (sources ?? []).flatMap(({ link }) => (link?.label ? [link.label] : [])),
+        }}
+      >
+        <Legend legend={legend} layout={layout} />
+        <Sources sources={sources} colorBias={colorBias} />
+      </InteractiveMapClient>
     </figure>
   )
 }

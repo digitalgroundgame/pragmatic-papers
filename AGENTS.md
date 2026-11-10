@@ -676,7 +676,9 @@ named for a hash of the block's data and its maps' SVG (`feedImage.ts`). The
 feed's query looks that name up, so an unchanged map isn't drawn twice, a
 changed one gets a new picture, and the old one stays for posts Substack
 already imported. A map with no picture gets the RSS feeds' link back to the
-article. The text in the picture needs a font in the image
+article. The block's download button (`download/`) draws the same picture in the
+reader's browser, with the sources and the logo in a footer and the font embedded, and saves
+it as a PNG for sharing. The text in the picture needs a font in the image
 (both Dockerfiles install fontconfig, the site's Geist as a TTF from the `geist` package, since fontconfig can't read woff2, and DejaVu as the fallback).
 
 An SVG never carries records. A drilldown's SVG is checked in, parsed once at

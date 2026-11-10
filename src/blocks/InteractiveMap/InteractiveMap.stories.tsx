@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, screen, userEvent, within } from "storybook/test"
+import { expect, screen, spyOn, userEvent, waitFor, within } from "storybook/test"
 
 import type { MapAsset } from "@/payload-types"
 import { FeedHTML } from "@/stories/FeedHTML"
@@ -51,6 +51,33 @@ export const SingleMap: Story = {
     const region = await within(canvasElement).findByLabelText(/^MO District 1:/)
     await userEvent.hover(region)
     await expect(await screen.findByRole("tooltip")).toHaveTextContent("MO District 1")
+  },
+}
+
+/**
+ * The download button under the map saves it as a PNG, at twice Substack's column width, with
+ * the title, legend, sources and logo, named for the widget's title.
+ */
+export const Download: Story = {
+  args: { widgetTitle: "Missouri's districts" },
+  play: async ({ canvasElement }) => {
+    const save = spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined)
+    try {
+      const button = await within(canvasElement).findByRole("button", {
+        name: "Download map as an image",
+      })
+      await userEvent.click(button)
+      await waitFor(() => expect(save).toHaveBeenCalledOnce())
+
+      const link = save.mock.contexts[0] as HTMLAnchorElement
+      await expect(link.download).toBe("missouris-districts.png")
+      const png = await fetch(link.href).then((res) => res.blob())
+      await expect(png.type).toBe("image/png")
+      const image = await createImageBitmap(png)
+      await expect(image.width).toBe(1360)
+    } finally {
+      save.mockRestore()
+    }
   },
 }
 

@@ -4,7 +4,12 @@ import { absoluteURL } from "@/utilities/getURL"
 import { isResolved } from "@/utilities/relationships"
 
 import { resolveInlineSvgMap } from "./adapters/inlineSvg"
-import { getDivergingRedBlueLegend, staticColor, STATIC_NEUTRAL } from "./colorScale"
+import {
+  getDivergingRedBlueLegend,
+  staticColor,
+  STATIC_NEUTRAL,
+  type ColorScaleType,
+} from "./colorScale"
 import type { ResolvedMap } from "./types"
 
 const SITE_NAME = "The Pragmatic Papers"
@@ -98,13 +103,14 @@ function text(
   x: number,
   y: number,
   fill = INK,
+  anchor: "start" | "middle" = "middle",
 ): string {
   return lines
     .map(
       (content, i) =>
         `<text x="${round(x)}" y="${round(y + i * line + size)}" font-size="${size}"${
           weight ? ` font-weight="${weight}"` : ""
-        } fill="${fill}" text-anchor="middle">${escapeHTML(content)}</text>`,
+        } fill="${fill}" text-anchor="${anchor}">${escapeHTML(content)}</text>`,
     )
     .join("")
 }
@@ -140,32 +146,49 @@ function mapMarkup(map: ResolvedMap, x: number, y: number, width: number, height
   return `<svg x="${round(x)}" y="${round(y)}" width="${round(width)}" height="${round(height)}" viewBox="${escapeHTML(map.viewBox)}" preserveAspectRatio="xMidYMid meet"><g${transform}>${paths}</g></svg>`
 }
 
-/**
- * The block as one standalone SVG: its title, each map shaded as the page shades it
- * (`resolveInlineSvgMap`, the component's own resolver), and the legend, which a picture
- * needs since nobody can hover it. Colors are the light theme's, on white. Null when no map
- * has its SVG loaded. Plain markup with no stylesheet, so an image library can rasterize it.
- */
-export const interactiveMapToSVG = (fields: MapFields): string | null => {
-  const scaleType = fields.colorScale ?? "divergingRedBlue"
-  const maps = (fields.maps ?? []).flatMap((map) => {
-    const svg = isResolved(map.svgAsset) ? map.svgAsset.svgContent : null
-    if (!svg) return []
-    return [
-      resolveInlineSvgMap({
-        title: map.title,
-        svg,
-        dataAttribute: map.dataAttribute,
-        overrides: map.overrides,
-        scaleType,
-        colorBias: fields.colorBias,
-        invertColors: map.invertColors,
-        neutralFill: STATIC_NEUTRAL,
-      }),
-    ]
-  })
-  if (maps.length === 0) return null
+export interface MapDrawing {
+  widgetTitle?: string | null
+  layout?: InteractiveMapBlock["layout"]
+  scaleType: ColorScaleType
+  colorBias?: number | null
+  /** Resolved as the page resolves them; theme colors are drawn as the light theme's. */
+  maps: ResolvedMap[]
+  /**
+   * A last row for a picture shared on its own: the sources on the left and the logo on the
+   * right, so the picture says where it's from.
+   */
+  footer?: {
+    sources?: readonly string[]
+    /** The logo as standalone SVG markup, drawn 10 units tall. */
+    logo?: string
+  }
+  /**
+   * `@font-face` rules embedded in the picture. A browser drawing an SVG as an image loads
+   * no fonts of the page's, so a picture drawn there brings its own.
+   */
+  fontFaces?: string
+}
 
+const FOOTER = { size: 11, line: 16, logo: 10 }
+
+/** A logo's viewBox, its width at the footer's height, and the markup inside its `<svg>`. */
+function logoBox(logo: string): { viewBox: string; width: number; inner: string } | null {
+  const open = /^\s*<svg\b([^>]*)>/i.exec(logo)
+  const close = logo.lastIndexOf("</svg>")
+  if (!open || close < 0) return null
+  const viewBox = /\bviewBox="([^"]+)"/.exec(open[1] ?? "")?.[1]
+  if (!viewBox) return null
+  const size = viewBoxSize(viewBox)
+  return {
+    viewBox,
+    width: (FOOTER.logo * size.width) / size.height,
+    inner: logo.slice(open[0].length, close),
+  }
+}
+
+/** Resolved maps drawn as one standalone SVG (see `interactiveMapToSVG`). */
+export const drawInteractiveMapSVG = (fields: MapDrawing): string => {
+  const { scaleType, maps } = fields
   const inner = WIDTH - PADDING * 2
   const parts: string[] = []
   let y = PADDING
@@ -212,6 +235,55 @@ export const interactiveMapToSVG = (fields: MapFields): string | null => {
     y += LEGEND.swatch + 2 + LEGEND.line + GAP
   }
 
+  if (fields.footer) {
+    const { sources = [], logo } = fields.footer
+    const logoSize = logo ? logoBox(logo) : null
+    if (sources.length) {
+      const label = `Source${sources.length > 1 ? "s" : ""}: ${sources.join(", ")}`
+      const room = inner - (logoSize ? logoSize.width + GAP : 0)
+      const lines = wrap(label, FOOTER.size, room)
+      parts.push(text(lines, FOOTER, PADDING, y, QUIET_INK, "start"))
+      y += Math.max(lines.length * FOOTER.line, FOOTER.line) + GAP
+    } else if (logoSize) {
+      y += FOOTER.line + GAP
+    }
+    if (logo && logoSize) {
+      const top = y - GAP - FOOTER.line + (FOOTER.line - FOOTER.logo) / 2
+      parts.push(
+        `<svg x="${round(WIDTH - PADDING - logoSize.width)}" y="${round(top)}" width="${round(logoSize.width)}" height="${FOOTER.logo}" viewBox="${escapeHTML(logoSize.viewBox)}">${logoSize.inner}</svg>`,
+      )
+    }
+  }
+
   const height = Math.ceil(y - GAP + PADDING)
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH * PIXEL_DENSITY}" height="${height * PIXEL_DENSITY}" viewBox="0 0 ${WIDTH} ${height}" font-family="${FONT}"><rect width="${WIDTH}" height="${height}" fill="#ffffff" />${parts.join("")}</svg>`
+  const defs = fields.fontFaces ? `<defs><style>${fields.fontFaces}</style></defs>` : ""
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH * PIXEL_DENSITY}" height="${height * PIXEL_DENSITY}" viewBox="0 0 ${WIDTH} ${height}" font-family="${FONT}">${defs}<rect width="${WIDTH}" height="${height}" fill="#ffffff" />${parts.join("")}</svg>`
+}
+
+/**
+ * The block as one standalone SVG: its title, each map shaded as the page shades it
+ * (`resolveInlineSvgMap`, the component's own resolver), and the legend, which a picture
+ * needs since nobody can hover it. Colors are the light theme's, on white. Null when no map
+ * has its SVG loaded. Plain markup with no stylesheet, so an image library can rasterize it.
+ */
+export const interactiveMapToSVG = (fields: MapFields): string | null => {
+  const scaleType = fields.colorScale ?? "divergingRedBlue"
+  const maps = (fields.maps ?? []).flatMap((map) => {
+    const svg = isResolved(map.svgAsset) ? map.svgAsset.svgContent : null
+    if (!svg) return []
+    return [
+      resolveInlineSvgMap({
+        title: map.title,
+        svg,
+        dataAttribute: map.dataAttribute,
+        overrides: map.overrides,
+        scaleType,
+        colorBias: fields.colorBias,
+        invertColors: map.invertColors,
+        neutralFill: STATIC_NEUTRAL,
+      }),
+    ]
+  })
+  if (maps.length === 0) return null
+  return drawInteractiveMapSVG({ ...fields, scaleType, maps })
 }

@@ -53,7 +53,7 @@ export const InteractiveMapBlock: React.FC<Props> = ({
   return (
     <figure
       data-interactive-map-block
-      className={cn("not-prose my-8 flex flex-col gap-2", className)}
+      className={cn("not-prose my-8 flex flex-col gap-2 font-serif", className)}
     >
       {widgetTitle && (
         <figcaption className="text-center text-lg font-semibold">{widgetTitle}</figcaption>

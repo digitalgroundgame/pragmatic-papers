@@ -2,7 +2,7 @@
 
 exports[`InteractiveMapBlock > renders RegionTitle with invertColors=true — label shows Inverted suffix 1`] = `
 <figure
-  class="not-prose my-8 flex flex-col gap-2"
+  class="not-prose my-8 flex flex-col gap-2 font-serif"
   data-interactive-map-block="true"
 >
   <div
@@ -305,7 +305,7 @@ exports[`InteractiveMapBlock > renders RegionTitle with invertColors=true — la
 
 exports[`InteractiveMapBlock > renders a single map with diverging color scale 1`] = `
 <figure
-  class="not-prose my-8 flex flex-col gap-2"
+  class="not-prose my-8 flex flex-col gap-2 font-serif"
   data-interactive-map-block="true"
 >
   <figcaption
@@ -628,7 +628,7 @@ exports[`InteractiveMapBlock > renders a single map with diverging color scale 1
 
 exports[`InteractiveMapBlock > renders multiple sources with plural label and comma separator 1`] = `
 <figure
-  class="not-prose my-8 flex flex-col gap-2"
+  class="not-prose my-8 flex flex-col gap-2 font-serif"
   data-interactive-map-block="true"
 >
   <div
@@ -817,7 +817,7 @@ exports[`InteractiveMapBlock > renders multiple sources with plural label and co
 
 exports[`InteractiveMapBlock > renders with perRegion colorScale — no legend block 1`] = `
 <figure
-  class="not-prose my-8 flex flex-col gap-2"
+  class="not-prose my-8 flex flex-col gap-2 font-serif"
   data-interactive-map-block="true"
 >
   <div

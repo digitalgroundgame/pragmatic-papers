@@ -52,6 +52,14 @@ export const SingleMap: Story = {
     const region = await within(canvasElement).findByLabelText(/^MO District 1:/)
     await userEvent.hover(region)
     await expect(await screen.findByRole("tooltip")).toHaveTextContent("MO District 1")
+    // The block sets the site's serif itself, so it reads the same outside an article.
+    const title = canvasElement.querySelector("figcaption")!
+    const unquoted = (family: string): string => family.replace(/["']/g, "").trim()
+    const serif = unquoted(
+      getComputedStyle(document.documentElement).getPropertyValue("--font-serif"),
+    )
+    await expect(serif).not.toBe("")
+    await expect(unquoted(getComputedStyle(title).fontFamily)).toBe(serif)
   },
 }
 

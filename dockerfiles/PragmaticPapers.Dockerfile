@@ -151,12 +151,15 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME="0.0.0.0"
 
-# Install runtime dependencies and create non-root user. fontconfig and a font are for
+# Install runtime dependencies and create non-root user. fontconfig and fonts are for
 # the text sharp draws on a map's picture (renderImage.ts): the image has no font of
-# its own, and without one the titles and legend labels come out blank.
+# its own, and without one the titles and legend labels come out blank. Geist is the
+# site's own body font, as a TTF from the `geist` package: fontconfig can't read the
+# site's woff2. DejaVu covers any character Geist lacks.
 RUN apk add --no-cache dumb-init libc6-compat fontconfig ttf-dejavu \
     && addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs
+COPY --from=builder /app/node_modules/geist/dist/fonts/geist-sans/Geist-Variable.ttf /usr/share/fonts/geist/
 
 # Copy the standalone Next.js build
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

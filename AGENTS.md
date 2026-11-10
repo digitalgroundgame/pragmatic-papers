@@ -677,7 +677,7 @@ feed's query looks that name up, so an unchanged map isn't drawn twice, a
 changed one gets a new picture, and the old one stays for posts Substack
 already imported. A map with no picture gets the RSS feeds' link back to the
 article. The text in the picture needs a font in the image
-(`fontconfig ttf-dejavu` in both Dockerfiles).
+(both Dockerfiles install fontconfig, the site's Geist as a TTF from the `geist` package, since fontconfig can't read woff2, and DejaVu as the fallback).
 
 An SVG never carries records. A drilldown's SVG is checked in, parsed once at
 snapshot time into `geometry/*.json`, and never parsed again;

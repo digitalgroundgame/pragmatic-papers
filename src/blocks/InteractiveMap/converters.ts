@@ -61,9 +61,10 @@ const WIDTH = 680
 const PIXEL_DENSITY = 2
 const PADDING = 16
 const GAP = 12
-// What the deployed image has (dockerfiles/) comes first, so a picture drawn in
-// development looks like production's wherever that font is installed.
-const FONT = "'DejaVu Sans', Helvetica, Arial, sans-serif"
+// The site's body font, which the deployed image installs (dockerfiles/), then the
+// image's fallback, so a picture drawn in development looks like production's wherever
+// those fonts are installed.
+const FONT = "Geist, 'DejaVu Sans', Helvetica, Arial, sans-serif"
 const INK = "#171717"
 const QUIET_INK = "#525252"
 const OUTLINE = "#ffffff"

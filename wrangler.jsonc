@@ -14,9 +14,9 @@
   "compatibility_date": "2026-09-30",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
-  // staging-worker.pragmaticpapers.com is a Custom Domain added in the dashboard (Settings,
-  // Domains & Routes), so the deploy token needs no zone permissions. With no `routes`
-  // here, `wrangler deploy` leaves it alone; listing one would replace the dashboard's.
+  // staging-worker.pragmaticpapers.com is a Route on the gateway Worker in front of this one,
+  // added in the dashboard (Settings, Domains & Routes), so the deploy token needs no zone
+  // permissions. With no `routes` here, `wrangler deploy` leaves the dashboard's alone.
   "observability": { "enabled": true },
   // Workers Cache, on the CachedSite entrypoint only: the default one is the gateway that
   // keeps drafts, logins and navigations out of it (src/cloudflare/edgeCache.ts).
@@ -71,8 +71,9 @@
   "env": {
     "production": {
       "name": "pragmatic-papers-production",
-      // No routes: production's hostname becomes a Custom Domain in the dashboard, as
-      // staging-worker's is, when the Worker takes over from Coolify.
+      // No routes: production's hostnames are Custom Domains on its gateway Worker, added in
+      // the dashboard (production-worker.pragmaticpapers.com now; pragmaticpapers.com when
+      // the Worker takes over from Coolify).
       "workers_dev": true,
       "observability": { "enabled": true },
       "exports": {

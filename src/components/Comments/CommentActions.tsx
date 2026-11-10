@@ -1,8 +1,9 @@
 "use client"
 
-import { ForwardIcon, MessageSquareIcon } from "lucide-react"
+import { MessageSquareIcon } from "lucide-react"
 import React, { useEffect, useState } from "react"
 
+import { ShareIcon } from "@/components/ShareIcon"
 import { Button } from "@/components/ui/button"
 
 import { trackCommentShare } from "./analytics"
@@ -42,7 +43,7 @@ const ShareButton: React.FC<{ id: number | string; itemId?: string }> = ({ id, i
         className="text-muted-foreground"
         onClick={() => void share()}
       >
-        <ForwardIcon aria-hidden="true" data-icon="inline-start" />
+        <ShareIcon aria-hidden="true" data-icon="inline-start" />
         Share
       </Button>
       {copied ? (

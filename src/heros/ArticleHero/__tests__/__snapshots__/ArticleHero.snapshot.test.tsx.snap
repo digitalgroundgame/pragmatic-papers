@@ -143,7 +143,7 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-forward"
+          class="lucide lucide-share-2"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -154,11 +154,32 @@ exports[`ArticleHero > joins three authors with commas and a closing ampersand 1
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="m15 17 5-5-5-5"
+          <circle
+            cx="18"
+            cy="5"
+            r="3"
           />
-          <path
-            d="M4 18v-2a4 4 0 0 1 4-4h12"
+          <circle
+            cx="6"
+            cy="12"
+            r="3"
+          />
+          <circle
+            cx="18"
+            cy="19"
+            r="3"
+          />
+          <line
+            x1="8.59"
+            x2="15.42"
+            y1="13.51"
+            y2="17.49"
+          />
+          <line
+            x1="15.41"
+            x2="8.59"
+            y1="6.51"
+            y2="10.49"
           />
         </svg>
       </button>
@@ -398,7 +419,7 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-forward"
+          class="lucide lucide-share-2"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -409,11 +430,32 @@ exports[`ArticleHero > names every author, however many, with no remainder 1`] =
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="m15 17 5-5-5-5"
+          <circle
+            cx="18"
+            cy="5"
+            r="3"
           />
-          <path
-            d="M4 18v-2a4 4 0 0 1 4-4h12"
+          <circle
+            cx="6"
+            cy="12"
+            r="3"
+          />
+          <circle
+            cx="18"
+            cy="19"
+            r="3"
+          />
+          <line
+            x1="8.59"
+            x2="15.42"
+            y1="13.51"
+            y2="17.49"
+          />
+          <line
+            x1="15.41"
+            x2="8.59"
+            y1="6.51"
+            y2="10.49"
           />
         </svg>
       </button>
@@ -482,7 +524,7 @@ exports[`ArticleHero > renders narration as numeric id (no player shown) 1`] = `
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-forward"
+          class="lucide lucide-share-2"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -493,11 +535,32 @@ exports[`ArticleHero > renders narration as numeric id (no player shown) 1`] = `
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="m15 17 5-5-5-5"
+          <circle
+            cx="18"
+            cy="5"
+            r="3"
           />
-          <path
-            d="M4 18v-2a4 4 0 0 1 4-4h12"
+          <circle
+            cx="6"
+            cy="12"
+            r="3"
+          />
+          <circle
+            cx="18"
+            cy="19"
+            r="3"
+          />
+          <line
+            x1="8.59"
+            x2="15.42"
+            y1="13.51"
+            y2="17.49"
+          />
+          <line
+            x1="15.41"
+            x2="8.59"
+            y1="6.51"
+            y2="10.49"
           />
         </svg>
       </button>
@@ -566,7 +629,7 @@ exports[`ArticleHero > renders narration as object (shows player) 1`] = `
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-forward"
+          class="lucide lucide-share-2"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -577,11 +640,32 @@ exports[`ArticleHero > renders narration as object (shows player) 1`] = `
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="m15 17 5-5-5-5"
+          <circle
+            cx="18"
+            cy="5"
+            r="3"
           />
-          <path
-            d="M4 18v-2a4 4 0 0 1 4-4h12"
+          <circle
+            cx="6"
+            cy="12"
+            r="3"
+          />
+          <circle
+            cx="18"
+            cy="19"
+            r="3"
+          />
+          <line
+            x1="8.59"
+            x2="15.42"
+            y1="13.51"
+            y2="17.49"
+          />
+          <line
+            x1="15.41"
+            x2="8.59"
+            y1="6.51"
+            y2="10.49"
           />
         </svg>
       </button>
@@ -650,7 +734,7 @@ exports[`ArticleHero > renders with hero image 1`] = `
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-forward"
+          class="lucide lucide-share-2"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -661,11 +745,32 @@ exports[`ArticleHero > renders with hero image 1`] = `
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="m15 17 5-5-5-5"
+          <circle
+            cx="18"
+            cy="5"
+            r="3"
           />
-          <path
-            d="M4 18v-2a4 4 0 0 1 4-4h12"
+          <circle
+            cx="6"
+            cy="12"
+            r="3"
+          />
+          <circle
+            cx="18"
+            cy="19"
+            r="3"
+          />
+          <line
+            x1="8.59"
+            x2="15.42"
+            y1="13.51"
+            y2="17.49"
+          />
+          <line
+            x1="15.41"
+            x2="8.59"
+            y1="6.51"
+            y2="10.49"
           />
         </svg>
       </button>
@@ -797,7 +902,7 @@ exports[`ArticleHero > renders with populated authors 1`] = `
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-forward"
+          class="lucide lucide-share-2"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -808,11 +913,32 @@ exports[`ArticleHero > renders with populated authors 1`] = `
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="m15 17 5-5-5-5"
+          <circle
+            cx="18"
+            cy="5"
+            r="3"
           />
-          <path
-            d="M4 18v-2a4 4 0 0 1 4-4h12"
+          <circle
+            cx="6"
+            cy="12"
+            r="3"
+          />
+          <circle
+            cx="18"
+            cy="19"
+            r="3"
+          />
+          <line
+            x1="8.59"
+            x2="15.42"
+            y1="13.51"
+            y2="17.49"
+          />
+          <line
+            x1="15.41"
+            x2="8.59"
+            y1="6.51"
+            y2="10.49"
           />
         </svg>
       </button>
@@ -881,7 +1007,7 @@ exports[`ArticleHero > renders without authors or hero image 1`] = `
       >
         <svg
           aria-hidden="true"
-          class="lucide lucide-forward"
+          class="lucide lucide-share-2"
           fill="none"
           height="24"
           stroke="currentColor"
@@ -892,11 +1018,32 @@ exports[`ArticleHero > renders without authors or hero image 1`] = `
           width="24"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path
-            d="m15 17 5-5-5-5"
+          <circle
+            cx="18"
+            cy="5"
+            r="3"
           />
-          <path
-            d="M4 18v-2a4 4 0 0 1 4-4h12"
+          <circle
+            cx="6"
+            cy="12"
+            r="3"
+          />
+          <circle
+            cx="18"
+            cy="19"
+            r="3"
+          />
+          <line
+            x1="8.59"
+            x2="15.42"
+            y1="13.51"
+            y2="17.49"
+          />
+          <line
+            x1="15.41"
+            x2="8.59"
+            y1="6.51"
+            y2="10.49"
           />
         </svg>
       </button>

@@ -3,6 +3,7 @@ import { expect, spyOn, userEvent, waitFor, within } from "storybook/test"
 
 import type { CommentThread, PublicComment } from "@/plugins/comments"
 import { commentThread, commentViewer } from "@/stories/fixtures/comments"
+import { isolatedDocs } from "@/stories/isolatedDocs"
 
 import { Comments } from "."
 
@@ -45,6 +46,7 @@ const signedIn = (overrides: Partial<CommentThread> = {}) =>
 const meta = {
   title: "Components/Comments",
   component: Comments,
+  parameters: isolatedDocs("720px"),
   args: { articleId: 1 },
   decorators: [
     (Story) => (

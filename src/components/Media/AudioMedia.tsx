@@ -36,25 +36,30 @@ const audioControlsVariants = cva("flex min-w-0 items-center gap-3 overflow-hidd
   },
 })
 
-const audioLabelVariants = cva("shrink-0 overflow-hidden font-serif text-sm whitespace-nowrap", {
-  variants: {
-    variant: {
-      default: "",
-      collapsible:
-        "transition-[max-width,opacity,margin] duration-500 ease-out motion-reduce:transition-none",
+const audioLabelVariants = cva(
+  "shrink-0 overflow-hidden font-serif text-sm font-normal whitespace-nowrap",
+  {
+    variants: {
+      variant: {
+        default: "",
+        collapsible:
+          "transition-[max-width,opacity,margin] duration-500 ease-out motion-reduce:transition-none",
+      },
+      // The label sits inside the play button, after its icon. Collapsed, `ml-4` puts it
+      // 16px from the icon, and the button's own 8px padding plus the next icon button's
+      // keeps the next glyph 16px away. Expanded, it shrinks to nothing and the button is
+      // the same 36px square as the other icon buttons.
+      expanded: {
+        true: "ml-0 max-w-0 opacity-0",
+        false: "ml-4 max-w-48 opacity-100",
+      },
     },
-    // Collapsed, the label is the player's last glyph, so its `mr-2` keeps the next
-    // icon button's glyph 16px away (that button pads its own icon by 8px).
-    expanded: {
-      true: "mx-0 max-w-0 opacity-0",
-      false: "mr-2 ml-2 max-w-48 opacity-100",
+    defaultVariants: {
+      variant: "default",
+      expanded: true,
     },
   },
-  defaultVariants: {
-    variant: "default",
-    expanded: true,
-  },
-})
+)
 
 type AudioVariant = NonNullable<VariantProps<typeof audioControlsVariants>["variant"]>
 
@@ -83,23 +88,35 @@ interface PlayToggleProps {
   onToggle: () => void
 }
 
+/**
+ * The collapsible player's "Listen" label is part of the play button, so clicking the
+ * label plays, and hovering it highlights the same area a click would hit.
+ */
 function PlayToggle({ isPlaying, label, variant, expanded, onToggle }: PlayToggleProps) {
-  return (
-    <div className="text-foreground hover:text-foreground/70 flex shrink-0 items-center transition-colors">
-      <Button
-        variant="ghost"
-        onClick={onToggle}
-        size="icon-lg"
-        aria-label={isPlaying ? "Pause" : "Play"}
-      >
-        {isPlaying ? <Pause /> : <Play />}
+  const icon = isPlaying ? <Pause className="size-5" /> : <Play className="size-5" />
+  const ariaLabel = isPlaying ? "Pause" : "Play"
+
+  if (variant !== "collapsible") {
+    return (
+      <Button variant="ghost" onClick={onToggle} size="icon-lg" aria-label={ariaLabel}>
+        {icon}
       </Button>
-      {variant === "collapsible" && (
-        <span aria-hidden className={audioLabelVariants({ variant, expanded })}>
-          {label}
-        </span>
-      )}
-    </div>
+    )
+  }
+
+  return (
+    <Button
+      variant="ghost"
+      onClick={onToggle}
+      size="lg"
+      aria-label={ariaLabel}
+      className="gap-0 px-2"
+    >
+      {icon}
+      <span aria-hidden className={audioLabelVariants({ variant, expanded })}>
+        {label}
+      </span>
+    </Button>
   )
 }
 

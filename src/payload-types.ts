@@ -341,6 +341,10 @@ export interface Article {
    * Adds the published article to the Substack import feed. Takes effect once the article is published.
    */
   syndicateToSubstack?: boolean | null;
+  /**
+   * Once Substack has imported the article, paste the post's address here. It marks the article as imported, takes it out of the bulk import feed, and adds a Read on Substack link to the article.
+   */
+  substackUrl?: string | null;
   createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
@@ -1893,6 +1897,7 @@ export interface ArticlesSelect<T extends boolean = true> {
   topics?: T;
   showTableOfContents?: T;
   syndicateToSubstack?: T;
+  substackUrl?: T;
   createdBy?: T;
   updatedAt?: T;
   createdAt?: T;

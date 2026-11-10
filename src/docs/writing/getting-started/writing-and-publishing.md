@@ -19,10 +19,11 @@ Every article starts as a draft. Readers only see it once it's published, and on
 
 ## Editors
 
-Editors, chief editors and admins can edit, publish, schedule and delete any article. They also have two sidebar fields writers can't change:
+Editors, chief editors and admins can edit, publish, schedule and delete any article. They also have three sidebar fields writers can't change:
 
 - **Published At**: the date shown on the article. Left empty, it's set to the moment the article is first published.
 - **Syndicate to Substack**: adds the article to the feed Substack imports from, once it's published.
+- **Substack post URL**: appears once Syndicate to Substack is ticked. After Substack has imported the article, paste the post's address here. The sidebar then shows the article as imported, the bulk import feed leaves it out, and the article gets a Read on Substack link.
 
 ## Saving and versions
 

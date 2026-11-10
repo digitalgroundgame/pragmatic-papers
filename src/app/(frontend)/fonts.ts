@@ -35,4 +35,45 @@ const geist = localFont({
   variable: "--font-sans",
 })
 
-export const fontVariables = cn(FKScreamer.variable, geist.variable)
+// Libertinus Serif, the serif in the design spec, from the `@expo-google-fonts/libertinus-serif`
+// package, trimmed at install like Geist (scripts/install-fonts.ts). Every reader gets the
+// same serif, so the map pictures drawn on the server can match the page. Libertinus is
+// drawn small: its x-height is 0.429 em where Georgia's, which most readers saw before,
+// is 0.481, so it's scaled up 112% to read at Georgia's size.
+//
+// Only Geist and FKScreamer are preloaded: preloading all four faces would add 120 kB to
+// every page. The fallback faces (globals.css) are sized to Libertinus' widths, so text
+// keeps its lines when the font arrives.
+const libertinusSerif = localFont({
+  src: [
+    {
+      path: "../../../public/fonts/LibertinusSerif-400Regular.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../../public/fonts/LibertinusSerif-400Regular_Italic.woff2",
+      weight: "400",
+      style: "italic",
+    },
+    { path: "../../../public/fonts/LibertinusSerif-700Bold.woff2", weight: "700", style: "normal" },
+    {
+      path: "../../../public/fonts/LibertinusSerif-700Bold_Italic.woff2",
+      weight: "700",
+      style: "italic",
+    },
+  ],
+  display: "swap",
+  preload: false,
+  declarations: [{ prop: "size-adjust", value: "112%" }],
+  adjustFontFallback: false,
+  fallback: [
+    "Libertinus Fallback Georgia",
+    "Libertinus Fallback Times",
+    "Libertinus Fallback Noto",
+    "serif",
+  ],
+  variable: "--font-serif",
+})
+
+export const fontVariables = cn(FKScreamer.variable, geist.variable, libertinusSerif.variable)

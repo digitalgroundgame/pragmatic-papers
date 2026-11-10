@@ -111,7 +111,27 @@ describe("substackArticleHTML", () => {
     expect(html).toContain("<pre><code>x^2</code></pre>")
   })
 
-  it("links interactive maps back to the article", () => {
+  it("shows an interactive map as its stored picture, linking to the interactive version", () => {
+    const html = substackArticleHTML(
+      makeArticle([
+        block({
+          blockType: "interactiveMap",
+          widgetTitle: "Turnout",
+          feedImage: {
+            url: "/media/interactive-map-0123456789abcdef.webp",
+            alt: "Map: Turnout",
+            width: 1360,
+            height: 900,
+          },
+        }),
+      ]),
+    )
+    expect(html).toContain(
+      '<figure><img src="https://example.org/media/interactive-map-0123456789abcdef.webp" alt="Map: Turnout" width="1360" height="900" /><figcaption><a href="https://example.org/articles/test-article">View the interactive version on The Pragmatic Papers</a></figcaption></figure>',
+    )
+  })
+
+  it("links an interactive map with no picture back to the article", () => {
     const html = substackArticleHTML(
       makeArticle([block({ blockType: "interactiveMap", widgetTitle: "Turnout" })]),
     )

@@ -24,4 +24,22 @@ describe("isolatedDocs", () => {
     )
     expect(missing).toEqual([])
   })
+
+  // Inline, one story's theme goes on the page's <html> and re-themes the rest.
+  // Hiding the story from the docs page (`!autodocs`) avoids that too.
+  it("is used by every story that sets a theme of its own", () => {
+    const missing = storyFiles.flatMap((file) =>
+      readFileSync(path.join(root, file), "utf8")
+        .split(/^export const /m)
+        .slice(1)
+        .filter(
+          (story) =>
+            /globals:\s*\{\s*theme:/.test(story) &&
+            !story.includes("isolatedDocs(") &&
+            !story.includes('"!autodocs"'),
+        )
+        .map((story) => `${file}: ${story.slice(0, story.indexOf(":"))}`),
+    )
+    expect(missing).toEqual([])
+  })
 })

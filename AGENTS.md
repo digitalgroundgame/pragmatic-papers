@@ -597,6 +597,11 @@ function, and fails on any axe violation.
   `src/stories/a11y.ts` and cite the issue tracking the fix; `knownContrastIssue` covers the
   brand colors (#998). Never turn a story's a11y test off wholesale.
 - **Third-party embeds** that load a platform's script get `tags: ["!test"]`.
+- **Design guide**: `src/design/` holds Storybook's "Design guide" pages (MDX): the site's
+  tokens, type, spacing, layout and components as they are, and an audit of where each public
+  page departs from the common layout (`pageLayouts.ts`). Its tests fail when globals.css gains
+  a token the guide doesn't list, or a page's wrapper changes without its audit entry: when you
+  fix a page's layout, update its entry in the same PR.
 - **Published**: CI's "Deploy Storybook" job uploads the tested build to the
   `pragmatic-papers-storybook` Cloudflare Worker (`.storybook/wrangler.jsonc`):
   `dev` at `pragmatic-papers-storybook.digital-ground-game.workers.dev`, and each PR at a

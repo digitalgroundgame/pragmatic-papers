@@ -1,0 +1,44 @@
+import { Meta, Unstyled } from "@storybook/addon-docs/blocks"
+import { FontFamilies, HeadingScale, TextScale } from "./DesignGuide"
+
+<Meta title="Design guide/Typography" />
+
+# Typography
+
+Three faces. Headings are FKScreamer, a condensed display face; the interface is Geist; and
+reading text, the body of an article, is the platform's serif.
+
+<Unstyled>
+  <FontFamilies />
+</Unstyled>
+
+## Headings
+
+`globals.css` sets every `h1`–`h6` in FKScreamer, bold, `leading-none`, `tracking-wide` and
+`text-balance`, and sizes `h1`–`h3`. A plain `<h1>` on a page is 36px, 48px from `md` up.
+Rich text (articles, docs, pages built from blocks) sizes its own headings through prose,
+a step larger.
+
+`text-3xl` is 32px rather than Tailwind's 30px: FKScreamer's ligatures break at 30px and
+below, so globals.css moves the step up.
+
+<Unstyled>
+  <HeadingScale />
+</Unstyled>
+
+## Text
+
+<Unstyled>
+  <TextScale />
+</Unstyled>
+
+## Where it's inconsistent today
+
+- **Four sizes of page title.** 36 / 48px on coded pages, 48 / 56px when the title is rich
+  text, 60 / 72px on a volume, 32 / 36px in the docs. The [page audit](?path=/docs/design-guide-page-audit--docs) lists which page uses which.
+- **A rich-text h2 is bigger than a page's h2.** Inside an article an `h2` is 36 / 48px; a
+  page's own section heading is 32 / 36px.
+- **The serif isn't a chosen font.** `font-serif` is Tailwind's default stack, so readers
+  on Apple devices get New York and everyone else Georgia (or Times). It's the face most of
+  the site's words are read in.
+- **The docs set headings in Geist** (`DocsLayout`), on purpose, to read as a wiki.

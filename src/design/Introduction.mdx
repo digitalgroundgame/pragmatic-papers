@@ -1,0 +1,35 @@
+import { Meta } from "@storybook/addon-docs/blocks"
+
+<Meta title="Design guide/Introduction" />
+
+# Design guide
+
+How Pragmatic Papers looks **today**: the tokens, type, spacing, layout and components the
+public site is built from, and where its pages depart from them. It describes the site as it
+is, not as it should be, so it can serve as the baseline for straightening out the pages that
+don't match.
+
+- [Color](?path=/docs/design-guide-color--docs): the brand color and its two contrast siblings, and shadcn's neutral palette.
+- [Typography](?path=/docs/design-guide-typography--docs): FKScreamer for headings, Geist for the interface, a system serif for reading.
+- [Spacing and shape](?path=/docs/design-guide-spacing-and-shape--docs): the spacing the pages repeat, and the corner radii.
+- [Layout](?path=/docs/design-guide-layout--docs): the container, the content widths, breakpoints and the page frame.
+- [Components](?path=/docs/design-guide-components--docs): which shared component to reach for, and where its stories are.
+- [Page audit](?path=/docs/design-guide-page-audit--docs): every public page measured against the common pattern.
+
+## Where the values come from
+
+Everything here reads from the code. Colors come from `src/app/(frontend)/globals.css`, read
+when the guide renders; the fonts from `src/app/(frontend)/fonts.ts`; the rest is Tailwind
+4's defaults plus the overrides in globals.css. The guide's own data lives in `src/design/`:
+`tokens.ts` names and explains the tokens, and `pageLayouts.ts` records each page's layout.
+Tests fail when globals.css gains a token the guide doesn't list, or when a page's wrapper
+changes without its audit entry, so the guide can't quietly fall behind.
+
+## Settled decisions
+
+- The brand color is **#ff401a** and doesn't change. Text and fills that need contrast use
+  `brand-text` and `brand-fill`.
+- Body and title text is `text-foreground`; secondary text is `text-muted-foreground`. The
+  off-white `text-primary` reads dingy in dark mode.
+- Corners stay rounded (`rounded-sm` by default). A fully square site was tried and rejected.
+- Build with the site's shadcn components (`src/components/ui/`), in the admin too.

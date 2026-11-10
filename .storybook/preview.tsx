@@ -41,6 +41,25 @@ const preview: Preview = {
   ],
   parameters: {
     layout: "padded",
+    options: {
+      // The design guide (src/design) first, its pages in reading order; the rest A–Z.
+      storySort: {
+        order: [
+          "Design guide",
+          [
+            "Introduction",
+            "Color",
+            "Typography",
+            "Spacing and shape",
+            "Layout",
+            "Components",
+            "Page audit",
+            "Specimens",
+          ],
+          "*",
+        ],
+      },
+    },
     nextjs: { appDirectory: true },
     controls: {
       matchers: {

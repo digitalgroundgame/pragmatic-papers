@@ -13,7 +13,6 @@ import { FootnoteList } from "@/components/FootnoteList"
 import { JsonLd } from "@/components/JsonLd"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
-import { ReadOnSubstack } from "@/components/ReadOnSubstack"
 import { RecommendedArticles } from "@/components/RecommendedArticles"
 import RichText from "@/components/RichText"
 import { TableOfContents, TableOfContentsProvider } from "@/components/TableOfContents"
@@ -137,7 +136,6 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                     <Separator />
                     <TopicsList topics={topics} label="Topics:" />
                   </div>
-                  <ReadOnSubstack article={article} />
                   <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
                   {commentsEnabled &&
                     (published ? <Comments articleId={article.id} /> : <CommentsUnpublished />)}

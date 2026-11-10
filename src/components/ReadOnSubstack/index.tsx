@@ -13,7 +13,10 @@ export interface ReadOnSubstackProps extends Omit<
   article: Pick<Article, "syndicateToSubstack" | "substackUrl">
 }
 
-/** A link to the article's post on Substack, once an editor has recorded where it landed. */
+/**
+ * An icon button in the article's actions bar that opens the article's post on Substack,
+ * once an editor has recorded where it landed.
+ */
 export const ReadOnSubstack: React.FC<ReadOnSubstackProps> = ({ article, className, ...props }) => {
   const href = substackPostUrl(article)
   if (!href) return null
@@ -23,11 +26,13 @@ export const ReadOnSubstack: React.FC<ReadOnSubstackProps> = ({ article, classNa
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={cn(buttonVariants({ variant: "outline", size: "lg" }), className)}
+      aria-label="Read on Substack"
+      title="Read on Substack"
+      data-slot="button"
+      className={cn(buttonVariants({ variant: "ghost", size: "icon-lg" }), "shrink-0", className)}
       {...props}
     >
-      <SubstackIcon className="text-[#ff6719]" />
-      Read on Substack
+      <SubstackIcon />
     </a>
   )
 }

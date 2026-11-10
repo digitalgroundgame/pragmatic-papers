@@ -89,6 +89,29 @@ export const WithTableOfContents: Story = {
 }
 
 /** The page shows the button while comments are on; it jumps to the Comments heading below the article. */
+/** An article already on Substack gets a button to its post there, before Share. */
+export const OnSubstack: Story = {
+  args: {
+    showComments: true,
+    article: {
+      ...meta.args.article,
+      syndicateToSubstack: true,
+      substackUrl: "https://thepragmaticpapers.substack.com/p/an-article",
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const controls = canvasElement.querySelector<HTMLElement>("[data-slot=article-meta-controls]")!
+    const link = within(controls).getByRole("link", { name: "Read on Substack" })
+    await expect(link).toHaveAttribute(
+      "href",
+      "https://thepragmaticpapers.substack.com/p/an-article",
+    )
+    // Sized like the comment and share buttons beside it.
+    await expect(link.getBoundingClientRect().width).toBe(36)
+    await expect(link.querySelector("svg")!.getBoundingClientRect().width).toBe(20)
+  },
+}
+
 export const WithComments: Story = {
   args: { showComments: true },
   play: async ({ canvasElement }) => {

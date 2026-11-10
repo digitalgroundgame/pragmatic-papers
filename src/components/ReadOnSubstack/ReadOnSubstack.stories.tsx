@@ -17,7 +17,7 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** Shown under an article once an editor has pasted its Substack post's address. */
+/** An icon button in the article's actions bar, once an editor has pasted the Substack post's address. */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const link = within(canvasElement).getByRole("link", { name: "Read on Substack" })

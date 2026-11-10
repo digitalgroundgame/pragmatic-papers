@@ -15,6 +15,9 @@ describe("ReadOnSubstack", () => {
     expect(link).toHaveAttribute("href", substackUrl)
     expect(link).toHaveAttribute("target", "_blank")
     expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"))
+    // An icon button: the name comes from its label, and the tooltip says the same.
+    expect(link).toHaveAttribute("title", "Read on Substack")
+    expect(link).toHaveTextContent("")
   })
 
   it.each([

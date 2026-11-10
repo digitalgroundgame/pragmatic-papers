@@ -76,6 +76,7 @@ const getTickerSources = cache(async () => {
     youtubeUpcomingHours: ticker?.upcomingHours,
     blueskyHandles: bluesky?.handles?.map((account) => account.handle),
     substackPublications: substack?.publications?.map((entry) => entry.publication),
+    substackTypes: substack?.types,
     xUsernames: x?.usernames?.map((account) => account.username),
   }
   const [current, ...lists] = await Promise.all([

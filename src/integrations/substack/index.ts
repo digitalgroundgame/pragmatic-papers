@@ -1,5 +1,15 @@
 import { env, type Integration } from "../types"
 
+/**
+ * What a feed item is, from its enclosure: a podcast episode carries audio, a video post
+ * video, and anything else (a written post, whose enclosure is its cover image if any) is a
+ * post. The feed says nothing else about where a post came from, so articles we syndicate to
+ * Substack are posts.
+ */
+export type SubstackPostType = "podcast" | "video" | "post"
+
+export const SUBSTACK_POST_TYPES: readonly SubstackPostType[] = ["podcast", "video", "post"]
+
 /** One of the publication's posts. */
 export interface SubstackPost {
   /** The feed's `guid`, stable across reads; the post's link when the feed gives none. */
@@ -11,6 +21,7 @@ export interface SubstackPost {
   url: string
   /** When it was published (ISO 8601). */
   createdAt: string
+  type: SubstackPostType
 }
 
 export interface SubstackPublicationsIntegration extends Integration {
@@ -19,12 +30,15 @@ export interface SubstackPublicationsIntegration extends Integration {
    * (the admin's list), else the publications variable, else the default.
    */
   publications(publications?: readonly string[] | null): string[]
+  /** The post types to read: `types` when it has any (the admin's choice), else the default. */
+  types(types?: readonly string[] | null): SubstackPostType[]
   /**
-   * One publication's newest posts, newest first, from its RSS feed. Throws when Substack
-   * refuses the request.
+   * One publication's newest posts of `types` (all of them when left out), newest first, from
+   * its RSS feed. Throws when Substack refuses the request.
    */
   recentPosts(opts: {
     publication: string
+    types?: readonly SubstackPostType[]
     limit?: number
     fetchImpl?: typeof fetch
     signal?: AbortSignal
@@ -35,6 +49,8 @@ export interface SubstackPublicationsOptions {
   id: string
   label: string
   defaultPublications: readonly string[]
+  /** The post types read when the admin picks none. */
+  defaultTypes: readonly SubstackPostType[]
   /** Environment variable holding publications, comma separated, for when the admin lists none. */
   publicationsEnv: string
 }
@@ -110,6 +126,14 @@ function isWebUrl(url: string): boolean {
   }
 }
 
+/** What an item is, from its enclosure's MIME type (`SubstackPostType`). */
+function itemType(item: string): SubstackPostType {
+  const [, mime = ""] = item.match(/<enclosure\b[^>]*\btype=["']([^"']+)["']/i) ?? []
+  if (/^audio\//i.test(mime)) return "podcast"
+  if (/^video\//i.test(mime)) return "video"
+  return "post"
+}
+
 /** The posts in an RSS feed, in the feed's order. Items without a title, link or date are skipped. */
 export function parseFeed(xml: string): SubstackPost[] {
   return [...xml.matchAll(/<item(?:\s[^>]*)?>([\s\S]*?)<\/item>/gi)].flatMap(([, item]) => {
@@ -124,6 +148,7 @@ export function parseFeed(xml: string): SubstackPost[] {
         subtitle: element(item!, "description"),
         url,
         createdAt: new Date(published).toISOString(),
+        type: itemType(item!),
       },
     ]
   })
@@ -137,6 +162,7 @@ export function substackPublications({
   id,
   label,
   defaultPublications,
+  defaultTypes,
   publicationsEnv,
 }: SubstackPublicationsOptions): SubstackPublicationsIntegration {
   const publications = (chosen?: readonly string[] | null): string[] => {
@@ -161,7 +187,17 @@ export function substackPublications({
     required: [],
     optional: [publicationsEnv],
     publications,
-    async recentPosts({ publication, limit = 5, fetchImpl = fetch, signal }) {
+    types(chosen) {
+      const picked = SUBSTACK_POST_TYPES.filter((type) => chosen?.includes(type))
+      return picked.length > 0 ? picked : [...defaultTypes]
+    },
+    async recentPosts({
+      publication,
+      types = SUBSTACK_POST_TYPES,
+      limit = 5,
+      fetchImpl = fetch,
+      signal,
+    }) {
       const host = publicationHost(publication)
       if (!host) throw new Error(`"${publication}" isn't a Substack publication`)
       const response = await fetchImpl(`https://${host}/feed`, {
@@ -172,6 +208,7 @@ export function substackPublications({
         throw new Error(`Substack feed for ${host} failed (HTTP ${response.status})`)
       }
       return parseFeed(await response.text())
+        .filter((post) => types.includes(post.type))
         .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
         .slice(0, limit)
     },

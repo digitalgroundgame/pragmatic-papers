@@ -78,7 +78,7 @@ describe("getTickerFeed", () => {
     integrations.current = {
       youtube: { channels: [{ channelId: "UC1" }, { channelId: "UC2" }] },
       bluesky: { handles: [{ handle: "admin.bsky.social" }, { handle: "other.bsky.social" }] },
-      substack: { publications: [{ publication: "admin.substack.com" }] },
+      substack: { types: ["podcast"], publications: [{ publication: "admin.substack.com" }] },
       x: { usernames: [{ username: "AdminPick" }] },
     }
     ticker.current = { upcomingHours: 6 }
@@ -89,6 +89,7 @@ describe("getTickerFeed", () => {
       youtubeUpcomingHours: 6,
       blueskyHandles: ["admin.bsky.social", "other.bsky.social"],
       substackPublications: ["admin.substack.com"],
+      substackTypes: ["podcast"],
       xUsernames: ["AdminPick"],
     }
     expect(loadSource).toHaveBeenCalledTimes(1 + postSources.length)
@@ -106,6 +107,7 @@ describe("getTickerFeed", () => {
       youtubeUpcomingHours: undefined,
       blueskyHandles: undefined,
       substackPublications: undefined,
+      substackTypes: undefined,
       xUsernames: undefined,
     })
   })

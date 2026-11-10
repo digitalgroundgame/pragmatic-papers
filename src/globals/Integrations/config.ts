@@ -107,6 +107,21 @@ export const Integrations: GlobalConfig = {
       admin: { description: "Whose posts run in the ticker." },
       fields: [
         {
+          name: "types",
+          label: "Post types",
+          type: "select",
+          hasMany: true,
+          options: [
+            { label: "Podcast episodes", value: "podcast" },
+            { label: "Videos", value: "video" },
+            { label: "Written posts", value: "post" },
+          ],
+          admin: {
+            description:
+              "Which of the publications' posts run in the ticker. Empty shows podcast episodes and videos: written posts are mostly our own articles, syndicated.",
+          },
+        },
+        {
           name: "publications",
           type: "array",
           labels: { singular: "Publication", plural: "Publications" },

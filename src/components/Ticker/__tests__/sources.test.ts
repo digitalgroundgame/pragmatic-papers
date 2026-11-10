@@ -140,6 +140,7 @@ describe("postSources", () => {
           subtitle: "Not shown",
           url: `https://${publication}/p/hello`,
           createdAt: "2026-10-08T12:00:00.000Z",
+          type: "podcast",
         },
       ])
     const posts = await substack!.load(signal, {
@@ -158,6 +159,16 @@ describe("postSources", () => {
     ])
     expect(recent).toHaveBeenCalledWith(
       expect.objectContaining({ publication: "one.substack.com", limit: MAX_POSTS, signal }),
+    )
+  })
+
+  it("reads only the Substack post types the admin picked, else podcast episodes and videos", async () => {
+    const recent = vi.spyOn(substackPosts, "recentPosts").mockResolvedValue([])
+    await substack!.load(signal, { substackPublications: ["one"], substackTypes: ["post"] })
+    expect(recent).toHaveBeenLastCalledWith(expect.objectContaining({ types: ["post"] }))
+    await substack!.load(signal, { substackPublications: ["one"] })
+    expect(recent).toHaveBeenLastCalledWith(
+      expect.objectContaining({ types: ["podcast", "video"] }),
     )
   })
 

@@ -7,6 +7,7 @@ const publication = substackPublications({
   id: "substack-example",
   label: "Example publication",
   defaultPublications: ["example"],
+  defaultTypes: ["podcast"],
   publicationsEnv: "EXAMPLE_SUBSTACK_PUBLICATIONS",
 })
 
@@ -64,6 +65,7 @@ describe("parseFeed", () => {
         subtitle: "A subtitle for first",
         url: "https://example.substack.com/p/first",
         createdAt: "2026-10-07T12:00:00.000Z",
+        type: "post",
       },
     ])
   })
@@ -83,6 +85,39 @@ describe("parseFeed", () => {
         ),
       ).map((post) => post.title),
     ).toEqual(["Kept"])
+  })
+
+  it("tells podcast episodes and videos from written posts by their enclosure", () => {
+    expect(
+      parseFeed(
+        feed(
+          item(
+            "episode",
+            "Episode",
+            "Tue, 07 Oct 2026 12:00:00 GMT",
+            '<enclosure url="https://example.com/a.mp3" length="1" type="audio/mpeg"/>',
+          ),
+          item(
+            "video",
+            "Video",
+            "Tue, 07 Oct 2026 12:00:00 GMT",
+            "<enclosure type='video/mp4' url='https://example.com/a.mp4'/>",
+          ),
+          item(
+            "cover",
+            "Cover",
+            "Tue, 07 Oct 2026 12:00:00 GMT",
+            '<enclosure url="https://example.com/a.jpg" type="image/jpeg"/>',
+          ),
+          item("plain", "Plain", "Tue, 07 Oct 2026 12:00:00 GMT"),
+        ),
+      ).map((post) => [post.title, post.type]),
+    ).toEqual([
+      ["Episode", "podcast"],
+      ["Video", "video"],
+      ["Cover", "post"],
+      ["Plain", "post"],
+    ])
   })
 
   it("is empty for something that isn't a feed", () => {
@@ -110,6 +145,36 @@ describe("substackPublications", () => {
     expect(publication.publications([])).toEqual(["env.substack.com"])
     vi.stubEnv("EXAMPLE_SUBSTACK_PUBLICATIONS", "")
     expect(publication.publications(null)).toEqual(["example.substack.com"])
+  })
+
+  it("reads the admin's post types, or the default when they pick none", () => {
+    expect(publication.types(["post", "podcast", "nonsense", "post"])).toEqual(["podcast", "post"])
+    expect(publication.types([])).toEqual(["podcast"])
+    expect(publication.types(null)).toEqual(["podcast"])
+  })
+
+  it("keeps only the post types asked for, before counting to the limit", async () => {
+    const fetchImpl = vi.fn<typeof fetch>(
+      async () =>
+        new Response(
+          feed(
+            item("article", "Syndicated article", "Wed, 08 Oct 2026 12:00:00 GMT"),
+            item(
+              "episode",
+              "Episode",
+              "Tue, 07 Oct 2026 12:00:00 GMT",
+              '<enclosure url="https://example.com/a.mp3" type="audio/mpeg"/>',
+            ),
+          ),
+        ),
+    )
+    const posts = await publication.recentPosts({
+      publication: "example",
+      types: ["podcast"],
+      limit: 1,
+      fetchImpl,
+    })
+    expect(posts.map((post) => post.title)).toEqual(["Episode"])
   })
 
   it("reads the publication's RSS feed, newest first, up to the limit", async () => {

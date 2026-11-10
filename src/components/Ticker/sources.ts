@@ -18,6 +18,7 @@ export interface TickerSettings {
   youtubeUpcomingHours?: number | null
   blueskyHandles?: string[] | null
   substackPublications?: string[] | null
+  substackTypes?: string[] | null
   xUsernames?: string[] | null
 }
 
@@ -110,10 +111,12 @@ export const postSources: TickerSource<TickerPost[]>[] = [
     // A feed is free to read, but a publication posts a few times a week at most.
     revalidate: 900,
     async load(signal: AbortSignal, settings: TickerSettings): Promise<TickerPost[]> {
+      const types = substackPosts.types(settings.substackTypes)
       const posts = await fromEach(
         "Substack",
         substackPosts.publications(settings.substackPublications),
-        (publication) => substackPosts.recentPosts({ publication, limit: MAX_POSTS, signal }),
+        (publication) =>
+          substackPosts.recentPosts({ publication, types, limit: MAX_POSTS, signal }),
       )
       return posts.map((post) => ({
         id: `substack:${post.id}`,

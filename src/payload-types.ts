@@ -2922,6 +2922,10 @@ export interface IntegrationSettings {
    */
   substack?: {
     /**
+     * Which of the publications' posts run in the ticker. Empty shows podcast episodes and videos: written posts are mostly our own articles, syndicated.
+     */
+    types?: ('podcast' | 'video' | 'post')[] | null;
+    /**
      * Empty uses SUBSTACK_PUBLICATIONS, or thepragmaticpapers.
      */
     publications?:
@@ -3154,6 +3158,7 @@ export interface IntegrationsSelect<T extends boolean = true> {
   substack?:
     | T
     | {
+        types?: T;
         publications?:
           | T
           | {

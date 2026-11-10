@@ -93,12 +93,14 @@ export const blueskyPosts = blueskyAccounts({
 
 /**
  * Our Substack publications, whose posts run in the ticker. Read from each one's public RSS
- * feed, so it needs no key.
+ * feed, so it needs no key. Only podcast episodes and videos unless the admin picks other
+ * types: the written posts are mostly our own articles, syndicated.
  */
 export const substackPosts = substackPublications({
   id: "substack-posts",
   label: "Substack posts",
   defaultPublications: ["thepragmaticpapers"],
+  defaultTypes: ["podcast", "video"],
   publicationsEnv: "SUBSTACK_PUBLICATIONS",
 })
 

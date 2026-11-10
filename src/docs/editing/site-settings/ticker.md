@@ -12,7 +12,7 @@ audience: [editor]
 The ticker is the strip under the site's header. It shows readers what we're doing outside the site:
 
 - **A live broadcast**, when one of our YouTube channels is live or about to go live.
-- **Our latest posts** from Bluesky, X and Substack, scrolling past.
+- **Our latest posts** from Bluesky and X, and our Substack podcast episodes, scrolling past.
 
 It fills itself in: YouTube is checked every few minutes, Bluesky every few minutes, Substack every quarter hour and X about every half hour. There's nothing to publish.
 
@@ -29,7 +29,7 @@ The link has to be a bsky.app or x.com post link; anything else is refused with 
 
 ## Choosing whose posts run
 
-Admins choose the YouTube channels, Bluesky accounts, Substack publications and X accounts in **System → Integrations**. See [Change the header, footer and other site-wide settings](/docs/editing/site-settings/globals).
+Admins choose the YouTube channels, Bluesky accounts, Substack publications (and which of their post types run: podcast episodes and videos unless they pick written posts too) and X accounts in **System → Integrations**. See [Change the header, footer and other site-wide settings](/docs/editing/site-settings/globals).
 
 ## Where it's switched on
 

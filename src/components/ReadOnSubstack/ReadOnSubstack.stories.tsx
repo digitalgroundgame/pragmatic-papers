@@ -17,7 +17,7 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** An icon button in the article's actions bar, once an editor has pasted the Substack post's address. */
+/** The labelled button under an article, once an editor has pasted the Substack post's address. */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const link = within(canvasElement).getByRole("link", { name: "Read on Substack" })
@@ -27,6 +27,17 @@ export const Default: Story = {
     )
     await expect(link).toHaveAttribute("target", "_blank")
     await expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"))
+    await expect(link).toHaveTextContent("Read on Substack")
+  },
+}
+
+/** The icon button in the article's actions bar. */
+export const Icon: Story = {
+  args: { variant: "icon" },
+  play: async ({ canvasElement }) => {
+    const link = within(canvasElement).getByRole("link", { name: "Read on Substack" })
+    await expect(link).toHaveAttribute("title", "Read on Substack")
+    await expect(link).toHaveTextContent("")
   },
 }
 

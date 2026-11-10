@@ -15,9 +15,24 @@ describe("ReadOnSubstack", () => {
     expect(link).toHaveAttribute("href", substackUrl)
     expect(link).toHaveAttribute("target", "_blank")
     expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"))
-    // An icon button: the name comes from its label, and the tooltip says the same.
+    expect(link).toHaveTextContent("Read on Substack")
+  })
+
+  it("is an icon button named by its label in the actions bar", () => {
+    render(<ReadOnSubstack variant="icon" article={{ syndicateToSubstack: true, substackUrl }} />)
+
+    const link = screen.getByRole("link", { name: "Read on Substack" })
+    expect(link).toHaveAttribute("href", substackUrl)
+    // The tooltip says the same as the label.
     expect(link).toHaveAttribute("title", "Read on Substack")
     expect(link).toHaveTextContent("")
+  })
+
+  it("renders nothing as an icon either when the article has no Substack post URL", () => {
+    const { container } = render(
+      <ReadOnSubstack variant="icon" article={{ syndicateToSubstack: true, substackUrl: null }} />,
+    )
+    expect(container).toBeEmptyDOMElement()
   })
 
   it.each([

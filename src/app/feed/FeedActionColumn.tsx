@@ -91,7 +91,7 @@ export function FeedActionColumn({ article }: FeedActionColumnProps): React.Reac
                     src={profileImageUrl}
                     render={
                       profileImage && typeof profileImage !== "number" ? (
-                        <Media media={profileImage} sizes="32px" variant="square" />
+                        <Media media={profileImage} sizes="38px" variant="square" />
                       ) : undefined
                     }
                   />

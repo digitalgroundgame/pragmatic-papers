@@ -210,6 +210,8 @@ describe("map pictures for the Substack feed", () => {
       data: {},
       file: svgFile(-40),
       user: editor,
+      // Outside Next there's no cache to revalidate; the redraw doesn't depend on it.
+      context: { disableRevalidate: true },
     })
 
     const pictures = await picturesOf(title)

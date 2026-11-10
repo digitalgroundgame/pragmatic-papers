@@ -25,12 +25,12 @@ describe("Articles hooks", () => {
     ])
   })
 
-  it("grants public profiles after revalidating, then draws the feed's block images", () => {
+  it("draws the feed's block images before revalidating, then grants public profiles", () => {
     expect(Articles.hooks?.afterChange).toEqual([
+      generateBlockImages,
       revalidateArticle,
       revalidateNavLinks,
       grantAuthorsPublicProfile,
-      generateBlockImages,
     ])
   })
 

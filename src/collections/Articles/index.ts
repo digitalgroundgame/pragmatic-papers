@@ -353,11 +353,12 @@ export const Articles: CollectionConfig = {
       detectMathBlocks,
       populateMetaImageFromHero,
     ],
+    // The feed pictures are drawn first, so the Substack feeds revalidated after them name them.
     afterChange: [
+      generateBlockImages,
       revalidateArticle,
       revalidateNavLinks,
       grantAuthorsPublicProfile,
-      generateBlockImages,
     ],
     beforeDelete: [removeFromRankings],
     afterDelete: [revalidateDelete, revalidateNavLinksDelete],

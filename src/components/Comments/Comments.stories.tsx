@@ -308,17 +308,18 @@ export const Badges: Story = {
       comments: [
         writerComment,
         ...[
-          "Admin",
-          "Chief editor",
-          "Editor",
-          "Narrator",
-          "Verified",
-          "Early member",
-          "Top commenter",
+          { key: "admin", label: "Admin" },
+          { key: "chief-editor", label: "Chief editor" },
+          { key: "editor", label: "Editor" },
+          { key: "narrator", label: "Narrator" },
+          { key: "vouched", label: "Verified" },
+          { key: "early-member", label: "Early member" },
+          // One editors added, with no look of its own yet.
+          { key: null, label: "Top commenter" },
         ].map((badge, i) => ({
           ...threadComments[0]!,
           id: 30 + i,
-          body: `A comment by someone with the ${badge} badge.`,
+          body: `A comment by someone with the ${badge.label} badge.`,
           author: { name: `Reader ${i + 1}`, image: null, badge },
         })),
         {

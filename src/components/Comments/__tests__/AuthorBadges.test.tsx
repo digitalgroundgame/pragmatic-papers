@@ -3,11 +3,17 @@ import { describe, expect, it } from "vitest"
 
 import { TooltipProvider } from "@/components/ui/tooltip"
 
+import type { BadgeInfo } from "@/plugins/comments"
+
 import { AuthorBadges } from "../AuthorBadges"
+
+const editor: BadgeInfo = { key: "editor", label: "Editor" }
+const verified: BadgeInfo = { key: "vouched", label: "Verified" }
+const earlyMember: BadgeInfo = { key: "early-member", label: "Early member" }
 
 const renderBadges = (
   author: {
-    badge: string | null
+    badge: BadgeInfo | null
     writer?: true
     newcomer?: true
     newMember?: true
@@ -23,13 +29,13 @@ const renderBadges = (
 
 describe("AuthorBadges", () => {
   it("shows the writer's mark first, then the author's own badge, each named", () => {
-    renderBadges({ badge: "Staff", writer: true })
+    renderBadges({ badge: editor, writer: true })
     const names = screen.getAllByRole("img").map((badge) => badge.getAttribute("aria-label"))
-    expect(names).toEqual(["Writer", "Staff"])
+    expect(names).toEqual(["Writer", "Editor"])
   })
 
   it("puts the newcomer's star between the writer's mark and their own badge", () => {
-    renderBadges({ badge: "Verified", writer: true, newcomer: true })
+    renderBadges({ badge: verified, writer: true, newcomer: true })
     const names = screen.getAllByRole("img").map((badge) => badge.getAttribute("aria-label"))
     expect(names).toEqual(["Writer", "New commenter", "Verified"])
     const star = screen.getByRole("img", { name: "New commenter" })
@@ -37,7 +43,7 @@ describe("AuthorBadges", () => {
   })
 
   it("orders the markers that come and go between the writer's mark and the badge", () => {
-    renderBadges({ badge: "Verified", writer: true, newcomer: true, newMember: true }, true)
+    renderBadges({ badge: verified, writer: true, newcomer: true, newMember: true }, true)
     const names = screen.getAllByRole("img").map((badge) => badge.getAttribute("aria-label"))
     expect(names).toEqual(["Writer", "First comment", "New commenter", "New member", "Verified"])
     expect(screen.getByRole("img", { name: "New member" }).querySelector("svg")).toHaveClass(
@@ -46,7 +52,7 @@ describe("AuthorBadges", () => {
   })
 
   it("puts the cake right after the writer's mark on someone's cake day", () => {
-    renderBadges({ badge: "Early member", writer: true, cakeDay: true }, true)
+    renderBadges({ badge: earlyMember, writer: true, cakeDay: true }, true)
     const names = screen.getAllByRole("img").map((badge) => badge.getAttribute("aria-label"))
     expect(names).toEqual(["Writer", "Cake day", "First comment", "Early member"])
     expect(screen.getByRole("img", { name: "Cake day" }).querySelector("svg")).toHaveClass(
@@ -55,26 +61,38 @@ describe("AuthorBadges", () => {
   })
 
   it("gives Early member the medal, keeping the star for new commenters", () => {
-    renderBadges({ badge: "Early member" })
+    renderBadges({ badge: earlyMember })
     const badge = screen.getByRole("img", { name: "Early member" })
     expect(badge.querySelector("svg")).toHaveClass("lucide-medal")
   })
 
   it("gives each staff role its own icon in the brand color", () => {
-    renderBadges({ badge: "Chief editor" })
+    renderBadges({ badge: { key: "chief-editor", label: "Chief editor" } })
     const badge = screen.getByRole("img", { name: "Chief editor" })
     expect(badge).toHaveClass("text-brand-text")
     expect(badge.querySelector("svg")).toHaveClass("lucide-crown")
   })
 
   it("colors each known badge its own way", () => {
-    renderBadges({ badge: "Verified" })
+    renderBadges({ badge: verified })
     expect(screen.getByRole("img", { name: "Verified" })).toHaveClass("text-blue-500")
   })
 
   it("gives an achievement without a look of its own the award icon", () => {
-    renderBadges({ badge: "Top commenter" })
+    renderBadges({ badge: { key: null, label: "Top commenter" } })
     const badge = screen.getByRole("img", { name: "Top commenter" })
+    expect(badge.querySelector("svg")).toHaveClass("lucide-award")
+  })
+
+  it("keeps a badge's look by its key when editors rename it", () => {
+    renderBadges({ badge: { key: "early-member", label: "Founding reader" } })
+    const badge = screen.getByRole("img", { name: "Founding reader" })
+    expect(badge.querySelector("svg")).toHaveClass("lucide-medal")
+  })
+
+  it("gives an unknown key the award icon, even one named like an object's own", () => {
+    renderBadges({ badge: { key: "toString", label: "Odd one" } })
+    const badge = screen.getByRole("img", { name: "Odd one" })
     expect(badge.querySelector("svg")).toHaveClass("lucide-award")
   })
 

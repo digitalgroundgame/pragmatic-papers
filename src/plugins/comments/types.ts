@@ -10,12 +10,22 @@ export type ViolationSource = (typeof VIOLATION_SOURCES)[number]
 /** A row of the authors collection, as Payload returns it. */
 export type CommentAuthor = Record<string, unknown> & { id: number | string }
 
+/** A badge beside an author's name. */
+export interface BadgeInfo {
+  /**
+   * What the site knows the badge by, so its look survives a rename: a staff role's slug, or the
+   * key of an achievement the site starts with. Null for one an editor added.
+   */
+  key: string | null
+  /** Its name, like "Editor". */
+  label: string
+}
+
 /** How an author shows beside their comments. */
 export interface AuthorDisplay {
   name: string
   image: string | null
-  /** A short label beside their name, like "Editor". */
-  badge: string | null
+  badge: BadgeInfo | null
   /** One of the writers of what the comments are on (`targetWriters`). */
   writer?: true
   /** Published their first comment within the last `newCommenterDays`: a New commenter. */
@@ -97,7 +107,7 @@ export interface CommentsPluginConfig {
    * asked once per request for every author shown. A badge `describeAuthor` gives (like
    * a staff role) wins. Default none.
    */
-  authorBadges?: (authors: CommentAuthor[], req: PayloadRequest) => Promise<Map<string, string>>
+  authorBadges?: (authors: CommentAuthor[], req: PayloadRequest) => Promise<Map<string, BadgeInfo>>
   /**
    * The authors IDs of whoever wrote the document comments are on, so their comments show as
    * the writer's. Asked once per request. Default none.

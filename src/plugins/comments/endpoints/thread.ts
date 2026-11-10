@@ -9,6 +9,7 @@ import { readSettings } from "../settings"
 import { buildThread, type StoredComment } from "../thread"
 import type {
   AuthorDisplay,
+  BadgeInfo,
   CommentAuthor,
   CommentThread,
   CommentViewer,
@@ -140,7 +141,7 @@ export async function describerFor(
         config.targetWriters(targetId, req),
         newCommenters(config, commenters, req),
       ])
-    : [new Map<string, string>(), [], new Set<string>()]
+    : [new Map<string, BadgeInfo>(), [], new Set<string>()]
   const writerIds = new Set(writers.map(String))
   return (author) => {
     const display = config.describeAuthor(author)

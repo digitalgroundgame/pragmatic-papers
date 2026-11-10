@@ -655,6 +655,10 @@ export interface Achievement {
    */
   limit?: number | null;
   badge?: boolean | null;
+  /**
+   * The site knows this achievement by this, so it can be renamed.
+   */
+  key?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -2698,6 +2702,7 @@ export interface AchievementsSelect<T extends boolean = true> {
   rule?: T;
   limit?: T;
   badge?: T;
+  key?: T;
   updatedAt?: T;
   createdAt?: T;
 }

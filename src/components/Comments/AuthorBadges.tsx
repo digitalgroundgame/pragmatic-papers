@@ -20,7 +20,7 @@ import {
 import React from "react"
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import type { AuthorDisplay } from "@/plugins/comments"
+import type { AuthorDisplay, BadgeInfo } from "@/plugins/comments"
 import { cn } from "@/utilities/utils"
 
 interface BadgeLook {
@@ -65,72 +65,61 @@ const NEW_MEMBER: BadgeLook = {
 }
 
 /**
- * The badges a commenter can carry as their own, looked up by the name the server sends: their
- * staff role (from the site) and the starter achievements. An achievement editors add later gets
- * the award icon until it has a look of its own here.
+ * The looks of the badges a commenter can carry as their own, by the key the server sends with
+ * each: a staff role's slug, or a starter achievement's key (`starterAchievements`). The name
+ * comes from the server, so an achievement keeps its look when editors rename it. One editors
+ * add later has no key, and gets the award icon until it has a look of its own.
  */
-const BADGES: BadgeLook[] = [
+const BADGES: Record<string, Omit<BadgeLook, "name">> = {
   // Staff roles share the brand color, so staff read as staff at a glance.
-  { name: "Admin", icon: ShieldCheckIcon, className: "text-brand-text", description: "Site admin" },
-  {
-    name: "Chief editor",
+  admin: { icon: ShieldCheckIcon, className: "text-brand-text", description: "Site admin" },
+  "chief-editor": {
     icon: CrownIcon,
     className: "text-brand-text",
     description: "Pragmatic Papers' chief editor",
   },
-  {
-    name: "Editor",
+  editor: {
     icon: SquarePenIcon,
     className: "text-brand-text",
     description: "Pragmatic Papers editor",
   },
-  {
-    name: "Staff writer",
+  writer: {
     icon: PenLineIcon,
     className: "text-brand-text",
     description: "Writes for Pragmatic Papers",
   },
-  {
-    name: "Narrator",
+  narrator: {
     icon: MicIcon,
     className: "text-brand-text",
     description: "Narrates Pragmatic Papers articles",
   },
-  {
-    name: "Staff",
-    icon: ShieldCheckIcon,
-    className: "text-brand-text",
-    description: "Pragmatic Papers staff",
-  },
-  {
-    name: "Verified",
+  vouched: {
     icon: BadgeCheckIcon,
     className: "text-blue-500 dark:text-blue-400",
     description: "The editors confirmed who this is",
   },
-  {
-    name: "Email verified",
+  verified: {
     icon: MailCheckIcon,
     className: "text-emerald-600 dark:text-emerald-400",
     description: "Verified email address",
   },
-  {
-    name: "Early member",
+  "early-member": {
     icon: MedalIcon,
     className: "text-rose-600 dark:text-rose-400",
     description: "One of the site's first members",
   },
-]
+}
 
-const BADGES_BY_NAME = new Map(BADGES.map((look) => [look.name, look]))
+const FALLBACK: Omit<BadgeLook, "name"> = {
+  icon: AwardIcon,
+  className: "text-violet-600 dark:text-violet-400",
+}
 
-/** The look of a badge the server names, or the award icon for one with no look of its own. */
-const badgeLook = (name: string): BadgeLook =>
-  BADGES_BY_NAME.get(name) ?? {
-    name,
-    icon: AwardIcon,
-    className: "text-violet-600 dark:text-violet-400",
-  }
+/** The look of a commenter's own badge, named as the server names it. */
+const badgeLook = ({ key, label }: BadgeInfo): BadgeLook => {
+  const look = key && Object.hasOwn(BADGES, key) ? BADGES[key] : undefined
+  return { ...(look ?? FALLBACK), name: label }
+}
 
 /** One badge: a colored icon, named for screen readers, with its name in a tooltip. */
 const AuthorBadge: React.FC<{ look: BadgeLook }> = ({

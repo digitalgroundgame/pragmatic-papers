@@ -1,4 +1,5 @@
 import type { Role } from "@/access/roles"
+import type { BadgeInfo } from "@/plugins/comments"
 
 /**
  * The badge each staff role shows beside its comments, most senior first: a staff member with
@@ -13,8 +14,12 @@ export const STAFF_BADGES: [Role, string][] = [
   ["narrator", "Narrator"],
 ]
 
-/** The badge for the most senior staff role in `roles`, or null for a reader. */
-export function staffBadge(roles: unknown): string | null {
+/**
+ * The badge for the most senior staff role in `roles`, or null for a reader. Its key is the
+ * role's slug.
+ */
+export function staffBadge(roles: unknown): BadgeInfo | null {
   if (!Array.isArray(roles)) return null
-  return STAFF_BADGES.find(([role]) => roles.includes(role))?.[1] ?? null
+  const found = STAFF_BADGES.find(([role]) => roles.includes(role))
+  return found ? { key: found[0], label: found[1] } : null
 }

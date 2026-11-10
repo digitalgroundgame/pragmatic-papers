@@ -33,12 +33,23 @@ export interface AchievementDoc {
   limit?: number | null
   /** Whether it shows beside the holder's name on comments. */
   badge?: boolean | null
+  /**
+   * What code knows a starter achievement by (`starterAchievements`), so the site can give its
+   * badge a look that survives a rename. Null for one an editor made.
+   */
+  key?: string | null
 }
 
 /** An achievement a site starts with (`starterAchievements`). */
 export type AchievementSeed = Omit<AchievementDoc, "id"> & {
-  /** Recorded with `markSeeded`, so one an editor deletes stays deleted. */
+  /** Stored on it, and recorded with `markSeeded`, so one an editor deletes stays deleted. */
   key: string
+}
+
+/** The badge an achievement shows: its `key` (null for one an editor made) and its name. */
+export interface AchievementBadge {
+  key: string | null
+  label: string
 }
 
 type RelationValue = number | string | { id: number | string } | null
@@ -57,8 +68,8 @@ export interface HeldAchievement {
   key: string
   label: string
   description: string
-  /** Its badge's label, if it has one. */
-  badge: string | null
+  /** Its badge, if it shows one. */
+  badge: AchievementBadge | null
   /** When an awarded achievement was earned; null for one worked out from the account. */
   earnedAt: string | null
 }

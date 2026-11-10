@@ -9,7 +9,7 @@ const earlyMember: HeldAchievement = {
   key: "early-member",
   label: "Early member",
   description: "One of the first readers to make an account.",
-  badge: "Early member",
+  badge: { key: "early-member", label: "Early member" },
   earnedAt: "2026-10-18T12:00:00.000Z",
 }
 const verified: HeldAchievement = {

@@ -502,9 +502,12 @@ join field, on each user's record. Only admins delete either.
   editors vouch for, first so its badge wins), Early member (`earlyMemberLimit`, 1000) and Email
   verified (the `verified` rule, no badge: nearly everyone has it) are created once per site by `/next/revalidate-all` and the seed
   (`readerAchievements.seed`, recorded with `markSeeded`), so one an editor deletes stays deleted.
+  Each carries its starter `key` (read-only in the admin), so editors can rename it.
 - **Badges on comments**: the comments plugin's `authorBadges` option asks
   `readerAchievements.badgesFor` once per thread; the first achievement in the editors' order
   with a badge shows, and a badge `describeAuthor` gives (a staff role's, `staffBadge`) wins.
+  A badge is a `BadgeInfo`, its label and a `key` (the role's slug, or the starter's key; null
+  for one an editor made), and `AuthorBadges` picks its icon and color by the key.
   `/api/achievements/mine` lists the signed-in reader's for `/account`. Switched off, no
   achievement shows anywhere.
 - The host's options (roles, access, the starter limit) are `achievementsOptions` in

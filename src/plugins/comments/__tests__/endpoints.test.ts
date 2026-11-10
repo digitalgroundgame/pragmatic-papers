@@ -4,11 +4,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { COMMENTS_SLUG, DEFAULT_SETTINGS, SETTINGS_SLUG, VIOLATIONS_SLUG } from "../constants"
 import { isCakeDay, THREAD_LIMIT, threadEndpoints } from "../endpoints/thread"
 import { SKIP_MODERATION } from "../hooks/recordModeration"
-import type { ResolvedCommentsConfig } from "../types"
+import type { BadgeInfo, ResolvedCommentsConfig } from "../types"
 
 const site = "https://example.com"
 const DAY_MS = 24 * 60 * 60 * 1000
 const ada = { id: 7, name: "Ada" }
+const STAFF: BadgeInfo = { key: "staff", label: "Staff" }
+const EARLY: BadgeInfo = { key: "early-member", label: "Early member" }
+const VERIFIED: BadgeInfo = { key: "vouched", label: "Verified" }
 
 const enabled = vi.fn()
 const currentUser = vi.fn()
@@ -27,7 +30,7 @@ const config = {
   describeAuthor: (author: Record<string, unknown>) => ({
     name: String(author.name),
     image: null,
-    badge: author.staff ? "Staff" : null,
+    badge: author.staff ? STAFF : null,
   }),
   authorBadges,
   targetWriters,
@@ -196,8 +199,8 @@ describe("badges from outside the plugin", () => {
     db.comments = [comment(2, grace), comment(1, ada)]
     authorBadges.mockResolvedValue(
       new Map([
-        ["7", "Early member"],
-        ["8", "Verified"],
+        ["7", EARLY],
+        ["8", VERIFIED],
       ]),
     )
 
@@ -205,10 +208,10 @@ describe("badges from outside the plugin", () => {
 
     expect(authorBadges).toHaveBeenCalledOnce()
     expect(authorBadges.mock.calls[0]![0]).toEqual([ada, grace, ada])
-    const comments = body.comments as { author: { badge: string | null } }[]
+    const comments = body.comments as { author: { badge: unknown } }[]
     // Staff wins over a badge from outside.
-    expect(comments.map((c) => c.author.badge)).toEqual(["Early member", "Staff"])
-    expect(body.viewer).toMatchObject({ badge: "Early member" })
+    expect(comments.map((c) => c.author.badge)).toEqual([EARLY, STAFF])
+    expect(body.viewer).toMatchObject({ badge: EARLY })
   })
 
   it("marks the comments of the document's writers", async () => {
@@ -234,12 +237,12 @@ describe("badges from outside the plugin", () => {
   })
 
   it("shows the author's badge on the comment they just posted", async () => {
-    authorBadges.mockResolvedValue(new Map([["7", "Verified"]]))
+    authorBadges.mockResolvedValue(new Map([["7", VERIFIED]]))
 
     const response = await call(post, { body: { body: "Hello" } })
 
     expect(((await json(response)).comment as { author: object }).author).toMatchObject({
-      badge: "Verified",
+      badge: VERIFIED,
     })
   })
 })

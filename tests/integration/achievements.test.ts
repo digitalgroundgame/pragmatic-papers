@@ -3,7 +3,7 @@ import { handleEndpoints, type Payload } from "payload"
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { MyAchievements } from "@/plugins/achievements"
-import type { CommentThread, PublicComment } from "@/plugins/comments"
+import type { BadgeInfo, CommentThread, PublicComment } from "@/plugins/comments"
 import { readerAchievements } from "@/plugins/readerAchievements"
 import { getSiteURL } from "@/utilities/getURL"
 import type { Article, Award, User } from "@/payload-types"
@@ -86,6 +86,8 @@ let editor: User
 let writer: User
 /** A member who signed up before the site had achievements, after the staff. */
 let olderMember: User
+/** The badge the seeded Early member shows, known by its starter key. */
+const EARLY_MEMBER_BADGE = { key: "early-member", label: "Early member" }
 /** The seeded achievements' IDs. */
 let early: number
 let verified: number
@@ -103,7 +105,7 @@ const mine = async (cookie: string) => {
 }
 
 /** Posts a comment as the reader (past the cooldown) and returns the badge it shows. */
-async function badgeOnComment(cookie: string): Promise<string | null> {
+async function badgeOnComment(cookie: string): Promise<BadgeInfo | null> {
   vi.setSystemTime(Date.now() + 60_000)
   const response = await api(`/comments/thread/${article.id}`, {
     method: "POST",
@@ -113,7 +115,7 @@ async function badgeOnComment(cookie: string): Promise<string | null> {
   expect(response.status, await response.clone().text()).toBe(201)
   const { comment } = (await response.json()) as { comment: PublicComment }
   const thread = (await (await api(`/comments/thread/${article.id}`)).json()) as CommentThread
-  expect(thread.comments.find((c) => c.id === comment.id)?.author?.badge).toBe(
+  expect(thread.comments.find((c) => c.id === comment.id)?.author?.badge).toEqual(
     comment.author?.badge,
   )
   return comment.author?.badge ?? null
@@ -197,10 +199,34 @@ describe("achievements", () => {
     const { cookie, user } = await signUp()
 
     expect(await achievementsOf(user)).toEqual([early])
-    expect(await badgeOnComment(cookie)).toBe("Early member")
+    expect(await badgeOnComment(cookie)).toEqual(EARLY_MEMBER_BADGE)
     const { status, body } = await mine(cookie)
     expect(status).toBe(200)
     expect(body.achievements.map((a) => a.label)).toEqual(["Early member", "Email verified"])
+  })
+
+  it("keeps a starter's key when editors rename it, and won't let anyone change it", async () => {
+    const { cookie } = await signUp()
+    await payload.update({
+      collection: "achievements",
+      id: early,
+      data: { name: "Founding reader", key: "something-else" },
+      user: editor,
+      overrideAccess: false,
+    })
+    try {
+      expect(await badgeOnComment(cookie)).toEqual({
+        key: "early-member",
+        label: "Founding reader",
+      })
+    } finally {
+      await payload.update({
+        collection: "achievements",
+        id: early,
+        data: { name: "Early member" },
+        overrideAccess: true,
+      })
+    }
   })
 
   it("awards staff Early member too, those already there and those made later", async () => {
@@ -255,7 +281,7 @@ describe("achievements", () => {
       user: editor,
       overrideAccess: false,
     })
-    expect(await badgeOnComment(cookie)).toBe("Early member")
+    expect(await badgeOnComment(cookie)).toEqual(EARLY_MEMBER_BADGE)
   })
 
   it("lets only moderators make revocations, and nobody hand an achievement out", async () => {
@@ -289,7 +315,7 @@ describe("achievements", () => {
 
   it("lets a moderator give the hand-given Verified, whose badge shows first", async () => {
     const { cookie, user } = await signUp()
-    expect(await badgeOnComment(cookie)).toBe("Early member")
+    expect(await badgeOnComment(cookie)).toEqual(EARLY_MEMBER_BADGE)
 
     await payload.create({
       collection: "awards",
@@ -298,7 +324,7 @@ describe("achievements", () => {
       overrideAccess: false,
     })
 
-    expect(await badgeOnComment(cookie)).toBe("Verified")
+    expect(await badgeOnComment(cookie)).toEqual({ key: "vouched", label: "Verified" })
   })
 
   it("keeps rows from members and anyone signed out", async () => {

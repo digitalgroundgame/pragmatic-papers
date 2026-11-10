@@ -18,6 +18,7 @@ const early: AchievementDoc = {
   rule: "firstMembers",
   limit: 1000,
   badge: true,
+  key: "early-member",
 }
 const verified: AchievementDoc = { id: 2, name: "Verified", rule: "verified", badge: true }
 const helper: AchievementDoc = { id: 3, name: "Helper", rule: "manual", badge: false }
@@ -42,7 +43,8 @@ describe("heldAchievements", () => {
       key: "2",
       label: "Verified",
       description: "",
-      badge: "Verified",
+      // Made by an editor, so it has no key.
+      badge: { key: null, label: "Verified" },
       earnedAt: null,
     })
     expect(held({ emailVerified: false }, [])).toEqual([])
@@ -92,7 +94,10 @@ describe("heldAchievements", () => {
 
 describe("topBadge", () => {
   it("is the first achievement held that has a badge", () => {
-    expect(topBadge(held({ emailVerified: true }, [row(1), row(3)]))).toBe("Early member")
+    expect(topBadge(held({ emailVerified: true }, [row(1), row(3)]))).toEqual({
+      key: "early-member",
+      label: "Early member",
+    })
     expect(topBadge(held({}, [row(3)]))).toBeNull()
     expect(topBadge([])).toBeNull()
   })

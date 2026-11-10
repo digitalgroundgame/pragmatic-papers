@@ -12,6 +12,7 @@ export { countLinks } from "./checks"
 export { lockFor } from "./lock"
 export type {
   AuthorDisplay,
+  BadgeInfo,
   CommentAuthor,
   CommentCheck,
   CommentSettings,

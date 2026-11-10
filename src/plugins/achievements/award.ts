@@ -155,19 +155,33 @@ export async function seedAchievements(
   for (const { key, ...data } of starterAchievements(config)) {
     if (await wasSeeded(payload, ACHIEVEMENTS_SLUG, key)) continue
     // A site that already has one by name and rule (made before seeding was recorded) counts as
-    // seeded too. Only one deploy seeds each database, so nothing else races this.
-    const { totalDocs } = await payload.count({
+    // seeded too, and it takes the key. Only one deploy seeds each database, so nothing else
+    // races this.
+    const {
+      docs: [existing],
+    } = await payload.find({
       collection: ACHIEVEMENTS_SLUG as CollectionSlug,
       where: { and: [{ name: { equals: data.name } }, { rule: { equals: data.rule } }] },
+      sort: "createdAt",
+      limit: 1,
+      depth: 0,
       overrideAccess: true,
     })
-    if (totalDocs) {
+    if (existing) {
+      if (!(existing as unknown as AchievementDoc).key) {
+        await payload.update({
+          collection: ACHIEVEMENTS_SLUG as CollectionSlug,
+          id: existing.id,
+          data: { key } as never,
+          overrideAccess: true,
+        })
+      }
       await markSeeded(payload, ACHIEVEMENTS_SLUG, key)
       continue
     }
     await payload.create({
       collection: ACHIEVEMENTS_SLUG as CollectionSlug,
-      data: data as never,
+      data: { ...data, key } as never,
       overrideAccess: true,
     })
     await markSeeded(payload, ACHIEVEMENTS_SLUG, key)

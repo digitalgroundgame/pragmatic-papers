@@ -6,8 +6,9 @@ import { seedAchievements } from "./award"
 import { achievementsCollection, awardsCollection, awardsJoinField } from "./collection"
 import { DEFAULT_EARLY_MEMBER_LIMIT } from "./constants"
 import { awardOnMembership, deleteUsersAwards } from "./hooks/users"
-import { achievementsFor, badgeLabelsFor } from "./read"
+import { achievementsFor, badgesFor } from "./read"
 import type {
+  AchievementBadge,
   AchievementUser,
   AchievementsPluginConfig,
   HeldAchievement,
@@ -17,6 +18,7 @@ import type {
 export { RULES } from "./rules"
 export type { MyAchievements } from "./endpoints/mine"
 export type {
+  AchievementBadge,
   AchievementDoc,
   AchievementRule,
   AchievementUser,
@@ -44,13 +46,16 @@ export const resolveAchievementsConfig = (
  * pages), and the achievements a site starts with, which a deploy creates once.
  */
 export function achievementsReader(options: AchievementsPluginConfig): {
-  badgesFor: (users: AchievementUser[], req: PayloadRequest) => Promise<Map<string, string>>
+  badgesFor: (
+    users: AchievementUser[],
+    req: PayloadRequest,
+  ) => Promise<Map<string, AchievementBadge>>
   heldBy: (payload: Payload, user: AchievementUser) => Promise<HeldAchievement[]>
   seed: (payload: Payload) => Promise<string[]>
 } {
   const config = resolveAchievementsConfig(options)
   return {
-    badgesFor: (users, req) => badgeLabelsFor(req.payload, users, config, req),
+    badgesFor: (users, req) => badgesFor(req.payload, users, config, req),
     heldBy: async (payload, user) =>
       (await achievementsFor(payload, [user], config)).get(String(user.id)) ?? [],
     seed: (payload) => seedAchievements(payload, config),

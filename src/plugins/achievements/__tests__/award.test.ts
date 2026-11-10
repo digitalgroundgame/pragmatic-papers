@@ -124,12 +124,11 @@ describe("seedAchievements", () => {
     ])
     expect(store[ACHIEVEMENTS_SLUG]).toEqual([
       // Given by hand to someone the editors vouch for, so it's the badge that shows first.
-      expect.objectContaining({ name: "Verified", rule: "manual", badge: true }),
-      expect.objectContaining({ name: "Early member", rule: "firstMembers", limit: 2 }),
+      expect.objectContaining({ key: "vouched", name: "Verified", rule: "manual", badge: true }),
+      expect.objectContaining({ key: "early-member", rule: "firstMembers", limit: 2 }),
       // Nearly everyone has it, so it shows no badge.
-      expect.objectContaining({ name: "Email verified", rule: "verified", badge: false }),
+      expect.objectContaining({ key: "verified", name: "Email verified", badge: false }),
     ])
-    expect(store[ACHIEVEMENTS_SLUG]![0]).not.toHaveProperty("key")
 
     store[ACHIEVEMENTS_SLUG] = []
     expect(await seedAchievements(payload, config)).toEqual([])
@@ -149,6 +148,12 @@ describe("seedAchievements", () => {
     expect(await seedAchievements(payload, config)).toEqual([])
     expect(store[ACHIEVEMENTS_SLUG]).toHaveLength(3)
     expect(payload.create).not.toHaveBeenCalled()
+    // Each takes its starter key, so its badge keeps its look.
+    expect(store[ACHIEVEMENTS_SLUG]!.map((doc) => doc.key)).toEqual([
+      "vouched",
+      "early-member",
+      "verified",
+    ])
     expect([...kv.keys()]).toEqual([
       "seeded:achievements:vouched",
       "seeded:achievements:early-member",

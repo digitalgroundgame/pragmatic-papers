@@ -6,15 +6,15 @@ import { STAFF_BADGES, staffBadge } from "../staffBadge"
 
 describe("staffBadge", () => {
   it("names each staff role", () => {
-    expect(staffBadge(["admin"])).toBe("Admin")
-    expect(staffBadge(["chief-editor"])).toBe("Chief editor")
-    expect(staffBadge(["editor"])).toBe("Editor")
-    expect(staffBadge(["writer"])).toBe("Staff writer")
-    expect(staffBadge(["narrator"])).toBe("Narrator")
+    expect(staffBadge(["admin"])).toEqual({ key: "admin", label: "Admin" })
+    expect(staffBadge(["chief-editor"])).toEqual({ key: "chief-editor", label: "Chief editor" })
+    expect(staffBadge(["editor"])).toEqual({ key: "editor", label: "Editor" })
+    expect(staffBadge(["writer"])).toEqual({ key: "writer", label: "Staff writer" })
+    expect(staffBadge(["narrator"])).toEqual({ key: "narrator", label: "Narrator" })
   })
 
   it("shows the most senior of several roles", () => {
-    expect(staffBadge(["narrator", "writer", "editor"])).toBe("Editor")
+    expect(staffBadge(["narrator", "writer", "editor"])).toMatchObject({ label: "Editor" })
   })
 
   it("gives readers and accounts without roles none", () => {

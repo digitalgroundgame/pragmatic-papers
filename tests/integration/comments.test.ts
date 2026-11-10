@@ -218,7 +218,7 @@ describe("comments", () => {
       .join("; ")
 
     const { comment } = await posted(article, cookie, "From the desk")
-    expect(comment.author?.badge).toBe("Editor")
+    expect(comment.author?.badge).toEqual({ key: "editor", label: "Editor" })
   })
 
   it("nests replies, up to the depth the settings allow when they're posted", async () => {

@@ -164,3 +164,44 @@ export const SelectionDark: Story = {
   parameters: isolatedDocs("560px"),
   play: async ({ canvasElement }) => expectBrandSelection(canvasElement),
 }
+
+/**
+ * An article's opening paragraph as the article and volume pages set it: Libertinus Serif
+ * (the design spec's serif, served to every reader so the page and the map pictures match)
+ * at 112%, Georgia's x-height, with the first letter dropped two lines. Chrome sets the drop
+ * cap with `initial-letter`; Safari and Firefox float it.
+ */
+export const DropCap: Story = {
+  args: {
+    className: "drop-cap",
+    data: richText(
+      createParagraph([
+        createTextNode(`${SENTENCES[0]} `),
+        createTextNode("Most of them", TextFormat.Italic),
+        createTextNode(` ${SENTENCES[1]}`),
+      ] as never),
+      createParagraph(SENTENCES[2]),
+    ) as DefaultTypedEditorState,
+  },
+  play: async ({ canvasElement }) => {
+    const paragraph = canvasElement.querySelector(".drop-cap > p")
+    if (!paragraph) throw new Error("no opening paragraph")
+    const family = getComputedStyle(paragraph).fontFamily
+    // Every reader gets the same serif, never the system's.
+    await expect(family).not.toContain("ui-serif")
+
+    await document.fonts.ready
+    const faces = [...document.fonts].filter(
+      (face) =>
+        face.status === "loaded" && family.includes(face.family.replace(/^["']|["']$/g, "")),
+    )
+    // The regular face, and the italic the paragraph uses, both arrived and scaled up.
+    await expect(faces.map((face) => face.style).sort()).toEqual(
+      expect.arrayContaining(["italic", "normal"]),
+    )
+    // `sizeAdjust` is Chrome's and Firefox's, not yet in TypeScript's DOM types.
+    for (const face of faces) {
+      await expect((face as FontFace & { sizeAdjust?: string }).sizeAdjust).toBe("112%")
+    }
+  },
+}

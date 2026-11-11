@@ -4,11 +4,14 @@ import { writeFileSync } from "node:fs"
 
 import { articleSlug, slugsFromDescription } from "./showcase-pr"
 
-import { AUTHOR_ROLES, hasRole } from "@/access/roles"
+import { AUTHOR_ROLES, hasRole, type Role } from "@/access/roles"
 import type { User } from "@/payload-types"
 import { createStockMedia } from "@/endpoints/seed/media"
 import { type ShowcaseEntry, showcaseEntries } from "@/endpoints/seed/showcase"
 import type { File, Payload } from "payload"
+
+/** The author roles that may create an article already published. */
+const PUBLISHING_ROLES: Role[] = ["editor", "chief-editor"]
 
 const USAGE = `Usage: pnpm showcase <pr-number | staging | url> (<slug...> | --all) [--draft]
 
@@ -212,6 +215,13 @@ export async function main(
     throw new Error(
       `${email} must hold one of ${AUTHOR_ROLES.join(", ")} on ${origin} to be credited as ` +
         `author (has: ${user.roles?.join(", ")}).`,
+    )
+  }
+  // Only editors publish (`canCreateArticle`), so a writer's push would be refused part-way.
+  if (!draft && !hasRole(user, PUBLISHING_ROLES)) {
+    throw new Error(
+      `${email} must hold one of ${PUBLISHING_ROLES.join(", ")} on ${origin} to publish ` +
+        `articles there (has: ${user.roles?.join(", ")}). Give it the role, or pass --draft.`,
     )
   }
   const links = new Map<string, string>()

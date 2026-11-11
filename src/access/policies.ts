@@ -71,6 +71,23 @@ export const isCreatedByOrEditor: Access = ({ req: { user } }) => {
 }
 
 /**
+ * Editors and above may create an article in any state. A writer may create drafts only:
+ * publishing is an editor's call, on create as on update (`isDraftOrEditor`). A create
+ * that names no `_status` saves a draft.
+ */
+export const canCreateArticle: Access = ({ req: { user }, data }) => {
+  if (isEditor(user)) {
+    return true
+  }
+
+  if (!hasRoleOrAdmin(user, "writer")) {
+    return false
+  }
+
+  return data?._status !== "published"
+}
+
+/**
  * Editors and above may delete any article. A writer may delete an article they created
  * while it isn't live: taking a live article down is an editor's call.
  */

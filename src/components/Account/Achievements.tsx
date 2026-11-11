@@ -2,19 +2,22 @@
 
 import React, { useEffect, useState } from "react"
 
+import { BetaBadge } from "@/components/BetaBadge"
 import { Badge } from "@/components/ui/badge"
 import type { HeldAchievement, MyAchievements } from "@/plugins/achievements"
 
 export interface AchievementsProps {
   /** Payload's API route. */
   apiPath?: string
+  /** Achievements are still a beta: the heading says so. */
+  beta?: boolean
 }
 
 /**
  * The signed-in reader's achievements, from `/api/achievements/mine`. Renders nothing while
  * achievements are switched off (the endpoint answers 404) or the list can't load: it's extra.
  */
-export const Achievements: React.FC<AchievementsProps> = ({ apiPath = "/api" }) => {
+export const Achievements: React.FC<AchievementsProps> = ({ apiPath = "/api", beta }) => {
   const [held, setHeld] = useState<HeldAchievement[] | null>(null)
 
   useEffect(() => {
@@ -37,6 +40,7 @@ export const Achievements: React.FC<AchievementsProps> = ({ apiPath = "/api" }) 
     <section className="space-y-3" aria-labelledby="achievements-heading">
       <h2 id="achievements-heading" className="text-lg font-semibold">
         Achievements
+        {beta ? <BetaBadge /> : null}
       </h2>
       {held.length ? (
         <>

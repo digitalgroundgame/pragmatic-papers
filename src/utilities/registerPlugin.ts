@@ -22,6 +22,13 @@ export interface PluginManifest {
   switch?: PluginSwitch
 }
 
+/**
+ * Whether a plugin is still a beta: its switch starts off. System → Plugins badges it, and so do
+ * the parts of the site it adds (`BetaBadge`), until it graduates by flipping that default.
+ */
+export const isBeta = (manifest: Pick<PluginManifest, "switch">): boolean =>
+  manifest.switch?.defaultValue === false
+
 /** Whether a plugin is on here: a constant, or a switch asked when someone looks. */
 export type PluginEnabled = boolean | ((payload: Payload) => boolean | Promise<boolean>)
 

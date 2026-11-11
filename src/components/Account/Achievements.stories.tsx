@@ -59,6 +59,18 @@ export const Several: Story = {
   },
 }
 
+/** While achievements are a beta, their heading says so. */
+export const Beta: Story = {
+  args: { beta: true },
+  beforeEach: serve([earlyMember]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      await canvas.findByRole("heading", { name: "Achievements Beta" }),
+    ).toBeInTheDocument()
+  },
+}
+
 export const NoneYet: Story = {
   beforeEach: serve([]),
   play: async ({ canvasElement }) => {

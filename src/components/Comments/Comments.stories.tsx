@@ -72,6 +72,18 @@ export const SignedOut: Story = {
   },
 }
 
+/** While comments are a beta, their heading says so. */
+export const Beta: Story = {
+  args: { beta: true },
+  beforeEach: serve(commentThread()),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      await canvas.findByRole("heading", { name: "Comments (3) Beta" }),
+    ).toBeInTheDocument()
+  },
+}
+
 export const SignedIn: Story = {
   beforeEach: serve(signedIn()),
   play: async ({ canvasElement }) => {

@@ -242,9 +242,19 @@ describe("drawInteractiveMapSVG", () => {
     )
     // 10 units tall and as wide as its viewBox allows, against the right edge.
     expect(svg).toContain(
-      '<svg x="580.67" y="463" width="83.33" height="10" viewBox="0 0 100 12"><path d="M0 0H100V12H0Z"/></svg>',
+      '<svg x="580.67" y="463" width="83.33" height="10" viewBox="0 0 100 12" fill="#171717"><path d="M0 0H100V12H0Z"/></svg>',
     )
     expect(height(svg)).toBe(height(drawInteractiveMapSVG(drawing)) + 28)
+  })
+
+  it("keeps the logo's own ink, so it reads on a dark picture", () => {
+    const svg = drawInteractiveMapSVG({
+      ...drawing,
+      footer: { logo: LOGO.replace("#171717", "#fafafa") },
+    })
+    expect(svg).toMatch(
+      /<svg x="[^"]+" y="[^"]+" width="83.33" height="10" viewBox="0 0 100 12" fill="#fafafa">/,
+    )
   })
 
   it("gives a logo with no sources a row of its own, and skips a logo it can't size", () => {

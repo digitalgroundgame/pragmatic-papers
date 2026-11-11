@@ -21,7 +21,8 @@ export async function GET(req: NextRequest): Promise<Response> {
     return new Response("Insufficient search params", { status: 404 })
   }
 
-  if (!path.startsWith("/")) {
+  // "//host" and "/\\host" are addresses on another site to a browser, not paths on this one.
+  if (!path.startsWith("/") || path.startsWith("//") || path.startsWith("/\\")) {
     return new Response("This endpoint can only be used for relative previews", { status: 500 })
   }
 

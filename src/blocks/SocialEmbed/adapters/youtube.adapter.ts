@@ -81,7 +81,7 @@ class YouTubeAdapter extends SocialAdapter<YouTubeOEmbedOptions, YouTubeOEmbedRe
       },
       allowedSchemes: ["http", "https"],
       allowProtocolRelative: false,
-      // The player only: an iframe to anywhere else is dropped.
+      // The player only: an iframe to anywhere else loses its src.
       allowedIframeHostnames: ["www.youtube.com", "www.youtube-nocookie.com"],
       allowIframeRelativeUrls: false,
     })

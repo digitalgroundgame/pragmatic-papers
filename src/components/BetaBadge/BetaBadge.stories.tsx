@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, screen, userEvent, within } from "storybook/test"
+import { expect, screen, userEvent, waitFor, within } from "storybook/test"
 
 import { isolatedDocs } from "@/stories/isolatedDocs"
 
@@ -67,5 +67,22 @@ export const Focused: Story = {
     await userEvent.tab()
     await expect(within(canvasElement).getByRole("button", { name: "Beta feature" })).toHaveFocus()
     await expect(await screen.findByText(/still trying this out/)).toBeInTheDocument()
+  },
+}
+
+/** Touch screens have no hover: a tap opens the tooltip, and a tap anywhere else closes it. */
+export const Tapped: Story = {
+  render: () => (
+    <h2 className="p-4 pt-12">
+      Comments
+      <BetaBadge info="Comments are in beta: we're still trying them out, so they may change." />
+    </h2>
+  ),
+  play: async ({ canvasElement }) => {
+    const flask = within(canvasElement).getByRole("button", { name: "Beta feature" })
+    await userEvent.pointer({ keys: "[TouchA]", target: flask })
+    await expect(await screen.findByText(/Comments are in beta/)).toBeInTheDocument()
+    await userEvent.pointer({ keys: "[TouchA]", target: canvasElement })
+    await waitFor(() => expect(screen.queryByText(/Comments are in beta/)).not.toBeInTheDocument())
   },
 }

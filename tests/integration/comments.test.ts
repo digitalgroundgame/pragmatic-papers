@@ -232,6 +232,46 @@ describe("comments", () => {
     expect(seen.viewer).not.toHaveProperty("newcomer")
   })
 
+  it("keeps each commenter's first-commented time as comments are posted, hidden and restored", async () => {
+    const profile = reader()
+    const cookie = await signIn(profile)
+    const firstCommented = async () => (await userByEmail(profile.email)).firstCommentedAt ?? null
+
+    expect(await firstCommented()).toBeNull()
+    const { comment: first } = await posted(article, cookie, "First")
+    const stored = await firstCommented()
+    expect(stored).not.toBeNull()
+    expect(new Date(stored!).getTime()).toBe(new Date(first.createdAt).getTime())
+
+    const other = await createArticle({ authors: [] })
+    vi.useFakeTimers({ now: Date.now() + 60_000, toFake: ["Date"] })
+    const { comment: second } = await posted(other, cookie, "Second")
+    expect(await firstCommented()).toBe(stored)
+
+    // Hiding the first moves it to the second; restoring the first moves it back.
+    const hide = (status: "hidden" | "published") =>
+      payload.update({
+        collection: "comments",
+        id: first.id,
+        data: { status },
+        overrideAccess: true,
+      })
+    await hide("hidden")
+    expect(new Date((await firstCommented())!).getTime()).toBe(new Date(second.createdAt).getTime())
+    await hide("published")
+    expect(await firstCommented()).toBe(stored)
+
+    // Deleting the article takes its comments, and the time with them.
+    await payload.delete({
+      collection: "articles",
+      id: other.id,
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+    })
+    await payload.delete({ collection: "comments", id: first.id, overrideAccess: true })
+    expect(await firstCommented()).toBeNull()
+  })
+
   it("badges staff, who comment through their Payload login", async () => {
     const editor = await createUser("editor")
     const login = await api("/users/login", {

@@ -592,6 +592,10 @@ export interface User {
   avatarUrl?: string | null;
   ssoConnections?: boolean | null;
   /**
+   * When their earliest published comment was posted. Comments keep it up to date.
+   */
+  firstCommentedAt?: string | null;
+  /**
    * Give an achievement that's given by hand with Add new, or open one to revoke it. Verified isn't listed until it's revoked: add a row for it with Revoked ticked.
    */
   awards?: {
@@ -2407,6 +2411,7 @@ export interface UsersSelect<T extends boolean = true> {
   emailVerified?: T;
   avatarUrl?: T;
   ssoConnections?: T;
+  firstCommentedAt?: T;
   awards?: T;
   updatedAt?: T;
   createdAt?: T;

@@ -3,7 +3,7 @@ import type { CollectionSlug, Endpoint, PayloadHandler, PayloadRequest } from "p
 import { normalizeCommentBody } from "../body"
 import { COMMENTING_FIELD, commentingOf } from "../commenting"
 import { duplicateCheck, linkCheck, runChecks } from "../checks"
-import { COMMENTS_SLUG, VIOLATIONS_SLUG } from "../constants"
+import { COMMENTS_SLUG, FIRST_COMMENTED_FIELD, VIOLATIONS_SLUG } from "../constants"
 import { SKIP_MODERATION } from "../hooks/recordModeration"
 import { authorLock } from "../lock"
 import { describerFor, findFirstComments } from "../markers"
@@ -71,9 +71,9 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
         limit: THREAD_LIMIT,
         depth: 1,
         populate: {
-          // `createdAt` too, for the New member mark.
+          // `createdAt` and the first-commented time too, for the marks that come and go.
           [config.authorsSlug]: Object.fromEntries(
-            [...config.authorFields, "createdAt"].map((f) => [f, true]),
+            [...config.authorFields, "createdAt", FIRST_COMMENTED_FIELD].map((f) => [f, true]),
           ),
         },
         select: {
@@ -96,25 +96,17 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
     if (!target || commenting === "off") return notFound()
 
     const stored = (found.docs as unknown as StoredComment[]).reverse()
-    const [firstComments, describe] = await Promise.all([
-      findFirstComments(stored, req),
-      describerFor(
-        config,
-        [
-          ...stored.flatMap((comment) =>
-            comment.author && typeof comment.author === "object" ? [comment.author] : [],
-          ),
-          ...(author ? [author] : []),
-        ],
-        req,
-        id,
-        stored.flatMap((comment) =>
-          comment.status === "published" && comment.author && typeof comment.author === "object"
-            ? [comment.author.id]
-            : [],
+    const describe = await describerFor(
+      config,
+      [
+        ...stored.flatMap((comment) =>
+          comment.author && typeof comment.author === "object" ? [comment.author] : [],
         ),
-      ),
-    ])
+        ...(author ? [author] : []),
+      ],
+      req,
+      id,
+    )
 
     let viewer: CommentViewer | null = null
     if (author) {
@@ -127,7 +119,7 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
 
     const thread: CommentThread = {
       // Oldest first, as readers read them.
-      comments: buildThread(stored, author?.id ?? null, describe, firstComments),
+      comments: buildThread(stored, author?.id ?? null, describe, findFirstComments(stored)),
       viewer,
       providers: viewer ? [] : config.signInProviders(),
       maxDepth: settings.maxDepth,
@@ -279,12 +271,20 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       })
     }
 
-    const posted = { ...created, author }
-    const [describe, firstComments] = await Promise.all([
-      describerFor(config, [author], req, id, check.ok ? [author.id] : []),
-      findFirstComments([posted], req),
-    ])
-    const [comment] = buildThread([posted], author.id, describe, firstComments) as [PublicComment]
+    // The comment's hook has just kept the author's first-commented time; `author` was read
+    // before it, so a first comment brings its own.
+    const posted = {
+      ...created,
+      author: {
+        ...author,
+        [FIRST_COMMENTED_FIELD]:
+          author[FIRST_COMMENTED_FIELD] ?? (check.ok ? created.createdAt : null),
+      },
+    }
+    const describe = await describerFor(config, [posted.author], req, id)
+    const [comment] = buildThread([posted], author.id, describe, findFirstComments([posted])) as [
+      PublicComment,
+    ]
     return Response.json(
       { comment, ...(!check.ok && { held: check.reason }) },
       { status: 201, headers: noStore },

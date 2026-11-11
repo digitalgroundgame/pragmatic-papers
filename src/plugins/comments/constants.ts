@@ -17,3 +17,10 @@ export const COMMENT_STATUSES = ["published", "auto-hidden", "hidden", "deleted"
 
 /** Where a violation came from. */
 export const VIOLATION_SOURCES = ["check", "moderator", "block"] as const
+
+/**
+ * The field the plugin adds to the authors collection: when the author's earliest published
+ * comment was posted, or empty while they have none. The First comment and New commenter
+ * marks read it, so a thread asks nothing more of the database for them.
+ */
+export const FIRST_COMMENTED_FIELD = "firstCommentedAt"

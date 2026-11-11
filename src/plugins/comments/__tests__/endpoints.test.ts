@@ -1,7 +1,13 @@
-import type { PayloadRequest, Where } from "payload"
+import type { PayloadRequest } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { COMMENTS_SLUG, DEFAULT_SETTINGS, SETTINGS_SLUG, VIOLATIONS_SLUG } from "../constants"
+import {
+  COMMENTS_SLUG,
+  DEFAULT_SETTINGS,
+  FIRST_COMMENTED_FIELD,
+  SETTINGS_SLUG,
+  VIOLATIONS_SLUG,
+} from "../constants"
 import { THREAD_LIMIT, threadEndpoints } from "../endpoints/thread"
 import { isCakeDay } from "../markers"
 import { SKIP_MODERATION } from "../hooks/recordModeration"
@@ -54,19 +60,6 @@ let db: {
   target: unknown
   parent: unknown
   recent: number
-  /** Published comments each author made before the New commenter window, by author ID. */
-  earlier: Record<string, number>
-  /** Published comments each author made before their earliest one in the thread, by author ID. */
-  before: Record<string, number>
-}
-
-/** The author and time of each clause in a `findDistinct` query's `or`. */
-function beforeClauses(where: Where): { author: string; time: string }[] {
-  const or = ((where.and as Where[])[1]!.or ?? []) as Where[]
-  return or.map((clause) => {
-    const [author, createdAt] = clause.and as Record<string, Record<string, unknown>>[]
-    return { author: String(author!.author!.equals), time: String(createdAt!.createdAt!.less_than) }
-  })
 }
 
 const payload = {
@@ -80,17 +73,9 @@ const payload = {
   ),
   // The cooldown counts recent comments.
   count: vi.fn(async () => ({ totalDocs: db.recent })),
-  // The New commenter and First comment marks ask, in one query each, which authors published
-  // a comment before a time: the window's start (within the last weeks), or a comment's.
-  findDistinct: vi.fn(async ({ where }: { where: Where }) => ({
-    values: beforeClauses(where).flatMap(({ author, time }) => {
-      const inWindow = Date.parse(time) > Date.now() - 8 * DAY_MS
-      return ((inWindow ? db.earlier[author] : db.before[author]) ?? 0) > 0 ? [{ author }] : []
-    }),
-  })),
   create: vi.fn(async ({ collection, data }: { collection: string; data: object }) => ({
     id: collection === COMMENTS_SLUG ? 99 : 1,
-    createdAt: "2026-10-13T12:00:00.000Z",
+    createdAt: new Date().toISOString(),
     ...data,
   })),
 }
@@ -125,8 +110,6 @@ beforeEach(() => {
     target: { id: 5 },
     parent: null,
     recent: 0,
-    earlier: {},
-    before: {},
   }
 })
 
@@ -171,7 +154,7 @@ describe("GET /thread/:id", () => {
         where: { target: { equals: 5 } },
         sort: "-createdAt",
         limit: THREAD_LIMIT,
-        populate: { users: { name: true, createdAt: true } },
+        populate: { users: { name: true, createdAt: true, [FIRST_COMMENTED_FIELD]: true } },
       }),
     )
   })
@@ -272,14 +255,14 @@ describe("badges from outside the plugin", () => {
 })
 
 describe("new commenters", () => {
-  const grace = { id: 8, name: "Grace" }
+  const ago = (days: number) => new Date(Date.now() - days * DAY_MS).toISOString()
   const comment = (id: number, author: object, status = "published") => ({
     id,
     body: "Hi",
     status,
     depth: 0,
     parent: null,
-    createdAt: `2026-10-13T1${id}:00:00.000Z`,
+    createdAt: ago(id),
     author,
   })
   const marks = (body: Record<string, unknown>) =>
@@ -288,55 +271,58 @@ describe("new commenters", () => {
       c.author?.newcomer,
     ])
 
-  it("marks every comment of an author with nothing published before the window", async () => {
+  it("marks every comment of an author whose first comment is within the window", async () => {
+    const newAda = { ...ada, [FIRST_COMMENTED_FIELD]: ago(3) }
+    const grace = { id: 8, name: "Grace", [FIRST_COMMENTED_FIELD]: ago(40) }
     // Newest first, as the database answers.
-    db.comments = [comment(3, ada), comment(2, grace), comment(1, ada)]
-    db.earlier = { "8": 4 }
+    db.comments = [comment(1, newAda), comment(2, grace), comment(3, newAda)]
+    currentUser.mockResolvedValue(newAda)
 
     const body = await json(await call(get))
 
     expect(marks(body)).toEqual([
-      [1, true],
-      [2, undefined],
       [3, true],
+      [2, undefined],
+      [1, true],
     ])
     expect(body.viewer).toMatchObject({ newcomer: true })
-    // One query for every author: who published before the last 7 days.
-    const windowQueries = payload.findDistinct.mock.calls
-      .map(([args]) => beforeClauses(args.where))
-      .filter(([clause]) => Date.parse(clause!.time) > Date.now() - 8 * DAY_MS)
-    expect(windowQueries).toHaveLength(1)
-    expect(windowQueries[0]!.map(({ author }) => author).sort()).toEqual(["7", "8"])
-    const cutoff = Date.parse(windowQueries[0]![0]!.time)
-    expect(Date.now() - cutoff).toBeCloseTo(7 * DAY_MS, -4)
-    expect(payload.findDistinct.mock.calls[0]![0]).toMatchObject({
-      field: "author",
-      where: { and: [{ status: { equals: "published" } }, expect.anything()] },
-    })
+    // Read from the authors' records, with nothing more asked of the database.
+    expect(payload.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        populate: { users: { name: true, createdAt: true, [FIRST_COMMENTED_FIELD]: true } },
+      }),
+    )
+    expect(payload.count).not.toHaveBeenCalled()
   })
 
-  it("doesn't mark an author whose only comments are held", async () => {
+  it("doesn't mark an author who has never had a comment published", async () => {
+    const grace = { id: 8, name: "Grace", [FIRST_COMMENTED_FIELD]: null }
     db.comments = [comment(1, grace, "auto-hidden")]
     currentUser.mockResolvedValue(grace)
 
     const body = await json(await call(get))
 
     expect(marks(body)).toEqual([[1, undefined]])
-    expect(payload.findDistinct).not.toHaveBeenCalled()
+    expect(body.viewer).not.toHaveProperty("newcomer")
   })
 
-  it("marks a reader's comment as soon as they post their first", async () => {
+  it("marks a reader's comment as soon as they post their first, and not once it's held", async () => {
     const first = await json(await call(post, { body: { body: "Hello" } }))
     expect((first.comment as { author: object }).author).toMatchObject({ newcomer: true })
 
-    db.earlier = { "7": 1 }
+    currentUser.mockResolvedValue({ ...ada, [FIRST_COMMENTED_FIELD]: ago(30) })
     const later = await json(await call(post, { body: { body: "Back again" } }))
     expect((later.comment as { author: object }).author).not.toHaveProperty("newcomer")
+
+    currentUser.mockResolvedValue(ada)
+    extraCheck.mockResolvedValue({ ok: false, reason: "Spam" })
+    const held = await json(await call(post, { body: { body: "Buy now" } }))
+    expect((held.comment as { author: object }).author).not.toHaveProperty("newcomer")
   })
 
   it("marks nobody when the window is 0 days", async () => {
     const [off] = threadEndpoints({ ...config, newCommenterDays: 0 })
-    db.comments = [comment(1, ada)]
+    db.comments = [comment(1, { ...ada, [FIRST_COMMENTED_FIELD]: ago(1) })]
 
     const response = await off!.handler({
       payload,
@@ -349,22 +335,23 @@ describe("new commenters", () => {
 })
 
 describe("first comments", () => {
-  const grace = { id: 8, name: "Grace" }
+  const at = (hour: number) => `2026-10-13T1${hour}:00:00.000Z`
   const comment = (id: number, author: object, status = "published") => ({
     id,
     body: "Hi",
     status,
     depth: 0,
     parent: null,
-    createdAt: `2026-10-13T1${id}:00:00.000Z`,
+    createdAt: at(id),
     author,
   })
   const firsts = (body: Record<string, unknown>) =>
     (body.comments as { id: number; firstComment?: true }[]).map((c) => [c.id, c.firstComment])
 
-  it("marks each author's earliest comment here when they published nothing before it", async () => {
-    db.comments = [comment(3, ada), comment(2, grace), comment(1, ada)]
-    db.before = { "8": 4 }
+  it("marks the comment posted when its author's first-commented time says", async () => {
+    const first = { ...ada, [FIRST_COMMENTED_FIELD]: at(1) }
+    const grace = { id: 8, name: "Grace", [FIRST_COMMENTED_FIELD]: "2026-09-01T00:00:00.000Z" }
+    db.comments = [comment(3, first), comment(2, grace), comment(1, first)]
 
     const body = await json(await call(get))
 
@@ -373,34 +360,22 @@ describe("first comments", () => {
       [2, undefined],
       [3, undefined],
     ])
-    // One query for both authors, each asked about the time of their earliest comment here.
-    const firstQueries = payload.findDistinct.mock.calls
-      .map(([args]) => beforeClauses(args.where))
-      .filter(([clause]) => clause!.time.startsWith("2026-10-13"))
-    expect(firstQueries).toEqual([
-      expect.arrayContaining([
-        { author: "7", time: "2026-10-13T11:00:00.000Z" },
-        { author: "8", time: "2026-10-13T12:00:00.000Z" },
-      ]),
-    ])
   })
 
   it("doesn't count a held comment as anyone's first", async () => {
-    db.comments = [comment(2, ada), comment(1, ada, "auto-hidden")]
+    const first = { ...ada, [FIRST_COMMENTED_FIELD]: at(1) }
+    db.comments = [comment(1, first, "auto-hidden")]
 
     const body = await json(await call(get))
 
-    expect(firsts(body)).toEqual([
-      [1, undefined],
-      [2, true],
-    ])
+    expect(firsts(body)).toEqual([[1, undefined]])
   })
 
   it("marks a reader's first comment as soon as they post it, and not a later one", async () => {
     const first = await json(await call(post, { body: { body: "Hello" } }))
     expect(first.comment).toMatchObject({ firstComment: true })
 
-    db.before = { "7": 1 }
+    currentUser.mockResolvedValue({ ...ada, [FIRST_COMMENTED_FIELD]: at(0) })
     const later = await json(await call(post, { body: { body: "Hello again" } }))
     expect(later.comment).not.toHaveProperty("firstComment")
   })

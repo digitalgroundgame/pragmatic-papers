@@ -484,8 +484,10 @@ or member, and staff get a badge.
   author's first published comment (`PublicComment.firstComment`), New commenter for
   `newCommenterDays` (7) after it (`AuthorDisplay.newcomer`), New member for `newMemberDays`
   (30) after the account's `createdAt` (`newMember`), and Cake day on its anniversary
-  (`cakeDay`, UTC). The first two are one `findDistinct` query each per thread read, however
-  many people comment.
+  (`cakeDay`, UTC). All four read the author's record, so a thread read asks nothing more: the
+  first two read `firstCommentedAt`, a read-only field the plugin adds to users and keeps at
+  their earliest published comment's time (`hooks/firstCommented.ts`, run whenever a comment
+  is posted, published, hidden or deleted).
 - Deleting an article deletes its comments. Deleting a comment deletes its replies. Deleting a
   user empties their comments (status `deleted`, no author) so others' replies keep their place.
 - `tests/integration/comments.test.ts` signs readers up with Discord stubbed, and posts.

@@ -21,6 +21,13 @@ describe("ssoOptions", () => {
     expect(await enabled(payloadWith({ sso: false }))).toBe(false)
   })
 
+  it("says a user has a picture of their own only when they have a profile image", async () => {
+    const withImage = (profileImage: number | null) =>
+      ({ findByID: vi.fn(async () => ({ id: 3, profileImage })) }) as unknown as Payload
+    expect(await ssoOptions.hasPicture?.({ payload: withImage(8), userId: "3" })).toBe(true)
+    expect(await ssoOptions.hasPicture?.({ payload: withImage(null), userId: "3" })).toBe(false)
+  })
+
   it("makes only staff Payload's user", () => {
     expect(ssoOptions.isPayloadUser?.({ roles: ["editor"] })).toBe(true)
     expect(ssoOptions.isPayloadUser?.({ roles: ["member"] })).toBe(false)

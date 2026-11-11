@@ -1,8 +1,9 @@
-import type { PayloadRequest } from "payload"
+import type { PayloadRequest, Where } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { COMMENTS_SLUG, DEFAULT_SETTINGS, SETTINGS_SLUG, VIOLATIONS_SLUG } from "../constants"
-import { isCakeDay, THREAD_LIMIT, threadEndpoints } from "../endpoints/thread"
+import { THREAD_LIMIT, threadEndpoints } from "../endpoints/thread"
+import { isCakeDay } from "../markers"
 import { SKIP_MODERATION } from "../hooks/recordModeration"
 import type { BadgeInfo, ResolvedCommentsConfig } from "../types"
 
@@ -59,6 +60,15 @@ let db: {
   before: Record<string, number>
 }
 
+/** The author and time of each clause in a `findDistinct` query's `or`. */
+function beforeClauses(where: Where): { author: string; time: string }[] {
+  const or = ((where.and as Where[])[1]!.or ?? []) as Where[]
+  return or.map((clause) => {
+    const [author, createdAt] = clause.and as Record<string, Record<string, unknown>>[]
+    return { author: String(author!.author!.equals), time: String(createdAt!.createdAt!.less_than) }
+  })
+}
+
 const payload = {
   db: { defaultIDType: "number" },
   find: vi.fn(async ({ collection }: { collection: string }) => ({
@@ -68,14 +78,16 @@ const payload = {
   findByID: vi.fn(async ({ collection }: { collection: string }) =>
     collection === COMMENTS_SLUG ? db.parent : db.target,
   ),
-  // The cooldown counts recent comments. The New commenter and First comment marks count
-  // published ones before a time: the window's start (within the last weeks), or a comment's.
-  count: vi.fn(async ({ where }: { where: Record<string, Record<string, unknown>> }) => {
-    if (!where.status) return { totalDocs: db.recent }
-    const author = String(where.author!.equals)
-    const inWindow = Date.parse(String(where.createdAt!.less_than)) > Date.now() - 8 * DAY_MS
-    return { totalDocs: (inWindow ? db.earlier[author] : db.before[author]) ?? 0 }
-  }),
+  // The cooldown counts recent comments.
+  count: vi.fn(async () => ({ totalDocs: db.recent })),
+  // The New commenter and First comment marks ask, in one query each, which authors published
+  // a comment before a time: the window's start (within the last weeks), or a comment's.
+  findDistinct: vi.fn(async ({ where }: { where: Where }) => ({
+    values: beforeClauses(where).flatMap(({ author, time }) => {
+      const inWindow = Date.parse(time) > Date.now() - 8 * DAY_MS
+      return ((inWindow ? db.earlier[author] : db.before[author]) ?? 0) > 0 ? [{ author }] : []
+    }),
+  })),
   create: vi.fn(async ({ collection, data }: { collection: string; data: object }) => ({
     id: collection === COMMENTS_SLUG ? 99 : 1,
     createdAt: "2026-10-13T12:00:00.000Z",
@@ -289,16 +301,17 @@ describe("new commenters", () => {
       [3, true],
     ])
     expect(body.viewer).toMatchObject({ newcomer: true })
-    // One count per author: their published comments from before the last 7 days.
-    const windowCounts = payload.count.mock.calls
-      .map(([args]) => args.where)
-      .filter((where) => Date.parse(String(where.createdAt!.less_than)) > Date.now() - 8 * DAY_MS)
-    expect(windowCounts).toHaveLength(2)
-    const cutoff = Date.parse(String(windowCounts[0]!.createdAt!.less_than))
+    // One query for every author: who published before the last 7 days.
+    const windowQueries = payload.findDistinct.mock.calls
+      .map(([args]) => beforeClauses(args.where))
+      .filter(([clause]) => Date.parse(clause!.time) > Date.now() - 8 * DAY_MS)
+    expect(windowQueries).toHaveLength(1)
+    expect(windowQueries[0]!.map(({ author }) => author).sort()).toEqual(["7", "8"])
+    const cutoff = Date.parse(windowQueries[0]![0]!.time)
     expect(Date.now() - cutoff).toBeCloseTo(7 * DAY_MS, -4)
-    expect(windowCounts[0]).toMatchObject({
-      author: { equals: "7" },
-      status: { equals: "published" },
+    expect(payload.findDistinct.mock.calls[0]![0]).toMatchObject({
+      field: "author",
+      where: { and: [{ status: { equals: "published" } }, expect.anything()] },
     })
   })
 
@@ -309,7 +322,7 @@ describe("new commenters", () => {
     const body = await json(await call(get))
 
     expect(marks(body)).toEqual([[1, undefined]])
-    expect(payload.count).not.toHaveBeenCalled()
+    expect(payload.findDistinct).not.toHaveBeenCalled()
   })
 
   it("marks a reader's comment as soon as they post their first", async () => {
@@ -360,11 +373,16 @@ describe("first comments", () => {
       [2, undefined],
       [3, undefined],
     ])
-    expect(payload.count.mock.calls.map(([args]) => args.where)).toContainEqual({
-      author: { equals: "7" },
-      status: { equals: "published" },
-      createdAt: { less_than: "2026-10-13T11:00:00.000Z" },
-    })
+    // One query for both authors, each asked about the time of their earliest comment here.
+    const firstQueries = payload.findDistinct.mock.calls
+      .map(([args]) => beforeClauses(args.where))
+      .filter(([clause]) => clause!.time.startsWith("2026-10-13"))
+    expect(firstQueries).toEqual([
+      expect.arrayContaining([
+        { author: "7", time: "2026-10-13T11:00:00.000Z" },
+        { author: "8", time: "2026-10-13T12:00:00.000Z" },
+      ]),
+    ])
   })
 
   it("doesn't count a held comment as anyone's first", async () => {

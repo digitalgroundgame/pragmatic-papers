@@ -480,11 +480,12 @@ or member, and staff get a badge.
 - **Violations** (`comment-violations`) lock commenting once the settings' threshold is active
   within its window, until enough age out or are reversed (`lockFor`); a `block` locks until
   it's reversed.
-- **Markers that come and go** sit beside the badge: First comment on an author's first
-  published comment (`PublicComment.firstComment`), New commenter for `newCommenterDays` (7)
-  after it (`AuthorDisplay.newcomer`), each one count per author shown, and New member for
-  `newMemberDays` (30) after the account's `createdAt` (`newMember`), and Cake day on its
-  anniversary (`cakeDay`, UTC).
+- **Markers that come and go** sit beside the badge (`markers.ts`): First comment on an
+  author's first published comment (`PublicComment.firstComment`), New commenter for
+  `newCommenterDays` (7) after it (`AuthorDisplay.newcomer`), New member for `newMemberDays`
+  (30) after the account's `createdAt` (`newMember`), and Cake day on its anniversary
+  (`cakeDay`, UTC). The first two are one `findDistinct` query each per thread read, however
+  many people comment.
 - Deleting an article deletes its comments. Deleting a comment deletes its replies. Deleting a
   user empties their comments (status `deleted`, no author) so others' replies keep their place.
 - `tests/integration/comments.test.ts` signs readers up with Discord stubbed, and posts.

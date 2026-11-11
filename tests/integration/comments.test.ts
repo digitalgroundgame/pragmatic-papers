@@ -205,6 +205,33 @@ describe("comments", () => {
     expect(own.comments.find((c) => c.id === comment.id)).toMatchObject({ firstComment: true })
   })
 
+  it("marks neither First comment nor New commenter for someone who commented weeks ago", async () => {
+    const profile = reader()
+    const cookie = await signIn(profile)
+    const user = await userByEmail(profile.email)
+    // Their earlier comment, on another article, from a month ago.
+    await payload.create({
+      collection: "comments",
+      data: {
+        body: "Long ago",
+        target: article.id,
+        author: user.id,
+        depth: 0,
+        status: "published",
+        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      overrideAccess: true,
+    })
+    const other = await createArticle({ authors: [] })
+    const { comment } = await posted(other, cookie, "Back again")
+    expect(comment).not.toHaveProperty("firstComment")
+    expect(comment.author).not.toHaveProperty("newcomer")
+
+    const seen = await thread(other, cookie)
+    expect(seen.comments.find((c) => c.id === comment.id)).not.toHaveProperty("firstComment")
+    expect(seen.viewer).not.toHaveProperty("newcomer")
+  })
+
   it("badges staff, who comment through their Payload login", async () => {
     const editor = await createUser("editor")
     const login = await api("/users/login", {

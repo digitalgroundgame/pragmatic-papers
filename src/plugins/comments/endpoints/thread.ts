@@ -6,17 +6,10 @@ import { duplicateCheck, linkCheck, runChecks } from "../checks"
 import { COMMENTS_SLUG, VIOLATIONS_SLUG } from "../constants"
 import { SKIP_MODERATION } from "../hooks/recordModeration"
 import { authorLock } from "../lock"
+import { describerFor, findFirstComments } from "../markers"
 import { readSettings } from "../settings"
 import { buildThread, type StoredComment } from "../thread"
-import type {
-  AuthorDisplay,
-  BadgeInfo,
-  CommentAuthor,
-  CommentThread,
-  CommentViewer,
-  PublicComment,
-  ResolvedCommentsConfig,
-} from "../types"
+import type { CommentThread, CommentViewer, PublicComment, ResolvedCommentsConfig } from "../types"
 
 /** The most comments one thread reads: the newest, so a new comment always shows. */
 export const THREAD_LIMIT = 500
@@ -32,131 +25,6 @@ function parseId(req: PayloadRequest, raw: unknown): number | string | null {
   if (req.payload.db.defaultIDType !== "number") return raw
   const id = Number(raw)
   return Number.isSafeInteger(id) && id > 0 ? id : null
-}
-
-const DAY_MS = 24 * 60 * 60 * 1000
-
-/**
- * Which of these authors are new commenters: their first published comment is within the last
- * `newCommenterDays`, so none of theirs is older. Pass only authors with a published comment.
- * One count per author.
- */
-export async function newCommenters(
-  config: ResolvedCommentsConfig,
-  authorIds: (number | string)[],
-  req: PayloadRequest,
-): Promise<Set<string>> {
-  if (config.newCommenterDays <= 0) return new Set()
-  const cutoff = new Date(Date.now() - config.newCommenterDays * DAY_MS).toISOString()
-  const ids = [...new Set(authorIds.map(String))]
-  const found = await Promise.all(
-    ids.map(async (id) => {
-      const older = await req.payload.count({
-        collection: COMMENTS_SLUG as CollectionSlug,
-        where: {
-          author: { equals: id },
-          status: { equals: "published" },
-          createdAt: { less_than: cutoff },
-        },
-        overrideAccess: true,
-        req,
-      })
-      return older.totalDocs === 0 ? id : null
-    }),
-  )
-  return new Set(found.filter((id): id is string => id !== null))
-}
-
-/**
- * Which of these comments (oldest first) is its author's first published comment on the site:
- * each author's earliest published one here, when they published nothing anywhere before it.
- * One count per author shown.
- */
-export async function findFirstComments(
-  stored: StoredComment[],
-  req: PayloadRequest,
-): Promise<Set<string>> {
-  const earliest = new Map<string, StoredComment>()
-  for (const comment of stored) {
-    if (comment.status !== "published" || !comment.author) continue
-    const authorId = String(typeof comment.author === "object" ? comment.author.id : comment.author)
-    if (!earliest.has(authorId)) earliest.set(authorId, comment)
-  }
-  const firsts = await Promise.all(
-    [...earliest].map(async ([authorId, comment]) => {
-      const before = await req.payload.count({
-        collection: COMMENTS_SLUG as CollectionSlug,
-        where: {
-          author: { equals: authorId },
-          status: { equals: "published" },
-          createdAt: { less_than: comment.createdAt },
-        },
-        overrideAccess: true,
-        req,
-      })
-      return before.totalDocs === 0 ? String(comment.id) : null
-    }),
-  )
-  return new Set(firsts.filter((id): id is string => id !== null))
-}
-
-/** Whether an account made at `createdAt` is within its first `days`. */
-function isNewMember(createdAt: unknown, days: number): boolean {
-  if (days <= 0 || (typeof createdAt !== "string" && !(createdAt instanceof Date))) return false
-  const made = new Date(createdAt).getTime()
-  return !Number.isNaN(made) && Date.now() - made < days * DAY_MS
-}
-
-/**
- * Whether `now` falls on an anniversary of `createdAt`, by the UTC calendar, from a year on.
- * An account made on 29 February has its cake day on the 28th in other years.
- */
-export function isCakeDay(createdAt: unknown, now: Date = new Date()): boolean {
-  if (typeof createdAt !== "string" && !(createdAt instanceof Date)) return false
-  const made = new Date(createdAt)
-  if (Number.isNaN(made.getTime()) || now.getUTCFullYear() <= made.getUTCFullYear()) return false
-  const year = now.getUTCFullYear()
-  const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
-  const month = made.getUTCMonth()
-  const day = month === 1 && made.getUTCDate() === 29 && !leap ? 28 : made.getUTCDate()
-  return now.getUTCMonth() === month && now.getUTCDate() === day
-}
-
-/**
- * `describeAuthor`, with the badges `authorBadges` gives these authors, the writer mark for
- * `targetWriters`, and the New commenter mark for those of `commenters` (authors with a
- * published comment) who are new, each asked once, New member for a new account, and Cake day
- * on its anniversary. A badge `describeAuthor` gives itself (like
- * a staff role) wins.
- */
-export async function describerFor(
-  config: ResolvedCommentsConfig,
-  authors: CommentAuthor[],
-  req: PayloadRequest,
-  targetId: number | string,
-  commenters: (number | string)[] = [],
-): Promise<(author: CommentAuthor) => AuthorDisplay> {
-  const [badges, writers, newcomers] = authors.length
-    ? await Promise.all([
-        config.authorBadges(authors, req),
-        config.targetWriters(targetId, req),
-        newCommenters(config, commenters, req),
-      ])
-    : [new Map<string, BadgeInfo>(), [], new Set<string>()]
-  const writerIds = new Set(writers.map(String))
-  return (author) => {
-    const display = config.describeAuthor(author)
-    const described = display.badge
-      ? display
-      : { ...display, badge: badges.get(String(author.id)) ?? null }
-    return {
-      ...described,
-      ...(writerIds.has(String(author.id)) && { writer: true as const }),
-      ...(newcomers.has(String(author.id)) && { newcomer: true as const }),
-      ...(isNewMember(author.createdAt, config.newMemberDays) && { newMember: true as const }),
-      ...(isCakeDay(author.createdAt) && { cakeDay: true as const }),
-    }
-  }
 }
 
 /** Whether a cross-site page sent this. A browser always names the page's origin on a POST. */
@@ -228,23 +96,25 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
     if (!target || commenting === "off") return notFound()
 
     const stored = (found.docs as unknown as StoredComment[]).reverse()
-    const firstComments = await findFirstComments(stored, req)
-    const describe = await describerFor(
-      config,
-      [
-        ...stored.flatMap((comment) =>
-          comment.author && typeof comment.author === "object" ? [comment.author] : [],
+    const [firstComments, describe] = await Promise.all([
+      findFirstComments(stored, req),
+      describerFor(
+        config,
+        [
+          ...stored.flatMap((comment) =>
+            comment.author && typeof comment.author === "object" ? [comment.author] : [],
+          ),
+          ...(author ? [author] : []),
+        ],
+        req,
+        id,
+        stored.flatMap((comment) =>
+          comment.status === "published" && comment.author && typeof comment.author === "object"
+            ? [comment.author.id]
+            : [],
         ),
-        ...(author ? [author] : []),
-      ],
-      req,
-      id,
-      stored.flatMap((comment) =>
-        comment.status === "published" && comment.author && typeof comment.author === "object"
-          ? [comment.author.id]
-          : [],
       ),
-    )
+    ])
 
     let viewer: CommentViewer | null = null
     if (author) {
@@ -409,14 +279,12 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       })
     }
 
-    const describe = await describerFor(config, [author], req, id, check.ok ? [author.id] : [])
     const posted = { ...created, author }
-    const [comment] = buildThread(
-      [posted],
-      author.id,
-      describe,
-      await findFirstComments([posted], req),
-    ) as [PublicComment]
+    const [describe, firstComments] = await Promise.all([
+      describerFor(config, [author], req, id, check.ok ? [author.id] : []),
+      findFirstComments([posted], req),
+    ])
+    const [comment] = buildThread([posted], author.id, describe, firstComments) as [PublicComment]
     return Response.json(
       { comment, ...(!check.ok && { held: check.reason }) },
       { status: 201, headers: noStore },

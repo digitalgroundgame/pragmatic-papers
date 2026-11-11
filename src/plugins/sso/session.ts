@@ -37,6 +37,30 @@ export function hasSessionCookie(headers: Headers, cookieName: string): boolean 
 }
 
 /**
+ * Whether a request comes from an origin allowed to act as the signed-in user: Payload's rule
+ * for its login cookie (`extractJWT`), applied to the SSO session's, plus page loads. A
+ * browser names the page's origin on every cross-origin request and every write; one that
+ * names an origin outside `config.csrf` is refused. Without an Origin, the browser's
+ * Sec-Fetch-Site has to say the request isn't cross-site, unless it is a top-level page load:
+ * the provider's redirect back after a sign-in is one, and so is a link into the admin from
+ * anywhere else. Those are the requests SameSite=Lax sends the cookie on, they can't write
+ * (a cross-site form post names its Origin), and the other site can't read the answer. An
+ * empty list allows everything, as it does for Payload.
+ */
+export function isAllowedOrigin(headers: Headers, allowed: readonly string[]): boolean {
+  if (allowed.length === 0) return true
+  const origin = headers.get("origin")
+  if (origin) return allowed.includes(origin)
+  const site = headers.get("sec-fetch-site")
+  if (site === "same-origin" || site === "same-site" || site === "none") return true
+  return (
+    site === "cross-site" &&
+    headers.get("sec-fetch-mode") === "navigate" &&
+    headers.get("sec-fetch-dest") === "document"
+  )
+}
+
+/**
  * The user a request's Better Auth session belongs to, whoever they are: staff or member.
  * Null without a session, or while single sign-on is off.
  */

@@ -51,6 +51,8 @@ describe("the login cookie", () => {
     "https://example.com",
   ])("is ignored on a request from %s", async (origin) => {
     expect(await whoIs({ origin })).toBeNull()
+    // What a browser sends from a sibling subdomain: Payload has to go by the Origin.
+    expect(await whoIs({ origin, "sec-fetch-site": "same-site" })).toBeNull()
   })
 
   it("is ignored on a cross-site request that names no origin", async () => {

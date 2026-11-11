@@ -439,6 +439,10 @@ plugin and the account page read too.
   cookie, and the SSO session's (`isAllowedOrigin` in `ssoStrategy`), sign nobody in on a
   request from another origin. Staging and PR previews are subdomains of the production site,
   which SameSite=Lax doesn't keep apart. The admin only works on `SERVER_URL`'s hostname.
+  A page opened from another site (a link in Slack or email, a provider's redirect back after
+  a sign-in) is a cross-site request too: the SSO session is still taken on a top-level page
+  load, and for Payload's cookie, which isn't, `ResumeSession` (`src/components/BeforeLogin`)
+  sends someone the login page finds signed in on to where they were headed.
 - `staffByDefault` (`src/plugins/staffByDefault.ts`, the last plugin) gives every access rule a
   collection or plugin leaves out to staff, where Payload's default is any logged-in user, so a
   forgotten rule can't reach members if one ever becomes `req.user`.

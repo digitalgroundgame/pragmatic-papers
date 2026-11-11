@@ -80,6 +80,22 @@ describe("isAllowedOrigin", () => {
     expect(allowed({ "sec-fetch-site": site })).toBe(expected)
   })
 
+  it("allows a cross-site page load, as a provider's redirect back after a sign-in is", () => {
+    const pageLoad = {
+      "sec-fetch-site": "cross-site",
+      "sec-fetch-mode": "navigate",
+      "sec-fetch-dest": "document",
+    }
+    expect(allowed(pageLoad)).toBe(true)
+    // Framed, or fetched: not a page the reader opened.
+    expect(allowed({ ...pageLoad, "sec-fetch-dest": "iframe" })).toBe(false)
+    expect(allowed({ ...pageLoad, "sec-fetch-mode": "no-cors", "sec-fetch-dest": "image" })).toBe(
+      false,
+    )
+    // A cross-site form post is a page load too, but it names its origin.
+    expect(allowed({ ...pageLoad, origin: "https://pr-12.pragmaticpapers.com" })).toBe(false)
+  })
+
   it("refuses a request that names neither", () => {
     expect(allowed({})).toBe(false)
   })

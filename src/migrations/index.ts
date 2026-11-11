@@ -72,6 +72,7 @@ import * as migration_20261110_063538_ticker_substack from "./20261110_063538_ti
 import * as migration_20261110_082331_ticker_substack_types from "./20261110_082331_ticker_substack_types"
 import * as migration_20261111_000420_article_content_updated_at from "./20261111_000420_article_content_updated_at"
 import * as migration_20261111_044629_achievements_key from "./20261111_044629_achievements_key"
+import * as migration_20261111_062705_article_commenting from "./20261111_062705_article_commenting"
 
 export const migrations = [
   {
@@ -443,5 +444,10 @@ export const migrations = [
     up: migration_20261111_044629_achievements_key.up,
     down: migration_20261111_044629_achievements_key.down,
     name: "20261111_044629_achievements_key",
+  },
+  {
+    up: migration_20261111_062705_article_commenting.up,
+    down: migration_20261111_062705_article_commenting.down,
+    name: "20261111_062705_article_commenting",
   },
 ]

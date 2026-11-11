@@ -2,6 +2,7 @@ import type { CollectionConfig } from "payload"
 
 import { isPluginOn, registerPlugin } from "@/utilities/registerPlugin"
 
+import { commentingField } from "./commenting"
 import { commentsCollection } from "./collections/Comments"
 import { violationsCollection } from "./collections/Violations"
 import { deleteAuthorsComments, deleteCommentsOnTarget } from "./hooks/deleteCommentsOn"
@@ -9,6 +10,7 @@ import { settingsGlobal } from "./settings"
 import type { CommentAuthor, CommentsPluginConfig, ResolvedCommentsConfig } from "./types"
 
 export { countLinks } from "./checks"
+export { commentingOf, COMMENTING, COMMENTING_FIELD, type Commenting } from "./commenting"
 export { lockFor } from "./lock"
 export type {
   AuthorDisplay,
@@ -85,7 +87,8 @@ export const commentsPlugin = registerPlugin<CommentsPluginConfig>({
     const collections = [
       ...(config.collections ?? []).map((existing): CollectionConfig => {
         if (existing.slug === comments.targetSlug) {
-          return withHook(existing, deleteCommentsOnTarget)
+          const target = withHook(existing, deleteCommentsOnTarget)
+          return { ...target, fields: [...target.fields, commentingField(comments)] }
         }
         if (existing.slug === comments.authorsSlug) {
           return withHook(existing, deleteAuthorsComments)

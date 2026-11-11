@@ -27,6 +27,7 @@ import { generateMeta } from "@/utilities/generateMeta"
 import { getPayloadClient } from "@/data/payload"
 import { PRERENDER_LIMIT } from "@/utilities/prerender"
 import { queryArticleBySlug, queryVolumesForArticles } from "@/data/queries"
+import { commentingOf } from "@/plugins/comments"
 import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 
@@ -93,7 +94,8 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
       // Preview stays on across pages, so it keeps comments wherever readers have them.
       draft ? isArticlePublished(article.id) : true,
     ])
-  const commentsEnabled = commentsSwitch && ssoSwitch
+  // Editors switch an article's comments off in its sidebar; locked ones still show, closed.
+  const commentsEnabled = commentsSwitch && ssoSwitch && commentingOf(article) !== "off"
   const showTableOfContents = tableOfContentsEnabled && article.showTableOfContents === true
 
   return (
@@ -126,7 +128,9 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                   <TableOfContents content={content} />
                 </ArticleSidebar>
               )}
-              <div className="mx-auto max-w-2xl space-y-3">
+              {/* `w-full min-w-0`: auto margins stop a flex item stretching, so without them a long
+                  code line would widen the column past a phone's screen. */}
+              <div className="mx-auto w-full max-w-2xl min-w-0 space-y-3">
                 <MathJaxProvider enableMathRendering={enableMathRendering}>
                   <RichText data={content} enableGutter={false} className="drop-cap" />
                 </MathJaxProvider>

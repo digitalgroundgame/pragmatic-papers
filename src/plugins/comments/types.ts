@@ -205,4 +205,6 @@ export interface CommentThread {
   maxLength: number
   /** Whether older comments were left out: a thread shows its newest `THREAD_LIMIT`. */
   truncated?: boolean
+  /** Locked: its comments stay readable, but it takes no new comments or replies. */
+  closed?: true
 }

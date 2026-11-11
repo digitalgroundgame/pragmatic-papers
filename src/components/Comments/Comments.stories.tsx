@@ -158,6 +158,18 @@ export const Locked: Story = {
   },
 }
 
+/** An article an editor locked: its comments stay, but nobody adds or replies to one. */
+export const Closed: Story = {
+  beforeEach: serve(signedIn({ closed: true })),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/zoning reform/)).toBeInTheDocument()
+    await expect(canvas.getByText("Comments are closed on this article.")).toBeInTheDocument()
+    await expect(canvas.queryByRole("button", { name: "Add a comment" })).not.toBeInTheDocument()
+    await expect(canvas.queryByRole("button", { name: "Reply" })).not.toBeInTheDocument()
+  },
+}
+
 export const Blocked: Story = {
   beforeEach: serve(signedIn({ viewer: { ...commentViewer, locked: { until: null } } })),
   play: async ({ canvasElement }) => {

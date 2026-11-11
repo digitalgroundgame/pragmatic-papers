@@ -1,6 +1,7 @@
 import type { CollectionSlug, Endpoint, PayloadHandler, PayloadRequest } from "payload"
 
 import { normalizeCommentBody } from "../body"
+import { COMMENTING_FIELD, commentingOf } from "../commenting"
 import { duplicateCheck, linkCheck, runChecks } from "../checks"
 import { COMMENTS_SLUG, VIOLATIONS_SLUG } from "../constants"
 import { SKIP_MODERATION } from "../hooks/recordModeration"
@@ -193,7 +194,7 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
         draft: false,
         overrideAccess: false,
         disableErrors: true,
-        select: {},
+        select: { [COMMENTING_FIELD]: true },
       }),
       req.payload.find({
         collection: COMMENTS_SLUG as CollectionSlug,
@@ -222,7 +223,9 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       readSettings(req.payload),
     ])
 
-    if (!target) return notFound()
+    // Comments switched off on this document show nothing, as if there were none.
+    const commenting = commentingOf(target)
+    if (!target || commenting === "off") return notFound()
 
     const stored = (found.docs as unknown as StoredComment[]).reverse()
     const firstComments = await findFirstComments(stored, req)
@@ -260,6 +263,7 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       maxDepth: settings.maxDepth,
       maxLength: config.maxLength,
       truncated: found.totalDocs > found.docs.length,
+      ...(commenting === "locked" && { closed: true as const }),
     }
     return Response.json(thread, { headers: noStore })
   }
@@ -306,9 +310,15 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       draft: false,
       overrideAccess: false,
       disableErrors: true,
-      select: {},
+      select: { [COMMENTING_FIELD]: true },
     })
-    if (!target) return notFound()
+    if (!target || commentingOf(target) === "off") return notFound()
+    if (commentingOf(target) === "locked") {
+      return Response.json(
+        { message: "Comments are closed on this article." },
+        { status: 403, headers: noStore },
+      )
+    }
 
     // A reply goes under a published comment on the same document, within the reply depth
     // the settings allow now. Replies already deeper than that stay where they are.

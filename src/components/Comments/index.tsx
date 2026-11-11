@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeftIcon } from "lucide-react"
+import { ArrowLeftIcon, LockIcon } from "lucide-react"
 import Link from "next/link"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
@@ -251,7 +251,7 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api",
 
   const reply: ReplyContext | null = thread
     ? {
-        canReply: Boolean(viewer && !viewer.locked && !viewer.needsVerifiedEmail),
+        canReply: Boolean(viewer && !thread.closed && !viewer.locked && !viewer.needsVerifiedEmail),
         maxDepth: thread.maxDepth,
         maxLength: thread.maxLength,
         threadURL,
@@ -310,7 +310,12 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api",
         </p>
       ) : (
         <>
-          {viewer ? (
+          {thread.closed ? (
+            <p className="text-muted-foreground text-sm" role="status">
+              <LockIcon aria-hidden="true" className="mr-1.5 inline size-4 align-[-0.125em]" />
+              Comments are closed on this article.
+            </p>
+          ) : viewer ? (
             <div className="flex items-start gap-3">
               <AccountMenu viewer={viewer} onSignOut={() => void signOut()} />
               <div className="min-w-0 flex-1 space-y-3">

@@ -181,6 +181,18 @@ describe("GET /thread/:id", () => {
     expect(body.providers).toEqual([])
     expect(body.maxDepth).toBe(2)
   })
+  it("marks a locked document's thread closed, and shows nothing on one with comments off", async () => {
+    db.target = { id: 5, commenting: "locked" }
+    const locked = await call(get)
+    expect(locked.status).toBe(200)
+    expect(await json(locked)).toMatchObject({ closed: true })
+
+    db.target = { id: 5, commenting: "off" }
+    expect((await call(get)).status).toBe(404)
+
+    db.target = { id: 5, commenting: "open" }
+    expect(await json(await call(get))).not.toHaveProperty("closed")
+  })
 })
 
 describe("badges from outside the plugin", () => {
@@ -550,6 +562,17 @@ describe("POST /thread/:id", () => {
     const refused = await send({ body: "Hi" })
     expect(refused.status).toBe(403)
     expect((await json(refused)).message).toMatch(/verified email/)
+  })
+
+  it("takes no comments or replies on a locked document, and none on one with comments off", async () => {
+    db.target = { id: 5, commenting: "locked" }
+    const locked = await send({ body: "Hi" })
+    expect(locked.status).toBe(403)
+    expect((await json(locked)).message).toBe("Comments are closed on this article.")
+
+    db.target = { id: 5, commenting: "off" }
+    expect((await send({ body: "Hi" })).status).toBe(404)
+    expect(payload.create).not.toHaveBeenCalled()
   })
 
   it("refuses an empty body, or one that isn't JSON", async () => {

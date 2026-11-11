@@ -426,6 +426,54 @@ describe("comments", () => {
     )
   })
 
+  it("lets editors lock an article's comments or switch them off, and nobody else", async () => {
+    const cookie = await signIn(reader())
+    const writer = await createUser("writer")
+    const editor = await createUser("editor")
+    const live = await createArticle({ authors: [writer.id] })
+    await posted(live, cookie, "Before the lock")
+    const setCommenting = (commenting: "open" | "locked" | "off") =>
+      payload.update({
+        collection: "articles",
+        id: live.id,
+        data: { commenting, _status: "published" },
+        user: editor,
+        overrideAccess: false,
+        context: { disableRevalidate: true },
+      })
+
+    // A credited writer can edit their draft, but its comments aren't theirs to close.
+    const draft = await createArticle({ authors: [writer.id], _status: "draft" })
+    const saved = await payload.update({
+      collection: "articles",
+      id: draft.id,
+      data: { commenting: "off" },
+      draft: true,
+      user: writer,
+      overrideAccess: false,
+      context: { disableRevalidate: true },
+    })
+    expect(saved.commenting).toBe("open")
+
+    await setCommenting("locked")
+    const closed = await thread(live, cookie)
+    expect(closed.closed).toBe(true)
+    expect(closed.comments.map((c) => c.body)).toEqual(["Before the lock"])
+    const refused = await post(live, cookie, "After the lock")
+    expect(refused.status).toBe(403)
+    expect(((await refused.json()) as { message: string }).message).toBe(
+      "Comments are closed on this article.",
+    )
+
+    await setCommenting("off")
+    expect((await api(`/comments/thread/${live.id}`)).status).toBe(404)
+    expect((await post(live, cookie, "Anyone there?")).status).toBe(404)
+
+    await setCommenting("open")
+    // Someone else, so the first reader's cooldown doesn't answer instead.
+    expect((await post(live, await signIn(reader()), "Open again")).status).toBe(201)
+  })
+
   it("empties a deleted account's comments, keeping replies to them", async () => {
     const a = reader()
     const aCookie = await signIn(a)

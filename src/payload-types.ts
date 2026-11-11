@@ -349,6 +349,10 @@ export interface Article {
    */
   substackUrl?: string | null;
   createdBy?: (number | null) | User;
+  /**
+   * Locked keeps its comments readable but closes them to new comments and replies. Off hides them. Readers see the change once it's published.
+   */
+  commenting?: ('open' | 'locked' | 'off') | null;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -1906,6 +1910,7 @@ export interface ArticlesSelect<T extends boolean = true> {
   syndicateToSubstack?: T;
   substackUrl?: T;
   createdBy?: T;
+  commenting?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;

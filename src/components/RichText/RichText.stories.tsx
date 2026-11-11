@@ -177,8 +177,8 @@ export const AnchoredHeadings: Story = {
       richText(
         createHeadingNode("Why the small races matter", "h2"),
         createParagraph(SENTENCES[0]!),
-      ),
-    ) as DefaultTypedEditorState,
+      ) as DefaultTypedEditorState,
+    ),
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)

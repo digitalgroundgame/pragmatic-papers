@@ -5,6 +5,7 @@ import type { InteractiveMapBlock as InteractiveMapBlockProps } from "@/payload-
 import { CMSLink } from "@/components/Link"
 import { Logo } from "@/components/Logo"
 import { cn } from "@/utilities/utils"
+import { DownloadMapButton } from "./download/MapDownload"
 import { Info, type Data } from "./Info"
 
 type SourcesProps = Pick<InteractiveMapBlockProps, "colorBias" | "sources"> & {
@@ -32,7 +33,10 @@ export function Sources({ sources, colorBias, notes, className }: SourcesProps):
         </p>
       )}
       <Info className="ml-auto" data={data} />
-      <Logo size="xs" />
+      <DownloadMapButton className="text-muted-foreground hover:text-foreground -mx-1.5" />
+      <span data-map-logo className="contents">
+        <Logo size="xs" />
+      </span>
     </div>
   )
 }

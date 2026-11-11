@@ -52,20 +52,23 @@ describe("GET /next/preview", () => {
     expect(redirect).toHaveBeenCalledWith("/articles/draft-article")
   })
 
-  it.each(["//example.com/articles/x", "/\\example.com", "https://example.com/"])(
-    "refuses a path that leads to another site: %s",
-    async (path) => {
-      auth.mockResolvedValue({ user: { id: 1 }, permissions: {}, responseHeaders: new Headers() })
-      const request = previewRequest()
-      request.nextUrl.searchParams.set("path", path)
+  it.each([
+    "//example.com/articles/x",
+    "/\\example.com",
+    "/\t/example.com",
+    "/\n/example.com",
+    "https://example.com/",
+  ])("refuses a path that leads to another site: %s", async (path) => {
+    auth.mockResolvedValue({ user: { id: 1 }, permissions: {}, responseHeaders: new Headers() })
+    const request = previewRequest()
+    request.nextUrl.searchParams.set("path", path)
 
-      const response = await GET(request)
+    const response = await GET(request)
 
-      expect(response.status).toBe(500)
-      expect(draft.enable).not.toHaveBeenCalled()
-      expect(redirect).not.toHaveBeenCalled()
-    },
-  )
+    expect(response.status).toBe(500)
+    expect(draft.enable).not.toHaveBeenCalled()
+    expect(redirect).not.toHaveBeenCalled()
+  })
 
   it("refuses a request with the wrong preview secret", async () => {
     const request = previewRequest()

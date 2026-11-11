@@ -1,5 +1,6 @@
 import { EndRule } from "@/blocks/SquiggleRule/EndRule"
 import { ArticleSidebar } from "@/components/ArticleSidebar"
+import { BetaBadge } from "@/components/BetaBadge"
 import type { Crumb } from "@/components/Breadcrumbs"
 import { DocPager, DocsLayout } from "@/components/DocsNav"
 import { JsonLd } from "@/components/JsonLd"
@@ -169,7 +170,10 @@ export async function DocView({
                 className="border shadow"
               />
             )}
-            <h1 className="mt-3">{doc.title}</h1>
+            <h1 className="mt-3">
+              {doc.title}
+              <BetaBadge feature="docs" />
+            </h1>
             {/* The dek: the summary the bell and link previews show. */}
             <p className="text-muted-foreground font-sans text-lg leading-snug text-pretty md:text-xl">
               {doc.summary}

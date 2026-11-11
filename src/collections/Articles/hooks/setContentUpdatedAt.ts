@@ -2,6 +2,8 @@ import type { Article } from "@/payload-types"
 import { isRecord } from "@/utilities/isRecord"
 import type { FieldHook } from "payload"
 
+import { publishTime } from "./setPublishedAtDefault"
+
 /**
  * The fields readers see on the article's page. A published save that leaves every one of
  * them alone (ticking Syndicate to Substack, adding a topic, editing the SEO tab) isn't an
@@ -55,6 +57,7 @@ type ReadersRow = ReaderFields & Pick<Article, "contentUpdatedAt" | "_status">
  * draft already holds the edit being published.
  */
 export const setContentUpdatedAt: FieldHook<Article, Article["contentUpdatedAt"]> = async ({
+  context,
   operation,
   originalDoc,
   req,
@@ -81,7 +84,8 @@ export const setContentUpdatedAt: FieldHook<Article, Article["contentUpdatedAt"]
   if (status !== "published") return kept
 
   // Never published (or published before this field existed and never backfilled).
-  if (!row || !kept) return siblingData.publishedAt ?? new Date().toISOString()
+  // `publishedAt`'s own hook may not have set it yet (a create gets here without waiting).
+  if (!row || !kept) return siblingData.publishedAt ?? publishTime(context)
 
   const after = Object.fromEntries(
     READER_FIELDS.map((field) => [

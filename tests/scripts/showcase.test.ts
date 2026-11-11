@@ -21,7 +21,7 @@ const { createRestPayload, main, resolveTarget, selectEntries, showcaseItem } =
 const { slugsFromDescription } = await import("../../scripts/showcase-pr")
 
 const ORIGIN = "https://pr-748.pragmaticpapers.com"
-const PUSHER = { id: 7, roles: ["writer"] }
+const PUSHER = { id: 7, roles: ["editor"] }
 const ENV = { SHOWCASE_EMAIL: "editor@example.com", SHOWCASE_PASSWORD: "secret" }
 
 function json(body: unknown, status = 200): Response {
@@ -238,6 +238,14 @@ describe("main", () => {
   it("refuses an account that cannot be credited as author", async () => {
     const fetchImpl = fakeFetch({ "POST /api/users/login": login({ id: 1, roles: ["admin"] }) })
     await expect(main(["748", "first"], ENV, fetchImpl)).rejects.toThrow("(has: admin)")
+    expect(mockCreateStockMedia).not.toHaveBeenCalled()
+  })
+
+  it("refuses to publish as a writer, who may only create drafts", async () => {
+    const fetchImpl = fakeFetch({ "POST /api/users/login": login({ id: 1, roles: ["writer"] }) })
+    await expect(main(["748", "first"], ENV, fetchImpl)).rejects.toThrow(
+      "must hold one of editor, chief-editor",
+    )
     expect(mockCreateStockMedia).not.toHaveBeenCalled()
   })
 

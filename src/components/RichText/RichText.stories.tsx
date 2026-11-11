@@ -2,11 +2,13 @@ import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, screen, userEvent, within } from "storybook/test"
 
+import { stampTableOfContentsAnchors } from "@/components/TableOfContents"
 import { MathJaxProviderRoot } from "@/providers/MathJaxProvider"
 import { landscapeImage, mediaFixture, portraitImage } from "@/stories/fixtures/media"
 import {
   articleBody,
   createLinkNode,
+  createHeadingNode,
   createParagraph,
   createTextNode,
   richText,
@@ -163,6 +165,46 @@ export const SelectionDark: Story = {
   globals: { theme: "dark" },
   parameters: isolatedDocs("560px"),
   play: async ({ canvasElement }) => expectBrandSelection(canvasElement),
+}
+
+/**
+ * Headings an article's table of contents links to. The icon beside each is the link,
+ * so the heading's own text selects like any other text; a click on it still jumps to it.
+ */
+export const AnchoredHeadings: Story = {
+  args: {
+    data: stampTableOfContentsAnchors(
+      richText(
+        createHeadingNode("Why the small races matter", "h2"),
+        createParagraph(SENTENCES[0]!),
+      ),
+    ) as DefaultTypedEditorState,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const heading = canvas.getByRole("heading", { level: 2, name: "Why the small races matter" })
+    const link = within(heading).getByRole("link", { name: "Why the small races matter" })
+    const text = within(heading).getByText("Why the small races matter")
+    await expect(link).toHaveAttribute("href", `#${heading.id}`)
+    // Dragging across a link drags the link, so the text must not be inside one.
+    await expect(text.closest("a")).toBeNull()
+
+    // Drag across the first word: it's selected, and the page doesn't jump.
+    const node = text.firstChild!
+    await userEvent.pointer([
+      { keys: "[MouseLeft>]", target: text, node, offset: 0 },
+      { target: text, node, offset: 3 },
+      { keys: "[/MouseLeft]" },
+    ])
+    await expect(window.getSelection()?.toString()).toBe("Why")
+    await expect(window.location.hash).not.toBe(`#${heading.id}`)
+
+    // A plain click links to the heading.
+    window.getSelection()?.removeAllRanges()
+    await userEvent.click(text)
+    await expect(window.location.hash).toBe(`#${heading.id}`)
+    history.replaceState(null, "", window.location.pathname + window.location.search)
+  },
 }
 
 /**

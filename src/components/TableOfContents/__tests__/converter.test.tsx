@@ -1,6 +1,6 @@
-import { render as renderDom, screen } from "@testing-library/react"
+import { fireEvent, render as renderDom, screen } from "@testing-library/react"
 import { renderToStaticMarkup } from "react-dom/server"
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it } from "vitest"
 
 import type { SerializedHeadingNode } from "@payloadcms/richtext-lexical"
 import type { SerializedLexicalNode } from "@payloadcms/richtext-lexical/lexical"
@@ -44,9 +44,49 @@ describe("createTableOfContentsConverter", () => {
         })}
       </>,
     )
-    // An aria-label on the wrapping link would replace the heading's name too.
+    // The link sits inside the heading, so neither name may pick up the other's text.
     expect(screen.getByRole("heading", { level: 2, name: "My Section" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "My Section" })).toHaveAttribute("href", "#my-section")
+  })
+
+  describe("heading text", () => {
+    afterEach(() => {
+      window.getSelection()?.removeAllRanges()
+      window.location.hash = ""
+    })
+
+    function renderHeading() {
+      const { heading: converter } = createTableOfContentsConverter()
+      renderDom(
+        <>
+          {(converter as ConverterFn)({
+            node: heading("h2", "My Section", "my-section"),
+            nodesToJSX,
+          })}
+        </>,
+      )
+      return screen.getByText("My Section")
+    }
+
+    it("isn't inside the link, so it can be selected by dragging", () => {
+      const text = renderHeading()
+      expect(text.closest("a")).toBeNull()
+      expect(screen.getByRole("link")).toHaveTextContent(/^$/)
+    })
+
+    it("links to the heading when clicked", () => {
+      fireEvent.click(renderHeading())
+      expect(window.location.hash).toBe("#my-section")
+    })
+
+    it("stays put when the click ends a selection", () => {
+      const text = renderHeading()
+      const range = document.createRange()
+      range.selectNodeContents(text)
+      window.getSelection()?.addRange(range)
+      fireEvent.click(text)
+      expect(window.location.hash).toBe("")
+    })
   })
 
   it("renders a plain heading when the node has no anchor", () => {

@@ -13,6 +13,12 @@ export interface PluginSwitch {
   defaultValue: boolean
 }
 
+/** A feature that's still being tried out, and what readers are told about it. */
+export interface BetaNote {
+  /** What the flask's tooltip says beside what the feature adds for readers. */
+  info?: string
+}
+
 /** What a plugin says about itself, the way a WordPress plugin's header does. */
 export interface PluginManifest {
   name: string
@@ -20,14 +26,16 @@ export interface PluginManifest {
   source: string
   description: string
   switch?: PluginSwitch
+  /**
+   * Still a beta: System → Plugins badges it, and the site marks what it adds for readers with
+   * a flask (`BetaBadge`). Delete it when the plugin graduates.
+   */
+  beta?: BetaNote
 }
 
-/**
- * Whether a plugin is still a beta: its switch starts off. System → Plugins badges it, and so do
- * the parts of the site it adds (`BetaBadge`), until it graduates by flipping that default.
- */
-export const isBeta = (manifest: Pick<PluginManifest, "switch">): boolean =>
-  manifest.switch?.defaultValue === false
+/** Whether a plugin says it's still a beta. */
+export const isBeta = (manifest: Pick<PluginManifest, "beta">): boolean =>
+  manifest.beta !== undefined
 
 /** Whether a plugin is on here: a constant, or a switch asked when someone looks. */
 export type PluginEnabled = boolean | ((payload: Payload) => boolean | Promise<boolean>)

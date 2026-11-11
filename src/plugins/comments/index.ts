@@ -44,6 +44,7 @@ export const commentsPlugin = registerPlugin<CommentsPluginConfig>({
     source: "src/plugins/comments",
     description:
       "Comments under articles, with replies, checks that hold suspect comments back and violations that stop repeat offenders. Moderators work in Content → Comments and System → Violations; admins set the rules in System → Comment settings.",
+    beta: { info: "Comments are in beta: we're still trying them out, so they may change." },
     switch: {
       label: "Comments",
       description:

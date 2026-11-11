@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, spyOn, within } from "storybook/test"
 
 import type { HeldAchievement } from "@/plugins/achievements"
+import { withBetaFeatures } from "@/stories/fixtures/betaFeatures"
 import { isolatedDocs } from "@/stories/isolatedDocs"
 
 import { Achievements } from "./Achievements"
@@ -59,9 +60,9 @@ export const Several: Story = {
   },
 }
 
-/** While achievements are a beta, their heading says so. */
+/** While achievements are a beta, a flask beside their heading says so. */
 export const Beta: Story = {
-  args: { beta: true },
+  decorators: [withBetaFeatures()],
   beforeEach: serve([earlyMember]),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)

@@ -1,12 +1,20 @@
 import type { CheckboxField, GlobalConfig } from "payload"
+import type { BetaNote } from "@/utilities/registerPlugin"
 import { isAdmin } from "@/access/roles"
 import { revalidateSiteSettings } from "./hooks/revalidateSiteSettings"
 
-/** An experiment's checkbox, shown as an on/off switch in the admin. */
-function experimentField(field: Omit<CheckboxField, "type">): CheckboxField {
+/**
+ * An experiment's checkbox, shown as an on/off switch in the admin. `beta` marks what it adds
+ * for readers with a flask (`BetaBadge`), as a beta plugin's manifest does.
+ */
+function experimentField({
+  beta,
+  ...field
+}: Omit<CheckboxField, "type"> & { beta?: BetaNote }): CheckboxField {
   return {
     ...field,
     type: "checkbox",
+    ...(beta && { custom: { ...field.custom, beta } }),
     admin: {
       ...field.admin,
       components: {
@@ -49,12 +57,16 @@ export const SiteSettings: GlobalConfig = {
           name: "feed",
           label: "Vertical article feed",
           defaultValue: false,
+          beta: { info: "The feed is in beta: we're still trying it out, so it may change." },
           admin: { description: "The full-screen article feed at /feed and its header button." },
         }),
         experimentField({
           name: "interactives",
           label: "Interactive pages",
           defaultValue: false,
+          beta: {
+            info: "Interactive pages are in beta: we're still trying them out, so they may change.",
+          },
           admin: {
             description:
               "Interactive pages at /interactives/<slug>, their sitemap and the daily data sync.",

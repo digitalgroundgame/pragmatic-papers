@@ -17,8 +17,6 @@ export interface AccountProps {
   providers: Array<{ id: string; label: string }>
   /** Payload's API route. */
   apiPath?: string
-  /** Achievements are still a beta: their heading says so. */
-  achievementsBeta?: boolean
 }
 
 type Load =
@@ -197,11 +195,7 @@ const DeleteAccount: React.FC<{ url: string }> = ({ url }) => {
  * The account page's content: who is signed in, read from `/api/account` (never cached, so
  * the page around it can be), with their name, sign-ins, sign out and, for members, delete.
  */
-export const Account: React.FC<AccountProps> = ({
-  providers,
-  apiPath = "/api",
-  achievementsBeta,
-}) => {
+export const Account: React.FC<AccountProps> = ({ providers, apiPath = "/api" }) => {
   const [load, setLoad] = useState<Load>({ state: "loading" })
   const url = `${apiPath}/account`
 
@@ -277,7 +271,7 @@ export const Account: React.FC<AccountProps> = ({
             url={url}
             onSaved={(saved) => setLoad({ state: "ready", account: saved })}
           />
-          <Achievements apiPath={apiPath} beta={achievementsBeta} />
+          <Achievements apiPath={apiPath} />
           {/* It reads the link callback's `?error=`, which a static page only has in the browser. */}
           <Suspense fallback={null}>
             <LinkedSignIns apiPath={apiPath} />

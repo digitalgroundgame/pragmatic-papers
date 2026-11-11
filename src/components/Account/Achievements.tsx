@@ -9,15 +9,13 @@ import type { HeldAchievement, MyAchievements } from "@/plugins/achievements"
 export interface AchievementsProps {
   /** Payload's API route. */
   apiPath?: string
-  /** Achievements are still a beta: the heading says so. */
-  beta?: boolean
 }
 
 /**
  * The signed-in reader's achievements, from `/api/achievements/mine`. Renders nothing while
  * achievements are switched off (the endpoint answers 404) or the list can't load: it's extra.
  */
-export const Achievements: React.FC<AchievementsProps> = ({ apiPath = "/api", beta }) => {
+export const Achievements: React.FC<AchievementsProps> = ({ apiPath = "/api" }) => {
   const [held, setHeld] = useState<HeldAchievement[] | null>(null)
 
   useEffect(() => {
@@ -40,9 +38,7 @@ export const Achievements: React.FC<AchievementsProps> = ({ apiPath = "/api", be
     <section className="space-y-3" aria-labelledby="achievements-heading">
       <h2 id="achievements-heading" className="text-lg font-semibold">
         Achievements
-        {beta ? (
-          <BetaBadge info="Achievements are in beta: we're still trying them out, so they may change." />
-        ) : null}
+        <BetaBadge feature="achievements" />
       </h2>
       {held.length ? (
         <>

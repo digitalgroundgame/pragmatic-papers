@@ -2,24 +2,15 @@ import { cleanup, render, screen, within } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { switches, betas, account } = vi.hoisted(() => ({
-  switches: { sso: true },
-  betas: { sso: true, achievements: true },
-  account: vi.fn(),
-}))
+import { BetaFeaturesProvider } from "@/components/BetaBadge"
+import type { BetaFeatures } from "@/data/betaFeatures"
+
+const { switches } = vi.hoisted(() => ({ switches: { sso: true } }))
 vi.mock("@/globals/Plugins/isPluginEnabled", () => ({
   isPluginEnabled: async (name: keyof typeof switches) => switches[name],
 }))
-vi.mock("@/globals/Plugins/isPluginBeta", () => ({
-  isPluginBeta: async (name: keyof typeof betas) => betas[name],
-}))
 vi.mock("@/plugins/signIn", () => ({ signUpProviders: () => [] }))
-vi.mock("@/components/Account", () => ({
-  Account: (props: { achievementsBeta?: boolean }) => {
-    account(props)
-    return null
-  },
-}))
+vi.mock("@/components/Account", () => ({ Account: () => null }))
 vi.mock("next/navigation", () => ({
   notFound: () => {
     throw new Error("notFound")
@@ -28,34 +19,33 @@ vi.mock("next/navigation", () => ({
 
 import AccountPage from "../page"
 
-const renderPage = async () => render((await AccountPage()) as React.ReactElement)
+const renderPage = async (features: BetaFeatures) =>
+  render(
+    <BetaFeaturesProvider features={features}>
+      {(await AccountPage()) as React.ReactElement}
+    </BetaFeaturesProvider>,
+  )
+
+const heading = () => screen.getByRole("heading", { level: 1, name: "Your account" })
 
 describe("AccountPage", () => {
   beforeEach(() => {
     switches.sso = true
-    betas.sso = true
-    betas.achievements = true
-    account.mockClear()
   })
   afterEach(cleanup)
 
-  it("badges the page and its achievements while their plugins are betas", async () => {
-    await renderPage()
+  it("puts a flask beside its heading while accounts are a beta", async () => {
+    await renderPage({ sso: "Accounts are in beta." })
     expect(
-      within(screen.getByRole("heading", { level: 1, name: "Your account" })).getByRole("button", {
-        name: "Beta feature",
-      }),
-    ).toBeInTheDocument()
-    expect(account).toHaveBeenCalledWith(expect.objectContaining({ achievementsBeta: true }))
+      within(heading()).getByRole("button", { name: "Beta feature" }),
+    ).toHaveAccessibleDescription("Accounts are in beta.")
   })
 
-  it("drops the badges once the plugins graduate", async () => {
-    betas.sso = false
-    betas.achievements = false
-    await renderPage()
-    expect(screen.getByRole("heading", { level: 1, name: "Your account" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Beta feature" })).not.toBeInTheDocument()
-    expect(account).toHaveBeenCalledWith(expect.objectContaining({ achievementsBeta: false }))
+  it("drops the flask once accounts graduate", async () => {
+    await renderPage({})
+    expect(
+      within(heading()).queryByRole("button", { name: "Beta feature" }),
+    ).not.toBeInTheDocument()
   })
 
   it("is not found while single sign-on is off", async () => {

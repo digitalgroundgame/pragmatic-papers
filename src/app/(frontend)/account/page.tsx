@@ -4,7 +4,6 @@ import React from "react"
 
 import { Account } from "@/components/Account"
 import { BetaBadge } from "@/components/BetaBadge"
-import { isPluginBeta } from "@/globals/Plugins/isPluginBeta"
 import { isPluginEnabled } from "@/globals/Plugins/isPluginEnabled"
 import { signUpProviders } from "@/plugins/signIn"
 
@@ -19,26 +18,19 @@ export const metadata: Metadata = {
  */
 export default async function AccountPage(): Promise<React.ReactNode> {
   if (!(await isPluginEnabled("sso"))) notFound()
-  // Accounts come with single sign-on; what they hold comes with achievements.
-  const [accountBeta, achievementsBeta] = await Promise.all([
-    isPluginBeta("sso"),
-    isPluginBeta("achievements"),
-  ])
 
   return (
     <article className="mx-auto max-w-xl space-y-8 px-4 pb-16">
       <header className="space-y-2">
         <h1>
           Your account
-          {accountBeta ? (
-            <BetaBadge info="Accounts are in beta: we're still trying them out, so they may change." />
-          ) : null}
+          <BetaBadge feature="sso" />
         </h1>
         <p className="text-muted-foreground text-sm">
           The name you comment under, the accounts you sign in with, and deleting your account.
         </p>
       </header>
-      <Account providers={signUpProviders()} achievementsBeta={achievementsBeta} />
+      <Account providers={signUpProviders()} />
     </article>
   )
 }

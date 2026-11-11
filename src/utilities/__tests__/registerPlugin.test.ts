@@ -134,16 +134,12 @@ describe("registerPlugin", () => {
 })
 
 describe("isBeta", () => {
-  it("is a beta while its switch starts off", () => {
-    expect(isBeta({ switch: { label: "Comments", description: "", defaultValue: false } })).toBe(
-      true,
-    )
+  it("is a beta while its manifest says so, with or without a note for readers", () => {
+    expect(isBeta({ beta: { info: "Comments are in beta." } })).toBe(true)
+    expect(isBeta({ beta: {} })).toBe(true)
   })
 
-  it("graduates when its switch starts on, and has no beta without a switch", () => {
-    expect(isBeta({ switch: { label: "Comments", description: "", defaultValue: true } })).toBe(
-      false,
-    )
+  it("graduates once the note is deleted", () => {
     expect(isBeta({})).toBe(false)
   })
 })

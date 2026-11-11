@@ -19,7 +19,6 @@ import RichText from "@/components/RichText"
 import { TableOfContents, TableOfContentsProvider } from "@/components/TableOfContents"
 import { TopicsList } from "@/components/Topics/TopicsList"
 import { Separator } from "@/components/ui/separator"
-import { isPluginBeta } from "@/globals/Plugins/isPluginBeta"
 import { isPluginEnabled } from "@/globals/Plugins/isPluginEnabled"
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { ArticleHero } from "@/heros/ArticleHero"
@@ -84,14 +83,13 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   const populatedAuthors = (authors || []).filter(isResolved<User>)
 
-  const [[volume], tableOfContentsEnabled, commentsSwitch, ssoSwitch, commentsBeta, published] =
+  const [[volume], tableOfContentsEnabled, commentsSwitch, ssoSwitch, published] =
     await Promise.all([
       queryVolumesForArticles([article.id]),
       isExperimentEnabled("tableOfContents"),
       isPluginEnabled("comments"),
       // Readers sign in to comment, so comments need single sign-on on too.
       isPluginEnabled("sso"),
-      isPluginBeta("comments"),
       // Preview stays on across pages, so it keeps comments wherever readers have them.
       draft ? isArticlePublished(article.id) : true,
     ])
@@ -142,11 +140,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                   </div>
                   <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
                   {commentsEnabled &&
-                    (published ? (
-                      <Comments articleId={article.id} beta={commentsBeta} />
-                    ) : (
-                      <CommentsUnpublished />
-                    ))}
+                    (published ? <Comments articleId={article.id} /> : <CommentsUnpublished />)}
                 </ArticleFooter>
               </div>
             </div>

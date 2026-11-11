@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, screen, spyOn, userEvent, waitFor, within } from "storybook/test"
 
 import type { CommentThread, PublicComment } from "@/plugins/comments"
+import { withBetaFeatures } from "@/stories/fixtures/betaFeatures"
 import { commentThread, commentViewer } from "@/stories/fixtures/comments"
 import { isolatedDocs } from "@/stories/isolatedDocs"
 
@@ -72,15 +73,19 @@ export const SignedOut: Story = {
   },
 }
 
-/** While comments are a beta, their heading says so. */
+/** While comments are a beta, a flask beside their heading says so. */
 export const Beta: Story = {
-  args: { beta: true },
+  decorators: [withBetaFeatures()],
   beforeEach: serve(commentThread()),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const heading = await canvas.findByRole("heading", { name: "Comments (3)" })
     await userEvent.hover(within(heading).getByRole("button", { name: "Beta feature" }))
-    await expect(await screen.findByText(/Comments are in beta/)).toBeInTheDocument()
+    await expect(
+      await screen.findByText(/Comments are in beta/, {
+        selector: '[data-slot="tooltip-content"]',
+      }),
+    ).toBeInTheDocument()
   },
 }
 

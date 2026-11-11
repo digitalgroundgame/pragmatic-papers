@@ -29,8 +29,6 @@ export interface CommentsProps {
   articleId: number | string
   /** Payload's API route. */
   apiPath?: string
-  /** Comments are still a beta: the heading says so. */
-  beta?: boolean
 }
 
 type Load =
@@ -69,7 +67,7 @@ const Locked: React.FC<{ until: string | null }> = ({ until }) => (
  * An article's comments, loaded once the reader scrolls near them, so the page itself stays
  * one cached copy for everyone and readers who never get this far cost nothing.
  */
-export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api", beta }) => {
+export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" }) => {
   const { ref, inView } = useInView<HTMLElement>({ rootMargin: "400px" })
   const [load, setLoad] = useState<Load>({ state: "idle" })
   const [signInError, setSignInError] = useState<string | null>(null)
@@ -183,9 +181,7 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api",
             <span className="text-muted-foreground">({count})</span>
           </>
         ) : null}
-        {beta ? (
-          <BetaBadge info="Comments are in beta: we're still trying them out, so they may change." />
-        ) : null}
+        <BetaBadge feature="comments" />
       </h2>
 
       {signInError ? (

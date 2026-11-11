@@ -4,7 +4,7 @@ import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { cn } from "@/utilities/utils"
 import useEmblaCarousel from "embla-carousel-react"
 import { Pause, Play } from "lucide-react"
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { FEED_TOP_INSET, INTERACTIVE_SEL } from "./constants"
 import { FeedByline } from "./FeedByline"
 import { FeedSettingsMenu } from "./FeedSettingsMenu"
@@ -83,14 +83,14 @@ export function ArticleView({
     onAutoPlayToggleRef.current = onAutoPlayToggle
   }, [onAutoPlayToggle])
 
-  const advance = useCallback(() => {
+  const advance = () => {
     if (!emblaApi) return
     if (emblaApi.canScrollNext()) {
       emblaApi.scrollNext()
     } else {
       onEndReachedRef.current()
     }
-  }, [emblaApi])
+  }
 
   const currentPage: FeedPageMeta | undefined = pages[pageIndex]
   const { progress } = useAutoPlay({
@@ -100,12 +100,9 @@ export function ArticleView({
     onAdvance: advance,
   })
 
-  const handleJump = useCallback(
-    (i: number) => {
-      emblaApi?.scrollTo(i)
-    },
-    [emblaApi],
-  )
+  const handleJump = (i: number) => {
+    emblaApi?.scrollTo(i)
+  }
 
   // Restore the remembered page when this article becomes active again.
   useEffect(() => {
@@ -146,37 +143,34 @@ export function ArticleView({
   // Both gestures observe the same pointer events alongside Embla; Embla still
   // owns the actual horizontal drag.
   const swipeStartRef = useRef<{ x: number; y: number; t: number } | null>(null)
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
+  const onPointerDown = (e: React.PointerEvent) => {
     swipeStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() }
-  }, [])
-  const onPointerUp = useCallback(
-    (e: React.PointerEvent) => {
-      const start = swipeStartRef.current
-      swipeStartRef.current = null
-      if (!start) return
-      const dx = start.x - e.clientX
-      const dy = start.y - e.clientY
-      const ax = Math.abs(dx)
-      const ay = Math.abs(dy)
-      const dt = Date.now() - start.t
+  }
+  const onPointerUp = (e: React.PointerEvent) => {
+    const start = swipeStartRef.current
+    swipeStartRef.current = null
+    if (!start) return
+    const dx = start.x - e.clientX
+    const dy = start.y - e.clientY
+    const ax = Math.abs(dx)
+    const ay = Math.abs(dy)
+    const dt = Date.now() - start.t
 
-      // Forward swipe past end → advance article (only on last page).
-      if (dx > SWIPE_PAST_END_PX && ax > ay * 1.5 && emblaApi && !emblaApi.canScrollNext()) {
-        onEndReachedRef.current()
-        return
-      }
+    // Forward swipe past end → advance article (only on last page).
+    if (dx > SWIPE_PAST_END_PX && ax > ay * 1.5 && emblaApi && !emblaApi.canScrollNext()) {
+      onEndReachedRef.current()
+      return
+    }
 
-      // Tap → toggle auto-play. Ignore taps that landed on an interactive child
-      // so buttons, segment tabs, and form fields still receive their click.
-      if (ax < TAP_MAX_MOVE_PX && ay < TAP_MAX_MOVE_PX && dt < TAP_MAX_MS) {
-        const target = e.target as Element | null
-        if (target && target.closest(INTERACTIVE_SEL)) return
-        onAutoPlayToggleRef.current()
-        setShowTapIndicator(true)
-      }
-    },
-    [emblaApi],
-  )
+    // Tap → toggle auto-play. Ignore taps that landed on an interactive child
+    // so buttons, segment tabs, and form fields still receive their click.
+    if (ax < TAP_MAX_MOVE_PX && ay < TAP_MAX_MOVE_PX && dt < TAP_MAX_MS) {
+      const target = e.target as Element | null
+      if (target && target.closest(INTERACTIVE_SEL)) return
+      onAutoPlayToggleRef.current()
+      setShowTapIndicator(true)
+    }
+  }
 
   const view = (
     <div

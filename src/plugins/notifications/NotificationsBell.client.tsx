@@ -2,7 +2,7 @@
 
 import { usePreferences } from "@payloadcms/ui"
 import type React from "react"
-import { useCallback, useMemo, useState } from "react"
+import { useState } from "react"
 
 import { NotificationsMenu, type NotificationIndex } from "./NotificationsMenu"
 import type { NotificationItem, NotificationsPreference, NotificationType } from "./types"
@@ -27,22 +27,13 @@ export function NotificationsBellClient({
   const { setPreference } = usePreferences()
   const [preference, setLocal] = useState(initial)
 
-  const save = useCallback(
-    (next: NotificationsPreference) => {
-      setLocal(next)
-      void setPreference<NotificationsPreference>(PREFERENCE_KEY, next)
-    },
-    [setPreference],
-  )
+  const save = (next: NotificationsPreference) => {
+    setLocal(next)
+    void setPreference<NotificationsPreference>(PREFERENCE_KEY, next)
+  }
 
-  const visible = useMemo(
-    () => visibleNotifications(items, preference.muted),
-    [items, preference.muted],
-  )
-  const unread = useMemo(
-    () => unreadNotifications(visible, preference.read, joinedAt),
-    [visible, preference.read, joinedAt],
-  )
+  const visible = visibleNotifications(items, preference.muted)
+  const unread = unreadNotifications(visible, preference.read, joinedAt)
 
   const markRead = (keys: string[]): void => {
     const read = [...new Set([...preference.read, ...keys])]

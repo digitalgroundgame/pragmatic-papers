@@ -9,7 +9,7 @@ import { isResolved } from "@/utilities/relationships"
 import { cn } from "@/utilities/utils"
 import { Share2 } from "lucide-react"
 import Link from "next/link"
-import React, { useCallback } from "react"
+import React from "react"
 import type { FeedArticleSummary } from "./types"
 
 interface FeedActionColumnProps {
@@ -37,7 +37,7 @@ function getProfileImageUrl(author: ResolvedAuthor): string | undefined {
 // hero title card. Author avatars on top, action buttons below; this is
 // where future narration / comments controls will live too.
 export function FeedActionColumn({ article }: FeedActionColumnProps): React.ReactNode {
-  const handleShare = useCallback(() => {
+  const handleShare = () => {
     const url = `${getClientURL()}/articles/${article.slug}`
     const title = article.title
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
@@ -51,7 +51,7 @@ export function FeedActionColumn({ article }: FeedActionColumnProps): React.Reac
         /* clipboard blocked */
       })
     }
-  }, [article.slug, article.title])
+  }
 
   const authors: ResolvedAuthor[] = (article.authors ?? [])
     .filter(isResolved<User>)

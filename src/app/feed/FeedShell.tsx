@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, { useEffect, useEffectEvent, useRef, useState } from "react"
 import { AdSlotView } from "./AdSlotView"
 import { ArticleView } from "./ArticleView"
 import { INTERACTIVE_SEL } from "./constants"
@@ -57,27 +57,18 @@ export function FeedShell({
   const loadingMoreRef = useRef(false)
 
   // Seed page memory for the pinned article so the first mount of
-  // ArticleView picks it up via `initialPage`.
-  const memorySeed = useMemo<Array<[number, number]>>(() => {
-    if (
-      initialPinnedArticleId !== undefined &&
-      initialPageIndex !== undefined &&
-      initialPageIndex > 0
-    ) {
-      return [[initialPinnedArticleId, initialPageIndex]]
-    }
-    return []
-    // The pinned identity is fixed for the lifetime of the component —
-    // depending on the raw props keeps the seed stable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-  const memory = usePageMemory(memorySeed)
+  // ArticleView picks it up via `initialPage`. The hook reads it on the first render only.
+  const memory = usePageMemory(
+    initialPinnedArticleId !== undefined && initialPageIndex !== undefined && initialPageIndex > 0
+      ? [[initialPinnedArticleId, initialPageIndex]]
+      : [],
+  )
 
   // Track the current in-article page index for the active article so the
   // URL can reflect ?p=<page>.
   const [activePageIndex, setActivePageIndex] = useState(initialPageIndex ?? 0)
 
-  const slots = useMemo<FeedSlot[]>(() => {
+  const slots = ((): FeedSlot[] => {
     if (FEED_ADS.length === 0 || FEED_AD_INTERVAL <= 0) {
       return articles.map((article) => ({
         kind: "article" as const,
@@ -96,42 +87,44 @@ export function FeedShell({
       }
     })
     return out
-  }, [articles])
+  })()
 
-  // Active slot tracking via IntersectionObserver
+  // Active slot tracking via IntersectionObserver. An effect event, so the observer reads the
+  // current activeIndex (its tiebreaker) without being rebuilt every time it changes.
+  const onIntersect = useEffectEvent((entries: IntersectionObserverEntry[]) => {
+    let bestIdx = activeIndex
+    let bestRatio = 0
+    for (const entry of entries) {
+      const idxAttr = (entry.target as HTMLElement).dataset.idx
+      if (!idxAttr) continue
+      if (entry.intersectionRatio > bestRatio) {
+        bestRatio = entry.intersectionRatio
+        bestIdx = Number(idxAttr)
+      }
+    }
+    if (bestRatio > 0.55) setActiveIndex(bestIdx)
+  })
+  const slotCount = slots.length
   useEffect(() => {
     const scroller = scrollerRef.current
     if (!scroller) return
 
-    const io = new IntersectionObserver(
-      (entries) => {
-        let bestIdx = activeIndex
-        let bestRatio = 0
-        for (const entry of entries) {
-          const idxAttr = (entry.target as HTMLElement).dataset.idx
-          if (!idxAttr) continue
-          if (entry.intersectionRatio > bestRatio) {
-            bestRatio = entry.intersectionRatio
-            bestIdx = Number(idxAttr)
-          }
-        }
-        if (bestRatio > 0.55) setActiveIndex(bestIdx)
-      },
-      { root: scroller, threshold: [0, 0.25, 0.55, 0.85, 1] },
-    )
+    const io = new IntersectionObserver((entries) => onIntersect(entries), {
+      root: scroller,
+      threshold: [0, 0.25, 0.55, 0.85, 1],
+    })
 
     sectionRefs.current.forEach((el) => io.observe(el))
     return () => io.disconnect()
-    // We intentionally don't depend on activeIndex: io callback reads it from closure as a tiebreaker.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slots.length])
+    // Rebuilt when slots are added, so the observer watches the new sections too.
+  }, [slotCount])
 
-  // Load more when nearing the end
-  const loadMore = useCallback(async () => {
+  // Load more when nearing the end, and again once a batch moves the cursor.
+  const loadMore = useEffectEvent(async (): Promise<void> => {
     if (loadingMoreRef.current || nextCursor === null) return
     loadingMoreRef.current = true
-    try {
-      const batch = await loadBatch(nextCursor).catch((error: unknown) => {
+    const batch = await loadBatch(nextCursor)
+      .catch((error: unknown) => {
         // Most likely a page from an earlier deploy calling a server action the
         // new build no longer has. Reload once: the URL already names the
         // current article, so the reader lands back where they were.
@@ -139,38 +132,36 @@ export function FeedShell({
         reloadOnce()
         return null
       })
-      if (!batch) {
-        // Stop paging rather than retrying the same request on every scroll.
-        setNextCursor(null)
-        return
-      }
-      setArticles((prev) => {
-        const seen = new Set(prev.map((a) => a.article.id))
-        const merged = [...prev]
-        for (const item of batch.items) {
-          if (!seen.has(item.article.id)) merged.push(item)
-        }
-        return merged
+      // `.finally()` rather than `try`/`finally`, which the React Compiler can't compile yet.
+      .finally(() => {
+        loadingMoreRef.current = false
       })
-      setNextCursor(batch.nextCursor)
-    } finally {
-      loadingMoreRef.current = false
+    if (!batch) {
+      // Stop paging rather than retrying the same request on every scroll.
+      setNextCursor(null)
+      return
     }
-  }, [nextCursor, loadBatch])
+    setArticles((prev) => {
+      const seen = new Set(prev.map((a) => a.article.id))
+      const merged = [...prev]
+      for (const item of batch.items) {
+        if (!seen.has(item.article.id)) merged.push(item)
+      }
+      return merged
+    })
+    setNextCursor(batch.nextCursor)
+  })
 
   useEffect(() => {
-    if (activeIndex >= slots.length - 3) {
+    if (activeIndex >= slotCount - 3) {
       void loadMore()
     }
-  }, [activeIndex, slots.length, loadMore])
+  }, [activeIndex, slotCount, nextCursor])
 
-  const handlePageChange = useCallback(
-    (articleId: number, pageIndex: number) => {
-      memory.set(articleId, pageIndex)
-      setActivePageIndex(pageIndex)
-    },
-    [memory],
-  )
+  const handlePageChange = (articleId: number, pageIndex: number) => {
+    memory.set(articleId, pageIndex)
+    setActivePageIndex(pageIndex)
+  }
 
   // Sync the URL with the active article + page index, debounced so a fast
   // swipe doesn't replaceState every frame. Ads have no slug, so skip.
@@ -212,15 +203,15 @@ export function FeedShell({
     }
   }
 
-  const toggleAutoPlay = useCallback(() => {
+  const toggleAutoPlay = () => {
     setAutoPlayEnabled((v) => !v)
-  }, [])
+  }
 
-  const scrollToNextSlot = useCallback(() => {
+  const scrollToNextSlot = () => {
     const scroller = scrollerRef.current
     if (!scroller) return
     scroller.scrollBy({ top: scroller.clientHeight, behavior: "smooth" })
-  }, [])
+  }
 
   // Keyboard: ArrowUp/Down navigate slots; Space toggles auto-play
   useEffect(() => {
@@ -241,19 +232,19 @@ export function FeedShell({
         // Space presses a focused button or link; only toggle when it wouldn't.
         if (e.target instanceof Element && e.target.closest(INTERACTIVE_SEL)) return
         e.preventDefault()
-        toggleAutoPlay()
+        setAutoPlayEnabled((v) => !v)
       }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [toggleAutoPlay])
+  }, [])
 
-  const registerSection = useCallback((idx: number) => {
+  const registerSection = (idx: number) => {
     return (el: HTMLElement | null) => {
       if (el) sectionRefs.current.set(idx, el)
       else sectionRefs.current.delete(idx)
     }
-  }, [])
+  }
 
   return (
     <>

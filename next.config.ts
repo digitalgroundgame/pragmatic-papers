@@ -66,6 +66,10 @@ const nextConfig: NextConfig = {
   // own pass (~25 s) checks, route types included.
   // Coolify's builds and local builds still type-check.
   typescript: { ignoreBuildErrors: process.env.SKIP_BUILD_TYPE_CHECK === "true" },
+  // Memoizes components and hooks at build time, so they don't need useMemo or useCallback.
+  // A component the compiler can't handle is left as written; `pnpm test:unit` lists which
+  // (src/__tests__/reactCompiler.test.ts). Storybook and Vitest run the same Babel plugin.
+  reactCompiler: true,
   // Temporarily required on Windows until Next.js fixes Turbopack Sass resolution.
   // See: https://github.com/vercel/next.js/issues/86431
   sassOptions: {

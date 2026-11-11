@@ -5,6 +5,8 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { defineConfig } from "vitest/config"
 
+import { clientReactCompiler } from "./react-compiler.config.mts"
+
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Pin the timezone so date rendering is reproducible. Anything that formats a
@@ -43,7 +45,9 @@ export default defineConfig({
     },
     projects: [
       {
-        plugins: [react()],
+        // Tests run the code next build ships, which the React Compiler memoizes
+        // (`reactCompiler` in next.config.ts).
+        plugins: [react(), clientReactCompiler()],
         resolve: {
           tsconfigPaths: true,
           // tsconfig maps "react" → @types/react for type-checking, but that package has

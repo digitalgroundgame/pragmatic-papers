@@ -9,7 +9,7 @@ import {
   useModal,
   useUploadControls,
 } from "@payloadcms/ui"
-import React, { useCallback } from "react"
+import React from "react"
 
 import type { UnsplashPhoto } from "@/integrations/unsplash"
 import type { Media } from "@/payload-types"
@@ -47,31 +47,28 @@ export function UnsplashPicker(): React.ReactNode {
   const alt = useFormFields(([fields]) => fields.alt?.value)
   const caption = useFormFields(([fields]) => fields.caption?.value)
 
-  const pick = useCallback(
-    async (photo: UnsplashPhoto, homeUrl: string): Promise<void> => {
-      const res = await fetch(`/api/media/unsplash/${encodeURIComponent(photo.id)}/file`, {
-        credentials: "include",
-      })
-      if (!res.ok) throw new Error(await errorOf(res, "Downloading the photo failed"))
-      const blob = await res.blob()
-      const file = new File([blob], `unsplash-${photo.photographer.username}-${photo.id}.jpg`, {
-        type: blob.type || "image/jpeg",
-      })
+  const pick = async (photo: UnsplashPhoto, homeUrl: string): Promise<void> => {
+    const res = await fetch(`/api/media/unsplash/${encodeURIComponent(photo.id)}/file`, {
+      credentials: "include",
+    })
+    if (!res.ok) throw new Error(await errorOf(res, "Downloading the photo failed"))
+    const blob = await res.blob()
+    const file = new File([blob], `unsplash-${photo.photographer.username}-${photo.id}.jpg`, {
+      type: blob.type || "image/jpeg",
+    })
 
-      rememberPickedFile(photo.id, file)
-      dispatchFields({ type: "UPDATE", path: "unsplashId", value: photo.id })
-      if (photo.alt && !(typeof alt === "string" && alt.trim())) {
-        dispatchFields({ type: "UPDATE", path: "alt", value: photo.alt })
-      }
-      // The save writes the credit again from its own lookup; this shows it now. The caption
-      // editor only redraws when its initial value changes, so that's set too.
-      const credited = withCredit(caption as Media["caption"], unsplashCredit(photo, homeUrl))
-      dispatchFields({ type: "UPDATE", path: "caption", value: credited, initialValue: credited })
-      closeModal(slug)
-      setUploadControlFile(file)
-    },
-    [alt, caption, closeModal, dispatchFields, setUploadControlFile, slug],
-  )
+    rememberPickedFile(photo.id, file)
+    dispatchFields({ type: "UPDATE", path: "unsplashId", value: photo.id })
+    if (photo.alt && !(typeof alt === "string" && alt.trim())) {
+      dispatchFields({ type: "UPDATE", path: "alt", value: photo.alt })
+    }
+    // The save writes the credit again from its own lookup; this shows it now. The caption
+    // editor only redraws when its initial value changes, so that's set too.
+    const credited = withCredit(caption as Media["caption"], unsplashCredit(photo, homeUrl))
+    dispatchFields({ type: "UPDATE", path: "caption", value: credited, initialValue: credited })
+    closeModal(slug)
+    setUploadControlFile(file)
+  }
 
   return (
     <>

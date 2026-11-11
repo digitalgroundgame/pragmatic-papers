@@ -42,6 +42,8 @@ export async function buildSnapshot({
   if (isFailure(result)) {
     return {
       ...snapshot,
+      // The snapshot kept is the one sent with the save, which needn't be one we fetched.
+      html: snapshot?.html ? await adapter.sanitize(snapshot.html) : undefined,
       status: result.error instanceof OEmbedRequestError ? result.error.code : "error",
       fetchedAt: new Date().toISOString(),
     }

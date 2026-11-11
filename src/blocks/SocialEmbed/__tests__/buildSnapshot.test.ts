@@ -85,7 +85,11 @@ describe("buildSnapshot", () => {
 
   it("keeps the previous snapshot and records the error code when the fetch fails", async () => {
     fetchMock.mockResolvedValue(new Response("", { status: 403, statusText: "Forbidden" }))
-    const previous = { status: "ok" as const, title: "Old", html: "<p>old</p>" }
+    const previous = {
+      status: "ok" as const,
+      title: "Old",
+      html: '<blockquote class="reddit-embed-bq"><a href="https://www.reddit.com/r/a">old</a></blockquote>',
+    }
 
     const snapshot = await buildSnapshot({
       platform: "reddit",
@@ -94,6 +98,22 @@ describe("buildSnapshot", () => {
     })
 
     expect(snapshot).toEqual({ ...previous, status: "forbidden", fetchedAt: NOW })
+  })
+
+  it("sanitizes the snapshot it keeps, which came with the save", async () => {
+    fetchMock.mockResolvedValue(new Response("", { status: 403, statusText: "Forbidden" }))
+
+    const snapshot = await buildSnapshot({
+      platform: "twitter",
+      url: "https://x.com/a/status/1",
+      snapshot: {
+        status: "ok",
+        html: '<blockquote class="twitter-tweet"><p>Hi</p></blockquote><img src="x" onerror="alert(1)"><script>alert(1)</script>',
+      },
+    })
+
+    expect(snapshot.status).toBe("forbidden")
+    expect(snapshot.html).toBe('<blockquote class="twitter-tweet"><p>Hi</p></blockquote>')
   })
 
   it("records a generic error for an invalid URL", async () => {

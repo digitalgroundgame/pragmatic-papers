@@ -37,6 +37,21 @@ export function hasSessionCookie(headers: Headers, cookieName: string): boolean 
 }
 
 /**
+ * Whether a request comes from an origin allowed to act as the signed-in user: Payload's own
+ * rule for its login cookie (`extractJWT`), applied to the SSO session's. A browser names the
+ * page's origin on every cross-origin request and every write; one that names an origin
+ * outside `config.csrf` is refused. Without an Origin, the browser's Sec-Fetch-Site has to
+ * say the request isn't cross-site. An empty list allows everything, as it does for Payload.
+ */
+export function isAllowedOrigin(headers: Headers, allowed: readonly string[]): boolean {
+  if (allowed.length === 0) return true
+  const origin = headers.get("origin")
+  if (origin) return allowed.includes(origin)
+  const site = headers.get("sec-fetch-site")
+  return site === "same-origin" || site === "same-site" || site === "none"
+}
+
+/**
  * The user a request's Better Auth session belongs to, whoever they are: staff or member.
  * Null without a session, or while single sign-on is off.
  */

@@ -2,6 +2,7 @@ import { Forbidden, type Payload } from "payload"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 import type { Article, User } from "@/payload-types"
 import { ARTICLE_CONTENT } from "../fixtures/content"
+import { createArticle } from "../helpers/content"
 import { createUser, getPayload } from "../helpers/testUsers"
 
 // Publishing revalidates the article's pages, which needs a Next.js request.
@@ -65,5 +66,37 @@ describe("creating an article", () => {
 
     const article = await create(editor, { _status: "published" })
     expect(article._status).toBe("published")
+  })
+
+  /** What `POST /api/articles/:id/duplicate` does, as this user. */
+  function duplicate(user: User, id: number, draft?: boolean) {
+    return payload.duplicate({
+      collection: "articles",
+      id,
+      overrideAccess: false,
+      user,
+      draft,
+      context: { disableRevalidate: true },
+    })
+  }
+
+  it.each([true, false, undefined])(
+    "saves a writer's copy of a published article as a draft (draft: %s)",
+    async (draft) => {
+      const writer = await createUser("writer")
+      const live = await createArticle({ authors: [writer.id] })
+
+      const copy = await duplicate(writer, live.id, draft)
+      expect(copy._status).toBe("draft")
+      expect(copy.id).not.toBe(live.id)
+    },
+  )
+
+  it("lets an editor copy a published article as published", async () => {
+    const [editor, writer] = await Promise.all([createUser("editor"), createUser("writer")])
+    const live = await createArticle({ authors: [writer.id] })
+
+    const copy = await duplicate(editor, live.id, false)
+    expect(copy._status).toBe("published")
   })
 })

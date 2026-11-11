@@ -7,7 +7,6 @@ import { EndRule } from "@/blocks/SquiggleRule/EndRule"
 import { ArticleFooter } from "@/components/ArticleFooter"
 import { ArticleFooterActions } from "@/components/ArticleFooter/ArticleFooterActions"
 import { ArticleSidebar } from "@/components/ArticleSidebar"
-import { ArticleViewBeacon } from "@/components/ArticleViewBeacon"
 import { AuthorList } from "@/components/Authors/AuthorList"
 import { Comments } from "@/components/Comments"
 import { CommentsUnpublished } from "@/components/Comments/Unpublished"
@@ -112,7 +111,6 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
           <PayloadRedirects disableNotFound url={url} />
 
           {draft && <LivePreviewListener />}
-          {!draft && <ArticleViewBeacon articleId={article.id} />}
 
           <TableOfContentsProvider>
             <ArticleHero

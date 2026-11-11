@@ -40,7 +40,9 @@ export const Achievements: React.FC<AchievementsProps> = ({ apiPath = "/api", be
     <section className="space-y-3" aria-labelledby="achievements-heading">
       <h2 id="achievements-heading" className="text-lg font-semibold">
         Achievements
-        {beta ? <BetaBadge /> : null}
+        {beta ? (
+          <BetaBadge info="Achievements are in beta: we're still trying them out, so they may change." />
+        ) : null}
       </h2>
       {held.length ? (
         <>

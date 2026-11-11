@@ -65,9 +65,8 @@ export const Beta: Story = {
   beforeEach: serve([earlyMember]),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(
-      await canvas.findByRole("heading", { name: "Achievements Beta" }),
-    ).toBeInTheDocument()
+    const heading = await canvas.findByRole("heading", { name: "Achievements" })
+    await expect(within(heading).getByRole("button", { name: "Beta feature" })).toBeInTheDocument()
   },
 }
 

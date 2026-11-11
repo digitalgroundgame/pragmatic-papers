@@ -303,8 +303,8 @@ Payload's own plugins so it can be lifted out without a rewrite:
   `pluginSwitches` (`src/globals/Plugins/`) gives it a checkbox on System → Plugins named for
   its slug (a camelCase one), `src/plugins/index.ts` passes `pluginSwitch("<slug>")` as its
   `enabled`, and routes outside the plugin gate on `isPluginEnabled("<slug>")`. A beta's switch
-  starts off (`defaultValue: false`), which shows a **Beta** badge there; the site shows
-  `BetaBadge` (`src/components/BetaBadge`) beside the heading of what the plugin adds for readers
+  starts off (`defaultValue: false`), which shows a **Beta** badge there; the site shows a flask,
+  `BetaBadge` (`src/components/BetaBadge`, its tooltip saying what beta means), beside the heading of what the plugin adds for readers
   while `isPluginBeta("<slug>")` holds (Comments, Your account, Achievements). When it graduates,
   flip the default rather than deleting the switch, and the badges go with it. This replaces an experiment in Settings for a
   feature that's a plugin; anything else stays an experiment.

@@ -183,7 +183,9 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api",
             <span className="text-muted-foreground">({count})</span>
           </>
         ) : null}
-        {beta ? <BetaBadge /> : null}
+        {beta ? (
+          <BetaBadge info="Comments are in beta: we're still trying them out, so they may change." />
+        ) : null}
       </h2>
 
       {signInError ? (

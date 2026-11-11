@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, spyOn, userEvent, waitFor, within } from "storybook/test"
+import { expect, screen, spyOn, userEvent, waitFor, within } from "storybook/test"
 
 import type { CommentThread, PublicComment } from "@/plugins/comments"
 import { commentThread, commentViewer } from "@/stories/fixtures/comments"
@@ -78,9 +78,9 @@ export const Beta: Story = {
   beforeEach: serve(commentThread()),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(
-      await canvas.findByRole("heading", { name: "Comments (3) Beta" }),
-    ).toBeInTheDocument()
+    const heading = await canvas.findByRole("heading", { name: "Comments (3)" })
+    await userEvent.hover(within(heading).getByRole("button", { name: "Beta feature" }))
+    await expect(await screen.findByText(/Comments are in beta/)).toBeInTheDocument()
   },
 }
 

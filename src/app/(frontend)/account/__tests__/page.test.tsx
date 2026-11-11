@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, render, screen, within } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -42,7 +42,9 @@ describe("AccountPage", () => {
   it("badges the page and its achievements while their plugins are betas", async () => {
     await renderPage()
     expect(
-      screen.getByRole("heading", { level: 1, name: /^Your account\s*Beta$/ }),
+      within(screen.getByRole("heading", { level: 1, name: "Your account" })).getByRole("button", {
+        name: "Beta feature",
+      }),
     ).toBeInTheDocument()
     expect(account).toHaveBeenCalledWith(expect.objectContaining({ achievementsBeta: true }))
   })
@@ -52,7 +54,7 @@ describe("AccountPage", () => {
     betas.achievements = false
     await renderPage()
     expect(screen.getByRole("heading", { level: 1, name: "Your account" })).toBeInTheDocument()
-    expect(screen.queryByText("Beta")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Beta feature" })).not.toBeInTheDocument()
     expect(account).toHaveBeenCalledWith(expect.objectContaining({ achievementsBeta: false }))
   })
 

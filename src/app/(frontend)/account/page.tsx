@@ -30,7 +30,9 @@ export default async function AccountPage(): Promise<React.ReactNode> {
       <header className="space-y-2">
         <h1>
           Your account
-          {accountBeta ? <BetaBadge /> : null}
+          {accountBeta ? (
+            <BetaBadge info="Accounts are in beta: we're still trying them out, so they may change." />
+          ) : null}
         </h1>
         <p className="text-muted-foreground text-sm">
           The name you comment under, the accounts you sign in with, and deleting your account.

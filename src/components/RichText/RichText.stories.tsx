@@ -1,8 +1,9 @@
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, screen, userEvent, within } from "storybook/test"
+import { expect, screen, userEvent, waitFor, within } from "storybook/test"
 
 import { stampTableOfContentsAnchors } from "@/components/TableOfContents"
+import { MULTI_CLICK_WAIT_MS } from "@/components/TableOfContents/AnchoredHeading"
 import { MathJaxProviderRoot } from "@/providers/MathJaxProvider"
 import { landscapeImage, mediaFixture, portraitImage } from "@/stories/fixtures/media"
 import {
@@ -199,10 +200,17 @@ export const AnchoredHeadings: Story = {
     await expect(window.getSelection()?.toString()).toBe("Why")
     await expect(window.location.hash).not.toBe(`#${heading.id}`)
 
+    // A double click selects a word and stays put.
+    window.getSelection()?.removeAllRanges()
+    await userEvent.dblClick(text)
+    await new Promise((resolve) => setTimeout(resolve, MULTI_CLICK_WAIT_MS + 50))
+    await expect(window.getSelection()?.toString()).not.toBe("")
+    await expect(window.location.hash).not.toBe(`#${heading.id}`)
+
     // A plain click links to the heading.
     window.getSelection()?.removeAllRanges()
     await userEvent.click(text)
-    await expect(window.location.hash).toBe(`#${heading.id}`)
+    await waitFor(() => expect(window.location.hash).toBe(`#${heading.id}`))
     history.replaceState(null, "", window.location.pathname + window.location.search)
   },
 }

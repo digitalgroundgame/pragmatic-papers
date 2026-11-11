@@ -255,6 +255,12 @@ describe("drawInteractiveMapSVG", () => {
     expect(svg).toMatch(
       /<svg x="[^"]+" y="[^"]+" width="83.33" height="10" viewBox="0 0 100 12" fill="#fafafa">/,
     )
+    // A logo that names no fill of its own leaves its parts to theirs.
+    const plain = drawInteractiveMapSVG({
+      ...drawing,
+      footer: { logo: LOGO.replace(' fill="#171717"', "") },
+    })
+    expect(plain).toContain('height="10" viewBox="0 0 100 12"><path')
   })
 
   it("gives a logo with no sources a row of its own, and skips a logo it can't size", () => {

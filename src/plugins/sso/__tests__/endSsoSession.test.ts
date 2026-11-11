@@ -16,6 +16,7 @@ const logger = { warn: vi.fn() }
 const config = {
   cookieName: "pp-session",
   payloadUserCookie: "payload-token-sso",
+  signedInCookie: "pp-signed-in",
 } as ResolvedSsoConfig
 
 const logout = (cookie?: string) =>
@@ -43,7 +44,7 @@ describe("endSsoSession", () => {
     await logout("pp-session=abc")
 
     expect(signOut).toHaveBeenCalledWith({ headers: expect.any(Headers) })
-    for (const name of ["pp-session", "payload-token-sso"]) {
+    for (const name of ["pp-session", "payload-token-sso", "pp-signed-in"]) {
       expect(set).toHaveBeenCalledWith(name, "", expect.objectContaining({ maxAge: 0 }))
     }
   })

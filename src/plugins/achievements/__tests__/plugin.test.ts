@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 import { achievementsPlugin, type AchievementsPluginConfig, resolveAchievementsConfig } from ".."
 import { awardChanges, deleteAchievementsAwards, fillOnSave } from "../collection"
 import { ACHIEVEMENTS_SLUG, AWARDING, AWARDS_SLUG } from "../constants"
+import { READS_SLUG, VISITS_FIELD } from "../reading/constants"
 import { registeredPlugins } from "@/utilities/registerPlugin"
 
 import { fakePayload } from "./fakePayload"
@@ -44,6 +45,7 @@ describe("achievementsPlugin", () => {
       "pages",
       ACHIEVEMENTS_SLUG,
       AWARDS_SLUG,
+      READS_SLUG,
     ])
     expect(achievements.admin?.group).toBe("Content")
     expect(achievements.orderable).toBe(true)
@@ -127,22 +129,33 @@ describe("achievementsPlugin", () => {
 
     expect(usersConfig.hooks?.afterChange).toHaveLength(2)
     expect(usersConfig.hooks?.afterChange?.[0]).toBe(existingHook)
-    expect(usersConfig.hooks?.beforeDelete).toHaveLength(1)
+    // Its awards, then its reads.
+    expect(usersConfig.hooks?.beforeDelete).toHaveLength(2)
+    expect(field(usersConfig, VISITS_FIELD)).toMatchObject({ type: "group" })
     expect(collection(config, "pages")).toBe(pages)
+    expect(config.endpoints!.map((e) => `${e.method} ${e.path}`)).toEqual([
+      "post /reading",
+      "get /reading/mine",
+    ])
   })
 
   it("keeps its schema but does nothing when disabled in code", () => {
     const config = apply({ ...options, disabled: true })
     expect(collection(config, ACHIEVEMENTS_SLUG).endpoints).toEqual([])
     expect(collection(config, ACHIEVEMENTS_SLUG).hooks?.afterChange).toEqual([])
-    expect(collection(config, "users")).toBe(users)
+    // The schema stays: the join field's and the visits' columns, and the reads.
+    const usersConfig = collection(config, "users")
+    expect(usersConfig.hooks).toBe(users.hooks)
+    expect(field(usersConfig, VISITS_FIELD)).toBeDefined()
+    expect(config.collections!.map(({ slug }) => slug)).toContain(READS_SLUG)
+    expect(config.endpoints ?? []).toEqual([])
   })
 
   it("offers a beta switch on System → Plugins, off by default", () => {
     const [registered] = registeredPlugins(apply(options))
     expect(registered).toMatchObject({
       slug: "achievements",
-      collections: [ACHIEVEMENTS_SLUG, AWARDS_SLUG],
+      collections: [ACHIEVEMENTS_SLUG, AWARDS_SLUG, READS_SLUG],
       switch: { label: "Achievements", defaultValue: false },
     })
   })

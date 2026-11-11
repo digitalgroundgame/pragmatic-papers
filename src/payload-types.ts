@@ -188,6 +188,7 @@ export interface Config {
     'comment-violations': CommentViolation;
     achievements: Achievement;
     awards: Award;
+    'articles-read': ArticlesRead;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
@@ -221,6 +222,7 @@ export interface Config {
     'comment-violations': CommentViolationsSelect<false> | CommentViolationsSelect<true>;
     achievements: AchievementsSelect<false> | AchievementsSelect<true>;
     awards: AwardsSelect<false> | AwardsSelect<true>;
+    'articles-read': ArticlesReadSelect<false> | ArticlesReadSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -591,6 +593,15 @@ export interface User {
     docs?: (number | Award)[];
     hasNextPage?: boolean;
     totalDocs?: number;
+  };
+  /**
+   * Days this account visited the site while signed in, on its own calendar.
+   */
+  reading?: {
+    daysVisited?: number | null;
+    lastVisitOn?: string | null;
+    currentStreak?: number | null;
+    longestStreak?: number | null;
   };
   updatedAt: string;
   createdAt: string;
@@ -1620,6 +1631,16 @@ export interface CommentViolation {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "articles-read".
+ */
+export interface ArticlesRead {
+  id: number;
+  user: number | User;
+  article: number | Article;
+  readAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -1828,6 +1849,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'awards';
         value: number | Award;
+      } | null)
+    | ({
+        relationTo: 'articles-read';
+        value: number | ArticlesRead;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -2396,6 +2421,14 @@ export interface UsersSelect<T extends boolean = true> {
   avatarUrl?: T;
   ssoConnections?: T;
   awards?: T;
+  reading?:
+    | T
+    | {
+        daysVisited?: T;
+        lastVisitOn?: T;
+        currentStreak?: T;
+        longestStreak?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -2725,6 +2758,15 @@ export interface AwardsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "articles-read_select".
+ */
+export interface ArticlesReadSelect<T extends boolean = true> {
+  user?: T;
+  article?: T;
+  readAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv_select".
  */
 export interface PayloadKvSelect<T extends boolean = true> {
@@ -2813,7 +2855,7 @@ export interface Header {
      */
     upcomingHours?: number | null;
     /**
-     * Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky or X. It's gone from the ticker as soon as you save.
+     * Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky, X or Substack. It's gone from the ticker as soon as you save.
      */
     hidden?:
       | {
@@ -2922,6 +2964,27 @@ export interface IntegrationSettings {
   /**
    * Whose posts run in the ticker.
    */
+  substack?: {
+    /**
+     * Which of the publications' posts run in the ticker. Empty shows podcast episodes and videos: written posts are mostly our own articles, syndicated.
+     */
+    types?: ('podcast' | 'video' | 'post')[] | null;
+    /**
+     * Empty uses SUBSTACK_PUBLICATIONS, or thepragmaticpapers.
+     */
+    publications?:
+      | {
+          /**
+           * Its address, a custom domain, or its name. Posts are read from its RSS feed.
+           */
+          publication: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  /**
+   * Whose posts run in the ticker.
+   */
   x?: {
     /**
      * Empty uses X_USERNAMES, or PragPapers.
@@ -2973,7 +3036,7 @@ export interface Plugin {
      */
     comments?: boolean | null;
     /**
-     * Badges beside readers' names on comments, and achievements on their account page. First-members achievements are still awarded while it's off.
+     * Badges beside readers' names on comments, achievements and reading totals on their account page, and recording what signed-in readers read. First-members achievements are still awarded while it's off.
      */
     achievements?: boolean | null;
   };
@@ -3133,6 +3196,17 @@ export interface IntegrationsSelect<T extends boolean = true> {
           | T
           | {
               handle?: T;
+              id?: T;
+            };
+      };
+  substack?:
+    | T
+    | {
+        types?: T;
+        publications?:
+          | T
+          | {
+              publication?: T;
               id?: T;
             };
       };

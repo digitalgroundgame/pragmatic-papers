@@ -5,6 +5,7 @@ import { googleAnalyticsProperty } from "./google/analytics"
 import { listmonkServer } from "./listmonk/connection"
 import { oauthApp } from "./oauth"
 import { shopifyStore } from "./shopify"
+import { substackPublications } from "./substack"
 import { xAccounts } from "./x"
 import { youtubeChannels } from "./youtube"
 import { integrationStatus, type Integration, type IntegrationStatus } from "./types"
@@ -92,6 +93,19 @@ export const blueskyPosts = blueskyAccounts({
 })
 
 /**
+ * Our Substack publications, whose posts run in the ticker. Read from each one's public RSS
+ * feed, so it needs no key. Only podcast episodes and videos unless the admin picks other
+ * types: the written posts are mostly our own articles, syndicated.
+ */
+export const substackPosts = substackPublications({
+  id: "substack-posts",
+  label: "Substack posts",
+  defaultPublications: ["thepragmaticpapers"],
+  defaultTypes: ["podcast", "video"],
+  publicationsEnv: "SUBSTACK_PUBLICATIONS",
+})
+
+/**
  * Our X accounts, whose posts run in the ticker. Reading posts needs a paid X API plan or
  * pay-per-use credits on the app behind the token.
  */
@@ -173,6 +187,7 @@ export const INTEGRATIONS: readonly Integration[] = [
   cloudflareWorkerCache,
   youtubeLive,
   blueskyPosts,
+  substackPosts,
   xPosts,
   unsplash,
   googleAnalytics,

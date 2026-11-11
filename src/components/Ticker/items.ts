@@ -12,7 +12,7 @@ export interface TickerBroadcast {
   startsAt: string | null
 }
 
-export type TickerPostSource = "bluesky" | "x"
+export type TickerPostSource = "bluesky" | "x" | "substack"
 
 /**
  * A link in a post: the text the post shows for it (each service shortens its own way, and a
@@ -78,8 +78,8 @@ function normalize(post: TickerPost): string {
 }
 
 /**
- * What identifies a post across the ways its link can be written (Bluesky or X, `www.`,
- * `twitter.com`, a trailing `?s=20`), or null for a link that isn't to a post.
+ * What identifies a post across the ways its link can be written (Bluesky, X or Substack,
+ * `www.`, `twitter.com`, a trailing `?s=20`), or null for a link that isn't to a post.
  */
 export function postKey(link: string): string | null {
   let url: URL
@@ -97,7 +97,17 @@ export function postKey(link: string): string | null {
     const [, id] = url.pathname.match(/^\/[^/]+\/status\/(\d+)/) ?? []
     return id ? `x:${id}` : null
   }
-  return null
+  // Substack's Share button links through `open.substack.com/pub/<publication>/p/<slug>`, the
+  // same post as `/p/<slug>` on the publication's subdomain.
+  if (host === "open.substack.com") {
+    const [, publication, slug] = url.pathname.match(/^\/pub\/([^/]+)\/p\/([^/]+)/) ?? []
+    return publication && slug
+      ? `substack:${publication.toLowerCase()}.substack.com/${slug.toLowerCase()}`
+      : null
+  }
+  // A Substack post is `/p/<slug>` on its publication's host: a subdomain or a custom domain.
+  const [, slug] = url.pathname.match(/^\/p\/([^/]+)/) ?? []
+  return slug ? `substack:${host.toLowerCase()}/${slug.toLowerCase()}` : null
 }
 
 /** The posts, without the ones an editor hid by their link. */

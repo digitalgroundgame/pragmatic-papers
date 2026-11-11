@@ -35,5 +35,10 @@ describe("the site's plugins", () => {
     expect(listed.find((p) => p.slug === "plugin-search")?.collections).toEqual(["search"])
     expect(listed.find((p) => p.slug === "docs")?.collections).toEqual(["docs"])
     expect(listed.find((p) => p.slug === "plugin-seo")?.collections).toEqual([])
+    expect(listed.find((p) => p.slug === "achievements")?.collections).toEqual([
+      "achievements",
+      "awards",
+      "articles-read",
+    ])
   })
 })

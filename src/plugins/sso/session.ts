@@ -3,7 +3,11 @@ import type { CollectionSlug, Payload, PayloadRequest } from "payload"
 import { isPluginOn } from "@/utilities/registerPlugin"
 
 import { getAuth } from "./auth"
-import { DEFAULT_COOKIE_NAME, DEFAULT_PAYLOAD_USER_COOKIE } from "./constants"
+import {
+  DEFAULT_COOKIE_NAME,
+  DEFAULT_PAYLOAD_USER_COOKIE,
+  DEFAULT_SIGNED_IN_COOKIE,
+} from "./constants"
 import type { ResolvedSsoConfig, SsoPluginConfig } from "./types"
 
 /** A row of the users collection, as Payload returns it. */
@@ -20,6 +24,7 @@ export function resolveSsoConfig(options: SsoPluginConfig): ResolvedSsoConfig {
     usersSlug: "users",
     cookieName: DEFAULT_COOKIE_NAME,
     payloadUserCookie: DEFAULT_PAYLOAD_USER_COOKIE,
+    signedInCookie: DEFAULT_SIGNED_IN_COOKIE,
     isPayloadUser: () => true,
     accountPath: "/account",
     sessionSeconds: 60 * 60 * 24 * 7,

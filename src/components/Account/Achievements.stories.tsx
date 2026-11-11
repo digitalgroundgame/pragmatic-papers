@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, spyOn, within } from "storybook/test"
 
 import type { HeldAchievement } from "@/plugins/achievements"
+import { isolatedDocs } from "@/stories/isolatedDocs"
 
 import { Achievements } from "./Achievements"
 
@@ -33,6 +34,7 @@ function serve(held: HeldAchievement[] | null) {
 const meta = {
   title: "Components/Account/Achievements",
   component: Achievements,
+  parameters: isolatedDocs("360px"),
   decorators: [
     (Story) => (
       <div className="mx-auto max-w-xl p-4">
@@ -67,6 +69,8 @@ export const NoneYet: Story = {
 }
 
 export const SwitchedOff: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   beforeEach: serve(null),
   play: async ({ canvasElement }) => {
     // Nothing to wait for: give the request a moment, then check nothing rendered.

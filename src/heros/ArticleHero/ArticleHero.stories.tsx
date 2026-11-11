@@ -15,7 +15,7 @@ const meta = {
     article: articleFixture({
       authors: authors.slice(0, 2),
       publishedAt: "2026-01-12T15:00:00.000Z",
-      updatedAt: "2026-01-12T15:00:00.000Z",
+      contentUpdatedAt: "2026-01-12T15:00:00.000Z",
     }),
   },
   decorators: [
@@ -48,7 +48,7 @@ export const Updated: Story = {
     article: articleFixture({
       authors: authors.slice(0, 1),
       publishedAt: "2026-01-12T15:00:00.000Z",
-      updatedAt: "2026-01-14T09:30:00.000Z",
+      contentUpdatedAt: "2026-01-14T09:30:00.000Z",
     }),
   },
 }
@@ -85,6 +85,29 @@ export const WithTableOfContents: Story = {
     })
     await userEvent.click(button)
     await expect(button).toHaveAttribute("aria-expanded", "false")
+  },
+}
+
+/** An article already on Substack gets a button to its post there, before Share. */
+export const OnSubstack: Story = {
+  args: {
+    showComments: true,
+    article: {
+      ...meta.args.article,
+      syndicateToSubstack: true,
+      substackUrl: "https://thepragmaticpapers.substack.com/p/an-article",
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const controls = canvasElement.querySelector<HTMLElement>("[data-slot=article-meta-controls]")!
+    const link = within(controls).getByRole("link", { name: "Read on Substack" })
+    await expect(link).toHaveAttribute(
+      "href",
+      "https://thepragmaticpapers.substack.com/p/an-article",
+    )
+    // Sized like the comment and share buttons beside it.
+    await expect(link.getBoundingClientRect().width).toBe(36)
+    await expect(link.querySelector("svg")!.getBoundingClientRect().width).toBe(20)
   },
 }
 
@@ -149,7 +172,7 @@ export const WithNarrationAndComments: Story = {
 const longestDates = articleFixture({
   authors: authors.slice(0, 1),
   publishedAt: "2026-09-23T16:59:00.000Z",
-  updatedAt: "2026-09-30T16:59:00.000Z",
+  contentUpdatedAt: "2026-09-30T16:59:00.000Z",
 })
 
 async function openDatelineTooltip(canvasElement: HTMLElement): Promise<HTMLElement> {

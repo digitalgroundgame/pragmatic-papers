@@ -37,7 +37,11 @@ export const Select: React.FC<
         name={name}
         render={({ field: { onChange, value } }) => {
           return (
-            <SelectComponent items={options} onValueChange={(val) => onChange(val)} value={value}>
+            <SelectComponent
+              items={options}
+              onValueChange={(val) => onChange(val)}
+              value={value ?? null}
+            >
               <SelectTrigger className="w-full" id={name} {...errorProps}>
                 <SelectValue placeholder={label} />
               </SelectTrigger>

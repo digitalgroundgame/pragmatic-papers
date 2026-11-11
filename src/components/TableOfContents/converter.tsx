@@ -5,6 +5,7 @@ import type { SerializedHeadingNode } from "@payloadcms/richtext-lexical"
 import type { SerializedLexicalNode } from "@payloadcms/richtext-lexical/lexical"
 import type { JSXConverter, JSXConverterArgs } from "@payloadcms/richtext-lexical/react"
 
+import { AnchoredHeading } from "./AnchoredHeading"
 import type { AnchoredNode } from "./types"
 
 export type HeadingJSXConverter = JSXConverter<SerializedHeadingNode>
@@ -36,23 +37,11 @@ export function createTableOfContentsConverter(
       const Tag = node.tag as "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
       const id = (node as AnchoredNode<SerializedHeadingNode>).anchor
       const children = nodesToJSX({ nodes: node.children })
+      if (!id) return <Tag>{children}</Tag>
       return (
-        <Tag id={id} className="group">
-          {id ? (
-            <a
-              href={`#${id}`}
-              className="group inline-flex items-baseline gap-1 [font-weight:inherit] text-inherit no-underline"
-            >
-              {children}
-              <Icon
-                aria-hidden="true"
-                className="text-muted-foreground size-4 opacity-0 group-hover:opacity-100"
-              />
-            </a>
-          ) : (
-            children
-          )}
-        </Tag>
+        <AnchoredHeading tag={Tag} id={id} icon={<Icon aria-hidden="true" className="size-4" />}>
+          {children}
+        </AnchoredHeading>
       )
     },
   }

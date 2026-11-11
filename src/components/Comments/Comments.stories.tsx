@@ -8,6 +8,7 @@ import {
   threadComments,
   writerComment,
 } from "@/stories/fixtures/comments"
+import { isolatedDocs } from "@/stories/isolatedDocs"
 
 import { Comments } from "."
 import { SEED_KEY, SORT_KEY } from "./useCommentOrder"
@@ -64,6 +65,7 @@ const signedIn = (overrides: Partial<CommentThread> = {}) =>
 const meta = {
   title: "Components/Comments",
   component: Comments,
+  parameters: isolatedDocs("720px"),
   args: { articleId: 1 },
   decorators: [
     (Story) => (

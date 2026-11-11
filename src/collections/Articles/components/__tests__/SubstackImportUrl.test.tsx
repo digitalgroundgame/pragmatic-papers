@@ -42,6 +42,28 @@ describe("SubstackImportUrl", () => {
     expect(screen.getByText(expectedUrl)).toBeInTheDocument()
   })
 
+  it("shows Imported and a link to the post once the Substack post URL is set", () => {
+    const substackUrl = "https://thepragmaticpapers.substack.com/p/my-article"
+    mockFields = { slug: { value: "my-article" }, substackUrl: { value: ` ${substackUrl} ` } }
+    render(<SubstackImportUrl />)
+
+    expect(screen.getByText(/Imported/)).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "View the post on Substack" })).toHaveAttribute(
+      "href",
+      substackUrl,
+    )
+    expect(screen.queryByText(expectedUrl)).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Copy URL" })).not.toBeInTheDocument()
+  })
+
+  it("keeps showing the import URL while the Substack post URL isn't a Substack address", () => {
+    mockFields = { slug: { value: "my-article" }, substackUrl: { value: "https://example.org" } }
+    render(<SubstackImportUrl />)
+
+    expect(screen.getByText(expectedUrl)).toBeInTheDocument()
+    expect(screen.queryByText(/Imported/)).not.toBeInTheDocument()
+  })
+
   it("copies the URL to the clipboard", async () => {
     mockFields = { slug: { value: "my-article" } }
     const writeText = vi.fn().mockResolvedValue(undefined)

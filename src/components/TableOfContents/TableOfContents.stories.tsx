@@ -148,6 +148,8 @@ export const Collapsed: Story = {
 }
 
 export const WithoutHeadings: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   args: { content: richText(text(0), text(1)) as DefaultTypedEditorState },
   play: async ({ canvasElement }) => {
     // An article with nothing to list renders neither the list nor its button.

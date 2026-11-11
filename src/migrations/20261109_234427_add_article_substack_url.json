@@ -220,6 +220,12 @@
           "notNull": false,
           "default": false
         },
+        "substack_url": {
+          "name": "substack_url",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_by_id": {
           "name": "created_by_id",
           "type": "integer",
@@ -887,6 +893,12 @@
           "primaryKey": false,
           "notNull": false,
           "default": false
+        },
+        "version_substack_url": {
+          "name": "version_substack_url",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
         },
         "version_created_by_id": {
           "name": "version_created_by_id",
@@ -15015,12 +15027,6 @@
           "notNull": false,
           "default": true
         },
-        "key": {
-          "name": "key",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -15048,21 +15054,6 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "achievements_key_idx": {
-          "name": "achievements_key_idx",
-          "columns": [
-            {
-              "expression": "key",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -19524,6 +19515,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "739d1729-01c8-473e-88d6-49979be6ecb3",
+  "id": "795f22b0-fc04-4f6c-9c51-b20d417bc779",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

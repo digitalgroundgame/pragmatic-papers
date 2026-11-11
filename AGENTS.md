@@ -4,7 +4,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 
 ## Project Overview
 
-**Pragmatic Papers** is a Next.js 15 website with Payload CMS 3 as the headless CMS. PostgreSQL database via Docker, Drizzle ORM (managed by Payload).
+**Pragmatic Papers** is a Next.js 16 website with Payload CMS 3 as the headless CMS. PostgreSQL database via Docker, Drizzle ORM (managed by Payload).
 
 ## Commands
 
@@ -34,7 +34,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:e2e` — run Playwright E2E tests against a throwaway Postgres in Docker (see [Test databases](#test-databases)). Functional assertions only; visual changes are reviewed in Storybook and the PR's site preview (see `tests/e2e/README.md`). CI runs the suite in the merge queue, on PRs into `main`, and on a PR into `dev` only once it has the `e2e` label
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`). CI's coverage report adds the stories' coverage: the Unit tests and Storybook jobs each upload a `coverage-final.json`, and the Coverage job's `scripts/merge-coverage.ts` adds the stories' hits onto the unit run's map, matching entries by start line (the two transforms disagree on columns, so istanbul's own merge would count them twice). Integration tests aren't counted
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
-- `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
+- `pnpm test:unit-snapshot` — regenerate snapshot baselines after intentional UI changes (`pnpm test:unit -u`). It accepts every changed snapshot as the new baseline and stays in watch mode, so review the `.snap` diff before committing
 - `pnpm coverage:report` — post the coverage section of CI's PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
 - `pnpm bundle-size` — measure the gzipped client JS and CSS each public page loads, from the build in `.next` (run `pnpm build` first), and compare it with dev's last measurement when `BASE_BUNDLE_SIZE_PATH` names one (see [Page speed](#page-speed))
 - `pnpm analyze` — Turbopack's bundle analyzer, in the browser (it compiles but doesn't leave a build behind): each route's client and server modules, and the import chain that brings each one in. `pnpm analyze --output` writes it to `.next/diagnostics/analyze/` instead, which the next `pnpm build` deletes
@@ -361,7 +361,7 @@ ESLint enforces the import rules for every folder under `src/plugins/` (`eslint.
 - Use `unstable_cache` with cache tags for long-lived caching (globals, redirects, sitemaps)
 - Sitemaps: each is a `sitemap.ts` in the folder of the section it lists (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`), added with a title to `SITEMAPS` in `src/data/feeds.ts`, which `/sitemap_index.xml`, robots.txt and the Feed list block read (that block, `blocks/FeedsList`, lists them and the RSS feeds in `FEEDS` from the same file on the `/feeds` page, a Pages document editors own: a deploy creates it once per site as a draft for an editor to publish, then never touches it again, even once deleted (`STARTER_PAGES` in `collections/Pages/starterPages/`), and the seed creates it published locally). Pages live at the root, so theirs is the root `sitemap.ts` (`/sitemap.xml`), and the index of them all is `/sitemap_index.xml` (`(sitemaps)/sitemap_index.xml`), which robots.txt and Search Console point at; Google News reads `articles/news-sitemap.xml/route.ts`, a route handler (`sitemap.ts` can't write `news:` tags) listing only the last two days' articles, as Google asks. The old `/pages-sitemap.xml`, `/articles-sitemap.xml` and `/volumes-sitemap.xml` redirect permanently in `next.config.ts`
 - Always respect `draftMode()` — pass `draft` and `overrideAccess: draft` into Payload queries
-- Next.js 15: `params` and `searchParams` are `Promise`s (must be `await`ed)
+- Next.js 16: `params` and `searchParams` are `Promise`s (must be `await`ed)
 - Metadata: use `generateMeta({ doc, canonicalPath })` from `@/utilities/generateMeta`
 - Static generation: implement `generateStaticParams()` with `overrideAccess: false` and `draft: false`
 
@@ -435,6 +435,14 @@ plugin and the account page read too.
   `next.config.ts` and the Worker's cache (`PERSONAL_COOKIES` in `src/cloudflare/edgeCache.ts`)
   by name, and Cloudflare's rule because the name contains `payload-token`. Rename either
   everywhere or not at all.
+- Payload's `csrf` list is this deployment's `SERVER_URL` (`payload.config.ts`), so its login
+  cookie, and the SSO session's (`isAllowedOrigin` in `ssoStrategy`), sign nobody in on a
+  request from another origin. Staging and PR previews are subdomains of the production site,
+  which SameSite=Lax doesn't keep apart. The admin only works on `SERVER_URL`'s hostname.
+  A page opened from another site (a link in Slack or email, a provider's redirect back after
+  a sign-in) is a cross-site request too: the SSO session is still taken on a top-level page
+  load, and for Payload's cookie, which isn't, `ResumeSession` (`src/components/BeforeLogin`)
+  sends someone the login page finds signed in on to where they were headed.
 - `staffByDefault` (`src/plugins/staffByDefault.ts`, the last plugin) gives every access rule a
   collection or plugin leaves out to staff, where Payload's default is any logged-in user, so a
   forgotten rule can't reach members if one ever becomes `req.user`.
@@ -674,6 +682,21 @@ Two things live there, and they are not two modes of one block:
   data a researcher's feed keeps updating. Pragmatic Papers owns geometry and
   presentation in code; the feed owns facts and records; `syncInteractiveData`
   pulls it daily into draft snapshots an editor publishes.
+
+The Substack feed can't run a map, so it shows a picture of it
+(`interactiveMapToImage`). `generateBlockImages` (an Articles `afterChange`
+hook) draws it when the article is published, never while a feed is built:
+`interactiveMapToSVG` shades the map with the component's own resolver,
+`renderImage.ts` rasterizes it with `sharp` (on the Coolify app, where articles
+are saved; the Worker only reads the result), and it's stored as a Media upload
+named for a hash of the block's data and its maps' SVG (`feedImage.ts`). The
+feed's query looks that name up, so an unchanged map isn't drawn twice, a
+changed one gets a new picture, and the old one stays for posts Substack
+already imported. A map with no picture gets the RSS feeds' link back to the
+article. The block's download button (`download/`) draws the same picture in the
+reader's browser, with the sources and the logo in a footer and the font embedded, in the theme the
+page shows (`themePalette`), and saves it as a PNG for sharing. The text in the picture needs a font in the image
+(both Dockerfiles install fontconfig and the site's own fonts as TTFs from their packages, Geist and Libertinus Serif, since fontconfig can't read woff2; a download embeds the site's woff2). Like the page, the titles and sources are in Libertinus Serif, scaled 112% as `fonts.ts` scales it, and the legend in Geist.
 
 An SVG never carries records. A drilldown's SVG is checked in, parsed once at
 snapshot time into `geometry/*.json`, and never parsed again;

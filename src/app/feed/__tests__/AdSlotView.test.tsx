@@ -51,6 +51,15 @@ describe("AdSlotView", () => {
     expect(cta).not.toHaveAttribute("target")
   })
 
+  it("renders the call to action as a plain link styled as a button", () => {
+    renderAd()
+    const cta = screen.getByRole("link", { name: "Donate" })
+    expect(cta).toHaveAttribute("data-slot", "button")
+    // Base UI's Button, rendered as a link, gives it a button's attributes.
+    expect(cta).not.toHaveAttribute("type")
+    expect(cta).not.toHaveAttribute("tabindex")
+  })
+
   it("opens external calls to action safely in a new tab", () => {
     renderAd({ ad: { ...donation, ctaHref: "https://example.com", variant: "external" } })
     const cta = screen.getByRole("link", { name: "Donate" })

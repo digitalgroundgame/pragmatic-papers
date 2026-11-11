@@ -406,6 +406,26 @@ describe("comments", () => {
     expect((await post({ id: 99_999_999 }, cookie, "Nowhere")).status).toBe(404)
   })
 
+  it("stops showing an article's comments once it's taken down", async () => {
+    const cookie = await signIn(reader())
+    const writer = await createUser("writer")
+    const live = await createArticle({ authors: [writer.id] })
+    await posted(live, cookie, "Here while it's live")
+    expect((await api(`/comments/thread/${live.id}`)).status).toBe(200)
+
+    await payload.update({
+      collection: "articles",
+      id: live.id,
+      data: { _status: "draft" },
+      context: { disableRevalidate: true },
+    })
+
+    expect((await api(`/comments/thread/${live.id}`)).status).toBe(404)
+    expect((await api(`/comments/thread/${live.id}`, { headers: { Cookie: cookie } })).status).toBe(
+      404,
+    )
+  })
+
   it("empties a deleted account's comments, keeping replies to them", async () => {
     const a = reader()
     const aCookie = await signIn(a)

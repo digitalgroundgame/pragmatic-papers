@@ -22,6 +22,8 @@ interface ShareButtonsProps {
   url: string
   title: string
   className?: string
+  /** Shows the word "Share" beside the icon, as an outlined button, where there's room for it. */
+  showLabel?: boolean
 }
 
 function getContentInfo(url: string): {
@@ -33,7 +35,12 @@ function getContentInfo(url: string): {
   return { contentType: match[1] === "articles" ? "article" : "volume", itemId: match[2]! }
 }
 
-export function ShareButtons({ url, title, className }: ShareButtonsProps): React.ReactElement {
+export function ShareButtons({
+  url,
+  title,
+  className,
+  showLabel = false,
+}: ShareButtonsProps): React.ReactElement {
   const [copied, setCopied] = useState(false)
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -107,15 +114,20 @@ export function ShareButtons({ url, title, className }: ShareButtonsProps): Reac
     <Popover>
       <PopoverTrigger
         render={
-          <Button
-            variant="ghost"
-            size="icon-lg"
-            aria-label="Share"
-            className={cn("shrink-0", className)}
-          />
+          showLabel ? (
+            <Button variant="outline" size="lg" className={cn("shrink-0", className)} />
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon-lg"
+              aria-label="Share"
+              className={cn("shrink-0", className)}
+            />
+          )
         }
       >
         <ShareIcon />
+        {showLabel && "Share"}
       </PopoverTrigger>
       <PopoverContent align="end" aria-label="Share">
         <div className="grid grid-cols-7 gap-1">

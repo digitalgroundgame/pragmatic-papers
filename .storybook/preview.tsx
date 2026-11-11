@@ -42,6 +42,8 @@ const preview: Preview = {
   parameters: {
     layout: "padded",
     nextjs: { appDirectory: true },
+    // The reading feed is an early mockup, so its section goes below the rest.
+    options: { storySort: { order: ["*", "Feed"] } },
     controls: {
       matchers: {
         color: /(background|color)$/i,

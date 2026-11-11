@@ -1,6 +1,6 @@
 {
   "name": "pragmatic-papers",
-  "version": "2.9.1",
+  "version": "2.10.0",
   "description": "The Pragmatic Papers",
   "license": "MIT",
   "type": "module",
@@ -40,6 +40,7 @@
     "test": "vitest",
     "test:ci": "vitest run",
     "test:unit": "vitest --project unit",
+    "test:unit-snapshot": "vitest --project unit --update",
     "test:integration": "vitest --project integration",
     "test:scripts": "vitest --project scripts",
     "test:storybook": "vitest --project storybook",
@@ -59,6 +60,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
+    "@expo-google-fonts/libertinus-serif": "0.4.0",
     "@google-analytics/data": "^7.3.0",
     "@next/third-parties": "16.4.5",
     "@payloadcms/admin-bar": "^3.93.0",

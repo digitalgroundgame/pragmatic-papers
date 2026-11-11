@@ -222,3 +222,22 @@ describe("ShareButtons", () => {
     })
   })
 })
+
+describe("ShareButtons label", () => {
+  it("is an icon button named by its label by default", () => {
+    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} />)
+    const button = screen.getByRole("button", { name: "Share" })
+    expect(button).toHaveAttribute("aria-label", "Share")
+    expect(button).toHaveTextContent("")
+  })
+
+  it("shows the word Share when asked, and still opens the share menu", () => {
+    render(<ShareButtons url={TEST_URL} title={TEST_TITLE} showLabel />)
+    const button = screen.getByRole("button", { name: "Share" })
+    expect(button).toHaveTextContent("Share")
+    expect(button).not.toHaveAttribute("aria-label")
+
+    fireEvent.click(button)
+    expect(screen.getByRole("link", { name: "Share on Bluesky" })).toBeInTheDocument()
+  })
+})

@@ -3,6 +3,7 @@ import React from "react"
 import { CommentsLink } from "@/components/Comments/CommentsLink"
 import { Byline } from "@/components/Authors/Byline"
 import { toBylineAuthor } from "@/components/Authors/BylineAuthor"
+import { ReadOnSubstack } from "@/components/ReadOnSubstack"
 import { ShareButtons } from "@/components/ShareButtons"
 import { Media } from "@/components/Media"
 import { NarrationPlayer } from "@/components/NarrationPlayer"
@@ -29,7 +30,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
   showTableOfContents = false,
   showComments = false,
 }) => {
-  const { publishedAt, updatedAt, title, heroImage, authors, narration, content } = article
+  const { publishedAt, contentUpdatedAt, title, heroImage, authors, narration, content } = article
 
   const bylineAuthors = (authors || []).filter(isResolved<User>).map(toBylineAuthor)
 
@@ -46,7 +47,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
       <Byline authors={bylineAuthors} />
       <div data-slot="article-meta" className="flex flex-wrap items-center gap-3">
         <div className="grow-999">
-          <PublicationDates publishedAt={publishedAt} updatedAt={updatedAt} />
+          <PublicationDates publishedAt={publishedAt} updatedAt={contentUpdatedAt} />
         </div>
         {/* The buttons sit edge to edge, so each icon's own padding spaces the row: 16px
             between every pair of glyphs. The collapsed player's "Listen" label carries the
@@ -56,6 +57,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
           <NarrationPlayer narration={narration} className="mr-auto shrink-0" />
           {showTableOfContents && <TableOfContentsButton content={content} />}
           {showComments && <CommentsLink />}
+          <ReadOnSubstack article={article} variant="icon" />
           <ShareButtons url={`${getSiteURL()}/articles/${article.slug}`} title={article.title} />
         </div>
       </div>

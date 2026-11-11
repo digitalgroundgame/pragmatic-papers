@@ -104,3 +104,16 @@ export const Narration: Story = {
     )
   },
 }
+
+// The "Listen" label is part of the play button: clicking the words plays.
+export const NarrationListenLabel: Story = {
+  render: () => <NarrationPlayer narration={narrationAudio} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const controls = canvasElement.querySelector("[data-slot=audio-controls]")
+    await userEvent.click(await canvas.findByText(/^Listen/))
+    await waitFor(() => expect(canvas.getByRole("button", { name: "Pause" })).toBeInTheDocument())
+    await expect(controls).not.toHaveAttribute("inert")
+    await userEvent.click(canvas.getByRole("button", { name: "Pause" }))
+  },
+}

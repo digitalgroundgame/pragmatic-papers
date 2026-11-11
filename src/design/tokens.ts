@@ -184,10 +184,10 @@ export const FONT_FAMILIES: FontFamily[] = [
     use: "The interface: navigation, buttons, forms, metadata, the docs. The <html> default.",
   },
   {
-    name: "System serif",
+    name: "Libertinus Serif",
     utility: "font-serif",
-    stack: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
-    use: "Reading text: RichText bodies, article card excerpts, bylines, dates. Tailwind's default stack, so it's New York on Apple devices and Georgia elsewhere.",
+    stack: "var(--font-serif)",
+    use: "Reading text: RichText bodies, article card excerpts, bylines, dates. Regular, italic and bold only (no semibold), scaled up 112% to read at Georgia's size, and not preloaded: fallback faces sized to its widths hold the lines until it arrives.",
   },
 ]
 

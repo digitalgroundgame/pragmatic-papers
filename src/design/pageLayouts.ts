@@ -163,10 +163,11 @@ export const PAGE_LAYOUTS: PageLayout[] = [
     breadcrumbs: "none",
     h1: "36 / 48px",
     bottomGap: 20,
+    // The hero, title and byline span max-w-5xl and the body max-w-2xl on purpose: the hero's
+    // width is independent of the body's, so other hero templates can be added.
     deviations: [
       "No visible breadcrumbs (the trail is only in the JSON-LD), unlike every other content page.",
-      "Two widths on one page: the hero, title and byline span max-w-5xl, the body max-w-2xl centered under them, so the title's left edge doesn't line up with the text's.",
-      "Recommended articles sit in container max-w-3xl, wider than the body above them (max-w-2xl), so neither their edges nor their top rule line up with it.",
+      "Recommended articles sit in container max-w-3xl, a little wider than the body above them (max-w-2xl), so neither their edges nor their top rule line up with it. Planned: the full container, with more kinds of recommendation.",
     ],
   },
   {

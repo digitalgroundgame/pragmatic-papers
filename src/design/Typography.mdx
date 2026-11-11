@@ -6,7 +6,7 @@ import { FontFamilies, HeadingScale, TextScale } from "./DesignGuide"
 # Typography
 
 Three faces. Headings are FKScreamer, a condensed display face; the interface is Geist; and
-reading text, the body of an article, is the platform's serif.
+reading text, the body of an article, is Libertinus Serif.
 
 <Unstyled>
   <FontFamilies />
@@ -38,7 +38,7 @@ below, so globals.css moves the step up.
   text, 60 / 72px on a volume, 32 / 36px in the docs. The [page audit](?path=/docs/design-guide-page-audit--docs) lists which page uses which.
 - **A rich-text h2 is bigger than a page's h2.** Inside an article an `h2` is 36 / 48px; a
   page's own section heading is 32 / 36px.
-- **The serif isn't a chosen font.** `font-serif` is Tailwind's default stack, so readers
-  on Apple devices get New York and everyone else Georgia (or Times). It's the face most of
-  the site's words are read in.
+- **The serif has two weights.** Libertinus Serif ships regular and bold (and their
+  italics), so serif text marked `font-semibold` is drawn in the bold face: the volume's
+  article links, the interactive page's eyebrow and the What's new list.
 - **The docs set headings in Geist** (`DocsLayout`), on purpose, to read as a wiki.

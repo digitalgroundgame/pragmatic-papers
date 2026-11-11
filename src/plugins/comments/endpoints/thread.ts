@@ -60,7 +60,8 @@ const lockedMessage = (until: string | null) =>
     : "A moderator has stopped this account from commenting."
 
 /**
- * `GET /api/comments/thread/:id`: a published document's comments as the viewer sees them,
+ * `GET /api/comments/thread/:id`: a published document's comments as the viewer sees them
+ * (404 for one that isn't published),
  * who the viewer is (if they're signed in) and the limits on posting.
  * `POST` posts a comment, or a reply (`parentId`), as the signed-in author.
  *
@@ -73,7 +74,17 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
     const id = parseId(req, req.routeParams?.id)
     if (id === null) return notFound()
 
-    const [found, author, settings] = await Promise.all([
+    const [target, found, author, settings] = await Promise.all([
+      // Only what anyone can read shows its comments: an article taken down takes them with it.
+      req.payload.findByID({
+        collection: config.targetSlug,
+        id,
+        depth: 0,
+        draft: false,
+        overrideAccess: false,
+        disableErrors: true,
+        select: {},
+      }),
       req.payload.find({
         collection: COMMENTS_SLUG as CollectionSlug,
         where: { target: { equals: id } },
@@ -97,6 +108,8 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       config.currentUser(req),
       readSettings(req.payload),
     ])
+
+    if (!target) return notFound()
 
     const stored = (found.docs as unknown as StoredComment[]).reverse()
     const describe = await describerFor(

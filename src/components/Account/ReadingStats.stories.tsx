@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, spyOn, within } from "storybook/test"
 
+import { isolatedDocs } from "@/stories/isolatedDocs"
+
 import type { MyReading } from "@/plugins/achievements"
 
 import { ReadingStats } from "./ReadingStats"
@@ -18,6 +20,7 @@ function serve(reading: MyReading | null) {
 const meta = {
   title: "Components/Account/ReadingStats",
   component: ReadingStats,
+  parameters: isolatedDocs("240px"),
   decorators: [
     (Story) => (
       <div className="mx-auto max-w-xl p-4">

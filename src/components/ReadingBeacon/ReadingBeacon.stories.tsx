@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, spyOn, waitFor } from "storybook/test"
 
+import { isolatedDocs } from "@/stories/isolatedDocs"
+
 import { ReadingBeacon } from "."
 
 /**
@@ -33,6 +35,7 @@ const reports = () =>
 const meta = {
   title: "Components/ReadingBeacon",
   component: ReadingBeacon,
+  parameters: isolatedDocs("160px"),
   decorators: [
     (Story) => (
       <div className="relative mx-auto max-w-xl p-4">

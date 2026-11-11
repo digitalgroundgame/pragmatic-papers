@@ -4,7 +4,6 @@ import { codeBlock } from "@/blocks/Code"
 import { collectionGridBlock } from "@/blocks/CollectionGrid"
 import { contentBlock } from "@/blocks/Content"
 import { contributorsBlock } from "@/blocks/Contributors"
-import { feedsListBlock } from "@/blocks/FeedsList"
 import { footnoteBlock } from "@/blocks/Footnote"
 import { formBlock } from "@/blocks/Form"
 import { interactiveMapBlock } from "@/blocks/InteractiveMap"
@@ -35,7 +34,6 @@ export const BLOCKS: readonly AnyBlockDescriptor[] = [
   contributorsBlock,
   ctaBlock,
   displayMathBlock,
-  feedsListBlock,
   footnoteBlock,
   formBlock,
   inlineMathBlock,

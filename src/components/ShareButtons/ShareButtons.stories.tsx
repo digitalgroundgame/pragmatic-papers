@@ -22,6 +22,17 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
 
+/** With room for it, as under an article, the button says "Share" beside its icon. */
+export const WithLabel: Story = {
+  args: { showLabel: true },
+  play: async ({ canvasElement }) => {
+    const button = within(canvasElement).getByRole("button", { name: "Share" })
+    await expect(button).toHaveTextContent("Share")
+    await userEvent.click(button)
+    await expect(await screen.findByRole("dialog", { name: "Share" })).toBeInTheDocument()
+  },
+}
+
 export const Open: Story = {
   play: async ({ args, canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("button", { name: "Share" }))

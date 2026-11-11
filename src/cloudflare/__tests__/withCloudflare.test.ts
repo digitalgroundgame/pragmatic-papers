@@ -44,7 +44,12 @@ describe("withCloudflare", () => {
   })
 
   it("takes the stubbed packages off serverExternalPackages", () => {
-    expect(config.serverExternalPackages).toEqual(["pino"])
+    expect(config.serverExternalPackages).toEqual(["drizzle-kit", "pino"])
+  })
+
+  it("leaves drizzle-kit external, since Payload only requires it at runtime for migrations", () => {
+    expect(WORKER_STUBS).not.toContain("drizzle-kit/api")
+    expect(runWebpack(config, true).resolve.alias).not.toHaveProperty("drizzle-kit/api$")
   })
 
   it("traces pg-cloudflare, which Node's resolution never reaches", () => {
@@ -56,7 +61,7 @@ describe("withCloudflare", () => {
   it("runs the base webpack function, then aliases each stub", () => {
     const resolved = runWebpack(config, false)
     expect(resolved.fromBase).toBe(true)
-    expect(resolved.externals).toEqual(["pino"])
+    expect(resolved.externals).toEqual(["drizzle-kit", "pino"])
     expect(resolved.resolve.alias.existing).toBe("/somewhere")
     for (const name of WORKER_STUBS) {
       expect(resolved.resolve.alias[`${name}$`]).toMatch(/stubs[\\/]unavailable\.ts$/)
@@ -71,7 +76,7 @@ describe("withCloudflare", () => {
   })
 
   it("keeps pg external on the server, for OpenNext to bundle with workerd", () => {
-    expect(runWebpack(config, true).externals).toEqual(["pino", "pg"])
+    expect(runWebpack(config, true).externals).toEqual(["drizzle-kit", "pino", "pg"])
     expect(runWebpack(config, false).externals).not.toContain("pg")
   })
 

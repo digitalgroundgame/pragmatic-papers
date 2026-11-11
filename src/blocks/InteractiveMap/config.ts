@@ -1,9 +1,11 @@
 import type { Block } from "payload"
 
+import { blockImages } from "@/blocks/blockImages"
 import { link } from "@/fields/link"
 
 export const InteractiveMap: Block = {
   slug: "interactiveMap",
+  admin: { images: blockImages("interactiveMap") },
   interfaceName: "InteractiveMapBlock",
   labels: {
     singular: "Interactive Map",

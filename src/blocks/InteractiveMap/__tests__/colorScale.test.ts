@@ -8,9 +8,32 @@ import {
   inferValueFormat,
   pickDivergingColor,
   resolveColor,
+  STATIC_NEUTRAL,
+  staticColor,
 } from "@/blocks/InteractiveMap/colorScale"
 
 describe("colorScale", () => {
+  describe("staticColor — a color for a rendering with no stylesheet", () => {
+    it("takes the fallback of a theme variable", () => {
+      expect(staticColor("var(--map-positive-1, #ffb8bc)")).toBe("#ffb8bc")
+      expect(staticColor(" var( --map-negative-4 ,rgb(18, 106, 206)) ")).toBe("rgb(18, 106, 206)")
+    })
+
+    it("gives every legend entry a plain color", () => {
+      for (const { color } of getDivergingRedBlueLegend()) {
+        expect(staticColor(color)).toMatch(/^#[0-9a-f]{6}$/)
+      }
+    })
+
+    it("swaps the neutral fill, whose fallback is oklch(), for its hex", () => {
+      expect(staticColor(DEFAULT_NEUTRAL)).toBe(STATIC_NEUTRAL)
+    })
+
+    it.each(["#d81334", "gold", "var(--no-fallback)"])("returns %s as it is", (color) => {
+      expect(staticColor(color)).toBe(color)
+    })
+  })
+
   describe("pickDivergingColor — neutral below first breakpoint, palette tiers above", () => {
     it.each([
       { value: 0.5, color: null },

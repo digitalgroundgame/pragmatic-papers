@@ -6,6 +6,21 @@
 @custom-variant dark (&:is(.dark *));
 /* An ancestor of an expanded TableOfContents (it renders data-slot="toc", hidden when collapsed). */
 @custom-variant toc-open (&:has([data-slot="toc"]:not([hidden])));
+/*
+ * Inside a card (an element with `group/card`; the site's Card already is one) that is
+ * pointed at, or that is or holds the keyboard focus: the image and headline react to the
+ * whole card together, not each to itself.
+ */
+@custom-variant card-hover {
+  @media (hover: hover) {
+    &:is(:where(.group\/card):hover *) {
+      @slot;
+    }
+  }
+  &:is(:where(.group\/card):is(:focus-visible, :has(:focus-visible)) *) {
+    @slot;
+  }
+}
 
 /*
  * Stand-ins for FKScreamer (fonts.ts) while it loads, so a heading wraps onto the same
@@ -57,6 +72,39 @@
   size-adjust: 104.6%;
   ascent-override: 96.1%;
   descent-override: 28.2%;
+  line-gap-override: 0%;
+}
+
+/*
+ * The same for Libertinus Serif (fonts.ts), at its 112% size: these set a paragraph as wide
+ * as Libertinus does, measured over 20 published articles' text (Times against Liberation
+ * Serif, Georgia against Gelasio, which share their widths). Ascent and descent are
+ * Libertinus' 894 and 246 of 1000 units, times 112%, divided by size-adjust.
+ */
+@font-face {
+  font-family: "Libertinus Fallback Georgia";
+  src: local("Georgia");
+  size-adjust: 104.5%;
+  ascent-override: 95.9%;
+  descent-override: 26.4%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Libertinus Fallback Times";
+  src:
+    local("Times New Roman"), local("TimesNewRomanPSMT"), local("Liberation Serif"), local("Tinos");
+  size-adjust: 114.4%;
+  ascent-override: 87.6%;
+  descent-override: 24.1%;
+  line-gap-override: 0%;
+}
+/* Android has neither: its serif is Noto Serif. */
+@font-face {
+  font-family: "Libertinus Fallback Noto";
+  src: local("Noto Serif"), local("NotoSerif-Regular");
+  size-adjust: 96.4%;
+  ascent-override: 103.9%;
+  descent-override: 28.6%;
   line-gap-override: 0%;
 }
 
@@ -162,6 +210,7 @@
 
 @theme inline {
   --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
   --font-display: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -218,6 +267,11 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Selected text is white on the brand fill (4.52:1), the same in both themes */
+  ::selection {
+    background-color: var(--brand-fill);
+    color: white;
   }
   html {
     /* Anchor links (the table of contents) stop below the header, and the ticker while it sticks */

@@ -10,10 +10,12 @@ import {
   UnorderedListFeature,
 } from "@payloadcms/richtext-lexical"
 
+import { blockImages } from "@/blocks/blockImages"
 import { menu } from "@/fields/menu"
 
 export const CallToAction: Block = {
   slug: "cta",
+  admin: { images: blockImages("cta") },
   interfaceName: "CallToActionBlock",
   fields: [
     {

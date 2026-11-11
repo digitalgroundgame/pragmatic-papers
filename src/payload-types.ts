@@ -330,6 +330,10 @@ export interface Article {
   slug: string;
   enableMathRendering?: boolean | null;
   publishedAt?: string | null;
+  /**
+   * When readers last saw a change to the title, text, hero image, authors or narration. The article shows it as "Updated".
+   */
+  contentUpdatedAt?: string | null;
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;
   /**
@@ -340,6 +344,10 @@ export interface Article {
    * Adds the published article to the Substack import feed. Takes effect once the article is published.
    */
   syndicateToSubstack?: boolean | null;
+  /**
+   * Once Substack has imported the article, paste the post's address here. It marks the article as imported, takes it out of the bulk import feed, and adds a Read on Substack link to the article.
+   */
+  substackUrl?: string | null;
   createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
@@ -1887,10 +1895,12 @@ export interface ArticlesSelect<T extends boolean = true> {
   slug?: T;
   enableMathRendering?: T;
   publishedAt?: T;
+  contentUpdatedAt?: T;
   authors?: T;
   topics?: T;
   showTableOfContents?: T;
   syndicateToSubstack?: T;
+  substackUrl?: T;
   createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -2806,7 +2816,7 @@ export interface Header {
      */
     upcomingHours?: number | null;
     /**
-     * Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky or X. It's gone from the ticker as soon as you save.
+     * Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky, X or Substack. It's gone from the ticker as soon as you save.
      */
     hidden?:
       | {
@@ -2908,6 +2918,27 @@ export interface IntegrationSettings {
     handles?:
       | {
           handle: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  /**
+   * Whose posts run in the ticker.
+   */
+  substack?: {
+    /**
+     * Which of the publications' posts run in the ticker. Empty shows podcast episodes and videos: written posts are mostly our own articles, syndicated.
+     */
+    types?: ('podcast' | 'video' | 'post')[] | null;
+    /**
+     * Empty uses SUBSTACK_PUBLICATIONS, or thepragmaticpapers.
+     */
+    publications?:
+      | {
+          /**
+           * Its address, a custom domain, or its name. Posts are read from its RSS feed.
+           */
+          publication: string;
           id?: string | null;
         }[]
       | null;
@@ -3126,6 +3157,17 @@ export interface IntegrationsSelect<T extends boolean = true> {
           | T
           | {
               handle?: T;
+              id?: T;
+            };
+      };
+  substack?:
+    | T
+    | {
+        types?: T;
+        publications?:
+          | T
+          | {
+              publication?: T;
               id?: T;
             };
       };

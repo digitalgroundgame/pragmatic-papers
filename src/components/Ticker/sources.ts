@@ -1,4 +1,4 @@
-import { blueskyPosts, xPosts, youtubeLive } from "@/integrations"
+import { blueskyPosts, substackPosts, xPosts, youtubeLive } from "@/integrations"
 import { describeStatus, integrationStatus, type Integration } from "@/integrations"
 
 import { MAX_POSTS, type TickerBroadcast, type TickerPost } from "./items"
@@ -17,6 +17,8 @@ export interface TickerSettings {
   youtubeChannelIds?: string[] | null
   youtubeUpcomingHours?: number | null
   blueskyHandles?: string[] | null
+  substackPublications?: string[] | null
+  substackTypes?: string[] | null
   xUsernames?: string[] | null
 }
 
@@ -77,6 +79,13 @@ export const broadcastSource: TickerSource<TickerBroadcast | null> = {
   },
 }
 
+/**
+ * How many of an account's newest Bluesky posts are read. More than the ticker shows, because
+ * the posts editors hid are left out only after they're read, and the next newest take their
+ * places. Few enough that the admin's list of posts stays short.
+ */
+export const BLUESKY_RECENT_POSTS = MAX_POSTS * 2
+
 export const postSources: TickerSource<TickerPost[]>[] = [
   {
     integration: blueskyPosts,
@@ -85,13 +94,36 @@ export const postSources: TickerSource<TickerPost[]>[] = [
       const posts = await fromEach(
         "Bluesky",
         blueskyPosts.handles(settings.blueskyHandles),
-        (handle) => blueskyPosts.recentPosts({ handle, limit: MAX_POSTS, signal }),
+        (handle) => blueskyPosts.recentPosts({ handle, limit: BLUESKY_RECENT_POSTS, signal }),
       )
       return posts.map((post) => ({
         id: `bluesky:${post.uri}`,
         source: "bluesky",
         text: post.text,
         links: post.links,
+        url: post.url,
+        createdAt: post.createdAt,
+      }))
+    },
+  },
+  {
+    integration: substackPosts,
+    // A feed is free to read, but a publication posts a few times a week at most.
+    revalidate: 900,
+    async load(signal: AbortSignal, settings: TickerSettings): Promise<TickerPost[]> {
+      const types = substackPosts.types(settings.substackTypes)
+      const posts = await fromEach(
+        "Substack",
+        substackPosts.publications(settings.substackPublications),
+        (publication) =>
+          substackPosts.recentPosts({ publication, types, limit: MAX_POSTS, signal }),
+      )
+      return posts.map((post) => ({
+        id: `substack:${post.id}`,
+        source: "substack",
+        // A post's title is what it says; its link is the post itself, so it carries none.
+        text: post.title,
+        links: [],
         url: post.url,
         createdAt: post.createdAt,
       }))

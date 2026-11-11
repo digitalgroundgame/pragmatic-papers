@@ -1,5 +1,7 @@
 import type { Block } from "payload"
 
+import { blockImages } from "@/blocks/blockImages"
+
 /**
  * Merch — showcases store products as an on-site placement.
  *
@@ -22,6 +24,7 @@ export const Merch: Block = {
     plural: "Merch",
   },
   admin: {
+    images: blockImages("merch"),
     components: {
       // Several placements can share a page, and collapsed they'd all read
       // "Merch" — the heading is what tells them apart.

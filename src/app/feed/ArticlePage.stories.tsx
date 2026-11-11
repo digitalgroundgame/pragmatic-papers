@@ -1,10 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, screen, userEvent, waitFor, within } from "storybook/test"
+import { expect, within } from "storybook/test"
 
 import {
   feedArticle,
   feedBody,
-  formBlockNode,
   headingNode,
   mediaBlockNode,
   phoneFrame,
@@ -55,7 +54,7 @@ export const Prose: Story = {
 /** The article's last page ends on the squiggle. */
 export const LastPage: Story = {
   args: {
-    page: { kind: "content", nodes: feedBody.slice(-2, -1), wordCount: 60 },
+    page: { kind: "content", nodes: feedBody.slice(-1), wordCount: 60 },
     isLast: true,
   },
   play: async ({ canvasElement }) => {
@@ -94,23 +93,6 @@ export const Table: Story = {
       "2022",
       "2024",
     ])
-  },
-}
-
-/** A form waits behind a button, and opens in a dialog over the feed. */
-export const Form: Story = {
-  render: (args) => (
-    <ArticleBlockPage {...args} article={article} page={blockPage(formBlockNode, "formBlock")} />
-  ),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await waitFor(() => expect(canvas.getByText("Pitch the editors")).toBeVisible())
-    await userEvent.click(canvas.getByRole("button", { name: "Open form" }))
-    const dialog = await screen.findByRole("dialog", { name: "Pitch the editors" })
-    // The dialog fades in from opacity 0, so wait for it to finish rather than read it mid-fade.
-    await waitFor(() =>
-      expect(within(dialog).getByRole("textbox", { name: /Your pitch/ })).toBeVisible(),
-    )
   },
 }
 

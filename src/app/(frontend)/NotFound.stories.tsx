@@ -1,3 +1,5 @@
+import { isolatedDocs } from "@/stories/isolatedDocs"
+
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, within } from "storybook/test"
 
@@ -22,4 +24,5 @@ export const Default: Story = {
 
 export const Dark: Story = {
   globals: { theme: "dark" },
+  parameters: isolatedDocs("500px"),
 }

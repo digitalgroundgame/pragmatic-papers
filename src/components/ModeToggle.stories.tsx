@@ -135,3 +135,45 @@ export const LoadsOnFocus: Story = {
     await expect(trigger).toHaveFocus()
   },
 }
+
+/**
+ * A mouse click as the browser sends it. `userEvent.click` focuses the button with a plain
+ * `focus()`, which scrolls a control under the page's `scroll-padding-top` into view where a real
+ * click never does, so it can't tell whether the page moved.
+ */
+function mouseClick(target: Element): void {
+  const init = { bubbles: true, cancelable: true, composed: true, button: 0, pointerType: "mouse" }
+  target.dispatchEvent(new PointerEvent("pointerover", init))
+  target.dispatchEvent(new PointerEvent("pointerdown", init))
+  target.dispatchEvent(new PointerEvent("pointerup", init))
+  target.dispatchEvent(new PointerEvent("click", { ...init, detail: 1 }))
+}
+
+/**
+ * Scrolled down the page, the first click on the header's toggle opens the menu where the reader
+ * is. The menu loads on that click, and the click replays on the real trigger; replayed as a
+ * keyboard press, it focused the first item and scrolled the page up.
+ */
+export const FirstClickKeepsScroll: Story = {
+  render: (args) => (
+    <div>
+      <header className="bg-background sticky top-0 z-50 border-b p-3">
+        <LazyModeToggle showLabel={args.showLabel} location="storybook" />
+      </header>
+      <div className="h-[300vh]" />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    window.scrollTo({ top: 1000, behavior: "instant" })
+    const before = window.scrollY
+    await expect(before).toBeGreaterThan(0)
+    mouseClick(within(canvasElement).getByRole("button", { name: "Toggle theme" }))
+    await expect(await screen.findByRole("menu")).toBeInTheDocument()
+    // A smooth scroll would still be moving: give it time to show.
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    await expect(window.scrollY).toBe(before)
+    await userEvent.keyboard("{Escape}")
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument())
+    window.scrollTo({ top: 0, behavior: "instant" })
+  },
+}

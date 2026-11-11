@@ -7,6 +7,7 @@ import {
   createTextNode,
   richText,
 } from "@/stories/fixtures/richText"
+import { isolatedDocs } from "@/stories/isolatedDocs"
 
 import { NewsletterSignupBlock } from "./Component"
 
@@ -28,6 +29,7 @@ async function subscribe(canvasElement: HTMLElement): Promise<void> {
 const meta = {
   title: "Blocks/NewsletterSignup",
   component: NewsletterSignupBlock,
+  parameters: isolatedDocs("360px"),
   args: {
     blockType: "newsletterSignup",
     heading: "Get Daily Pragmatic Papers",

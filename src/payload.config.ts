@@ -27,11 +27,7 @@ import { updateRecommendationsTask } from "@/jobs/updateRecommendations"
 import { plugins } from "@/plugins"
 import { searchVectorAfterSchemaInit } from "@/plugins/searchVector"
 import { ssoAfterSchemaInit } from "@/plugins/sso"
-import {
-  restorePayloadErrorNames,
-  sentryPayloadPlugin,
-  skipPluginErrorsInPino,
-} from "@/sentryPayload"
+import { sentryPayloadPlugin, skipPluginErrorsInPino } from "@/sentryPayload"
 import { getSiteURL } from "@/utilities/getURL"
 import { describePlugin } from "@/utilities/registerPlugin"
 import { migrations } from "@/migrations"
@@ -44,8 +40,6 @@ import { fileURLToPath } from "url"
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
-
-restorePayloadErrorNames()
 
 export default buildConfig({
   logger: {
@@ -176,6 +170,12 @@ export default buildConfig({
     Categories,
   ],
   cors: [getSiteURL()].filter(Boolean),
+  // Payload takes its login cookie from any origin while this list is empty. SameSite=Lax
+  // keeps other sites from sending the cookie, but staging and every PR preview are
+  // subdomains of the same site, so a page on one could post to another as whoever is
+  // signed in there. With the list set, a request that names another origin is anonymous.
+  // The admin has to be used on SERVER_URL's hostname.
+  csrf: [getSiteURL()].filter(Boolean),
   globals: [
     Header,
     Footer,

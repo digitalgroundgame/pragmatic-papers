@@ -14,9 +14,9 @@
   "compatibility_date": "2026-09-30",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
-  // staging-worker.pragmaticpapers.com is a Custom Domain added in the dashboard (Settings,
-  // Domains & Routes), so the deploy token needs no zone permissions. With no `routes`
-  // here, `wrangler deploy` leaves it alone; listing one would replace the dashboard's.
+  // staging-worker.pragmaticpapers.com is a Route on the gateway Worker in front of this one,
+  // added in the dashboard (Settings, Domains & Routes), so the deploy token needs no zone
+  // permissions. With no `routes` here, `wrangler deploy` leaves the dashboard's alone.
   "observability": { "enabled": true },
   // Workers Cache, on the CachedSite entrypoint only: the default one is the gateway that
   // keeps drafts, logins and navigations out of it (src/cloudflare/edgeCache.ts).
@@ -71,8 +71,9 @@
   "env": {
     "production": {
       "name": "pragmatic-papers-production",
-      // No routes: production's hostname becomes a Custom Domain in the dashboard, as
-      // staging-worker's is, when the Worker takes over from Coolify.
+      // No routes: production's hostnames are Custom Domains on its gateway Worker, added in
+      // the dashboard (production-worker.pragmaticpapers.com now; pragmaticpapers.com when
+      // the Worker takes over from Coolify).
       "workers_dev": true,
       "observability": { "enabled": true },
       "exports": {
@@ -82,7 +83,11 @@
         "BUILD_ENV": "production",
         // Production's media is in S3 (Supabase Storage), linked by its public URL, which
         // the deploy passes in SUPABASE_URL and S3_BUCKET. The Worker never uploads, so it
-        // has no S3 credentials.
+        // has no S3 credentials. Unset, USE_LOCAL_STORAGE would be whatever a stray .env at
+        // build time said (OpenNext compiles .env files in as fallbacks), so it's spelled out.
+        "USE_LOCAL_STORAGE": "false",
+        // GOOGLE_ANALYTICS_ID and TURNSTILE_SITE_KEY come from the deploy too
+        // (PRODUCTION_GOOGLE_ANALYTICS_ID and PRODUCTION_TURNSTILE_SITE_KEY in worker.yml).
         // Production's Coolify deploy seeds its database; this Worker's never does. An
         // environment doesn't inherit the top-level `vars`, so it needs its own copy.
         "DEPLOY_SEED": "false",

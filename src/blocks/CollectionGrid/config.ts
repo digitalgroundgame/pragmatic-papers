@@ -3,10 +3,13 @@ import { layouts, slotCounts, slotDescriptions } from "./helpers/layouts"
 import { validateSlots } from "./hooks/validateSlots"
 import type { LayoutDefinition } from "./types"
 
+import { blockImages } from "@/blocks/blockImages"
+
 export type { LayoutDefinition }
 
 export const CollectionGrid: Block = {
   slug: "collectionGrid",
+  admin: { images: blockImages("collectionGrid") },
   interfaceName: "CollectionGridBlock",
   labels: { singular: "Collection Grid", plural: "Collection Grids" },
   fields: [

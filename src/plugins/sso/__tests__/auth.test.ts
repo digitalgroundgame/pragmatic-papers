@@ -259,6 +259,33 @@ describe("connection pictures", () => {
     expect(values).toEqual(["https://cdn.discordapp.com/a.png", 9])
   })
 
+  it("logs, rather than throws, when saving the picture fails", async () => {
+    const warn = vi.fn()
+    const payload = { ...newPayload(), logger: { warn } } as unknown as Payload
+    const sso = config({
+      hasPicture: async () => {
+        throw new Error("connection lost")
+      },
+    })
+    const { options } = (await getAuth(payload, sso)) as unknown as {
+      options: BetterAuthOptions
+    }
+    await options.user?.validateUserInfo?.(
+      {
+        user: { id: "9", image: "https://cdn.discordapp.com/a.png" },
+        source: { action: "link-account", method: "oauth", oauth: { providerId: "discord" } },
+      } as never,
+      {} as never,
+    )
+    await expect(
+      options.databaseHooks?.account?.create?.after?.(
+        { id: "1", userId: "9", providerId: "discord" } as never,
+        null,
+      ),
+    ).resolves.toBeUndefined()
+    expect(warn).toHaveBeenCalledOnce()
+  })
+
   it("keeps a sign-up's https picture, and drops any other", async () => {
     const options = await optionsFor(
       config({ signUp: { enabled: () => true, columns: () => ({ slug: "member-1" }) } }),

@@ -135,10 +135,13 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
     databaseHooks: {
       account: {
         create: {
-          // A newly linked account's picture becomes the user's, if they have none.
+          // A newly linked account's picture becomes the user's, if they have none. The
+          // account is linked by now, so a failure here is logged rather than shown.
           after: async (account) => {
             await savePicture(pool, config.usersSlug, account, (userId) =>
               config.hasPicture({ payload, userId }),
+            ).catch((err: unknown) =>
+              payload.logger.warn({ err }, "sso: couldn't save the linked account's picture"),
             )
           },
         },

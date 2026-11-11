@@ -16,13 +16,15 @@ const req = (roles: string[] | null) =>
   ({ req: { user: roles ? { roles } : null } }) as Parameters<FieldAccess>[0]
 
 describe("Header ticker field", () => {
-  it("takes a link to a post on Bluesky or X", () => {
+  it("takes a link to a post on Bluesky, X or Substack", () => {
     expect(urlField.validate("https://bsky.app/profile/pp.bsky.social/post/3k1")).toBe(true)
     expect(urlField.validate("https://x.com/PragPapers/status/42")).toBe(true)
+    expect(urlField.validate("https://thepragmaticpapers.substack.com/p/episode-1")).toBe(true)
   })
 
   it.each([
     ["a profile", "https://bsky.app/profile/pp.bsky.social"],
+    ["a publication's home page", "https://thepragmaticpapers.substack.com/"],
     ["the post's text", "Volume 12 is out"],
     ["nothing", null],
   ])("refuses %s, saying what to paste", (_, value) => {

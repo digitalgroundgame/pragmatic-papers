@@ -86,6 +86,8 @@ export const MixedLayout: Story = {
 }
 
 export const Empty: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   args: { blocks: [] },
   play: async ({ canvasElement }) => {
     await expect(canvasElement).toBeEmptyDOMElement()

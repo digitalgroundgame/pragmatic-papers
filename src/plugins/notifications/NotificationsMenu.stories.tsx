@@ -14,7 +14,7 @@ const items: NotificationItem[] = [
     href: "/docs/unsplash-photos",
     date: "2026-10-18T00:00:00.000Z",
     image: {
-      url: "/docs-assets/media/unsplash-photos-hero.webp",
+      url: "/docs-assets/writing/media/unsplash-photos-hero.webp",
       alt: "The Unsplash search in Media uploads with a grid of photos",
     },
   },
@@ -26,7 +26,7 @@ const items: NotificationItem[] = [
     href: "/docs/experiments",
     date: "2026-10-11T00:00:00.000Z",
     image: {
-      url: "/docs-assets/site/experiments-hero.webp",
+      url: "/docs-assets/editing/site-settings/experiments-hero.webp",
       alt: "The Site Settings switch for the Ticker experiment, turned on",
     },
   },
@@ -69,8 +69,16 @@ export const Unread: Story = {
     // The thumbnail is decorative, so the link's name is still its title.
     await expect(item.querySelector("img")).toHaveAttribute(
       "src",
-      "/docs-assets/media/unsplash-photos-hero.webp",
+      "/docs-assets/writing/media/unsplash-photos-hero.webp",
     )
+    // Every thumbnail is a picture that exists: a doc that moves takes its pictures along.
+    const thumbnails = Array.from(
+      document.querySelectorAll<HTMLImageElement>('img[src^="/docs-assets/"]'),
+    )
+    await expect(thumbnails.length).toBeGreaterThan(0)
+    await waitFor(() => {
+      for (const image of thumbnails) expect(image.complete && image.naturalWidth > 0).toBe(true)
+    })
     await expect(screen.getByText("October 18, 2026")).toBeVisible()
     await expect(screen.getByRole("link", { name: "See all" })).toHaveAttribute(
       "href",
@@ -119,7 +127,7 @@ export const ShowMe: Story = {
         showMe: "/admin?tour=articles",
         date: "2026-10-18T00:00:00.000Z",
         image: {
-          url: "/docs-assets/getting-started/guided-tours-hero.webp",
+          url: "/docs-assets/writing/getting-started/guided-tours-hero.webp",
           alt: "A help doc in the bell with two buttons, Show me and Read more",
         },
       },

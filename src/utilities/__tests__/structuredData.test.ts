@@ -53,7 +53,7 @@ describe("buildArticleJsonLd", () => {
         },
         publishedAt: "2024-01-01T00:00:00.000Z",
         createdAt: "2023-12-01T00:00:00.000Z",
-        updatedAt: "2024-02-01T00:00:00.000Z",
+        contentUpdatedAt: "2024-02-01T00:00:00.000Z",
         authors: [{ id: 1, name: "Alice", slug: "alice" } as User],
         topics: [
           { id: 1, name: "Economics" },
@@ -91,6 +91,18 @@ describe("buildArticleJsonLd", () => {
       "@type": "WebPage",
       "@id": `${SERVER_URL}/articles/my-post`,
     })
+  })
+
+  it("dates the modification from the content, not the last save", () => {
+    const result = buildArticleJsonLd(
+      makeArticle({
+        updatedAt: "2024-03-01T00:00:00.000Z",
+        contentUpdatedAt: "2024-02-01T00:00:00.000Z",
+      }),
+      "/articles/my-post",
+    )
+
+    expect(result.dateModified).toBe("2024-02-01T00:00:00.000Z")
   })
 
   it("omits optional fields and falls back to title / createdAt when data is missing", () => {

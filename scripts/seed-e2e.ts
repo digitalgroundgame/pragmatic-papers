@@ -126,7 +126,10 @@ const PUBLISHED_AT = "2026-06-04T00:00:00.000Z"
  */
 async function pinRevisionStamps(payload: Payload): Promise<void> {
   const { drizzle } = payload.db as unknown as PostgresAdapter
-  await drizzle.execute(sql`UPDATE articles SET updated_at = ${SEEDED_UPDATED_AT}`)
+  // An article's hero dates its update from `content_updated_at`, which the first publish sets.
+  await drizzle.execute(
+    sql`UPDATE articles SET updated_at = ${SEEDED_UPDATED_AT}, content_updated_at = ${SEEDED_UPDATED_AT}`,
+  )
   await drizzle.execute(sql`UPDATE volumes SET updated_at = ${SEEDED_UPDATED_AT}`)
 }
 

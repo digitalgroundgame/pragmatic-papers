@@ -70,6 +70,7 @@ import * as migration_20261021_011206_docs_tree from "./20261021_011206_docs_tre
 import * as migration_20261109_234427_add_article_substack_url from "./20261109_234427_add_article_substack_url"
 import * as migration_20261110_063538_ticker_substack from "./20261110_063538_ticker_substack"
 import * as migration_20261110_082331_ticker_substack_types from "./20261110_082331_ticker_substack_types"
+import * as migration_20261111_000420_article_content_updated_at from "./20261111_000420_article_content_updated_at"
 
 export const migrations = [
   {
@@ -431,5 +432,10 @@ export const migrations = [
     up: migration_20261110_082331_ticker_substack_types.up,
     down: migration_20261110_082331_ticker_substack_types.down,
     name: "20261110_082331_ticker_substack_types",
+  },
+  {
+    up: migration_20261111_000420_article_content_updated_at.up,
+    down: migration_20261111_000420_article_content_updated_at.down,
+    name: "20261111_000420_article_content_updated_at",
   },
 ]

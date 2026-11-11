@@ -35,6 +35,7 @@ import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populate
 import { keepWritersOffLiveArticles } from "@/collections/Articles/hooks/keepWritersOffLiveArticles"
 import { removeFromRankings } from "@/collections/Articles/hooks/removeFromRankings"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
+import { setContentUpdatedAt } from "@/collections/Articles/hooks/setContentUpdatedAt"
 import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
 import { populateTableOfContentsAnchors, tableOfContentsField } from "@/components/TableOfContents"
 import { TableOfContentsLabelsFeature } from "@/components/TableOfContents/feature"
@@ -264,6 +265,24 @@ export const Articles: CollectionConfig = {
       },
       hooks: {
         beforeChange: [setPublishedAtDefault],
+      },
+    },
+    // After the content and publishedAt, so it compares what their own hooks produced.
+    {
+      name: "contentUpdatedAt",
+      type: "date",
+      label: "Content updated",
+      admin: {
+        position: "sidebar",
+        readOnly: true,
+        date: {
+          pickerAppearance: "dayAndTime",
+        },
+        description:
+          'When readers last saw a change to the title, text, hero image, authors or narration. The article shows it as "Updated".',
+      },
+      hooks: {
+        beforeChange: [setContentUpdatedAt],
       },
     },
     {

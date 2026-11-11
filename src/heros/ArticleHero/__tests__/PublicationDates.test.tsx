@@ -39,6 +39,12 @@ describe("PublicationDates", () => {
     expect(screen.getByText(/^Updated /)).toHaveTextContent("Updated June 20, 2024")
   })
 
+  it("shows no update for an article whose content hasn't been dated", () => {
+    render(<PublicationDates publishedAt={PUBLISHED} updatedAt={null} />)
+    expect(screen.getByText("June 15, 2024")).toBeInTheDocument()
+    expect(screen.queryByText(/^Updated/)).not.toBeInTheDocument()
+  })
+
   it("keeps the dateline reachable by keyboard now that it is not a link", () => {
     render(<PublicationDates publishedAt={PUBLISHED} updatedAt={PUBLISHED} />)
     // The trigger is a <span> so the <time> semantics survive, which costs the

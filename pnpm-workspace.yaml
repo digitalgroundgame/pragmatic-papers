@@ -7,6 +7,20 @@ overrides:
   # The plugin depends on @sentry/nextjs 9; ours is newer. Only its admin provider imports
   # it, and src/sentryPayload.ts drops that, but without this the whole v9 SDK is installed.
   "@payloadcms/plugin-sentry>@sentry/nextjs": "$@sentry/nextjs"
+  # Indirect dependencies with published advisories, held at the release that fixes them
+  # until the packages that bring them in (named beside each) ask for it themselves. Each
+  # stays inside the major its dependents asked for. Drop a line once `pnpm why <name>`
+  # shows the fixed version without it.
+  "dompurify@<3.4.17": "^3.4.17" # @payloadcms/ui
+  "js-yaml@>=4.0.0 <4.3.2": "^4.3.2" # payload
+  "fast-uri@<3.1.9": "^3.1.9" # @sentry/nextjs (webpack's ajv)
+  "ip-address@<10.7.4": "^10.7.4" # shadcn
+  "@xmldom/xmldom@>=0.9.0 <0.9.12": "^0.9.12" # better-react-mathjax (mathjax-full)
+  "immutable@>=4.0.0 <4.3.9": "^4.3.9" # @payloadcms/next (sass)
+  "undici@>=8.0.0 <8.12.2": "^8.12.2" # better-auth
+  "fast-copy@>=3.0.0 <3.1.0": "^3.1.0" # payload (pino-pretty)
+  "fast-copy@>=4.0.0 <4.1.0": "^4.1.0"
+  "fast-xml-parser@>=5.0.0 <5.12.0": "^5.12.0" # @payloadcms/storage-s3 (AWS SDK)
 
 allowBuilds:
   esbuild: true

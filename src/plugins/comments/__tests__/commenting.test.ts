@@ -17,11 +17,15 @@ describe("commentingOf", () => {
 
 describe("commentingField", () => {
   const moderators = vi.fn()
-  const field = commentingField({ moderators } as unknown as ResolvedCommentsConfig) as SelectField
+  const commentingEditors = vi.fn()
+  const field = commentingField({
+    moderators,
+    commentingEditors,
+  } as unknown as ResolvedCommentsConfig) as SelectField
   const update = field.access!.update!
-  const ask = () => update({ req: {} as PayloadRequest } as Parameters<typeof update>[0])
+  const ask = () => update({ req: {} as PayloadRequest, id: 7 } as Parameters<typeof update>[0])
 
-  it("is open unless a moderator says otherwise, in the sidebar", () => {
+  it("is open unless someone says otherwise, in the sidebar", () => {
     expect(field.defaultValue).toBe("open")
     expect(field.options).toEqual([
       { label: "Open", value: "open" },
@@ -29,15 +33,26 @@ describe("commentingField", () => {
       { label: "Off", value: "off" },
     ])
     expect(field.admin?.position).toBe("sidebar")
+    expect(field.access!.create).toBe(update)
   })
 
-  it("lets only moderators change it", async () => {
+  it("lets moderators change it", async () => {
+    commentingEditors.mockReturnValue(false)
     moderators.mockReturnValue(true)
     expect(await ask()).toBe(true)
     moderators.mockReturnValue(false)
     expect(await ask()).toBe(false)
     // A rule that answers with a query isn't a yes for a whole field.
     moderators.mockReturnValue({ id: { equals: 1 } })
+    expect(await ask()).toBe(false)
+  })
+
+  it("lets whoever commentingEditors names change it too, asked about the document", async () => {
+    moderators.mockReturnValue(false)
+    commentingEditors.mockResolvedValue(true)
+    expect(await ask()).toBe(true)
+    expect(commentingEditors).toHaveBeenLastCalledWith(expect.objectContaining({ id: 7 }))
+    commentingEditors.mockResolvedValue(false)
     expect(await ask()).toBe(false)
   })
 })

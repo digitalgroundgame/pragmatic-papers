@@ -18,11 +18,15 @@ export const commentingOf = (doc: unknown): Commenting => {
   return COMMENTING.includes(value as Commenting) ? (value as Commenting) : "open"
 }
 
-/** The sidebar choice moderators make per document: open, locked or off. */
+/**
+ * The sidebar choice made per document: open, locked or off. Moderators make it, and whoever
+ * `commentingEditors` lets.
+ */
 export function commentingField(config: ResolvedCommentsConfig): Field {
-  // Field access answers yes or no; a moderators rule that answers a query counts as no.
-  const moderates: FieldAccess = async ({ req }) =>
-    (await config.moderators({ req } as Parameters<typeof config.moderators>[0])) === true
+  // Field access answers yes or no; a rule that answers a query counts as no.
+  const chooses: FieldAccess = async (args) =>
+    (await config.moderators({ req: args.req } as Parameters<typeof config.moderators>[0])) ===
+      true || (await config.commentingEditors(args)) === true
   return {
     name: COMMENTING_FIELD,
     label: "Comments",
@@ -33,7 +37,7 @@ export function commentingField(config: ResolvedCommentsConfig): Field {
       { label: "Locked", value: "locked" },
       { label: "Off", value: "off" },
     ],
-    access: { create: moderates, update: moderates },
+    access: { create: chooses, update: chooses },
     admin: {
       position: "sidebar",
       description:

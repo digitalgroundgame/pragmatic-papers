@@ -1,4 +1,4 @@
-import type { Access, CollectionSlug, Payload, PayloadRequest } from "payload"
+import type { Access, CollectionSlug, FieldAccess, Payload, PayloadRequest } from "payload"
 
 import type { PluginEnabled } from "@/utilities/registerPlugin"
 
@@ -127,6 +127,11 @@ export interface CommentsPluginConfig {
   baseURL: () => string
   /** Who can see, hide, restore and delete comments, and see and reverse violations. */
   moderators: Access
+  /**
+   * Who besides moderators may choose whether a document takes comments (its `commenting`
+   * field), such as the writers of their own articles. Only a plain yes counts. Default none.
+   */
+  commentingEditors?: FieldAccess
   /** Who can change the settings global. */
   admins: Access
   /** More checks, run after the built-in ones (links and duplicates). */

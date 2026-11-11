@@ -426,11 +426,10 @@ describe("comments", () => {
     )
   })
 
-  it("lets editors lock an article's comments or switch them off, and nobody else", async () => {
+  it("lets editors lock an article's comments or switch them off", async () => {
     const cookie = await signIn(reader())
-    const writer = await createUser("writer")
     const editor = await createUser("editor")
-    const live = await createArticle({ authors: [writer.id] })
+    const live = await createArticle({ authors: [] })
     await posted(live, cookie, "Before the lock")
     const setCommenting = (commenting: "open" | "locked" | "off") =>
       payload.update({
@@ -441,19 +440,6 @@ describe("comments", () => {
         overrideAccess: false,
         context: { disableRevalidate: true },
       })
-
-    // A credited writer can edit their draft, but its comments aren't theirs to close.
-    const draft = await createArticle({ authors: [writer.id], _status: "draft" })
-    const saved = await payload.update({
-      collection: "articles",
-      id: draft.id,
-      data: { commenting: "off" },
-      draft: true,
-      user: writer,
-      overrideAccess: false,
-      context: { disableRevalidate: true },
-    })
-    expect(saved.commenting).toBe("open")
 
     await setCommenting("locked")
     const closed = await thread(live, cookie)
@@ -472,6 +458,40 @@ describe("comments", () => {
     await setCommenting("open")
     // Someone else, so the first reader's cooldown doesn't answer instead.
     expect((await post(live, await signIn(reader()), "Open again")).status).toBe(201)
+  })
+
+  it("lets writers switch their own article's comments off in a draft, for an editor to publish", async () => {
+    const writer = await createUser("writer")
+    const otherWriter = await createUser("writer")
+    const editor = await createUser("editor")
+    const live = await createArticle({ authors: [writer.id] })
+    const saveDraft = (user: typeof writer) =>
+      payload.update({
+        collection: "articles",
+        id: live.id,
+        data: { commenting: "off" },
+        draft: true,
+        user,
+        overrideAccess: false,
+        context: { disableRevalidate: true },
+      })
+
+    // A writer who isn't credited can't save the article at all.
+    await expect(saveDraft(otherWriter)).rejects.toThrow()
+    const draft = await saveDraft(writer)
+    expect(draft.commenting).toBe("off")
+    // Readers still see the published article's comments until an editor publishes the draft.
+    expect((await api(`/comments/thread/${live.id}`)).status).toBe(200)
+
+    await payload.update({
+      collection: "articles",
+      id: live.id,
+      data: { _status: "published" },
+      user: editor,
+      overrideAccess: false,
+      context: { disableRevalidate: true },
+    })
+    expect((await api(`/comments/thread/${live.id}`)).status).toBe(404)
   })
 
   it("empties a deleted account's comments, keeping replies to them", async () => {

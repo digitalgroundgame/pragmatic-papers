@@ -470,8 +470,11 @@ or member, and staff get a badge.
   violation. A moderator hiding a published comment adds one too; publishing a held or hidden
   one reverses it (`recordModeration`).
 - **Per article**, the plugin adds a `commenting` choice to the target collection's sidebar
-  (moderators only): `open`, `locked` (the thread stays readable, marked `closed`, and posts get 403) or `off` (the section is hidden and the thread answers 404). It's read from the published
-  version, so a change reaches readers once the article is published (`commentingOf`).
+  (moderators, and whoever the `commentingEditors` option names: here a writer on their own
+  article, `canChooseArticleCommenting`): `open`, `locked` (the thread stays readable, marked
+  `closed`, and posts get 403) or `off` (the section is hidden and the thread answers 404). It's
+  read from the published version, so a change reaches readers once the article is published
+  (`commentingOf`): a writer's choice on a live article waits in their draft for an editor.
 - **Require a verified email address** (off by default) in Comment settings limits posting
   to authors `isVerified` accepts: staff, or a provider-verified `emailVerified`.
 - **Violations** (`comment-violations`) lock commenting once the settings' threshold is active

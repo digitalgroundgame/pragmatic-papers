@@ -1,6 +1,7 @@
 import type { PluginSwitchName } from "@/globals/Plugins/isPluginEnabled"
 import { admin, editor } from "@/access/collections"
 import { isAdmin, isStaff } from "@/access/roles"
+import { canChooseArticleCommenting } from "@/access/policies"
 import { revalidateRedirects, revalidateRedirectsDelete } from "@/hooks/revalidateRedirects"
 import { docsPlugin } from "@/plugins/docs"
 import { docsNotifications } from "@/plugins/docs/notifications"
@@ -451,6 +452,8 @@ export const plugins: Plugin[] = [
     maxLength: 10_000,
     baseURL: getSiteURL,
     moderators: editor,
+    // Writers choose for their own articles, in a draft; an editor publishes it.
+    commentingEditors: canChooseArticleCommenting,
     admins: admin,
   }),
   achievementsPlugin(achievementsOptions),

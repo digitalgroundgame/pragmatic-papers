@@ -53,14 +53,24 @@ export const InteractiveMapBlock: React.FC<Props> = ({
   return (
     <figure
       data-interactive-map-block
-      className={cn("not-prose my-8 flex flex-col gap-2", className)}
+      className={cn("not-prose my-8 flex flex-col gap-2 font-serif", className)}
     >
       {widgetTitle && (
         <figcaption className="text-center text-lg font-semibold">{widgetTitle}</figcaption>
       )}
-      <InteractiveMapClient layout={layout} maps={resolvedMaps} />
-      <Legend legend={legend} layout={layout} />
-      <Sources sources={sources} colorBias={colorBias} />
+      <InteractiveMapClient
+        layout={layout}
+        maps={resolvedMaps}
+        download={{
+          widgetTitle,
+          scaleType,
+          colorBias,
+          sources: (sources ?? []).flatMap(({ link }) => (link?.label ? [link.label] : [])),
+        }}
+      >
+        <Legend legend={legend} layout={layout} />
+        <Sources sources={sources} colorBias={colorBias} />
+      </InteractiveMapClient>
     </figure>
   )
 }

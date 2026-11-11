@@ -3,6 +3,7 @@ import React from "react"
 import { CommentsLink } from "@/components/Comments/CommentsLink"
 import { Byline } from "@/components/Authors/Byline"
 import { toBylineAuthor } from "@/components/Authors/BylineAuthor"
+import { ReadOnSubstack } from "@/components/ReadOnSubstack"
 import { ShareButtons } from "@/components/ShareButtons"
 import { Media } from "@/components/Media"
 import { NarrationPlayer } from "@/components/NarrationPlayer"
@@ -56,6 +57,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
           <NarrationPlayer narration={narration} className="mr-auto shrink-0" />
           {showTableOfContents && <TableOfContentsButton content={content} />}
           {showComments && <CommentsLink />}
+          <ReadOnSubstack article={article} variant="icon" />
           <ShareButtons url={`${getSiteURL()}/articles/${article.slug}`} title={article.title} />
         </div>
       </div>

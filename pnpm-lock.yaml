@@ -16,6 +16,9 @@ importers:
       '@base-ui/react':
         specifier: ^1.9.0
         version: 1.9.0(@date-fns/tz@1.2.0)(@types/react@19.3.0)(date-fns@4.4.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@expo-google-fonts/libertinus-serif':
+        specifier: 0.4.0
+        version: 0.4.0
       '@google-analytics/data':
         specifier: ^7.3.0
         version: 7.3.0
@@ -1730,6 +1733,9 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@expo-google-fonts/libertinus-serif@0.4.0':
+    resolution: {integrity: sha512-oS0Iyf2lVIpt3w4FIZMry3ODQ+sop+dalzAyPY/dbs+zhY7bJlt6QO8OkvyILMowz4OTvnq0Adi6pqw+20oh7Q==}
 
   '@faceless-ui/modal@3.0.0':
     resolution: {integrity: sha512-o3oEFsot99EQ8RJc1kL3s/nNMHX+y+WMXVzSSmca9L0l2MR6ez2QM1z1yIelJX93jqkLXQ9tW+R9tmsYa+O4Qg==}
@@ -10833,6 +10839,8 @@ snapshots:
   '@exodus/bytes@1.15.1(@noble/hashes@2.4.0)':
     optionalDependencies:
       '@noble/hashes': 2.4.0
+
+  '@expo-google-fonts/libertinus-serif@0.4.0': {}
 
   '@faceless-ui/modal@3.0.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:

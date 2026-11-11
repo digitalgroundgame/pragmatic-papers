@@ -126,6 +126,8 @@ export const PageHero: Story = {
 
 /** A page whose hero is set to "None" gets no hero at all, not an empty wrapper. */
 export const None: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   args: { type: "none", media: landscapeImage, links },
   play: async ({ canvasElement }) => {
     await expect(canvasElement.querySelector(".py-8")).toBeEmptyDOMElement()

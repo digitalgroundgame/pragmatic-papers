@@ -206,12 +206,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "content_updated_at": {
-          "name": "content_updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
         "show_table_of_contents": {
           "name": "show_table_of_contents",
           "type": "boolean",
@@ -225,6 +219,12 @@
           "primaryKey": false,
           "notNull": false,
           "default": false
+        },
+        "substack_url": {
+          "name": "substack_url",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_by_id": {
           "name": "created_by_id",
@@ -880,12 +880,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "version_content_updated_at": {
-          "name": "version_content_updated_at",
-          "type": "timestamp(3) with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
         "version_show_table_of_contents": {
           "name": "version_show_table_of_contents",
           "type": "boolean",
@@ -899,6 +893,12 @@
           "primaryKey": false,
           "notNull": false,
           "default": false
+        },
+        "version_substack_url": {
+          "name": "version_substack_url",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
         },
         "version_created_by_id": {
           "name": "version_created_by_id",
@@ -19515,6 +19515,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "d4ac00b0-3155-4076-af30-0d16839d143f",
+  "id": "795f22b0-fc04-4f6c-9c51-b20d417bc779",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

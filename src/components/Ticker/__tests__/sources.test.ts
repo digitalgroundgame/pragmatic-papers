@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { blueskyPosts, type Integration, xPosts, youtubeLive } from "@/integrations"
+import { blueskyPosts, type Integration, substackPosts, xPosts, youtubeLive } from "@/integrations"
 
 import { MAX_POSTS } from "../items"
 import {
@@ -121,12 +121,55 @@ describe("broadcastSource", () => {
 
 describe("postSources", () => {
   const signal = new AbortController().signal
-  const [bluesky, x] = postSources
+  const [bluesky, substack, x] = postSources
 
   it("checks X far less often than Bluesky, since X reads are paid", () => {
     expect(bluesky!.integration).toBe(blueskyPosts)
+    expect(substack!.integration).toBe(substackPosts)
     expect(x!.integration).toBe(xPosts)
     expect(x!.revalidate).toBeGreaterThan(bluesky!.revalidate)
+  })
+
+  it("runs every admin publication's Substack posts by their titles, linked to the post", async () => {
+    const recent = vi
+      .spyOn(substackPosts, "recentPosts")
+      .mockImplementation(async ({ publication }) => [
+        {
+          id: `https://${publication}/p/hello`,
+          title: `Hello from ${publication}`,
+          subtitle: "Not shown",
+          url: `https://${publication}/p/hello`,
+          createdAt: "2026-10-08T12:00:00.000Z",
+          type: "podcast",
+        },
+      ])
+    const posts = await substack!.load(signal, {
+      substackPublications: ["one.substack.com", "two.substack.com"],
+    })
+    expect(posts).toEqual([
+      {
+        id: "substack:https://one.substack.com/p/hello",
+        source: "substack",
+        text: "Hello from one.substack.com",
+        links: [],
+        url: "https://one.substack.com/p/hello",
+        createdAt: "2026-10-08T12:00:00.000Z",
+      },
+      expect.objectContaining({ id: "substack:https://two.substack.com/p/hello" }),
+    ])
+    expect(recent).toHaveBeenCalledWith(
+      expect.objectContaining({ publication: "one.substack.com", limit: MAX_POSTS, signal }),
+    )
+  })
+
+  it("reads only the Substack post types the admin picked, else podcast episodes and videos", async () => {
+    const recent = vi.spyOn(substackPosts, "recentPosts").mockResolvedValue([])
+    await substack!.load(signal, { substackPublications: ["one"], substackTypes: ["post"] })
+    expect(recent).toHaveBeenLastCalledWith(expect.objectContaining({ types: ["post"] }))
+    await substack!.load(signal, { substackPublications: ["one"] })
+    expect(recent).toHaveBeenLastCalledWith(
+      expect.objectContaining({ types: ["podcast", "video"] }),
+    )
   })
 
   it("maps every admin handle's Bluesky posts, keyed by their URI, with their links", async () => {

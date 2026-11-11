@@ -17,7 +17,12 @@ test("an article's share popover copies the article's URL", async ({
   await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: baseURL })
   await page.goto(`/articles/${SHOWCASE_SLUG}`)
 
-  await page.getByRole("button", { name: "Share" }).click()
+  // An article has two Share buttons: this one in the actions bar under its title, and a
+  // labelled one at its end.
+  await page
+    .locator('[data-slot="article-meta-controls"]')
+    .getByRole("button", { name: "Share" })
+    .click()
   const dialog = page.getByRole("dialog")
   const input = dialog.getByRole("textbox")
   await expect(input).toHaveValue(new RegExp(`^https?://[^/]+/articles/${SHOWCASE_SLUG}$`))
@@ -26,6 +31,20 @@ test("an article's share popover copies the article's URL", async ({
   await dialog.getByRole("button", { name: "Copy link" }).click()
   await expect(dialog.getByRole("button", { name: "Copied!" })).toBeVisible()
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url)
+})
+
+test("the Share button at the end of an article offers the article's URL", async ({ page }) => {
+  await page.goto(`/articles/${SHOWCASE_SLUG}`)
+
+  const share = page
+    .locator('[data-slot="article-footer-actions"]')
+    .getByRole("button", { name: "Share" })
+  await expect(share).toHaveText("Share")
+  await share.click()
+
+  await expect(page.getByRole("dialog").getByRole("textbox")).toHaveValue(
+    new RegExp(`^https?://[^/]+/articles/${SHOWCASE_SLUG}$`),
+  )
 })
 
 test("a volume's share popover offers the volume's URL", async ({ page }) => {

@@ -27,8 +27,9 @@ import type { SerializedLexicalNode } from "@/utilities/lexical"
  * Unlike `/articles/feed.xml`, whose HTML targets feed readers, this markup is
  * written for Substack's editor, which keeps only plain semantic HTML: every
  * URL is absolute, there are no inline styles, math falls back to its LaTeX
- * source, footnotes become plain endnotes, and blocks Substack cannot render
- * (interactive maps) link back to the article. Each post ends by pointing at
+ * source, footnotes become plain endnotes, and an interactive map, which Substack
+ * cannot run, is the picture drawn of it when the article was published (or a link
+ * back to the article until it has one). Each post ends by pointing at
  * the original on the site.
  */
 

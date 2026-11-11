@@ -1,6 +1,6 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/utilities/utils"
 import { ArrowUpRight, Pause, Play } from "lucide-react"
 import React, { useCallback, useEffect, useRef, useState } from "react"
@@ -145,20 +145,16 @@ export function AdSlotView({
           {ad.title}
         </h2>
         <p className="mt-3 max-w-md font-serif text-base leading-snug text-white/85">{ad.body}</p>
-        <Button
-          className="mt-6 rounded-full px-6"
-          variant="default"
-          render={
-            <a
-              href={ad.ctaHref}
-              target={isExternal ? "_blank" : undefined}
-              rel={isExternal ? "noopener noreferrer" : undefined}
-            >
-              {ad.ctaLabel}
-              {isExternal && <ArrowUpRight className="ml-1 size-4" />}
-            </a>
-          }
-        />
+        <a
+          data-slot="button"
+          className={cn(buttonVariants({ variant: "default" }), "mt-6 rounded-full px-6")}
+          href={ad.ctaHref}
+          target={isExternal ? "_blank" : undefined}
+          rel={isExternal ? "noopener noreferrer" : undefined}
+        >
+          {ad.ctaLabel}
+          {isExternal && <ArrowUpRight className="ml-1 size-4" />}
+        </a>
       </div>
 
       <div

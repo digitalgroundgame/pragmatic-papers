@@ -126,8 +126,6 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                   <TableOfContents content={content} />
                 </ArticleSidebar>
               )}
-              {/* `w-full min-w-0`: auto margins stop a flex item stretching, so without them a long
-                  code line would widen the column past a phone's screen. */}
               <div className="mx-auto w-full max-w-2xl min-w-0 space-y-3">
                 <MathJaxProvider enableMathRendering={enableMathRendering}>
                   <RichText data={content} enableGutter={false} className="drop-cap" />

@@ -1,5 +1,9 @@
-import { canDeleteArticle, isDraftOrEditor, isPublishedOrStaff } from "@/access/policies"
-import { writerOrEditor } from "@/access/collections"
+import {
+  canCreateArticle,
+  canDeleteArticle,
+  isDraftOrEditor,
+  isPublishedOrStaff,
+} from "@/access/policies"
 import { editorFieldLevel, shownToEditors } from "@/access/fields"
 import { AUTHOR_ROLES } from "@/access/roles"
 import { Banner } from "@/blocks/Banner/config"
@@ -72,7 +76,7 @@ import { setPublishedAtDefault } from "@/collections/Articles/hooks/setPublished
 export const Articles: CollectionConfig = {
   slug: "articles",
   access: {
-    create: writerOrEditor,
+    create: canCreateArticle,
     delete: canDeleteArticle,
     read: isPublishedOrStaff,
     update: isDraftOrEditor,

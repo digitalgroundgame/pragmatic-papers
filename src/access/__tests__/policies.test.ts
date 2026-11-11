@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import {
+  canCreateArticle,
   canDeleteArticle,
   isSelfOrAdmin,
   isCreatedByOrEditor,
@@ -35,6 +36,34 @@ describe("isSelfOrAdmin policy", () => {
 
   it("denies anonymous users", () => {
     expect(isSelfOrAdmin(makeArgs(null))).toBe(false)
+  })
+})
+
+describe("canCreateArticle policy", () => {
+  const creating = (user: User | null, data?: Record<string, unknown>) =>
+    canCreateArticle({ req: { user }, data } as unknown as AccessArgs<User>)
+
+  it("allows admins, chief-editors, and editors to create a published article", () => {
+    for (const role of ["admin", "chief-editor", "editor"]) {
+      expect(creating(makeUser(role), { _status: "published" })).toBe(true)
+    }
+  })
+
+  it("allows writers to create drafts", () => {
+    expect(creating(makeUser("writer"), { _status: "draft" })).toBe(true)
+    expect(creating(makeUser("writer"), {})).toBe(true)
+    // The admin asks without data, to decide whether to show Create New.
+    expect(creating(makeUser("writer"))).toBe(true)
+  })
+
+  it("refuses writers a published article", () => {
+    expect(creating(makeUser("writer"), { _status: "published" })).toBe(false)
+  })
+
+  it("denies narrators, members and anonymous users", () => {
+    expect(creating(makeUser("narrator"), { _status: "draft" })).toBe(false)
+    expect(creating(makeUser("member"), { _status: "draft" })).toBe(false)
+    expect(creating(null, { _status: "draft" })).toBe(false)
   })
 })
 

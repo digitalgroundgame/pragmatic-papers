@@ -83,7 +83,8 @@ export default async function WhipCountPage({
           <p className="text-brand-text font-serif text-xs font-semibold tracking-widest uppercase">
             Interactive
           </p>
-          <h1 className="mt-2">{doc.title}</h1>
+          {/* Whip counts set their headings in the body sans, not the site's display face. */}
+          <h1 className="mt-2 font-sans leading-tight font-semibold tracking-tight">{doc.title}</h1>
           {doc.intro && <p className="mt-4 text-lg">{doc.intro}</p>}
         </header>
 
@@ -104,7 +105,9 @@ export default async function WhipCountPage({
 
         {doc.methodology && (
           <section className="text-muted-foreground mt-10 max-w-3xl text-sm">
-            <h2 className="text-foreground text-base font-semibold">How this is counted</h2>
+            <h2 className="text-foreground font-sans text-base leading-tight font-semibold tracking-normal">
+              How this is counted
+            </h2>
             <p className="mt-2 whitespace-pre-line">{doc.methodology}</p>
           </section>
         )}

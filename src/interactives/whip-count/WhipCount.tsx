@@ -262,8 +262,8 @@ function CountBar({
   )
 }
 
-/** A headline number with its label, and a line of context under it. */
-function Stat({
+/** A candidate's public backers: the largest number on the page, centred over its label. */
+function Total({
   value,
   label,
   detail,
@@ -271,27 +271,27 @@ function Stat({
 }: {
   value: number
   label: string
-  detail?: string
-  color?: string
+  detail: string
+  color: string
 }): React.ReactNode {
   return (
-    <div className="border-border bg-card rounded-lg border p-4">
-      <p className="font-display text-4xl leading-none font-bold tabular-nums md:text-5xl">
+    <div className="text-center">
+      <p className="font-sans text-7xl leading-none font-bold tracking-tight tabular-nums md:text-8xl">
         {value}
       </p>
-      <p className="mt-2 flex items-center gap-1.5 text-sm font-medium">
-        {color && (
-          <span aria-hidden className="size-2.5 rounded-xs" style={{ background: color }} />
-        )}
+      <p className="mt-3 flex items-center justify-center gap-1.5 font-medium">
+        <span aria-hidden className="size-3 rounded-xs" style={{ background: color }} />
         {label}
       </p>
-      {detail && <p className="text-muted-foreground mt-0.5 text-xs">{detail}</p>}
+      <p className="text-muted-foreground mt-0.5 text-sm">{detail}</p>
     </div>
   )
 }
 
 const eyebrow = "text-brand-text font-serif text-xs font-semibold tracking-widest uppercase"
-const sectionTitle = "mt-1 text-2xl md:text-3xl"
+// Headings here are set in the body sans, not the site's display face.
+const heading = "font-sans leading-tight font-semibold tracking-tight"
+const sectionTitle = `${heading} mt-1 text-2xl md:text-3xl`
 
 /**
  * A whip count: the public count of a leadership vote, and a draft the reader fills in with
@@ -401,23 +401,27 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
           The ballot is secret: these are public statements, not votes.
         </p>
 
-        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="mt-8 flex justify-center gap-10 sm:gap-20 md:gap-28">
           {data.candidates.map((c) => (
-            <Stat
+            <Total
               key={c.id}
               value={count("backs", c)}
               label={`Back ${c.short}`}
-              detail={count("leans", c) > 0 ? `plus ${count("leans", c)} leaning` : "publicly"}
+              detail={
+                count("leans", c) > 0 ? `plus ${count("leans", c)} leaning` : "publicly committed"
+              }
               color={candidateColor(data, c)}
             />
           ))}
-          <Stat
-            value={voters.length - committed}
-            label="Uncommitted"
-            detail="have backed nobody in public"
-          />
-          <Stat value={majority} label="To win" detail={`of ${voters.length} votes`} />
         </div>
+        <p className="text-muted-foreground mt-5 text-center text-sm">
+          <span className="text-foreground font-medium tabular-nums">
+            {voters.length - committed}
+          </span>{" "}
+          have backed nobody in public ·{" "}
+          <span className="text-foreground font-medium tabular-nums">{majority}</span> of{" "}
+          {voters.length} votes wins
+        </p>
 
         <div className="mt-6">
           <CountBar
@@ -512,9 +516,7 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
 
           {memberGroups.length > 0 && (
             <div className="border-border mt-6 border-t pt-5">
-              <h3 className="font-sans text-sm leading-normal font-semibold tracking-normal">
-                Assign a group
-              </h3>
+              <h3 className={`${heading} text-sm`}>Assign a group</h3>
               <p className="text-muted-foreground text-xs">
                 Moves everyone in the group who has not publicly backed a candidate.
               </p>
@@ -566,7 +568,7 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
           className="border-border bg-card flex flex-wrap items-center justify-between gap-4 rounded-lg border p-5 md:p-6"
         >
           <div>
-            <h2 id="whip-count-draft" className="text-2xl">
+            <h2 id="whip-count-draft" className={`${heading} text-xl md:text-2xl`}>
               Think you know how it breaks?
             </h2>
             <p className="text-muted-foreground mt-1.5 text-sm">

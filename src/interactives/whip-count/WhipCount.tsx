@@ -13,7 +13,12 @@ import {
 } from "@/components/ui/table"
 import { formatLongDate } from "@/utilities/formatDate"
 import { isRecord } from "@/utilities/isRecord"
+import { Logo } from "@/components/Logo"
 import { cn } from "@/utilities/utils"
+
+import { Countdown } from "./Countdown"
+import { DownloadWhipCountButton } from "./WhipCountDownload"
+import { candidateColor, groupPaint, UNASSIGNED, type Paint } from "./paint"
 
 import {
   assignGroup,
@@ -35,6 +40,8 @@ import {
 } from "./model"
 
 interface Props {
+  /** The count's title, for the picture a reader downloads. */
+  title: string
   data: WhipCountData
   /** Names the reader's saved draft in their browser; the document's slug. */
   storageKey: string
@@ -101,23 +108,9 @@ function parseStored(text: string | null, data: WhipCountData): StoredDraft {
   return { picks: {}, cleared: [] }
 }
 
-/** The first candidate is drawn in blue, the last in the brand colour. */
-function candidateColor(data: WhipCountData, candidate?: WhipCountCandidate): string {
-  if (!candidate) return "var(--muted-foreground)"
-  return data.candidates[0]?.id === candidate.id ? "var(--chart-3)" : "var(--brand-fill)"
-}
-
-function groupStyle(data: WhipCountData, group: PublicGroup): React.CSSProperties {
-  if (group.stance === "undeclared") return { background: "var(--border)" }
-  if (group.stance === "open") return { background: "var(--muted-foreground)", opacity: 0.45 }
-  // Ruling a candidate out counts toward the other side, drawn fainter than a lean.
-  const side =
-    group.stance === "opposes"
-      ? data.candidates.find((c) => c.id !== group.candidate?.id)
-      : group.candidate
-  const opacity = group.stance === "backs" ? 1 : group.stance === "leans" ? 0.55 : 0.3
-  return { background: candidateColor(data, side), opacity }
-}
+const style = ({ color, opacity }: Paint): React.CSSProperties => ({ background: color, opacity })
+const groupStyle = (data: WhipCountData, group: PublicGroup): React.CSSProperties =>
+  style(groupPaint(data, group))
 
 /** One voter's rectangle in a bar: who they are, and what the card that opens on it says. */
 interface Vote {
@@ -298,7 +291,7 @@ const sectionTitle = `${heading} mt-1 text-2xl md:text-3xl`
  * their own guess of how the uncommitted break, one voter at a time or a bloc at a time. The
  * draft lives in the reader's browser only.
  */
-export function WhipCount({ data: published, storageKey }: Props): React.ReactNode {
+export function WhipCount({ title, data: published, storageKey }: Props): React.ReactNode {
   const outgoing = hasOutgoing(published)
   const [countOutgoing, setCountOutgoing] = useState(() =>
     published.members.some((m) => m.seat === "outgoing" && m.voting),
@@ -373,7 +366,7 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
       .filter((m) => (side ? draft[m.name] === side.candidate.id : !draft[m.name]))
       .map((member) => ({
         member,
-        style: { background: side ? candidateColor(data, side.candidate) : "var(--border)" },
+        style: side ? { background: candidateColor(data, side.candidate) } : style(UNASSIGNED),
         standing: side ? `Your pick: ${side.candidate.short}` : "Unassigned in your count",
       })),
   )
@@ -389,10 +382,15 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
   return (
     <div data-whip-count="" className="flex flex-col gap-12">
       <section aria-labelledby="whip-count-public">
-        <p className={eyebrow}>As of {formatLongDate(`${data.asOf}T00:00:00Z`)}</p>
-        <h2 id="whip-count-public" className={sectionTitle}>
-          The public count
-        </h2>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className={eyebrow}>As of {formatLongDate(`${data.asOf}T00:00:00Z`)}</p>
+            <h2 id="whip-count-public" className={sectionTitle}>
+              The public count
+            </h2>
+          </div>
+          <DownloadWhipCountButton title={title} data={data} />
+        </div>
         <p className="text-muted-foreground mt-3 max-w-3xl">
           {voters.length} vote, so {majority} wins.
           {first && firmFirst
@@ -400,6 +398,12 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
             : ""}{" "}
           The ballot is secret: these are public statements, not votes.
         </p>
+
+        {data.voteAt && (
+          <div className="mt-8">
+            <Countdown to={data.voteAt} />
+          </div>
+        )}
 
         <div className="mt-8 flex justify-center gap-10 sm:gap-20 md:gap-28">
           {data.candidates.map((c) => (
@@ -671,6 +675,11 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
           </TableBody>
         </Table>
       </section>
+
+      {/* The download button reads this logo, in the theme the page is showing. */}
+      <div data-whip-count-logo="" className="-mt-6 flex justify-end">
+        <Logo size="xs" />
+      </div>
     </div>
   )
 }

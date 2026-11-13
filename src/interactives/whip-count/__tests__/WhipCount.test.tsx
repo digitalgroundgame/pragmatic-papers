@@ -10,7 +10,7 @@ const result = (): HTMLElement => document.querySelector<HTMLElement>("[data-whi
 
 /** Renders the count with the reader's own count opened. */
 function renderDrafting(): ReturnType<typeof render> {
-  const view = render(<WhipCount data={whipCountData} storageKey="test" />)
+  const view = render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
   fireEvent.click(screen.getByRole("button", { name: "Make your own count" }))
   return view
 }
@@ -20,7 +20,7 @@ describe("WhipCount", () => {
   afterEach(cleanup)
 
   it("shows the public count and how far the first candidate is from a majority", () => {
-    render(<WhipCount data={whipCountData} storageKey="test" />)
+    render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
     expect(
       screen.getByText(/9 vote, so 5 wins\. 3 have publicly backed Marion Hale, 2 short/),
     ).toBeInTheDocument()
@@ -28,7 +28,7 @@ describe("WhipCount", () => {
   })
 
   it("keeps the reader's count out of the way until they ask for it", () => {
-    render(<WhipCount data={whipCountData} storageKey="test" />)
+    render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
     expect(result()).not.toBeInTheDocument()
     expect(screen.queryByLabelText("Your pick for Sam Okafor")).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole("button", { name: "Make your own count" }))
@@ -60,7 +60,7 @@ describe("WhipCount", () => {
 
     // A saved count opens by itself on the next visit.
     unmount()
-    render(<WhipCount data={whipCountData} storageKey="test" />)
+    render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
     expect(screen.getByLabelText("Your pick for Sam Okafor")).toHaveValue("hale")
   })
 
@@ -86,7 +86,7 @@ describe("WhipCount", () => {
   })
 
   it("counts outgoing members only when the reader asks", () => {
-    render(<WhipCount data={whipCountData} storageKey="test" />)
+    render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
     const table = screen.getByRole("table")
     expect(within(table).queryByText("Walter Finch")).not.toBeInTheDocument()
     fireEvent.click(screen.getByLabelText("Count outgoing senators as voters"))
@@ -95,7 +95,7 @@ describe("WhipCount", () => {
   })
 
   it("opens a card with who a vote is, where they stand and the source", () => {
-    render(<WhipCount data={whipCountData} storageKey="test" />)
+    render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
     const card = (): HTMLElement | null => document.querySelector("[data-vote-card]")
     expect(card()).not.toBeInTheDocument()
 

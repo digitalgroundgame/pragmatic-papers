@@ -116,7 +116,15 @@ export const WhipCountDataField: JSONFieldClientComponent = (props) => {
       {showError && errorMessage && (
         <p style={{ color: "var(--theme-error-500)" }}>{errorMessage}</p>
       )}
-      <p style={{ margin: "0 0 8px", display: "flex", gap: 12, alignItems: "center" }}>
+      <p
+        style={{
+          margin: "0 0 8px",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 12,
+          alignItems: "center",
+        }}
+      >
         <label>
           Checked on{" "}
           <input
@@ -126,6 +134,17 @@ export const WhipCountDataField: JSONFieldClientComponent = (props) => {
             value={data.asOf}
             disabled={readOnly}
             onChange={(event) => write({ ...data, asOf: event.target.value })}
+          />
+        </label>
+        <label>
+          Vote held at{" "}
+          <input
+            aria-label="Time of the vote"
+            placeholder="2026-12-01T09:30:00-05:00"
+            style={{ ...cellInput, width: "16rem" }}
+            value={data.voteAt ?? ""}
+            disabled={readOnly}
+            onChange={(event) => write({ ...data, voteAt: event.target.value || undefined })}
           />
         </label>
         <span>

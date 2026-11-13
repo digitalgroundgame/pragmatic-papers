@@ -76,14 +76,21 @@ describe("parseWhipCount", () => {
     expect(parsed.success && parsed.value.members[0]?.source?.label).toBe("example.org")
   })
 
-  it("leaves an outgoing member out of the vote unless the data counts them", () => {
+  it("counts an outgoing member unless the data says not to", () => {
     const input = raw()
     const members = input.members as Record<string, unknown>[]
     const finch = members.find((m) => m.name === "Walter Finch")!
     delete finch.voting
     const parsed = parseWhipCount(input)
     const member = parsed.success && parsed.value.members.find((m) => m.name === "Walter Finch")
-    expect(member && member.voting).toBe(false)
+    expect(member && member.voting).toBe(true)
+  })
+
+  it("takes a vote time with its offset, and refuses one without", () => {
+    const ok = parseWhipCount({ ...raw(), voteAt: "2026-12-01T09:30:00-05:00" })
+    expect(ok.success && ok.value.voteAt).toBe("2026-12-01T09:30:00-05:00")
+    const bad = parseWhipCount({ ...raw(), voteAt: "2026-12-01" })
+    expect(!bad.success && bad.error).toContain('"voteAt" must be a time with its offset')
   })
 })
 
@@ -92,8 +99,10 @@ describe("the seeded Senate count", () => {
     const parsed = parseWhipCount(senateLeader2026)
     expect(parsed.success).toBe(true)
     if (!parsed.success) return
-    expect(votingMembers(parsed.value)).toHaveLength(56)
-    expect(votingMembers(withOutgoing(parsed.value, true))).toHaveLength(60)
+    // Outgoing senators are counted unless a reader unticks them.
+    expect(votingMembers(parsed.value)).toHaveLength(60)
+    expect(votingMembers(withOutgoing(parsed.value, false))).toHaveLength(56)
+    expect(parsed.value.voteAt).toBe("2026-12-01T00:00:00-05:00")
     expect(parsed.value.members.filter((m) => m.basis)).toEqual([])
   })
 })

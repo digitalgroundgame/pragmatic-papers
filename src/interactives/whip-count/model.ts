@@ -55,8 +55,8 @@ export interface WhipCountMember {
   source?: WhipCountSource
   note?: string
   /**
-   * False for someone listed who is not counted as a voter: an uncalled race, or a departing
-   * member. Defaults to true, except for an `outgoing` seat, which defaults to false.
+   * False for someone listed who is not counted as a voter, such as an uncalled race.
+   * Defaults to true. An outgoing member's is where the page's "count outgoing" box starts.
    */
   voting: boolean
 }
@@ -65,12 +65,18 @@ export interface WhipCountData {
   schema: typeof WHIP_COUNT_SCHEMA
   /** The day the count was last checked (YYYY-MM-DD). */
   asOf: string
+  /**
+   * When the vote is held, as a full timestamp with its offset
+   * (`2026-12-01T00:00:00-05:00`). The page counts down to it; without it there is no clock.
+   */
+  voteAt?: string
   /** In the order the page lays them out: the first on the left, the last on the right. */
   candidates: WhipCountCandidate[]
   members: WhipCountMember[]
 }
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/
+const TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/
 
 const text = (value: unknown): string | undefined =>
   typeof value === "string" && value.trim() ? value.trim() : undefined
@@ -103,6 +109,11 @@ export function parseWhipCount(input: unknown): Result<WhipCountData, string> {
   }
   const asOf = text(input.asOf)
   if (!asOf || !DAY.test(asOf)) return failure('"asOf" must be a date like 2026-11-13.')
+
+  const voteAt = text(input.voteAt)
+  if (voteAt && (!TIMESTAMP.test(voteAt) || Number.isNaN(Date.parse(voteAt)))) {
+    return failure('"voteAt" must be a time with its offset, like 2026-12-01T09:30:00-05:00.')
+  }
 
   if (!Array.isArray(input.candidates) || input.candidates.length < 2) {
     return failure('"candidates" must list at least two candidates.')
@@ -163,10 +174,10 @@ export function parseWhipCount(input: unknown): Result<WhipCountData, string> {
       basisDate,
       source,
       note: text(raw.note),
-      voting: seat === "outgoing" ? raw.voting === true : raw.voting !== false,
+      voting: raw.voting !== false,
     })
   }
-  return success({ schema: WHIP_COUNT_SCHEMA, asOf, candidates, members })
+  return success({ schema: WHIP_COUNT_SCHEMA, asOf, voteAt, candidates, members })
 }
 
 /**

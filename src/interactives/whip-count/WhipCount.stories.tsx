@@ -8,7 +8,7 @@ import { WhipCount } from "./WhipCount"
 const meta = {
   title: "Interactives/WhipCount",
   component: WhipCount,
-  args: { data: whipCountData, storageKey: "storybook" },
+  args: { title: "Who will lead the caucus?", data: whipCountData, storageKey: "storybook" },
   beforeEach: () => {
     window.localStorage.removeItem("whip-count-draft:storybook")
   },

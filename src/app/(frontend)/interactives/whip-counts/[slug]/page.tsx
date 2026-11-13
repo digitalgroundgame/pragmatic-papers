@@ -91,7 +91,7 @@ export default async function WhipCountPage({
         <Separator className="my-6" />
 
         {parsed.success ? (
-          <WhipCount data={parsed.value} storageKey={slug} />
+          <WhipCount title={doc.title} data={parsed.value} storageKey={slug} />
         ) : (
           <p
             data-whip-count-empty=""

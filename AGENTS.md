@@ -696,8 +696,11 @@ which `parseWhipCount` (`model.ts`) checks on save. An editor changes it row by 
 (`WhipCountDataField`: position, statement, source, bloc and tags), or pastes a whole count
 with "Edit as JSON". The page shows the public count and lets a reader draft their own guess
 of how the vote breaks, one voter at a time or a group at a time (a bloc, a tag, the incoming
-or the outgoing), kept in their browser only. Outgoing members are listed but counted only
-when the reader asks, or when the data sets their `voting` to true. It is part of the
+or the outgoing), kept in their browser only and hidden until they ask for it. Outgoing
+members are counted until the reader unticks them (or the data sets their `voting` to
+false). With a `voteAt` time in the data the page counts down to the vote. The bars draw one
+rectangle a voter, each opening a card with their source, and a button saves the public count
+as a PNG with the logo (`picture.ts`, on the map block's `saveSVGAsPNG`). It is part of the
 `interactives` experiment too, and isn't in any sitemap yet. The seed and the showcase entry
 `whip-counts-draft-your-own-leadership-vote` create one (a dated snapshot, without
 quotations) and an article that links to it; creating it takes an editor's account.

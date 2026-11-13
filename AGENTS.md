@@ -128,8 +128,9 @@ checkbox in the Settings global's `experiments` group
 (`src/globals/SiteSettings/config.ts`). Each environment has its own database,
 so each has its own switches; PR previews start with staging's. To add one:
 
-1. Add a `checkbox` to the `experiments` group, `defaultValue: false`, then
-   run `pnpm payload generate:types` and `pnpm migrate:create`.
+1. Add an `experimentField` to the `experiments` group, `defaultValue: false`, with
+   `beta: { info }` if readers will see it (a flask beside its heading says so, `BetaBadge`),
+   then run `pnpm payload generate:types` and `pnpm migrate:create`.
 2. Turn it on in the seed's "Enabling experiments..." step
    (`src/endpoints/seed/index.ts`), so local dev shows it.
 3. Gate **every** entry point with
@@ -303,8 +304,13 @@ Payload's own plugins so it can be lifted out without a rewrite:
   `pluginSwitches` (`src/globals/Plugins/`) gives it a checkbox on System → Plugins named for
   its slug (a camelCase one), `src/plugins/index.ts` passes `pluginSwitch("<slug>")` as its
   `enabled`, and routes outside the plugin gate on `isPluginEnabled("<slug>")`. A beta's switch
-  starts off (`defaultValue: false`), which shows a **Beta** badge; when it graduates, flip the
-  default rather than deleting the switch. This replaces an experiment in Settings for a
+  starts off (`defaultValue: false`), and its manifest says `beta: { info }`: System → Plugins
+  badges it, and the site marks what it adds for readers with a flask, `<BetaBadge feature="<slug>" />`
+  (`src/components/BetaBadge`) beside the heading, whose tooltip shows `info`. An experiment
+  does the same with `beta` on its `experimentField`. The layout reads every beta once from the
+  config (`getBetaFeatures`, `src/data/betaFeatures.ts`) and hands it to the page, so a flask
+  needs no wiring and renders nothing once the feature graduates. When it graduates, delete its
+  `beta` and flip the switch's default rather than deleting the switch. This replaces an experiment in Settings for a
   feature that's a plugin; anything else stays an experiment.
 - Settings an admin changes while the site runs (thresholds, limits, rules) go in the plugin's
   own global, in the System group (the comments plugin's **Comment settings**), never as fields

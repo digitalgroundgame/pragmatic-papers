@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import React from "react"
 
 import { Account } from "@/components/Account"
+import { BetaBadge } from "@/components/BetaBadge"
 import { isPluginEnabled } from "@/globals/Plugins/isPluginEnabled"
 import { signUpProviders } from "@/plugins/signIn"
 
@@ -21,7 +22,10 @@ export default async function AccountPage(): Promise<React.ReactNode> {
   return (
     <article className="mx-auto max-w-xl space-y-8 px-4 pb-16">
       <header className="space-y-2">
-        <h1>Your account</h1>
+        <h1>
+          Your account
+          <BetaBadge feature="sso" />
+        </h1>
         <p className="text-muted-foreground text-sm">
           The name you comment under, the accounts you sign in with, and deleting your account.
         </p>

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   describePlugin,
+  isBeta,
   isPluginOn,
   registeredPlugins,
   registerPlugin,
@@ -129,6 +130,17 @@ describe("registerPlugin", () => {
   it("lists nothing for a config no registered plugin ran on", () => {
     expect(registeredPlugins(base())).toEqual([])
     expect(registeredPlugins({ custom: { registeredPlugins: "nope" } })).toEqual([])
+  })
+})
+
+describe("isBeta", () => {
+  it("is a beta while its manifest says so, with or without a note for readers", () => {
+    expect(isBeta({ beta: { info: "Comments are in beta." } })).toBe(true)
+    expect(isBeta({ beta: {} })).toBe(true)
+  })
+
+  it("graduates once the note is deleted", () => {
+    expect(isBeta({})).toBe(false)
   })
 })
 

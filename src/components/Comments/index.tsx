@@ -3,6 +3,7 @@
 import Link from "next/link"
 import React, { useEffect, useRef, useState } from "react"
 
+import { BetaBadge } from "@/components/BetaBadge"
 import { Button } from "@/components/ui/button"
 import type { CommentThread, SignInProvider } from "@/plugins/comments"
 import { useInView } from "@/hooks/useInView"
@@ -180,6 +181,7 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api" 
             <span className="text-muted-foreground">({count})</span>
           </>
         ) : null}
+        <BetaBadge feature="comments" />
       </h2>
 
       {signInError ? (

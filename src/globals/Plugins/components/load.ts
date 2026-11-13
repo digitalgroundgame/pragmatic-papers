@@ -3,7 +3,12 @@ import type { Payload } from "payload"
 import type { User } from "@/payload-types"
 import { SWITCHES_GROUP } from "../pluginSwitches"
 
-import { isPluginOn, type RegisteredPlugin, registeredPlugins } from "@/utilities/registerPlugin"
+import {
+  isBeta,
+  isPluginOn,
+  type RegisteredPlugin,
+  registeredPlugins,
+} from "@/utilities/registerPlugin"
 
 /** A link to an admin page, or `href: null` when that page is hidden from this user. */
 export interface PluginPage {
@@ -99,7 +104,7 @@ export async function loadPlugins(
         source: plugin.source,
         description: plugin.description,
         status: await status(plugin.enabled, payload),
-        beta: plugin.switch?.defaultValue === false,
+        beta: isBeta(plugin),
         switchPath:
           plugin.switch && plugin.enabled !== false ? `${SWITCHES_GROUP}.${plugin.slug}` : null,
         pages: [...collections, ...globals],

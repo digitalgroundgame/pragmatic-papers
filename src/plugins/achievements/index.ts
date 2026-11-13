@@ -72,6 +72,7 @@ export const achievementsPlugin = registerPlugin<AchievementsPluginConfig>({
     source: "src/plugins/achievements",
     description:
       "Readers' achievements, defined by editors in Content → Achievements and earned by rules in code (Verified, Early member, or given by hand), with a badge beside their name on comments. Moderators give and revoke them from a user's record.",
+    beta: { info: "Achievements are in beta: we're still trying them out, so they may change." },
     switch: {
       label: "Achievements",
       description:

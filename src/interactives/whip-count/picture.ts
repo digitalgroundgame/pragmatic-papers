@@ -17,6 +17,7 @@ const LIGHT_COLORS: Record<string, string> = {
   "var(--chart-3)": "#155dfc",
   "var(--brand-fill)": "#e2330f",
   "var(--muted-foreground)": "#737373",
+  "var(--warning)": "#d78e00",
   "var(--border)": "#e5e5e5",
 }
 

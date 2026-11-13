@@ -17,7 +17,7 @@ const LIGHT_COLORS: Record<string, string> = {
   "var(--chart-3)": "#155dfc",
   "var(--brand-fill)": "#e2330f",
   "var(--muted-foreground)": "#737373",
-  "var(--map-neutral)": "#f3efe8",
+  "var(--border)": "#e5e5e5",
 }
 
 const LIGHT: PicturePalette = {
@@ -77,8 +77,8 @@ export function drawWhipCountSVG({
   const groups = publicGroups(data)
   const majority = majorityOf(voters.length)
   const inner = WIDTH - PADDING * 2
-  const fill = ({ color, opacity, outlined }: Paint): string =>
-    `fill="${escapeHTML(palette.color(color))}"${opacity < 1 ? ` fill-opacity="${opacity}"` : ""}${outlined ? ` stroke="${escapeHTML(palette.quietInk)}" stroke-width="1"` : ""}`
+  const fill = ({ color, opacity }: Paint): string =>
+    `fill="${escapeHTML(palette.color(color))}"${opacity < 1 ? ` fill-opacity="${opacity}"` : ""}`
   const text = (
     x: number,
     y: number,

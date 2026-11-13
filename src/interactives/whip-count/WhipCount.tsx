@@ -108,11 +108,7 @@ function parseStored(text: string | null, data: WhipCountData): StoredDraft {
   return { picks: {}, cleared: [] }
 }
 
-const style = ({ color, opacity, outlined }: Paint): React.CSSProperties => ({
-  background: color,
-  opacity,
-  boxShadow: outlined ? "inset 0 0 0 1px var(--muted-foreground)" : undefined,
-})
+const style = ({ color, opacity }: Paint): React.CSSProperties => ({ background: color, opacity })
 const groupStyle = (data: WhipCountData, group: PublicGroup): React.CSSProperties =>
   style(groupPaint(data, group))
 

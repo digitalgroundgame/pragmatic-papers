@@ -689,6 +689,29 @@ reader's browser, with the sources and the logo in a footer and the font embedde
 page shows (`themePalette`), and saves it as a PNG for sharing. The text in the picture needs a font in the image
 (both Dockerfiles install fontconfig and the site's own fonts as TTFs from their packages, Geist and Libertinus Serif, since fontconfig can't read woff2; a download embeds the site's woff2). Like the page, the titles and sources are in Libertinus Serif, scaled 112% as `fonts.ts` scales it, and the legend in Geist.
 
+A **whip count** (`/interactives/whip-counts/<slug>`, the `whip-counts` collection,
+`src/interactives/whip-count/`) is a third kind of interactive page, with no map: a leadership
+vote tracked voter by voter. The count is one JSON document in the document's `data` field,
+which `parseWhipCount` (`model.ts`) checks on save. An editor changes it row by row in a table
+(`WhipCountDataField`: position, statement, source, bloc and tags), or pastes a whole count
+with "Edit as JSON". The page shows the public count and lets a reader draft their own guess
+of how the vote breaks, one voter at a time or a group at a time (a bloc, a tag, the incoming
+or the outgoing), kept in their browser only and hidden until they ask for it. Outgoing
+members aren't counted until the reader ticks the box to count them. With a `voteAt` time in the data the page counts down to the vote. With an `updates`
+schedule (times of day in a time zone) it names the next check for new statements, in the
+reader's own time. The bars draw one
+rectangle a voter, each opening a card with their source, and a button saves the public count
+as a PNG with the logo (`picture.ts`, on the map block's `saveSVGAsPNG`). A job outside the
+site can keep a count current with `POST /next/whip-counts/<slug>` (`Authorization: Bearer
+<WHIP_COUNT_PUSH_TOKEN>`, closed while unset): the count is checked like a save and merged
+into the document's (`mergePushedCount` keeps the editors' blocs and tags), as a draft unless
+the document's "Publish pushed updates" is ticked (and even then while an editor has unpublished
+changes, which publishing would carry live), and refused (409) while an editor holds the
+document's lock, whose form would autosave its older count over the push. It is part of the
+`interactives` experiment too, and isn't in any sitemap yet. The seed and the showcase entry
+`whip-counts-draft-your-own-leadership-vote` create one (a dated snapshot, without
+quotations) and an article that links to it; creating it takes an editor's account.
+
 An SVG never carries records. A drilldown's SVG is checked in, parsed once at
 snapshot time into `geometry/*.json`, and never parsed again;
 `scripts/snapshot-federal-courts.ts` regenerates the Federal Courts geometry

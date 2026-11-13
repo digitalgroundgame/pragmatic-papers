@@ -174,6 +174,7 @@ export interface Config {
     pages: Page;
     interactives: Interactive;
     'interactive-snapshots': InteractiveSnapshot;
+    'whip-counts': WhipCount;
     'map-assets': MapAsset;
     merch: Merch;
     users: User;
@@ -207,6 +208,7 @@ export interface Config {
     pages: PagesSelect<false> | PagesSelect<true>;
     interactives: InteractivesSelect<false> | InteractivesSelect<true>;
     'interactive-snapshots': InteractiveSnapshotsSelect<false> | InteractiveSnapshotsSelect<true>;
+    'whip-counts': WhipCountsSelect<false> | WhipCountsSelect<true>;
     'map-assets': MapAssetsSelect<false> | MapAssetsSelect<true>;
     merch: MerchSelect<false> | MerchSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
@@ -1350,6 +1352,49 @@ export interface InteractiveSnapshot {
   _status?: ('draft' | 'published') | null;
 }
 /**
+ * A leadership vote tracked voter by voter. Editors own the words and each voter's position, edited row by row or pasted as JSON; readers draft their own guess on the page.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "whip-counts".
+ */
+export interface WhipCount {
+  id: number;
+  title: string;
+  /**
+   * Standfirst shown above the count, and the page's description in search results and link previews.
+   */
+  intro?: string | null;
+  /**
+   * The count: every voter's public position, edited row by row. To start a count or replace it whole, use "Edit as JSON" and paste a document (schema "pragmatic-papers/whip-count@1"). Saving checks it and says what is wrong.
+   */
+  data:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * A count pushed to this document from outside (POST /next/whip-counts/<slug>) is saved as a draft for an editor to publish. Tick this to publish each one as it arrives instead, without a review, except while this document has unpublished changes of yours, which a push never publishes. Blocs and tags set here are kept either way.
+   */
+  autoPublish?: boolean | null;
+  /**
+   * How positions are assigned and what is unconfirmed. Shown under the count.
+   */
+  methodology?: string | null;
+  publishedAt?: string | null;
+  /**
+   * When enabled, the slug will auto-generate from the title field on save and autosave.
+   */
+  generateSlug?: boolean | null;
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
  * Raw vector geometry for the Interactive Map block — SVG today, GeoJSON/TopoJSON later. Files are stored without image processing so vector data round-trips intact.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1775,6 +1820,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'interactive-snapshots';
         value: number | InteractiveSnapshot;
+      } | null)
+    | ({
+        relationTo: 'whip-counts';
+        value: number | WhipCount;
       } | null)
     | ({
         relationTo: 'map-assets';
@@ -2325,6 +2374,23 @@ export interface InteractiveSnapshotsSelect<T extends boolean = true> {
   generatedAt?: T;
   syncedAt?: T;
   data?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "whip-counts_select".
+ */
+export interface WhipCountsSelect<T extends boolean = true> {
+  title?: T;
+  intro?: T;
+  data?: T;
+  autoPublish?: T;
+  methodology?: T;
+  publishedAt?: T;
+  generateSlug?: T;
+  slug?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -3328,6 +3394,10 @@ export interface TaskSchedulePublish {
       | ({
           relationTo: 'interactives';
           value: number | Interactive;
+        } | null)
+      | ({
+          relationTo: 'whip-counts';
+          value: number | WhipCount;
         } | null);
     global?: string | null;
     user?: {

@@ -10,6 +10,7 @@ import { createRichTextShowcaseArticle } from "./features/rich-text-showcase"
 import { createLegacySocialEmbedArticle, createSocialEmbedArticle } from "./features/social-embeds"
 import { createTableOfContentsArticle } from "./features/table-of-contents"
 import { createTimelineArticle } from "./features/timeline"
+import { createWhipCountArticle } from "./features/whip-count"
 
 /**
  * Feature articles that `pnpm showcase` can push onto a live environment, such
@@ -79,6 +80,12 @@ export const showcaseEntries: ShowcaseEntry[] = [
     slug: "legacy-social-media-embed-test-all-variations",
     create: (payload, writers, media, context) =>
       createLegacySocialEmbedArticle(payload, writers[0]!, media, [], context),
+  },
+  {
+    // Also creates the whip count the article links to, which takes an editor's account.
+    slug: "whip-counts-draft-your-own-leadership-vote",
+    create: (payload, writers, media, context) =>
+      createWhipCountArticle(payload, writers, media, [], context),
   },
   {
     slug: "missouri-shifting-margins-119-120-congressional-maps",

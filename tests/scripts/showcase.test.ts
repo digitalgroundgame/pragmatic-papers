@@ -207,6 +207,23 @@ describe("createRestPayload", () => {
     expect(JSON.parse((mediaInit as RequestInit).body as string)).toEqual({ alt: "Alt" })
   })
 
+  it("creates the whip counts an article links to as drafts too", async () => {
+    const fetchImpl = fakeFetch({
+      "POST /api/whip-counts": () => json({ doc: { id: 5 } }, 201),
+    })
+    const { create } = createRestPayload(ORIGIN, "tok", fetchImpl, {
+      draft: true,
+    }) as unknown as { create: RestCreate }
+    await create({ collection: "whip-counts", data: { title: "Count", _status: "published" } })
+
+    const [url, init] = fetchImpl.mock.calls[0]!
+    expect(new URL(String(url)).searchParams.get("draft")).toBe("true")
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+      title: "Count",
+      _status: "draft",
+    })
+  })
+
   it("surfaces Payload's error messages", async () => {
     const fetchImpl = fakeFetch({
       "POST /api/articles": () => json({ errors: [{ message: "Authors is invalid" }] }, 400),

@@ -117,12 +117,16 @@ export async function login(
   return { token: body.token as string, user: body.user as User }
 }
 
+/** The collections a draft push creates as drafts: the ones with a public page of their own. */
+const DRAFTED = new Set(["articles", "whip-counts"])
+
 /**
  * Stands in for the Local API in seed helpers, which only call `create` and
  * `logger`. Access control and hooks run on the server as for any editor.
  *
- * With `draft`, articles are created as drafts whatever status the seed asks
- * for, so a seed needs no changes to be pushed to staging.
+ * With `draft`, articles (and the whip counts they link to) are created as
+ * drafts whatever status the seed asks for, so a seed needs no changes to be
+ * pushed to staging.
  */
 export function createRestPayload(
   origin: string,
@@ -132,7 +136,7 @@ export function createRestPayload(
 ): Payload {
   const headers = { Authorization: `JWT ${token}` }
   const create = async ({ collection, data: seedData, file }: CreateArgs) => {
-    const asDraft = draft && collection === "articles"
+    const asDraft = draft && DRAFTED.has(collection)
     const data = asDraft ? { ...seedData, _status: "draft" } : seedData
     let init: RequestInit
     if (file) {

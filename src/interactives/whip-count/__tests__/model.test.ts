@@ -10,6 +10,7 @@ import {
   hasOutgoing,
   majorityOf,
   mergePushedCount,
+  nextUpdate,
   parseWhipCount,
   publicGroups,
   stanceLabel,
@@ -135,6 +136,7 @@ describe("the seeded Senate count", () => {
     expect(votingMembers(parsed.value)).toHaveLength(60)
     expect(votingMembers(withOutgoing(parsed.value, false))).toHaveLength(56)
     expect(parsed.value.voteAt).toBe("2026-12-01T00:00:00-05:00")
+    expect(parsed.value.updates?.times).toHaveLength(4)
     expect(parsed.value.members.filter((m) => m.basis)).toEqual([])
   })
 })
@@ -299,5 +301,58 @@ describe("mergePushedCount", () => {
     })
     // Members the push doesn't know stay, after the ones it does.
     expect(merged.members.slice(-2).map((m) => m.name)).toEqual(["Kaya Tulugaq", "Added By Hand"])
+  })
+})
+
+describe("the update schedule", () => {
+  const updates = { times: ["07:37", "12:37", "16:37", "21:37"], timeZone: "America/New_York" }
+
+  it("is checked, and kept in order", () => {
+    const parsed = parseWhipCount({
+      ...raw(),
+      updates: { times: ["16:37", "07:37"], timeZone: "America/New_York" },
+    })
+    expect(parsed.success && parsed.value.updates).toEqual({
+      times: ["07:37", "16:37"],
+      timeZone: "America/New_York",
+    })
+    for (const bad of [
+      { times: [], timeZone: "America/New_York" },
+      { times: ["7:37"], timeZone: "America/New_York" },
+      { times: ["25:00"], timeZone: "America/New_York" },
+      { times: ["07:37"], timeZone: "Mars/Olympus" },
+      { times: ["07:37"] },
+      "hourly",
+    ]) {
+      const refused = parseWhipCount({ ...raw(), updates: bad })
+      expect(!refused.success && refused.error).toContain('"updates" needs "times"')
+    }
+  })
+
+  it("finds the next check in the schedule's own zone", () => {
+    // 12:00 UTC on Nov 13 is 7:00am Eastern (UTC-5): the 7:37 check is next.
+    expect(nextUpdate(new Date("2026-11-13T12:00:00Z"), updates)?.toISOString()).toBe(
+      "2026-11-13T12:37:00.000Z",
+    )
+    // Just after it, the 12:37pm one.
+    expect(nextUpdate(new Date("2026-11-13T12:37:01Z"), updates)?.toISOString()).toBe(
+      "2026-11-13T17:37:00.000Z",
+    )
+    // After the day's last (9:37pm Eastern is 02:37 UTC), tomorrow's first.
+    expect(nextUpdate(new Date("2026-11-14T03:00:00Z"), updates)?.toISOString()).toBe(
+      "2026-11-14T12:37:00.000Z",
+    )
+    // In summer the zone is UTC-4.
+    expect(nextUpdate(new Date("2026-07-01T10:00:00Z"), updates)?.toISOString()).toBe(
+      "2026-07-01T11:37:00.000Z",
+    )
+    expect(nextUpdate(new Date(), undefined)).toBeNull()
+  })
+
+  it("stays the document's when a push says nothing of one", () => {
+    const current = { ...whipCountData, updates }
+    expect(mergePushedCount(current, whipCountData).updates).toEqual(updates)
+    const other = { times: ["09:00"], timeZone: "UTC" }
+    expect(mergePushedCount(current, { ...whipCountData, updates: other }).updates).toEqual(other)
   })
 })

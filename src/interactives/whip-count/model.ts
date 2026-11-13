@@ -61,6 +61,13 @@ export interface WhipCountMember {
   voting: boolean
 }
 
+export interface WhipCountUpdates {
+  /** Times of day, 24-hour (`"07:37"`). */
+  times: string[]
+  /** The IANA time zone they are in (`"America/New_York"`). */
+  timeZone: string
+}
+
 export interface WhipCountData {
   schema: typeof WHIP_COUNT_SCHEMA
   /** The day the count was last checked (YYYY-MM-DD). */
@@ -70,16 +77,31 @@ export interface WhipCountData {
    * (`2026-12-01T00:00:00-05:00`). The page counts down to it; without it there is no clock.
    */
   voteAt?: string
+  /**
+   * When the count is next checked for new statements, as whoever keeps it up to date
+   * schedules it: times of day in one time zone. The page shows the next of them.
+   */
+  updates?: WhipCountUpdates
   /** In the order the page lays them out: the first on the left, the last on the right. */
   candidates: WhipCountCandidate[]
   members: WhipCountMember[]
 }
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/
 const TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/
 
 const text = (value: unknown): string | undefined =>
   typeof value === "string" && value.trim() ? value.trim() : undefined
+
+function isTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone })
+    return true
+  } catch {
+    return false
+  }
+}
 
 /** A member's tags: the non-empty strings of a list, once each. Anything else is no tags. */
 function tagsOf(value: unknown): string[] | undefined {
@@ -113,6 +135,24 @@ export function parseWhipCount(input: unknown): Result<WhipCountData, string> {
   const voteAt = text(input.voteAt)
   if (voteAt && (!TIMESTAMP.test(voteAt) || Number.isNaN(Date.parse(voteAt)))) {
     return failure('"voteAt" must be a time with its offset, like 2026-12-01T09:30:00-05:00.')
+  }
+
+  let updates: WhipCountUpdates | undefined
+  if (input.updates !== undefined && input.updates !== null) {
+    const times = isRecord(input.updates) ? input.updates.times : undefined
+    const timeZone = isRecord(input.updates) ? text(input.updates.timeZone) : undefined
+    if (
+      !Array.isArray(times) ||
+      times.length === 0 ||
+      !times.every((time): time is string => typeof time === "string" && TIME.test(time)) ||
+      !timeZone ||
+      !isTimeZone(timeZone)
+    ) {
+      return failure(
+        '"updates" needs "times" like ["07:37", "16:37"] and a "timeZone" like "America/New_York".',
+      )
+    }
+    updates = { times: [...times].sort(), timeZone }
   }
 
   if (!Array.isArray(input.candidates) || input.candidates.length < 2) {
@@ -177,7 +217,7 @@ export function parseWhipCount(input: unknown): Result<WhipCountData, string> {
       voting: raw.voting !== false,
     })
   }
-  return success({ schema: WHIP_COUNT_SCHEMA, asOf, voteAt, candidates, members })
+  return success({ schema: WHIP_COUNT_SCHEMA, asOf, voteAt, updates, candidates, members })
 }
 
 /**
@@ -395,6 +435,46 @@ export function mergePushedCount(
   const pushedNames = new Set(pushed.members.map((m) => m.name))
   return {
     ...pushed,
+    // A schedule is the document's to keep when the push says nothing of one.
+    updates: pushed.updates ?? current.updates,
     members: [...members, ...current.members.filter((m) => !pushedNames.has(m.name))],
   }
+}
+
+/**
+ * The next scheduled check after `now`, or null without a schedule. Works out the zone's
+ * offset as it is at `now`, so the hour either side of a clock change can be an hour out.
+ */
+export function nextUpdate(now: Date, updates: WhipCountUpdates | undefined): Date | null {
+  if (!updates) return null
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: updates.timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+  }).formatToParts(now)
+  const part = (type: string): number => Number(parts.find((p) => p.type === type)?.value)
+  // The zone's wall clock read as if it were UTC; its distance from `now` is the offset.
+  const wall = Date.UTC(
+    part("year"),
+    part("month") - 1,
+    part("day"),
+    part("hour"),
+    part("minute"),
+    part("second"),
+  )
+  const offset = wall - Math.floor(now.getTime() / 1000) * 1000
+  const upcoming = [0, 1]
+    .flatMap((day) =>
+      updates.times.map((time) => {
+        const [hour, minute] = time.split(":").map(Number)
+        return Date.UTC(part("year"), part("month") - 1, part("day") + day, hour, minute) - offset
+      }),
+    )
+    .filter((at) => at > now.getTime())
+  return upcoming.length > 0 ? new Date(Math.min(...upcoming)) : null
 }

@@ -2,7 +2,7 @@ import { act, cleanup, render, screen } from "@testing-library/react"
 import React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { Countdown } from "../Countdown"
+import { Countdown, NextUpdate } from "../Countdown"
 
 describe("Countdown", () => {
   beforeEach(() => {
@@ -29,5 +29,23 @@ describe("Countdown", () => {
     expect(container).toBeEmptyDOMElement()
     rerender(<Countdown to="soon" />)
     expect(container).toBeEmptyDOMElement()
+  })
+})
+
+describe("NextUpdate", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-11-13T12:00:00Z"))
+  })
+  afterEach(() => {
+    cleanup()
+    vi.useRealTimers()
+  })
+
+  it("names the next check in the reader's time", () => {
+    render(<NextUpdate updates={{ times: ["07:37", "21:37"], timeZone: "America/New_York" }} />)
+    const line = document.querySelector("[data-whip-count-next-update]")!
+    expect(line).toHaveTextContent(/Next check for new statements: (today|tomorrow) at \d/)
+    expect(line.querySelector("time")).toHaveAttribute("datetime", "2026-11-13T12:37:00.000Z")
   })
 })

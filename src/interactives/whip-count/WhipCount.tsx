@@ -16,7 +16,7 @@ import { isRecord } from "@/utilities/isRecord"
 import { Logo } from "@/components/Logo"
 import { cn } from "@/utilities/utils"
 
-import { Countdown } from "./Countdown"
+import { Countdown, NextUpdate } from "./Countdown"
 import { DownloadWhipCountButton } from "./WhipCountDownload"
 import { candidateColor, groupPaint, UNASSIGNED, type Paint } from "./paint"
 
@@ -417,6 +417,7 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
             : ""}{" "}
           The ballot is secret: these are public statements, not votes.
         </p>
+        {data.updates && <NextUpdate updates={data.updates} />}
 
         {data.voteAt && (
           <div className="mt-8">

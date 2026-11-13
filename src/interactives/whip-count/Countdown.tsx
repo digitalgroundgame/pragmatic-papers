@@ -2,6 +2,8 @@
 
 import React, { useSyncExternalStore } from "react"
 
+import { nextUpdate, type WhipCountUpdates } from "./model"
+
 /** The current second, shared by every clock on the page, ticking only while one is shown. */
 function subscribe(onTick: () => void): () => void {
   const timer = window.setInterval(onTick, 1000)
@@ -44,5 +46,24 @@ export function Countdown({ to }: { to: string }): React.ReactNode {
         ))}
       </p>
     </div>
+  )
+}
+
+/**
+ * When the count is next checked for new statements, in the reader's own time. Drawn after
+ * the page loads, like the clock, since the server doesn't know the reader's zone or the time
+ * a cached page is read.
+ */
+export function NextUpdate({ updates }: { updates: WhipCountUpdates }): React.ReactNode {
+  const now = useSyncExternalStore(subscribe, thisSecond, () => null)
+  const next = now === null ? null : nextUpdate(new Date(now * 1000), updates)
+  if (!next) return null
+  const today = new Date(now! * 1000).toDateString() === next.toDateString()
+  const time = next.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
+  return (
+    <p data-whip-count-next-update="" className="text-muted-foreground mt-1 text-xs">
+      Next check for new statements: {today ? "today" : "tomorrow"} at{" "}
+      <time dateTime={next.toISOString()}>{time}</time>
+    </p>
   )
 }

@@ -72,6 +72,7 @@ import * as migration_20261110_063538_ticker_substack from "./20261110_063538_ti
 import * as migration_20261110_082331_ticker_substack_types from "./20261110_082331_ticker_substack_types"
 import * as migration_20261111_000420_article_content_updated_at from "./20261111_000420_article_content_updated_at"
 import * as migration_20261113_041133_whip_counts from "./20261113_041133_whip_counts"
+import * as migration_20261113_061907_whip_counts_auto_publish from "./20261113_061907_whip_counts_auto_publish"
 
 export const migrations = [
   {
@@ -443,5 +444,10 @@ export const migrations = [
     up: migration_20261113_041133_whip_counts.up,
     down: migration_20261113_041133_whip_counts.down,
     name: "20261113_041133_whip_counts",
+  },
+  {
+    up: migration_20261113_061907_whip_counts_auto_publish.up,
+    down: migration_20261113_061907_whip_counts_auto_publish.down,
+    name: "20261113_061907_whip_counts_auto_publish",
   },
 ]

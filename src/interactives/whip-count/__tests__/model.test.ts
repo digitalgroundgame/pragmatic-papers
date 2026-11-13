@@ -8,6 +8,7 @@ import {
   cleanDraft,
   groupsOf,
   majorityOf,
+  mergePushedCount,
   parseWhipCount,
   publicGroups,
   startingDraft,
@@ -195,5 +196,42 @@ describe("a reader's draft", () => {
       ),
     ).toEqual({ "Sam Okafor": "hale" })
     expect(cleanDraft("nonsense", whipCountData)).toEqual({})
+  })
+})
+
+describe("mergePushedCount", () => {
+  it("takes the pushed count whole when the document has none", () => {
+    expect(mergePushedCount(null, whipCountData)).toBe(whipCountData)
+  })
+
+  it("takes positions from the push and keeps the editors' blocs, tags and added members", () => {
+    const current = {
+      ...whipCountData,
+      members: [
+        ...whipCountData.members.map((m) =>
+          m.name === "Sam Okafor" ? { ...m, bloc: "Conservative", tags: ["Persuadable"] } : m,
+        ),
+        { ...whipCountData.members[0]!, name: "Added By Hand" },
+      ],
+    }
+    const pushed = {
+      ...whipCountData,
+      asOf: "2026-11-20",
+      members: whipCountData.members
+        .filter((m) => m.name !== "Kaya Tulugaq")
+        .map((m) =>
+          m.name === "Sam Okafor" ? { ...m, stance: "leans" as const, candidate: "hale" } : m,
+        ),
+    }
+    const merged = mergePushedCount(current, pushed)
+    expect(merged.asOf).toBe("2026-11-20")
+    expect(merged.members.find((m) => m.name === "Sam Okafor")).toMatchObject({
+      stance: "leans",
+      candidate: "hale",
+      bloc: "Conservative",
+      tags: ["Persuadable"],
+    })
+    // Members the push doesn't know stay, after the ones it does.
+    expect(merged.members.slice(-2).map((m) => m.name)).toEqual(["Kaya Tulugaq", "Added By Hand"])
   })
 })

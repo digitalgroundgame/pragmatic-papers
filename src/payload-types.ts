@@ -1377,6 +1377,10 @@ export interface WhipCount {
     | boolean
     | null;
   /**
+   * A count pushed to this document from outside (POST /next/whip-counts/<slug>) is saved as a draft for an editor to publish. Tick this to publish each one as it arrives instead, without a review. Blocs and tags set here are kept either way.
+   */
+  autoPublish?: boolean | null;
+  /**
    * How positions are assigned and what is unconfirmed. Shown under the count.
    */
   methodology?: string | null;
@@ -2382,6 +2386,7 @@ export interface WhipCountsSelect<T extends boolean = true> {
   title?: T;
   intro?: T;
   data?: T;
+  autoPublish?: T;
   methodology?: T;
   publishedAt?: T;
   generateSlug?: T;

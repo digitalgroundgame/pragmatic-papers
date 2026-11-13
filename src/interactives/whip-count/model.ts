@@ -375,3 +375,26 @@ export function assignGroup(draft: Draft, group: MemberGroup, candidate: string 
   }
   return next
 }
+
+/**
+ * A count pushed from outside, laid over the one a document holds. The push owns what was
+ * said (positions, statements, sources, the dates) and the roster's facts; the document keeps
+ * what its editors decide: each member's bloc and tags, and anyone they added by hand whom
+ * the push doesn't know.
+ */
+export function mergePushedCount(
+  current: WhipCountData | null,
+  pushed: WhipCountData,
+): WhipCountData {
+  if (!current) return pushed
+  const held = new Map(current.members.map((m) => [m.name, m]))
+  const members = pushed.members.map((member) => {
+    const mine = held.get(member.name)
+    return mine ? { ...member, bloc: mine.bloc, tags: mine.tags } : member
+  })
+  const pushedNames = new Set(pushed.members.map((m) => m.name))
+  return {
+    ...pushed,
+    members: [...members, ...current.members.filter((m) => !pushedNames.has(m.name))],
+  }
+}

@@ -78,6 +78,16 @@ export const WhipCounts: CollectionConfig<"whip-counts"> = {
       },
     },
     {
+      name: "autoPublish",
+      type: "checkbox",
+      defaultValue: false,
+      label: "Publish pushed updates",
+      admin: {
+        description:
+          "A count pushed to this document from outside (POST /next/whip-counts/<slug>) is saved as a draft for an editor to publish. Tick this to publish each one as it arrives instead, without a review. Blocs and tags set here are kept either way.",
+      },
+    },
+    {
       name: "methodology",
       type: "textarea",
       admin: {

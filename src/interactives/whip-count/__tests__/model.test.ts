@@ -132,7 +132,7 @@ describe("the seeded Senate count", () => {
     const parsed = parseWhipCount(senateLeader2026)
     expect(parsed.success).toBe(true)
     if (!parsed.success) return
-    // Outgoing senators are counted unless a reader unticks them.
+    // The data counts the outgoing senators; the page leaves them out until a reader ticks the box.
     expect(votingMembers(parsed.value)).toHaveLength(60)
     expect(votingMembers(withOutgoing(parsed.value, false))).toHaveLength(56)
     expect(parsed.value.voteAt).toBe("2026-12-01T00:00:00-05:00")

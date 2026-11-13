@@ -309,9 +309,8 @@ const sectionTitle = `${heading} mt-1 text-2xl md:text-3xl`
  */
 export function WhipCount({ title, data: published, storageKey }: Props): React.ReactNode {
   const outgoing = hasOutgoing(published)
-  const [countOutgoing, setCountOutgoing] = useState(() =>
-    published.members.some((m) => m.seat === "outgoing" && m.voting),
-  )
+  // Outgoing members start uncounted; the reader ticks the box to count them.
+  const [countOutgoing, setCountOutgoing] = useState(false)
   const data = useMemo(() => withOutgoing(published, countOutgoing), [published, countOutgoing])
   const voters = useMemo(() => votingMembers(data), [data])
   const groups = useMemo(() => publicGroups(data), [data])

@@ -56,7 +56,8 @@ export interface WhipCountMember {
   note?: string
   /**
    * False for someone listed who is not counted as a voter, such as an uncalled race.
-   * Defaults to true. An outgoing member's is where the page's "count outgoing" box starts.
+   * Defaults to true. An outgoing member's is set by the page's "count outgoing" box, which
+   * starts unticked.
    */
   voting: boolean
 }

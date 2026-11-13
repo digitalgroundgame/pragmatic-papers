@@ -85,6 +85,18 @@ describe("WhipCount", () => {
     expect(window.localStorage.getItem("whip-count-draft:test")).toBeNull()
   })
 
+  it("leaves outgoing members out at first, even when the data counts them", () => {
+    const counted = {
+      ...whipCountData,
+      members: whipCountData.members.map((m) =>
+        m.seat === "outgoing" ? { ...m, voting: true } : m,
+      ),
+    }
+    render(<WhipCount title="Who leads?" data={counted} storageKey="test" />)
+    expect(screen.getByLabelText("Count outgoing senators as voters")).not.toBeChecked()
+    expect(within(screen.getByRole("table")).queryByText("Walter Finch")).not.toBeInTheDocument()
+  })
+
   it("counts outgoing members only when the reader asks", () => {
     render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
     const table = screen.getByRole("table")

@@ -18,6 +18,11 @@ describe("drawWhipCountSVG", () => {
     expect(svg).toContain(">1 Won’t back Hale<")
   })
 
+  it("leaves out the list of votes and any reader's own count", () => {
+    for (const member of whipCountData.members) expect(svg).not.toContain(member.name)
+    expect(svg).not.toMatch(/your count|your pick|every vote/i)
+  })
+
   it("draws one rectangle a voter, in plain colors", () => {
     // Nine voters' rectangles, six legend swatches, two candidate swatches, the line and the
     // background.

@@ -697,8 +697,7 @@ which `parseWhipCount` (`model.ts`) checks on save. An editor changes it row by 
 with "Edit as JSON". The page shows the public count and lets a reader draft their own guess
 of how the vote breaks, one voter at a time or a group at a time (a bloc, a tag, the incoming
 or the outgoing), kept in their browser only and hidden until they ask for it. Outgoing
-members are counted until the reader unticks them (or the data sets their `voting` to
-false). With a `voteAt` time in the data the page counts down to the vote. With an `updates`
+members aren't counted until the reader ticks the box to count them. With a `voteAt` time in the data the page counts down to the vote. With an `updates`
 schedule (times of day in a time zone) it names the next check for new statements, in the
 reader's own time. The bars draw one
 rectangle a voter, each opening a card with their source, and a button saves the public count

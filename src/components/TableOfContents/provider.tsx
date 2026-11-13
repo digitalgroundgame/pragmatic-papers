@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useCallback, useContext, useId, useMemo, useState } from "react"
+import { createContext, useContext, useId, useState } from "react"
 
 interface TableOfContentsContextValue {
   isOpen: boolean
@@ -17,8 +17,8 @@ interface TableOfContentsProviderProps {
 function TableOfContentsProvider({ children }: TableOfContentsProviderProps): React.ReactNode {
   const [isOpen, setIsOpen] = useState(true)
   const navId = useId()
-  const toggle = useCallback(() => setIsOpen((v) => !v), [])
-  const value = useMemo(() => ({ isOpen, navId, toggle }), [isOpen, navId, toggle])
+  const toggle = () => setIsOpen((v) => !v)
+  const value = { isOpen, navId, toggle }
 
   return <TableOfContentsContext.Provider value={value}>{children}</TableOfContentsContext.Provider>
 }

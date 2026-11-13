@@ -56,20 +56,16 @@ export const MerchCarousel: React.FC<MerchCarouselProps> = ({ autoplay, classNam
 
   // A new array identity re-initialises embla, so only rebuild when the
   // effective autoplay state actually flips.
-  const plugins = React.useMemo(
-    () =>
-      isAutoplaying
-        ? [
-            Autoplay({
-              delay: AUTOPLAY_DELAY_MS,
-              stopOnInteraction: true,
-              stopOnMouseEnter: true,
-              stopOnFocusIn: true,
-            }),
-          ]
-        : [],
-    [isAutoplaying],
-  )
+  const plugins = isAutoplaying
+    ? [
+        Autoplay({
+          delay: AUTOPLAY_DELAY_MS,
+          stopOnInteraction: true,
+          stopOnMouseEnter: true,
+          stopOnFocusIn: true,
+        }),
+      ]
+    : []
 
   return (
     <Carousel

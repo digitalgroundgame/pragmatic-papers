@@ -1,7 +1,7 @@
 "use client"
 
 import { cva } from "class-variance-authority"
-import React, { useEffect, useId, useMemo, useState } from "react"
+import React, { useEffect, useId, useState } from "react"
 
 import type { ResolvedMap, ResolvedRegion } from "@/blocks/InteractiveMap/types"
 import type { InteractiveMapBlock } from "@/payload-types"
@@ -44,10 +44,7 @@ export function InteractiveMapClient({
   } | null>(null)
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null)
 
-  const pinnedKeySet = useMemo(
-    () => new Set(pinned.map((p) => `${p.mapIndex}:${p.region.regionId}`)),
-    [pinned],
-  )
+  const pinnedKeySet = new Set(pinned.map((p) => `${p.mapIndex}:${p.region.regionId}`))
 
   function handleEnter(mapIndex: number, region: ResolvedRegion) {
     if (pinnedKeySet.has(`${mapIndex}:${region.regionId}`)) {

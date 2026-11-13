@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef } from "react"
+import { useEffect, useRef } from "react"
 
 /**
  * Smooths volume changes for an `<audio>` element.
@@ -49,7 +49,7 @@ export function useAudioGain(audioRef: React.RefObject<HTMLAudioElement | null>)
   // must not be retried on every play.
   const attemptedRef = useRef(false)
 
-  const startGlide = useCallback(() => {
+  const startGlide = () => {
     if (frameRef.current !== null) return
 
     const step = (): void => {
@@ -71,9 +71,9 @@ export function useAudioGain(audioRef: React.RefObject<HTMLAudioElement | null>)
     }
 
     frameRef.current = requestAnimationFrame(step)
-  }, [audioRef])
+  }
 
-  const connect = useCallback(() => {
+  const connect = () => {
     const audio = audioRef.current
     if (!audio || attemptedRef.current) {
       void contextRef.current?.resume()
@@ -98,24 +98,21 @@ export function useAudioGain(audioRef: React.RefObject<HTMLAudioElement | null>)
       // No Web Audio (or the element is already routed elsewhere) — the fallback
       // path keeps working.
     }
-  }, [audioRef])
+  }
 
-  const setGain = useCallback(
-    (value: number) => {
-      const clamped = Math.min(1, Math.max(0, value))
-      targetRef.current = clamped
+  const setGain = (value: number) => {
+    const clamped = Math.min(1, Math.max(0, value))
+    targetRef.current = clamped
 
-      const context = contextRef.current
-      const gain = gainRef.current
-      if (context && gain) {
-        gain.gain.setTargetAtTime(clamped, context.currentTime, RAMP_TIME_CONSTANT)
-        return
-      }
+    const context = contextRef.current
+    const gain = gainRef.current
+    if (context && gain) {
+      gain.gain.setTargetAtTime(clamped, context.currentTime, RAMP_TIME_CONSTANT)
+      return
+    }
 
-      startGlide()
-    },
-    [startGlide],
-  )
+    startGlide()
+  }
 
   useEffect(() => {
     return () => {

@@ -7,7 +7,7 @@ import { createClientFeature } from "@payloadcms/richtext-lexical/client"
 import { $getNodeByKey } from "@payloadcms/richtext-lexical/lexical"
 import { useLexicalComposerContext } from "@payloadcms/richtext-lexical/lexical/react/LexicalComposerContext"
 import { useFormFields } from "@payloadcms/ui"
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, { useEffect, useEffectEvent, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { ListTreeIcon } from "lucide-react"
 
@@ -32,7 +32,7 @@ export const TocLabelPlugin: PluginComponentWithAnchor = ({ anchorElem }) => {
   const input = useRef<HTMLInputElement>(null)
   const current = useRef<SelectedHeading | null>(null)
 
-  const place = useCallback(() => {
+  const place = useEffectEvent(() => {
     const key = current.current?.key
     const element = key ? editor.getElementByKey(key) : null
     if (element) {
@@ -45,7 +45,7 @@ export const TocLabelPlugin: PluginComponentWithAnchor = ({ anchorElem }) => {
         right: anchor.right - rect.right,
       })
     }
-  }, [anchorElem, editor])
+  })
 
   useEffect(
     () =>
@@ -66,13 +66,14 @@ export const TocLabelPlugin: PluginComponentWithAnchor = ({ anchorElem }) => {
         setHeading(next)
         place()
       }),
-    [editor, place],
+    [editor],
   )
 
   useEffect(() => {
-    window.addEventListener("resize", place)
-    return () => window.removeEventListener("resize", place)
-  }, [place])
+    const onResize = (): void => place()
+    window.addEventListener("resize", onResize)
+    return () => window.removeEventListener("resize", onResize)
+  }, [])
 
   if (!show || !heading || !editor.isEditable()) return null
 

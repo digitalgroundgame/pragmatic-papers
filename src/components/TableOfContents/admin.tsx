@@ -5,7 +5,7 @@ import "./admin.scss"
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import { CheckboxField, useField, useFormFields } from "@payloadcms/ui"
 import type { CheckboxFieldClientComponent } from "payload"
-import React, { useMemo } from "react"
+import React from "react"
 
 import { stampTableOfContentsAnchors, tableOfContentsEntries } from "."
 import type { TableOfContentsEntry } from "./types"
@@ -35,10 +35,7 @@ function PreviewList({ entries }: { entries: TableOfContentsEntry[] }): React.Re
 function TableOfContentsPreview(): React.ReactNode {
   const content = useFormFields(([fields]) => fields.content?.value) as
     DefaultTypedEditorState | undefined
-  const entries = useMemo(
-    () => (content?.root ? tableOfContentsEntries(stampTableOfContentsAnchors(content)) : []),
-    [content],
-  )
+  const entries = content?.root ? tableOfContentsEntries(stampTableOfContentsAnchors(content)) : []
 
   return (
     <section className={baseClass} aria-label="Table of contents preview">

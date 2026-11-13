@@ -1,7 +1,10 @@
 import type { StorybookConfig } from "@storybook/nextjs-vite"
+import { createRequire } from "node:module"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { normalizePath, type Plugin } from "vite"
+
+import { clientReactCompiler } from "../react-compiler.config.mts"
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 // Vite's ids use "/" on every OS, so these do too.
@@ -24,6 +27,25 @@ function mockPayload(): Plugin {
         return null
       const resolved = await this.resolve(source, importer, { ...options, skipSelf: true })
       return withoutQuery(resolved?.id) === payloadClient ? payloadClientMock : null
+    },
+  }
+}
+
+/**
+ * Storybook's Next framework aliases `react` to Next's own copy, file and all, so the
+ * compiler's `react/compiler-runtime` import would resolve to a path inside that file. Point
+ * it at the runtime beside that copy, ahead of the framework's aliases, so it shares the
+ * React that renders the stories.
+ */
+function compilerRuntimeFromNextReact(): Plugin {
+  const runtime = createRequire(import.meta.url).resolve(
+    "next/dist/compiled/react/compiler-runtime",
+  )
+  return {
+    name: "storybook-react-compiler-runtime",
+    configResolved(config) {
+      const alias = config.resolve.alias as { find: string | RegExp; replacement: string }[]
+      alias.unshift({ find: /^react\/compiler-runtime$/, replacement: runtime })
     },
   }
 }
@@ -63,7 +85,14 @@ const config: StorybookConfig = {
     experimentalRSC: true,
   },
   viteFinal: (viteConfig) => {
-    viteConfig.plugins = [mockPayload(), ...(viteConfig.plugins ?? [])]
+    viteConfig.plugins = [
+      mockPayload(),
+      ...(viteConfig.plugins ?? []),
+      // The framework doesn't read `reactCompiler` from next.config.ts, so stories would
+      // otherwise render components without the memoization next build gives them.
+      clientReactCompiler(),
+      compilerRuntimeFromNextReact(),
+    ]
     viteConfig.define = {
       ...viteConfig.define,
       ...Object.fromEntries(

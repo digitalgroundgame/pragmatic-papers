@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useId, useState } from "react"
+import { useId, useState } from "react"
 
 export interface RailPane {
   /** Null until the reader says anything about the rail; the default is then a question of
@@ -28,15 +28,15 @@ export function useRailPane(isMobile: boolean): RailPane {
   const railId = useId()
   const paneId = useId()
 
-  const showRail = useCallback((open: boolean) => {
+  const showRail = (open: boolean) => {
     setRailChoice(open)
     if (open) setPaneOpen(false)
-  }, [])
-  const showPane = useCallback((open: boolean) => {
+  }
+  const showPane = (open: boolean) => {
     setPaneOpen(open)
     if (open) setRailChoice(false)
-  }, [])
-  const unfoldToSearch = useCallback(() => {
+  }
+  const unfoldToSearch = () => {
     showRail(true)
     // The box is only mounted once the rail is open.
     requestAnimationFrame(() => {
@@ -45,7 +45,7 @@ export function useRailPane(isMobile: boolean): RailPane {
         ?.querySelector<HTMLInputElement>("[data-drilldown-search] input")
         ?.focus()
     })
-  }, [showRail, railId])
+  }
 
   return {
     railChoice,

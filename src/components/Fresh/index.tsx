@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback } from "react"
+import React from "react"
 
 import { Dot } from "@/components/ui/dot"
 import { cn } from "@/utilities/utils"
@@ -50,11 +50,8 @@ export function useFresh(
   name: FreshName,
   { className }: { className?: string } = {},
 ): { freshDot: React.ReactNode; markSeen: (open?: unknown) => void } {
-  const markThisSeen = useCallback(
-    (open?: unknown): void => {
-      if (open !== false) markSeen(name)
-    },
-    [name],
-  )
+  const markThisSeen = (open?: unknown): void => {
+    if (open !== false) markSeen(name)
+  }
   return { freshDot: <Fresh name={name} className={className} />, markSeen: markThisSeen }
 }

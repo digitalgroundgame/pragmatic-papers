@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 
 import { cn } from "@/utilities/utils"
 
@@ -161,10 +161,10 @@ export function DrilldownBench({
   const half = metrics.half
   const nodeWidth = metrics.icon + 8
 
-  const all = useMemo(() => [...bench.active, ...bench.supernumerary], [bench])
-  const keyOf = useMemo(() => new Map(all.map((r, i) => [r, recordKey(r, i)])), [all])
+  const all = [...bench.active, ...bench.supernumerary]
+  const keyOf = new Map(all.map((r, i) => [r, recordKey(r, i)]))
 
-  const layout = useMemo(() => {
+  const layout = (() => {
     const positions = new Map<DrilldownRecord, Point>()
     const hidden = new Set<DrilldownRecord>()
     let vacancies: Point[] = []
@@ -203,9 +203,9 @@ export function DrilldownBench({
       if (supernumeraryMode === "hide") for (const r of bench.supernumerary) hidden.add(r)
     }
     return { positions, hidden, vacancies, height, arc }
-  }, [all, bench, display, mode, supernumeraryMode, width, available, metrics])
+  })()
 
-  const count = useMemo(() => {
+  const count = (() => {
     if (mode !== "seats") return null
     const pool = supernumeraryMode === "include" ? all : bench.active
     const tally = new Map<string, { label: string; n: number }>()
@@ -226,7 +226,7 @@ export function DrilldownBench({
     return `${lead.label} ${lead.n} of ${total} · majority ${need}${lead.n >= need ? " ✓" : " (no majority)"}${
       supernumeraryMode === "include" ? ` · incl. ${supLabel.toLowerCase()}` : ""
     }`
-  }, [mode, supernumeraryMode, all, bench.active, display])
+  })()
 
   const cohortField = display.cohort
   const arc = layout.arc

@@ -664,11 +664,11 @@
       "name": "Mary Peltola",
       "state": "AK",
       "party": "D",
-      "seat": "uncalled",
+      "seat": "incoming",
       "bloc": "Moderate",
+      "tags": ["Progressive-leaning"],
       "stance": "undeclared",
-      "voting": false,
-      "note": "Race not called."
+      "note": "Counted as elected; the Alaska race had not been called when this was written."
     },
     {
       "name": "Dick Durbin",

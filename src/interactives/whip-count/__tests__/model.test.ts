@@ -92,8 +92,8 @@ describe("the seeded Senate count", () => {
     const parsed = parseWhipCount(senateLeader2026)
     expect(parsed.success).toBe(true)
     if (!parsed.success) return
-    expect(votingMembers(parsed.value)).toHaveLength(55)
-    expect(votingMembers(withOutgoing(parsed.value, true))).toHaveLength(59)
+    expect(votingMembers(parsed.value)).toHaveLength(56)
+    expect(votingMembers(withOutgoing(parsed.value, true))).toHaveLength(60)
     expect(parsed.value.members.filter((m) => m.basis)).toEqual([])
   })
 })

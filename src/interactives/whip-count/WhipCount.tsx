@@ -124,32 +124,72 @@ function CountBar({
   segments,
   total,
   majority,
+  ends,
 }: {
   label: string
   segments: { key: string; count: number; style: React.CSSProperties }[]
   total: number
   majority: number
+  /** The candidates at each end of the bar. */
+  ends: [string, string]
 }): React.ReactNode {
   return (
-    <div className="relative pt-6" role="img" aria-label={label}>
-      <div className="flex h-9 gap-0.5 overflow-hidden rounded-sm">
-        {segments
-          .filter((s) => s.count > 0)
-          .map((s) => (
-            <div key={s.key} style={{ ...s.style, flex: `${s.count} 0 0` }} />
-          ))}
+    <div>
+      <div className="relative pt-7" role="img" aria-label={label}>
+        <div className="flex h-10 gap-0.5 overflow-hidden rounded-md">
+          {segments
+            .filter((s) => s.count > 0)
+            .map((s) => (
+              <div key={s.key} style={{ ...s.style, flex: `${s.count} 0 0` }} />
+            ))}
+        </div>
+        <div
+          className="border-foreground pointer-events-none absolute top-1 bottom-0 border-l-2"
+          style={{ left: `${(majority / total) * 100}%` }}
+        >
+          <span className="absolute top-0 left-1.5 text-xs font-medium whitespace-nowrap">
+            {majority} to win
+          </span>
+        </div>
       </div>
-      <div
-        className="border-foreground pointer-events-none absolute top-0 bottom-0 border-l-2"
-        style={{ left: `${(majority / total) * 100}%` }}
-      >
-        <span className="text-muted-foreground absolute top-0 left-1.5 text-xs whitespace-nowrap">
-          {majority} to win
-        </span>
+      <div aria-hidden className="text-muted-foreground mt-1.5 flex justify-between text-xs">
+        <span>{ends[0]}</span>
+        <span>{ends[1]}</span>
       </div>
     </div>
   )
 }
+
+/** A headline number with its label, and a line of context under it. */
+function Stat({
+  value,
+  label,
+  detail,
+  color,
+}: {
+  value: number
+  label: string
+  detail?: string
+  color?: string
+}): React.ReactNode {
+  return (
+    <div className="border-border bg-card rounded-lg border p-4">
+      <p className="font-display text-4xl leading-none font-bold tabular-nums md:text-5xl">
+        {value}
+      </p>
+      <p className="mt-2 flex items-center gap-1.5 text-sm font-medium">
+        {color && (
+          <span aria-hidden className="size-2.5 rounded-xs" style={{ background: color }} />
+        )}
+        {label}
+      </p>
+      {detail && <p className="text-muted-foreground mt-0.5 text-xs">{detail}</p>}
+    </div>
+  )
+}
+
+const eyebrow = "text-brand-text font-serif text-xs font-semibold tracking-widest uppercase"
+const sectionTitle = "mt-1 text-2xl md:text-3xl"
 
 /**
  * A whip count: the public count of a leadership vote, and a draft the reader fills in with
@@ -164,7 +204,12 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
   const data = useMemo(() => withOutgoing(published, countOutgoing), [published, countOutgoing])
   const voters = useMemo(() => votingMembers(data), [data])
   const groups = useMemo(() => publicGroups(data), [data])
-  const memberGroups = useMemo(() => groupsOf(data), [data])
+  // Only groups with someone left to assign: one whose members have all publicly backed a
+  // candidate has nothing for a reader to move.
+  const memberGroups = useMemo(
+    () => groupsOf(data).filter((group) => group.members.some((m) => m.stance !== "backs")),
+    [data],
+  )
   const majority = majorityOf(voters.length)
   const [first] = data.candidates
 
@@ -207,6 +252,11 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
   }
   const reset = (): void => writeStored(storageKey, null)
 
+  // The reader's count stays out of the way until they ask for it. One saved from an earlier
+  // visit opens by itself; `null` means the reader hasn't said either way on this visit.
+  const [opened, setOpened] = useState<boolean | null>(null)
+  const drafting = opened ?? stored !== null
+
   const tally = tallyDraft(data, draft)
   const firmFirst = groups.find((g) => g.stance === "backs" && g.candidate?.id === first?.id)
   const short = Math.max(0, majority - (firmFirst?.members.length ?? 0))
@@ -228,146 +278,220 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
       })),
   ]
 
+  const count = (stance: "backs" | "leans", candidate: WhipCountCandidate): number =>
+    groups.find((g) => g.stance === stance && g.candidate?.id === candidate.id)?.members.length ?? 0
+  const committed = data.candidates.reduce((sum, c) => sum + count("backs", c), 0)
+  const ends: [string, string] = [first?.short ?? "", data.candidates.at(-1)?.short ?? ""]
+
   return (
-    <div data-whip-count="" className="flex flex-col gap-10">
+    <div data-whip-count="" className="flex flex-col gap-12">
       <section aria-labelledby="whip-count-public">
-        <h2 id="whip-count-public" className="text-xl font-semibold">
+        <p className={eyebrow}>As of {formatLongDate(`${data.asOf}T00:00:00Z`)}</p>
+        <h2 id="whip-count-public" className={sectionTitle}>
           The public count
         </h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          As of {formatLongDate(`${data.asOf}T00:00:00Z`)}. {voters.length} vote, so {majority}{" "}
-          wins.
+        <p className="text-muted-foreground mt-3 max-w-3xl">
+          {voters.length} vote, so {majority} wins.
           {first && firmFirst
             ? ` ${firmFirst.members.length} have publicly backed ${first.name}, ${short} short of a majority.`
             : ""}{" "}
           The ballot is secret: these are public statements, not votes.
         </p>
+
+        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {data.candidates.map((c) => (
+            <Stat
+              key={c.id}
+              value={count("backs", c)}
+              label={`Back ${c.short}`}
+              detail={count("leans", c) > 0 ? `plus ${count("leans", c)} leaning` : "publicly"}
+              color={candidateColor(data, c)}
+            />
+          ))}
+          <Stat
+            value={voters.length - committed}
+            label="Uncommitted"
+            detail="have backed nobody in public"
+          />
+          <Stat value={majority} label="To win" detail={`of ${voters.length} votes`} />
+        </div>
+
+        <div className="mt-6">
+          <CountBar
+            label={`${groups.map((g) => `${g.label}: ${g.members.length}`).join(", ")}. ${majority} of ${voters.length} needed to win.`}
+            segments={groups.map((g) => ({
+              key: g.key,
+              count: g.members.length,
+              style: groupStyle(data, g),
+            }))}
+            total={voters.length}
+            majority={majority}
+            ends={ends}
+          />
+          <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
+            {groups.map((g) => (
+              <li key={g.key} className="flex items-center gap-1.5">
+                <span aria-hidden className="size-2.5 rounded-xs" style={groupStyle(data, g)} />
+                <span className="font-medium tabular-nums">{g.members.length}</span>
+                <span className="text-muted-foreground">{g.label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
         {outgoing && (
-          <label className="mt-3 flex items-center gap-2 text-sm">
+          <label className="mt-5 flex w-fit items-center gap-2 text-sm">
             <input
               type="checkbox"
+              className="accent-foreground size-4"
               checked={countOutgoing}
               onChange={(event) => setCountOutgoing(event.target.checked)}
             />
             Count outgoing senators as voters
           </label>
         )}
-        <CountBar
-          label={`${groups.map((g) => `${g.label}: ${g.members.length}`).join(", ")}. ${majority} of ${voters.length} needed to win.`}
-          segments={groups.map((g) => ({
-            key: g.key,
-            count: g.members.length,
-            style: groupStyle(data, g),
-          }))}
-          total={voters.length}
-          majority={majority}
-        />
-        <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm">
-          {groups.map((g) => (
-            <li key={g.key} className="flex items-center gap-1.5">
-              <span aria-hidden className="size-2.5 rounded-xs" style={groupStyle(data, g)} />
-              <span className="font-medium tabular-nums">{g.members.length}</span>
-              <span className="text-muted-foreground">{g.label}</span>
-            </li>
-          ))}
-        </ul>
       </section>
 
-      <section aria-labelledby="whip-count-draft">
-        <h2 id="whip-count-draft" className="text-xl font-semibold">
-          Your count
-        </h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Guess how the vote breaks. Everyone who has publicly backed a candidate starts with them;
-          assign the rest a group at a time here, or one by one in the table. Your count is saved in
-          this browser only.
-        </p>
-        <CountBar
-          label={`Your count: ${tally.votes.map((v) => `${v.candidate.short} ${v.count}`).join(", ")}, unassigned ${tally.unassigned}. ${majority} needed to win.`}
-          segments={draftSegments}
-          total={tally.voters}
-          majority={majority}
-        />
-        <p className="mt-3 text-sm" aria-live="polite" data-whip-count-result="">
-          {tally.votes.map((v) => (
-            <span key={v.candidate.id} className="mr-4">
-              <span
-                aria-hidden
-                className="mr-1.5 inline-block size-2.5 rounded-xs"
-                style={{ background: candidateColor(data, v.candidate) }}
-              />
-              <span className="font-medium tabular-nums">{v.count}</span> {v.candidate.short}
-            </span>
-          ))}
-          <span className="text-muted-foreground mr-4">
-            <span className="font-medium tabular-nums">{tally.unassigned}</span> unassigned
-          </span>
-          <strong>
-            {tally.winner
-              ? `${tally.winner.name} wins in your count.`
-              : "Nobody has a majority in your count yet."}
-          </strong>
-        </p>
-
-        {memberGroups.length > 0 && (
-          <div className="mt-5">
-            <h3 className="text-sm font-semibold">Assign a group</h3>
-            <p className="text-muted-foreground text-xs">
-              Moves everyone in the group who has not publicly backed a candidate.
-            </p>
-            <ul className="mt-2 flex flex-col gap-2">
-              {memberGroups.map((group) => {
-                const open = group.members.filter((m) => m.stance !== "backs")
-                return (
-                  <li
-                    key={`${group.kind}:${group.name}`}
-                    className="flex flex-wrap items-center gap-2 text-sm"
-                  >
-                    <span className="min-w-56">
-                      <span className="font-medium">{group.name}</span>{" "}
-                      <span className="text-muted-foreground">({open.length} uncommitted)</span>
-                    </span>
-                    {data.candidates.map((c) => (
-                      <Button
-                        key={c.id}
-                        size="sm"
-                        variant="outline"
-                        disabled={open.length === 0}
-                        aria-label={`Give ${group.name} to ${c.short}`}
-                        onClick={() => update(assignGroup(draft, group, c.id))}
-                      >
-                        {c.short}
-                      </Button>
-                    ))}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={open.length === 0}
-                      aria-label={`Clear ${group.name}`}
-                      onClick={() => update(assignGroup(draft, group, null))}
-                    >
-                      Clear
-                    </Button>
-                  </li>
-                )
-              })}
-            </ul>
+      {drafting ? (
+        <section
+          aria-labelledby="whip-count-draft"
+          className="border-border bg-card rounded-lg border p-5 md:p-6"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className={eyebrow}>Your guess</p>
+              <h2 id="whip-count-draft" className={sectionTitle}>
+                Your count
+              </h2>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={reset}>
+                Start over
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setOpened(false)}>
+                Hide
+              </Button>
+            </div>
           </div>
-        )}
-        <Button className="mt-4" size="sm" variant="secondary" onClick={reset}>
-          Start over
-        </Button>
-      </section>
+          <p className="text-muted-foreground mt-3 max-w-3xl text-sm">
+            Everyone who has publicly backed a candidate starts with them. Assign the rest a group
+            at a time here, or one by one in the table below. Your count is saved in this browser
+            only.
+          </p>
+
+          <div className="mt-5">
+            <CountBar
+              label={`Your count: ${tally.votes.map((v) => `${v.candidate.short} ${v.count}`).join(", ")}, unassigned ${tally.unassigned}. ${majority} needed to win.`}
+              segments={draftSegments}
+              total={tally.voters}
+              majority={majority}
+              ends={ends}
+            />
+          </div>
+          <p
+            className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm"
+            aria-live="polite"
+            data-whip-count-result=""
+          >
+            {tally.votes.map((v) => (
+              <span key={v.candidate.id} className="flex items-center gap-1.5">
+                <span
+                  aria-hidden
+                  className="size-2.5 rounded-xs"
+                  style={{ background: candidateColor(data, v.candidate) }}
+                />
+                <span className="font-medium tabular-nums">{v.count}</span> {v.candidate.short}
+              </span>
+            ))}
+            <span className="text-muted-foreground">
+              <span className="font-medium tabular-nums">{tally.unassigned}</span> unassigned
+            </span>
+            <strong className="basis-full text-base sm:basis-auto">
+              {tally.winner
+                ? `${tally.winner.name} wins in your count.`
+                : "Nobody has a majority in your count yet."}
+            </strong>
+          </p>
+
+          {memberGroups.length > 0 && (
+            <div className="border-border mt-6 border-t pt-5">
+              <h3 className="font-sans text-sm leading-normal font-semibold tracking-normal">
+                Assign a group
+              </h3>
+              <p className="text-muted-foreground text-xs">
+                Moves everyone in the group who has not publicly backed a candidate.
+              </p>
+              <ul className="mt-3 grid gap-x-8 gap-y-2.5 lg:grid-cols-2">
+                {memberGroups.map((group) => {
+                  const open = group.members.filter((m) => m.stance !== "backs")
+                  return (
+                    <li
+                      key={`${group.kind}:${group.name}`}
+                      className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                    >
+                      <span>
+                        <span className="font-medium">{group.name}</span>{" "}
+                        <span className="text-muted-foreground">({open.length} uncommitted)</span>
+                      </span>
+                      <span className="flex gap-1.5">
+                        {data.candidates.map((c) => (
+                          <Button
+                            key={c.id}
+                            size="sm"
+                            variant="outline"
+                            disabled={open.length === 0}
+                            aria-label={`Give ${group.name} to ${c.short}`}
+                            onClick={() => update(assignGroup(draft, group, c.id))}
+                          >
+                            {c.short}
+                          </Button>
+                        ))}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={open.length === 0}
+                          aria-label={`Clear ${group.name}`}
+                          onClick={() => update(assignGroup(draft, group, null))}
+                        >
+                          Clear
+                        </Button>
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
+        </section>
+      ) : (
+        <section
+          aria-labelledby="whip-count-draft"
+          className="border-border bg-card flex flex-wrap items-center justify-between gap-4 rounded-lg border p-5 md:p-6"
+        >
+          <div>
+            <h2 id="whip-count-draft" className="text-2xl">
+              Think you know how it breaks?
+            </h2>
+            <p className="text-muted-foreground mt-1.5 text-sm">
+              Assign the uncommitted yourself, one senator or one bloc at a time, and see who wins.
+            </p>
+          </div>
+          <Button variant="branded" onClick={() => setOpened(true)}>
+            Make your own count
+          </Button>
+        </section>
+      )}
 
       <section aria-labelledby="whip-count-members">
-        <h2 id="whip-count-members" className="text-xl font-semibold">
+        <p className={eyebrow}>{voters.length} votes</p>
+        <h2 id="whip-count-members" className={sectionTitle}>
           Every vote
         </h2>
-        <Table className="mt-3">
+        <Table className="mt-4">
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Your pick</TableHead>
+              {drafting && <TableHead>Your pick</TableHead>}
               <TableHead>Public position</TableHead>
               <TableHead>Bloc</TableHead>
               <TableHead>What they said</TableHead>
@@ -388,24 +512,26 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
                       </span>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <select
-                      aria-label={`Your pick for ${m.name}`}
-                      value={draft[m.name] ?? ""}
-                      onChange={(event) => pick(m.name, event.target.value)}
-                      className={cn(
-                        "border-input bg-background h-8 rounded-sm border px-2 text-sm",
-                        !draft[m.name] && "text-muted-foreground",
-                      )}
-                    >
-                      <option value="">Unassigned</option>
-                      {data.candidates.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.short}
-                        </option>
-                      ))}
-                    </select>
-                  </TableCell>
+                  {drafting && (
+                    <TableCell>
+                      <select
+                        aria-label={`Your pick for ${m.name}`}
+                        value={draft[m.name] ?? ""}
+                        onChange={(event) => pick(m.name, event.target.value)}
+                        className={cn(
+                          "border-input bg-background h-8 rounded-sm border px-2 text-sm",
+                          !draft[m.name] && "text-muted-foreground",
+                        )}
+                      >
+                        <option value="">Unassigned</option>
+                        {data.candidates.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.short}
+                          </option>
+                        ))}
+                      </select>
+                    </TableCell>
+                  )}
                   <TableCell className="whitespace-nowrap">
                     <span
                       aria-hidden

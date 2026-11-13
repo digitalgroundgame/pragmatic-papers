@@ -8,6 +8,13 @@ import { WhipCount } from "../WhipCount"
 
 const result = (): HTMLElement => document.querySelector<HTMLElement>("[data-whip-count-result]")!
 
+/** Renders the count with the reader's own count opened. */
+function renderDrafting(): ReturnType<typeof render> {
+  const view = render(<WhipCount data={whipCountData} storageKey="test" />)
+  fireEvent.click(screen.getByRole("button", { name: "Make your own count" }))
+  return view
+}
+
 describe("WhipCount", () => {
   beforeEach(() => window.localStorage.clear())
   afterEach(cleanup)
@@ -20,8 +27,18 @@ describe("WhipCount", () => {
     expect(screen.getByRole("img", { name: /Backs Hale: 3, Leaning Hale: 1/ })).toBeInTheDocument()
   })
 
-  it("starts the reader's count from public backers", () => {
+  it("keeps the reader's count out of the way until they ask for it", () => {
     render(<WhipCount data={whipCountData} storageKey="test" />)
+    expect(result()).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("Your pick for Sam Okafor")).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "Make your own count" }))
+    expect(result()).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "Hide" }))
+    expect(result()).not.toBeInTheDocument()
+  })
+
+  it("starts the reader's count from public backers", () => {
+    renderDrafting()
     expect(result()).toHaveTextContent("3 Hale")
     expect(result()).toHaveTextContent("2 Ortiz")
     expect(result()).toHaveTextContent("4 unassigned")
@@ -31,7 +48,7 @@ describe("WhipCount", () => {
   })
 
   it("counts a pick, names a winner, and remembers the draft", () => {
-    const { unmount } = render(<WhipCount data={whipCountData} storageKey="test" />)
+    const { unmount } = renderDrafting()
     fireEvent.change(screen.getByLabelText("Your pick for Sam Okafor"), {
       target: { value: "hale" },
     })
@@ -41,13 +58,14 @@ describe("WhipCount", () => {
     expect(result()).toHaveTextContent("5 Hale")
     expect(result()).toHaveTextContent("Marion Hale wins in your count.")
 
+    // A saved count opens by itself on the next visit.
     unmount()
     render(<WhipCount data={whipCountData} storageKey="test" />)
     expect(screen.getByLabelText("Your pick for Sam Okafor")).toHaveValue("hale")
   })
 
   it("assigns a group at once, except its public backers", () => {
-    render(<WhipCount data={whipCountData} storageKey="test" />)
+    renderDrafting()
     fireEvent.click(screen.getByRole("button", { name: "Give Progressive to Hale" }))
     expect(screen.getByLabelText("Your pick for Ana Whitfield")).toHaveValue("hale")
     expect(screen.getByLabelText("Your pick for Luis Navarro")).toHaveValue("hale")
@@ -59,7 +77,7 @@ describe("WhipCount", () => {
   })
 
   it("lets a reader take a public backer away, and start over", () => {
-    render(<WhipCount data={whipCountData} storageKey="test" />)
+    renderDrafting()
     fireEvent.change(screen.getByLabelText("Your pick for Tom Becker"), { target: { value: "" } })
     expect(result()).toHaveTextContent("2 Hale")
     fireEvent.click(screen.getByRole("button", { name: "Start over" }))

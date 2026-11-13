@@ -117,10 +117,22 @@ describe("WhipCount", () => {
     expect(card()).not.toBeInTheDocument()
   })
 
-  it("says whose pick a vote is in the reader's count", () => {
+  it("draws the undeclared as empty places that open nothing, and lists them by name", () => {
+    render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
+    expect(document.querySelector('[data-vote="Sam Okafor"]')).not.toBeInTheDocument()
+    const list = document.querySelector<HTMLElement>("[data-whip-count-undeclared]")!
+    expect(within(list).getByText("Sam Okafor")).toBeInTheDocument()
+    expect(within(list).getAllByRole("listitem")).toHaveLength(1)
+  })
+
+  it("says whose pick a vote is in the reader's count, and leaves the unassigned empty", () => {
     renderDrafting()
-    const votes = document.querySelectorAll<HTMLElement>('[data-vote="Sam Okafor"]')
-    fireEvent.pointerEnter(votes[1]!, { pointerType: "mouse" })
-    expect(document.querySelector("[data-vote-card]")).toHaveTextContent("Unassigned in your count")
+    expect(document.querySelector('[data-vote="Sam Okafor"]')).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText("Your pick for Sam Okafor"), {
+      target: { value: "ortiz" },
+    })
+    const vote = document.querySelector<HTMLElement>('[data-vote="Sam Okafor"]')!
+    fireEvent.pointerEnter(vote, { pointerType: "mouse" })
+    expect(document.querySelector("[data-vote-card]")).toHaveTextContent("Your pick: Ortiz")
   })
 })

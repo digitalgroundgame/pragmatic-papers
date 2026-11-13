@@ -118,6 +118,11 @@ interface Vote {
   style: React.CSSProperties
   /** Their place in this bar, in words: a public position, or the reader's pick. */
   standing: string
+  /**
+   * A vote nobody has claimed, drawn as an empty place: it opens no card, because where it
+   * sits in the row says nothing about which way that voter will go.
+   */
+  unclaimed?: boolean
 }
 
 const CARD_WIDTH = 256
@@ -166,21 +171,26 @@ function CountBar({
         <div className="relative pt-7" role="img" aria-label={label}>
           {/* One thin rectangle a voter, so a group reads as that many people. */}
           <div className="flex h-10 gap-0.5">
-            {votes.map((v) => (
-              <div
-                key={v.member.name}
-                data-vote={v.member.name}
-                className={cn(
-                  "min-w-0 flex-1 cursor-pointer rounded-xs",
-                  open?.name === v.member.name && "ring-foreground ring-2",
-                )}
-                style={v.style}
-                onPointerEnter={(event) => {
-                  if (event.pointerType === "mouse") show(event.currentTarget, v.member.name, false)
-                }}
-                onClick={(event) => show(event.currentTarget, v.member.name, true)}
-              />
-            ))}
+            {votes.map((v) =>
+              v.unclaimed ? (
+                <div key={v.member.name} className="min-w-0 flex-1 rounded-xs" style={v.style} />
+              ) : (
+                <div
+                  key={v.member.name}
+                  data-vote={v.member.name}
+                  className={cn(
+                    "min-w-0 flex-1 cursor-pointer rounded-xs",
+                    open?.name === v.member.name && "ring-foreground ring-2",
+                  )}
+                  style={v.style}
+                  onPointerEnter={(event) => {
+                    if (event.pointerType === "mouse")
+                      show(event.currentTarget, v.member.name, false)
+                  }}
+                  onClick={(event) => show(event.currentTarget, v.member.name, true)}
+                />
+              ),
+            )}
           </div>
           <div
             className="border-foreground pointer-events-none absolute top-1 bottom-0 border-l-2"
@@ -368,15 +378,24 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
         member,
         style: side ? { background: candidateColor(data, side.candidate) } : style(UNASSIGNED),
         standing: side ? `Your pick: ${side.candidate.short}` : "Unassigned in your count",
+        unclaimed: !side,
       })),
   )
   const publicVotes: Vote[] = groups.flatMap((g) =>
-    g.members.map((member) => ({ member, style: groupStyle(data, g), standing: g.label })),
+    g.members.map((member) => ({
+      member,
+      style: groupStyle(data, g),
+      standing: g.label,
+      unclaimed: g.stance === "undeclared",
+    })),
   )
 
   const count = (stance: "backs" | "leans", candidate: WhipCountCandidate): number =>
     groups.find((g) => g.stance === stance && g.candidate?.id === candidate.id)?.members.length ?? 0
   const committed = data.candidates.reduce((sum, c) => sum + count("backs", c), 0)
+  const undeclared = [...(groups.find((g) => g.stance === "undeclared")?.members ?? [])].sort(
+    (a, b) => (a.name.split(" ").at(-1) ?? "").localeCompare(b.name.split(" ").at(-1) ?? ""),
+  )
   const ends: [string, string] = [first?.short ?? "", data.candidates.at(-1)?.short ?? ""]
 
   return (
@@ -444,6 +463,32 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
             ))}
           </ul>
         </div>
+
+        {undeclared.length > 0 && (
+          <div className="mt-6" data-whip-count-undeclared="">
+            <h3 className={`${heading} text-sm`}>
+              Undeclared{" "}
+              <span className="text-muted-foreground font-normal">({undeclared.length})</span>
+            </h3>
+            <p className="text-muted-foreground text-xs">
+              The grey places in the row are theirs, in no order: they have not said which way they
+              will go.
+            </p>
+            <ul className="mt-2 flex flex-wrap gap-1.5">
+              {undeclared.map((m) => (
+                <li
+                  key={m.name}
+                  className="border-border rounded-sm border px-2 py-0.5 text-xs whitespace-nowrap"
+                >
+                  {m.name}{" "}
+                  <span className="text-muted-foreground">
+                    ({[m.party, m.state].filter(Boolean).join("-")})
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {outgoing && (
           <label className="mt-5 flex w-fit items-center gap-2 text-sm">

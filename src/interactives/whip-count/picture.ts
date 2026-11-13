@@ -18,6 +18,7 @@ const LIGHT_COLORS: Record<string, string> = {
   "var(--brand-fill)": "#e2330f",
   "var(--border)": "#e5e5e5",
   "var(--muted-foreground)": "#737373",
+  "var(--warning)": "#d78e00",
 }
 
 const LIGHT: PicturePalette = {

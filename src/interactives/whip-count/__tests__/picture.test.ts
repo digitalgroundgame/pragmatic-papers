@@ -24,7 +24,9 @@ describe("drawWhipCountSVG", () => {
     expect(svg.match(/<rect /g)).toHaveLength(9 + 6 + 2 + 1 + 1)
     expect(svg).not.toContain("var(")
     expect(svg).toContain('fill="#155dfc"')
-    expect(svg).toContain('fill="#e2330f" fill-opacity="0.3"')
+    // Ruling a candidate out is yellow, not a tint of the other candidate's color.
+    expect(svg).toContain('fill="#d78e00"')
+    expect(svg).not.toContain('fill="#e2330f" fill-opacity')
   })
 
   it("puts the logo in the bottom right corner", () => {

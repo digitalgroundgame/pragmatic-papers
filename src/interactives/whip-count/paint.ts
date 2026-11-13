@@ -19,11 +19,11 @@ export function candidateColor(data: WhipCountData, candidate?: WhipCountCandida
 export function groupPaint(data: WhipCountData, group: PublicGroup): Paint {
   if (group.stance === "undeclared") return UNASSIGNED
   if (group.stance === "open") return { color: "var(--muted-foreground)", opacity: 0.45 }
-  // Ruling a candidate out counts toward the other side, drawn fainter than a lean.
-  const side =
-    group.stance === "opposes"
-      ? data.candidates.find((c) => c.id !== group.candidate?.id)
-      : group.candidate
-  const opacity = group.stance === "backs" ? 1 : group.stance === "leans" ? 0.55 : 0.3
-  return { color: candidateColor(data, side), opacity }
+  // Ruling one candidate out is a public position, but not a vote for another: the theme's
+  // yellow, which is neither candidate's colour.
+  if (group.stance === "opposes") return { color: "var(--warning)", opacity: 1 }
+  return {
+    color: candidateColor(data, group.candidate),
+    opacity: group.stance === "backs" ? 1 : 0.55,
+  }
 }

@@ -9,12 +9,13 @@ import { whipCountData } from "@/stories/fixtures/whipCount"
 import { WhipCountDataField } from "../WhipCountDataField"
 
 let mockValue: unknown
+let mockError: string | undefined
 const setValue = vi.fn((next: unknown) => {
   mockValue = next
 })
 
 vi.mock("@payloadcms/ui", () => ({
-  useField: () => ({ value: mockValue, setValue, showError: false }),
+  useField: () => ({ value: mockValue, setValue, showError: !!mockError, errorMessage: mockError }),
   JSONField: () => <div data-testid="json-editor" />,
 }))
 
@@ -29,6 +30,7 @@ describe("WhipCountDataField", () => {
   beforeEach(() => {
     mockValue = JSON.parse(JSON.stringify(whipCountData))
     setValue.mockClear()
+    mockError = undefined
   })
   afterEach(cleanup)
 
@@ -112,5 +114,73 @@ describe("WhipCountDataField", () => {
     mockValue = { schema: "something else" }
     render(<WhipCountDataField {...props} />)
     expect(screen.getByText(/can’t be shown as a table: "schema" must be/)).toBeInTheDocument()
+  })
+
+  it("changes a seat, a bloc, tags, a note and the count's dates", () => {
+    render(<WhipCountDataField {...props} />)
+    fireEvent.change(screen.getByLabelText("Seat for Sam Okafor"), {
+      target: { value: "outgoing" },
+    })
+    fireEvent.change(screen.getByLabelText("Bloc for Sam Okafor"), { target: { value: "" } })
+    fireEvent.change(screen.getByLabelText("Tags, separated by commas for Sam Okafor"), {
+      target: { value: "Persuadable, Freshman" },
+    })
+    fireEvent.change(screen.getByLabelText("Note for Sam Okafor"), { target: { value: "A note." } })
+    fireEvent.change(screen.getByLabelText("State for Sam Okafor"), { target: { value: "MD" } })
+    fireEvent.change(screen.getByLabelText("Party for Sam Okafor"), { target: { value: "I" } })
+    fireEvent.change(screen.getByLabelText("Date the count was checked"), {
+      target: { value: "2026-11-20" },
+    })
+    fireEvent.change(screen.getByLabelText("Time of the vote"), {
+      target: { value: "2026-12-01T09:30:00-05:00" },
+    })
+    const parsed = parseWhipCount(saved())
+    expect(parsed.success).toBe(true)
+    if (!parsed.success) return
+    expect(parsed.value).toMatchObject({ asOf: "2026-11-20", voteAt: "2026-12-01T09:30:00-05:00" })
+    const okafor = parsed.value.members.find((m) => m.name === "Sam Okafor")!
+    expect(okafor).toMatchObject({
+      seat: "outgoing",
+      state: "MD",
+      party: "I",
+      tags: ["Persuadable", "Freshman"],
+      note: "A note.",
+    })
+    expect(okafor.bloc).toBeUndefined()
+  })
+
+  it("clears a statement, its date, its source, tags and the vote time when emptied", () => {
+    render(<WhipCountDataField {...props} />)
+    fireEvent.change(screen.getByLabelText("What Marion Hale said"), { target: { value: "" } })
+    fireEvent.change(screen.getByLabelText("Date Marion Hale said it"), { target: { value: "" } })
+    fireEvent.change(screen.getByLabelText("Source link for Marion Hale"), {
+      target: { value: "" },
+    })
+    fireEvent.change(screen.getByLabelText("Tags, separated by commas for Daniel Ortiz"), {
+      target: { value: "" },
+    })
+    fireEvent.change(screen.getByLabelText("Time of the vote"), { target: { value: "x" } })
+    fireEvent.change(screen.getByLabelText("Time of the vote"), { target: { value: "" } })
+    const hale = saved().members.find((m) => m.name === "Marion Hale")!
+    expect(hale.basis).toBeUndefined()
+    expect(hale.basisDate).toBeUndefined()
+    expect(hale.source).toBeUndefined()
+    expect(saved().members.find((m) => m.name === "Daniel Ortiz")?.tags).toBeUndefined()
+    expect(saved().voteAt).toBeUndefined()
+  })
+
+  it("shows the form's error, and takes no edits when read-only", () => {
+    mockError = "Something is wrong with the data."
+    render(<WhipCountDataField {...props} readOnly />)
+    expect(screen.getByText("Something is wrong with the data.")).toBeInTheDocument()
+    expect(screen.getByLabelText("Position for Sam Okafor")).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Add a person" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Remove Sam Okafor" })).toBeDisabled()
+  })
+
+  it("names a row with no name yet by its place", () => {
+    render(<WhipCountDataField {...props} />)
+    fireEvent.click(screen.getByRole("button", { name: "Add a person" }))
+    expect(screen.getByLabelText("Name for row 12")).toHaveValue("")
   })
 })

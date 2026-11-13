@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react"
 import React from "react"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { whipCountData } from "@/stories/fixtures/whipCount"
 
@@ -134,5 +134,45 @@ describe("WhipCount", () => {
     const vote = document.querySelector<HTMLElement>('[data-vote="Sam Okafor"]')!
     fireEvent.pointerEnter(vote, { pointerType: "mouse" })
     expect(document.querySelector("[data-vote-card]")).toHaveTextContent("Your pick: Ortiz")
+  })
+
+  it("keeps the reader's count for the visit when the browser refuses storage", () => {
+    const set = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("QuotaExceededError")
+    })
+    const get = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("SecurityError")
+    })
+    render(<WhipCount title="Who leads?" data={whipCountData} storageKey="blocked" />)
+    fireEvent.click(screen.getByRole("button", { name: "Make your own count" }))
+    fireEvent.change(screen.getByLabelText("Your pick for Sam Okafor"), {
+      target: { value: "ortiz" },
+    })
+    expect(result()).toHaveTextContent("3 Ortiz")
+    set.mockRestore()
+    get.mockRestore()
+  })
+
+  it("starts over from a saved count it can't read", () => {
+    window.localStorage.setItem("whip-count-draft:test", "{not json")
+    render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
+    expect(result()).toHaveTextContent("3 Hale")
+    cleanup()
+    window.localStorage.setItem("whip-count-draft:test", JSON.stringify({ picks: 4, cleared: 4 }))
+    render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
+    expect(result()).toHaveTextContent("4 unassigned")
+  })
+
+  it("shows the clock when the count has a vote time, and the download button", () => {
+    const future = new Date(Date.now() + 3 * 86_400_000).toISOString().replace(".000", "")
+    render(
+      <WhipCount
+        title="Who leads?"
+        data={{ ...whipCountData, voteAt: future }}
+        storageKey="test"
+      />,
+    )
+    expect(screen.getByRole("timer")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Download PNG" })).toBeInTheDocument()
   })
 })

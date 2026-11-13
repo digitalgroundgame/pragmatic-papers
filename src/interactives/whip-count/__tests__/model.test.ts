@@ -7,10 +7,12 @@ import {
   assignGroup,
   cleanDraft,
   groupsOf,
+  hasOutgoing,
   majorityOf,
   mergePushedCount,
   parseWhipCount,
   publicGroups,
+  stanceLabel,
   startingDraft,
   tallyDraft,
   votingMembers,
@@ -64,6 +66,35 @@ describe("parseWhipCount", () => {
     expect(!parsed.success && parsed.error).toContain("Marion Hale")
   })
 
+  it.each([
+    [
+      "a candidate with no name",
+      { candidates: [{ id: "a" }, { id: "b", name: "B" }] },
+      "Candidate 1 needs",
+    ],
+    [
+      "two candidates with one id",
+      {
+        candidates: [
+          { id: "a", name: "A" },
+          { id: "a", name: "B" },
+        ],
+      },
+      'Two candidates share the id "a".',
+    ],
+    ["a member with no name", { members: [{ state: "NY" }] }, 'Member 1 needs a "name".'],
+    ["a member with no state", { members: [{ name: "X" }] }, 'X needs a "state".'],
+    ["a member that is not an object", { members: ["X"] }, 'Member 1 needs a "name".'],
+  ])("refuses %s", (_name, change, message) => {
+    const parsed = parseWhipCount({ ...raw(), ...change })
+    expect(!parsed.success && parsed.error).toContain(message)
+  })
+
+  it("names a source it can't read a host from", () => {
+    const parsed = parseWhipCount(withMember({ source: { url: "https://" } }))
+    expect(parsed.success && parsed.value.members[0]?.source?.label).toBe("Source")
+  })
+
   it("refuses the same member twice", () => {
     const input = raw()
     const members = input.members as unknown[]
@@ -108,6 +139,18 @@ describe("the seeded Senate count", () => {
   })
 })
 
+describe("stanceLabel", () => {
+  it("names the candidate, or stands in for one it isn't given", () => {
+    const [hale] = whipCountData.candidates
+    expect(stanceLabel("backs", hale)).toBe("Backs Hale")
+    expect(stanceLabel("leans")).toBe("Leaning a candidate")
+    expect(stanceLabel("opposes")).toBe("Won’t back a candidate")
+    expect(stanceLabel("backs")).toBe("Backs a candidate")
+    expect(stanceLabel("open", hale)).toBe("Open to a change")
+    expect(stanceLabel("undeclared")).toBe("Undeclared")
+  })
+})
+
 describe("the public count", () => {
   it("counts only voting members, and a majority of them", () => {
     expect(votingMembers(whipCountData)).toHaveLength(9)
@@ -124,6 +167,29 @@ describe("the public count", () => {
       ["Won’t back Hale", 1],
       ["Backs Ortiz", 2],
     ])
+  })
+
+  it("puts those who ruled the last candidate out, or lean their way, on the right side", () => {
+    const data = {
+      ...whipCountData,
+      members: whipCountData.members.map((m) =>
+        m.name === "Sam Okafor"
+          ? { ...m, stance: "opposes" as const, candidate: "ortiz" }
+          : m.name === "Grace Lindqvist"
+            ? { ...m, stance: "leans" as const, candidate: "ortiz" }
+            : m,
+      ),
+    }
+    expect(publicGroups(data).map((g) => g.label)).toEqual([
+      "Backs Hale",
+      "Leaning Hale",
+      "Won’t back Ortiz",
+      "Won’t back Hale",
+      "Leaning Ortiz",
+      "Backs Ortiz",
+    ])
+    expect(hasOutgoing(data)).toBe(true)
+    expect(hasOutgoing({ ...data, members: data.members.slice(0, 3) })).toBe(false)
   })
 
   it("counts outgoing members when asked", () => {

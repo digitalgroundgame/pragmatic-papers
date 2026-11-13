@@ -18,11 +18,23 @@ import senateLeader2026 from "./senate-leader-2026.json"
 export const WHIP_COUNT_SLUG = "senate-majority-leader-2026"
 
 /**
+ * Whether creating failed because the slug is taken: Payload's unique check, thrown by the Local
+ * API as a ValidationError on `slug`, or by `pnpm showcase`'s REST stand-in as its message.
+ */
+function isTakenSlug(err: unknown): boolean {
+  const errors = (err as { data?: { errors?: { path?: string }[] } } | null)?.data?.errors
+  if (errors?.some((e) => e.path === "slug")) return true
+  return err instanceof Error && /field is invalid: slug\b/i.test(err.message)
+}
+
+/**
  * The Senate Democrats' 2026 leadership vote as a whip count. The data is a snapshot from
  * November 13, 2026: each senator's public position with the link it came from, and no
  * quotations, since the statements behind them were not checked against their sources.
  *
  * A count that is already there is left alone, so this can run again on a site that has one.
+ * Any other failure (an account that may not create whip counts) is thrown, so a showcase
+ * fails rather than publish an article that links to a missing page.
  */
 export async function createSenateLeaderWhipCount(
   payload: Payload,
@@ -45,9 +57,8 @@ export async function createSenateLeaderWhipCount(
       },
     })
   } catch (err) {
-    payload.logger.warn(
-      `Whip count "${WHIP_COUNT_SLUG}" was not created (it may already exist): ${err instanceof Error ? err.message : String(err)}`,
-    )
+    if (!isTakenSlug(err)) throw err
+    payload.logger.info(`Whip count "${WHIP_COUNT_SLUG}" is already there; left as it is.`)
   }
 }
 

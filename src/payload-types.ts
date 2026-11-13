@@ -1377,7 +1377,7 @@ export interface WhipCount {
     | boolean
     | null;
   /**
-   * A count pushed to this document from outside (POST /next/whip-counts/<slug>) is saved as a draft for an editor to publish. Tick this to publish each one as it arrives instead, without a review. Blocs and tags set here are kept either way.
+   * A count pushed to this document from outside (POST /next/whip-counts/<slug>) is saved as a draft for an editor to publish. Tick this to publish each one as it arrives instead, without a review, except while this document has unpublished changes of yours, which a push never publishes. Blocs and tags set here are kept either way.
    */
   autoPublish?: boolean | null;
   /**

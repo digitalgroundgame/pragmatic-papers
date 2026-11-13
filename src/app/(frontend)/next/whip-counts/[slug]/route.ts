@@ -15,7 +15,10 @@ interface Args {
  * keeps the blocs and tags its editors set (`mergePushedCount`).
  *
  * The result is saved as a draft, so the public page changes only when an editor publishes
- * it, unless the document's "Publish pushed updates" is ticked. It never creates a document.
+ * it, unless the document's "Publish pushed updates" is ticked. Even then it is saved as a draft
+ * while an editor has unpublished changes: publishing starts from the newest version, so it
+ * would publish their half-done work too (a title, a standfirst, rows). It never creates a
+ * document.
  *
  * Authenticated with `Authorization: Bearer <WHIP_COUNT_PUSH_TOKEN>`: a token of its own, so
  * the job that holds it can change whip counts and nothing else. Closed while it is unset.
@@ -52,7 +55,9 @@ export async function POST(request: Request, { params }: Args): Promise<Response
     return Response.json({ status: "unchanged" })
   }
 
-  const publish = doc.autoPublish === true
+  // The newest version is a draft when an editor has saved changes since the last publish.
+  const pendingEdits = doc._status === "draft"
+  const publish = doc.autoPublish === true && !pendingEdits
   await payload.update({
     collection: "whip-counts",
     id: doc.id,
@@ -63,5 +68,11 @@ export async function POST(request: Request, { params }: Args): Promise<Response
   payload.logger.info(
     `Whip count ${slug} took a pushed count, ${publish ? "published" : "saved as a draft"}`,
   )
-  return Response.json({ status: publish ? "published" : "draft" })
+  return Response.json(
+    publish
+      ? { status: "published" }
+      : doc.autoPublish === true
+        ? { status: "draft", reason: "An editor has unpublished changes; publish them together." }
+        : { status: "draft" },
+  )
 }

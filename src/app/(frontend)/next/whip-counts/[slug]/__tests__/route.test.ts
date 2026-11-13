@@ -32,7 +32,9 @@ describe("POST /next/whip-counts/[slug]", () => {
     vi.stubEnv("WHIP_COUNT_PUSH_TOKEN", "t0ken")
     vi.clearAllMocks()
     isExperimentEnabled.mockResolvedValue(true)
-    find.mockResolvedValue({ docs: [{ id: 7, autoPublish: false, data: copy() }] })
+    find.mockResolvedValue({
+      docs: [{ id: 7, autoPublish: false, _status: "published", data: copy() }],
+    })
   })
 
   it("refuses a request without the token, and any request while the token is unset", async () => {
@@ -86,9 +88,27 @@ describe("POST /next/whip-counts/[slug]", () => {
   })
 
   it("publishes it when the document asks for that", async () => {
-    find.mockResolvedValue({ docs: [{ id: 7, autoPublish: true, data: copy() }] })
+    find.mockResolvedValue({
+      docs: [{ id: 7, autoPublish: true, _status: "published", data: copy() }],
+    })
     const pushed = { ...copy(), asOf: "2026-11-14" }
     await expect((await push(pushed)).json()).resolves.toEqual({ status: "published" })
     expect(update.mock.calls[0]).toMatchObject([{ draft: false, data: { _status: "published" } }])
+  })
+
+  it("saves a draft, not publishing, while an editor has unpublished changes", async () => {
+    // Publishing starts from the newest version, which is the editor's draft.
+    find.mockResolvedValue({
+      docs: [{ id: 7, autoPublish: true, _status: "draft", data: copy() }],
+    })
+    const pushed = { ...copy(), asOf: "2026-11-14" }
+    await expect((await push(pushed)).json()).resolves.toEqual({
+      status: "draft",
+      reason: "An editor has unpublished changes; publish them together.",
+    })
+    expect(update.mock.calls[0]).toMatchObject([{ draft: true }])
+    expect(
+      (update.mock.calls[0] as unknown as [{ data: { _status?: string } }])[0].data._status,
+    ).toBeUndefined()
   })
 })

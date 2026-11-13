@@ -707,7 +707,8 @@ site can keep a count current with `POST /next/whip-counts/<slug>` (`Authorizati
 <WHIP_COUNT_PUSH_TOKEN>`, closed while unset): the count is checked like a save and merged
 into the document's (`mergePushedCount` keeps the editors' blocs and tags), as a draft unless
 the document's "Publish pushed updates" is ticked (and even then while an editor has unpublished
-changes, which publishing would carry live). It is part of the
+changes, which publishing would carry live), and refused (409) while an editor holds the
+document's lock, whose form would autosave its older count over the push. It is part of the
 `interactives` experiment too, and isn't in any sitemap yet. The seed and the showcase entry
 `whip-counts-draft-your-own-leadership-vote` create one (a dated snapshot, without
 quotations) and an article that links to it; creating it takes an editor's account.

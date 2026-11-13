@@ -13,6 +13,7 @@ const payload = { find, update, logger: { info: vi.fn() } }
 vi.mock("@/data/payload", () => ({ getPayloadClient: async () => payload }))
 vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({ isExperimentEnabled }))
 
+const { Locked } = await import("payload")
 const { POST } = await import("../route")
 
 const copy = (): WhipCountData => JSON.parse(JSON.stringify(whipCountData)) as WhipCountData
@@ -110,5 +111,18 @@ describe("POST /next/whip-counts/[slug]", () => {
     expect(
       (update.mock.calls[0] as unknown as [{ data: { _status?: string } }])[0].data._status,
     ).toBeUndefined()
+  })
+
+  it("leaves a count an editor has open alone, for the next push", async () => {
+    update.mockRejectedValueOnce(new Locked("Document with ID 7 is currently locked"))
+    const response = await push({ ...copy(), asOf: "2026-11-14" })
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toMatchObject({ status: "locked" })
+    expect(update.mock.calls[0]).toMatchObject([{ overrideLock: false }])
+  })
+
+  it("lets any other failure through", async () => {
+    update.mockRejectedValueOnce(new Error("database is down"))
+    await expect(push({ ...copy(), asOf: "2026-11-14" })).rejects.toThrow("database is down")
   })
 })

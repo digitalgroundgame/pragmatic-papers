@@ -1,3 +1,5 @@
+import { Locked } from "payload"
+
 import { getPayloadClient } from "@/data/payload"
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
 import { mergePushedCount, parseWhipCount } from "@/interactives/whip-count/model"
@@ -58,13 +60,24 @@ export async function POST(request: Request, { params }: Args): Promise<Response
   // The newest version is a draft when an editor has saved changes since the last publish.
   const pendingEdits = doc._status === "draft"
   const publish = doc.autoPublish === true && !pendingEdits
-  await payload.update({
-    collection: "whip-counts",
-    id: doc.id,
-    draft: !publish,
-    // Spread into a plain object: the JSON field's type wants an index signature.
-    data: { data: { ...merged }, ...(publish ? { _status: "published" as const } : {}) },
-  })
+  try {
+    await payload.update({
+      collection: "whip-counts",
+      id: doc.id,
+      draft: !publish,
+      // An editor with the document open would autosave their form's older count over the
+      // push. Leave it to them: the next push lands once they close it.
+      overrideLock: false,
+      // Spread into a plain object: the JSON field's type wants an index signature.
+      data: { data: { ...merged }, ...(publish ? { _status: "published" as const } : {}) },
+    })
+  } catch (err) {
+    if (!(err instanceof Locked)) throw err
+    return Response.json(
+      { status: "locked", reason: "An editor has it open; the next push will try again." },
+      { status: 409 },
+    )
+  }
   payload.logger.info(
     `Whip count ${slug} took a pushed count, ${publish ? "published" : "saved as a draft"}`,
   )

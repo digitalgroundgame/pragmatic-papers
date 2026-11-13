@@ -24,8 +24,8 @@ describe("drawWhipCountSVG", () => {
     expect(svg.match(/<rect /g)).toHaveLength(9 + 6 + 2 + 1 + 1)
     expect(svg).not.toContain("var(")
     expect(svg).toContain('fill="#155dfc"')
-    // Ruling a candidate out is yellow, not a tint of the other candidate's color.
-    expect(svg).toContain('fill="#d78e00"')
+    // Ruling a candidate out is pale yellow with a hairline, not a tint of the other's color.
+    expect(svg).toContain('fill="#f3efe8" stroke="#525252" stroke-width="1"')
     expect(svg).not.toContain('fill="#e2330f" fill-opacity')
   })
 

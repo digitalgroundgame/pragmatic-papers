@@ -117,10 +117,15 @@ describe("WhipCount", () => {
     expect(card()).not.toBeInTheDocument()
   })
 
-  it("draws the undeclared as empty places that open nothing, and lists them by name", () => {
+  it("draws the undeclared as empty places that open nothing, and lists them by name, folded away", () => {
     render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
     expect(document.querySelector('[data-vote="Sam Okafor"]')).not.toBeInTheDocument()
     const list = document.querySelector<HTMLElement>("[data-whip-count-undeclared]")!
+    const toggle = within(list).getByRole("button", { name: /Undeclared \(1\)/ })
+    expect(toggle).toHaveAttribute("aria-expanded", "false")
+    expect(within(list).queryByText("Sam Okafor")).not.toBeInTheDocument()
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute("aria-expanded", "true")
     expect(within(list).getByText("Sam Okafor")).toBeInTheDocument()
     expect(within(list).getAllByRole("listitem")).toHaveLength(1)
   })

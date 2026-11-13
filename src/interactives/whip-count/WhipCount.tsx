@@ -2,6 +2,12 @@
 
 import React, { useMemo, useState, useSyncExternalStore } from "react"
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -465,32 +471,6 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
           </ul>
         </div>
 
-        {undeclared.length > 0 && (
-          <div className="mt-6" data-whip-count-undeclared="">
-            <h3 className={`${heading} text-sm`}>
-              Undeclared{" "}
-              <span className="text-muted-foreground font-normal">({undeclared.length})</span>
-            </h3>
-            <p className="text-muted-foreground text-xs">
-              The grey places in the row are theirs, in no order: they have not said which way they
-              will go.
-            </p>
-            <ul className="mt-2 flex flex-wrap gap-1.5">
-              {undeclared.map((m) => (
-                <li
-                  key={m.name}
-                  className="border-border rounded-sm border px-2 py-0.5 text-xs whitespace-nowrap"
-                >
-                  {m.name}{" "}
-                  <span className="text-muted-foreground">
-                    ({[m.party, m.state].filter(Boolean).join("-")})
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         {outgoing && (
           <label className="mt-5 flex w-fit items-center gap-2 text-sm">
             <input
@@ -501,6 +481,40 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
             />
             Count outgoing senators as voters
           </label>
+        )}
+
+        {undeclared.length > 0 && (
+          <Accordion className="border-border mt-5 border-y" data-whip-count-undeclared="">
+            <AccordionItem value="undeclared">
+              <AccordionTrigger className="py-3">
+                <span>
+                  Undeclared{" "}
+                  <span className="text-muted-foreground font-normal tabular-nums">
+                    ({undeclared.length})
+                  </span>
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <p className="text-muted-foreground text-xs">
+                  The grey places in the row are theirs, in no order: they have not said which way
+                  they will go.
+                </p>
+                <ul className="mt-2 flex flex-wrap gap-1.5">
+                  {undeclared.map((m) => (
+                    <li
+                      key={m.name}
+                      className="border-border rounded-sm border px-2 py-0.5 text-xs whitespace-nowrap"
+                    >
+                      {m.name}{" "}
+                      <span className="text-muted-foreground">
+                        ({[m.party, m.state].filter(Boolean).join("-")})
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         )}
       </section>
 

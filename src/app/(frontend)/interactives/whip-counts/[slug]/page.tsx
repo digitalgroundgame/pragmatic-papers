@@ -83,8 +83,8 @@ export default async function WhipCountPage({
           <p className="text-brand-text font-serif text-xs font-semibold tracking-widest uppercase">
             Interactive
           </p>
-          {/* Whip counts set their headings in the body sans, not the site's display face. */}
-          <h1 className="mt-2 font-sans leading-tight font-semibold tracking-tight">{doc.title}</h1>
+          {/* The title is in the site's display face; the count below sets its headings in the body sans. */}
+          <h1 className="mt-2">{doc.title}</h1>
           {doc.intro && <p className="mt-4 text-lg">{doc.intro}</p>}
         </header>
 

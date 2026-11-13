@@ -689,6 +689,14 @@ reader's browser, with the sources and the logo in a footer and the font embedde
 page shows (`themePalette`), and saves it as a PNG for sharing. The text in the picture needs a font in the image
 (both Dockerfiles install fontconfig and the site's own fonts as TTFs from their packages, Geist and Libertinus Serif, since fontconfig can't read woff2; a download embeds the site's woff2). Like the page, the titles and sources are in Libertinus Serif, scaled 112% as `fonts.ts` scales it, and the legend in Geist.
 
+A **whip count** (`/interactives/whip-counts/<slug>`, the `whip-counts` collection,
+`src/interactives/whip-count/`) is a third kind of interactive page, with no map: a leadership
+vote tracked voter by voter. An editor pastes the count into the document's `data` field as
+JSON; `parseWhipCount` (`model.ts`) is its schema, and saving refuses a paste it can't read.
+The page shows the public count and lets a reader draft their own guess of how the vote
+breaks, one voter or one bloc at a time, kept in their browser only. It is part of the
+`interactives` experiment too, and isn't in any sitemap yet.
+
 An SVG never carries records. A drilldown's SVG is checked in, parsed once at
 snapshot time into `geometry/*.json`, and never parsed again;
 `scripts/snapshot-federal-courts.ts` regenerates the Federal Courts geometry

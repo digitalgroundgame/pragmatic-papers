@@ -136,7 +136,8 @@ describe("the seeded Senate count", () => {
     expect(votingMembers(parsed.value)).toHaveLength(60)
     expect(votingMembers(withOutgoing(parsed.value, false))).toHaveLength(56)
     expect(parsed.value.voteAt).toBe("2026-12-01T00:00:00-05:00")
-    expect(parsed.value.updates?.times).toHaveLength(4)
+    // A snapshot: nothing keeps a seeded copy up to date, so it names no next check.
+    expect(parsed.value.updates).toBeUndefined()
     expect(parsed.value.members.filter((m) => m.basis)).toEqual([])
   })
 })

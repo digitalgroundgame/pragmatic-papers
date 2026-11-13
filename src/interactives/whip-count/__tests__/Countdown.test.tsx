@@ -48,4 +48,14 @@ describe("NextUpdate", () => {
     expect(line).toHaveTextContent(/Next check for new statements: (today|tomorrow) at \d/)
     expect(line.querySelector("time")).toHaveAttribute("datetime", "2026-11-13T12:37:00.000Z")
   })
+
+  it("says nothing once the vote has passed", () => {
+    const updates = { times: ["07:37"], timeZone: "America/New_York" }
+    const { container, rerender } = render(
+      <NextUpdate updates={updates} voteAt="2026-11-13T00:00:00-05:00" />,
+    )
+    expect(container).toBeEmptyDOMElement()
+    rerender(<NextUpdate updates={updates} voteAt="2026-12-01T00:00:00-05:00" />)
+    expect(container).not.toBeEmptyDOMElement()
+  })
 })

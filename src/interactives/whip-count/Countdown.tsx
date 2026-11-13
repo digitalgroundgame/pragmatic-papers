@@ -54,10 +54,17 @@ export function Countdown({ to }: { to: string }): React.ReactNode {
  * the page loads, like the clock, since the server doesn't know the reader's zone or the time
  * a cached page is read.
  */
-export function NextUpdate({ updates }: { updates: WhipCountUpdates }): React.ReactNode {
+export function NextUpdate({
+  updates,
+  voteAt,
+}: {
+  updates: WhipCountUpdates
+  /** Once the vote has passed there is nothing left to check for, so the line goes. */
+  voteAt?: string
+}): React.ReactNode {
   const now = useSyncExternalStore(subscribe, thisSecond, () => null)
   const next = now === null ? null : nextUpdate(new Date(now * 1000), updates)
-  if (!next) return null
+  if (!next || (voteAt && Date.parse(voteAt) <= now! * 1000)) return null
   const today = new Date(now! * 1000).toDateString() === next.toDateString()
   const time = next.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
   return (

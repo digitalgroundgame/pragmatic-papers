@@ -2,10 +2,6 @@
   "schema": "pragmatic-papers/whip-count@1",
   "asOf": "2026-11-13",
   "voteAt": "2026-12-01T00:00:00-05:00",
-  "updates": {
-    "times": ["07:37", "12:37", "16:37", "21:37"],
-    "timeZone": "America/New_York"
-  },
   "candidates": [
     {
       "id": "schumer",

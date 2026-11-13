@@ -417,7 +417,7 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
             : ""}{" "}
           The ballot is secret: these are public statements, not votes.
         </p>
-        {data.updates && <NextUpdate updates={data.updates} />}
+        {data.updates && <NextUpdate updates={data.updates} voteAt={data.voteAt} />}
 
         {data.voteAt && (
           <div className="mt-8">

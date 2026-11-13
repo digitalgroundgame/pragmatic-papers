@@ -255,3 +255,37 @@ export const DropCap: Story = {
     }
   },
 }
+
+// A writer can paste a bare URL as a link's text. On a phone it has to break where it
+// meets the edge, or the article column and the page grow to fit it. The decorators copy
+// the article page's column: `mx-auto` in a flex column sizes it to its content.
+export const LongLinkOnMobile: Story = {
+  args: {
+    data: richText(
+      createParagraph([
+        createTextNode("For further reading: "),
+        createLinkNode(
+          "https://jspp.psychopen.eu/index.php/jspp/article/view/12989/12989.html",
+          "https://jspp.psychopen.eu/index.php/jspp/article/view/12989/12989.html",
+        ),
+      ]),
+    ) as DefaultTypedEditorState,
+  },
+  decorators: [
+    (Story) => (
+      <div data-testid="page" className="flex w-[320px] flex-col">
+        <div data-testid="column" className="mx-auto max-w-2xl space-y-3">
+          <Story />
+        </div>
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement).getByTestId("page")
+    const column = within(canvasElement).getByTestId("column")
+    await expect(column.getBoundingClientRect().width).toBeLessThanOrEqual(
+      page.getBoundingClientRect().width,
+    )
+    await expect(page.scrollWidth).toBeLessThanOrEqual(page.clientWidth)
+  },
+}

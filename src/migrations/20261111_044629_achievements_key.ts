@@ -12,6 +12,11 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
     WHERE "id" = (SELECT min("id") FROM "achievements" WHERE "rule" = 'firstMembers');
   UPDATE "achievements" SET "key" = 'verified'
     WHERE "id" = (SELECT min("id") FROM "achievements" WHERE "rule" = 'verified');`)
+  // Nearly every reader verifies their email, so that achievement now shows no badge, and its old
+  // name goes to the hand-given Verified. Left alone if an editor renamed it.
+  await db.execute(sql`
+  UPDATE "achievements" SET "name" = 'Email verified', "badge" = false
+    WHERE "key" = 'verified' AND "name" = 'Verified';`)
 }
 
 export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {

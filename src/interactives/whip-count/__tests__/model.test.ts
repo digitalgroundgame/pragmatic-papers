@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest"
 
+import senateLeader2026 from "@/endpoints/seed/features/whip-count/senate-leader-2026.json"
 import { whipCountData } from "@/stories/fixtures/whipCount"
 
 import {
-  assignBloc,
-  blocsOf,
+  assignGroup,
   cleanDraft,
+  groupsOf,
   majorityOf,
   parseWhipCount,
   publicGroups,
@@ -86,6 +87,17 @@ describe("parseWhipCount", () => {
   })
 })
 
+describe("the seeded Senate count", () => {
+  it("is data the page accepts, and carries no quotations", () => {
+    const parsed = parseWhipCount(senateLeader2026)
+    expect(parsed.success).toBe(true)
+    if (!parsed.success) return
+    expect(votingMembers(parsed.value)).toHaveLength(55)
+    expect(votingMembers(withOutgoing(parsed.value, true))).toHaveLength(59)
+    expect(parsed.value.members.filter((m) => m.basis)).toEqual([])
+  })
+})
+
 describe("the public count", () => {
   it("counts only voting members, and a majority of them", () => {
     expect(votingMembers(whipCountData)).toHaveLength(9)
@@ -136,16 +148,34 @@ describe("a reader's draft", () => {
     expect(won.winner?.id).toBe("hale")
   })
 
-  it("lists blocs by size", () => {
-    expect(blocsOf(whipCountData)).toEqual(["Progressive", "Mainstream", "Moderate"])
+  it("lists blocs by size, then tags, then the incoming", () => {
+    expect(groupsOf(whipCountData).map((g) => [g.kind, g.name, g.members.length])).toEqual([
+      ["bloc", "Progressive", 4],
+      ["bloc", "Mainstream", 3],
+      ["bloc", "Moderate", 2],
+      ["tag", "Anti-establishment", 2],
+      ["tag", "Independent", 1],
+      ["seat", "Incoming senators", 1],
+    ])
+    const counted = groupsOf(withOutgoing(whipCountData, true))
+    expect(counted.at(-1)).toMatchObject({ kind: "seat", name: "Outgoing senators" })
   })
 
-  it("assigns a bloc's uncommitted members and leaves public backers alone", () => {
-    const draft = assignBloc(whipCountData, startingDraft(whipCountData), "Progressive", "hale")
+  it("assigns a group's uncommitted members and leaves public backers alone", () => {
+    const progressives = groupsOf(whipCountData).find((g) => g.name === "Progressive")!
+    const draft = assignGroup(startingDraft(whipCountData), progressives, "hale")
     expect(draft["Ana Whitfield"]).toBe("hale")
     expect(draft["Luis Navarro"]).toBe("hale")
     expect(draft["Daniel Ortiz"]).toBe("ortiz")
-    expect(assignBloc(whipCountData, draft, "Progressive", null)["Ana Whitfield"]).toBeUndefined()
+    expect(assignGroup(draft, progressives, null)["Ana Whitfield"]).toBeUndefined()
+  })
+
+  it("keeps a member's tags once each and drops what isn't text", () => {
+    const input = raw()
+    const members = input.members as Record<string, unknown>[]
+    members[0]!.tags = ["Leadership", " Leadership ", "", 3]
+    const parsed = parseWhipCount(input)
+    expect(parsed.success && parsed.value.members[0]?.tags).toEqual(["Leadership"])
   })
 
   it("drops saved picks the data no longer has", () => {

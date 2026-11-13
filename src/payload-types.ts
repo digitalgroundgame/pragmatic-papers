@@ -1352,7 +1352,7 @@ export interface InteractiveSnapshot {
   _status?: ('draft' | 'published') | null;
 }
 /**
- * A leadership vote tracked voter by voter. Editors own the words and paste the count as JSON; readers draft their own guess on the page.
+ * A leadership vote tracked voter by voter. Editors own the words and each voter's position, edited row by row or pasted as JSON; readers draft their own guess on the page.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "whip-counts".
@@ -1365,7 +1365,7 @@ export interface WhipCount {
    */
   intro?: string | null;
   /**
-   * The count: candidates and every voter's public position. Paste the whole document (schema "pragmatic-papers/whip-count@1"); saving checks it and says what is wrong.
+   * The count: every voter's public position, edited row by row. To start a count or replace it whole, use "Edit as JSON" and paste a document (schema "pragmatic-papers/whip-count@1"). Saving checks it and says what is wrong.
    */
   data:
     | {

@@ -40,6 +40,11 @@ export interface WhipCountMember {
   seat: Seat
   /** The ideological bloc an editor files them under, for assigning a group at once. */
   bloc?: string
+  /**
+   * Other groups an editor puts them in, which cut across blocs ("Independent",
+   * "Anti-establishment"). A reader can assign any of them at once too.
+   */
+  tags?: string[]
   stance: Stance
   /** The candidate `stance` is about; absent for `open` and `undeclared`. */
   candidate?: string
@@ -69,6 +74,13 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/
 
 const text = (value: unknown): string | undefined =>
   typeof value === "string" && value.trim() ? value.trim() : undefined
+
+/** A member's tags: the non-empty strings of a list, once each. Anything else is no tags. */
+function tagsOf(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  const tags = [...new Set(value.flatMap((tag) => text(tag) ?? []))]
+  return tags.length > 0 ? tags : undefined
+}
 
 /** The site a link goes to, for a source with no label of its own. */
 function hostOf(url: string): string {
@@ -144,6 +156,7 @@ export function parseWhipCount(input: unknown): Result<WhipCountData, string> {
       party: text(raw.party) ?? "",
       seat,
       bloc: text(raw.bloc),
+      tags: tagsOf(raw.tags),
       stance,
       candidate: named ? candidate : undefined,
       basis: text(raw.basis),
@@ -299,30 +312,53 @@ export function tallyDraft(data: WhipCountData, draft: Draft): DraftTally {
   }
 }
 
-/** The blocs in the data, most members first; members without one are left out. */
-export function blocsOf(data: WhipCountData): string[] {
-  const counts = new Map<string, number>()
-  for (const member of votingMembers(data)) {
-    if (member.bloc) counts.set(member.bloc, (counts.get(member.bloc) ?? 0) + 1)
-  }
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([b]) => b)
+/** A set of voters a reader can assign at once: a bloc, a tag, or a kind of seat. */
+export interface MemberGroup {
+  kind: "bloc" | "tag" | "seat"
+  name: string
+  members: WhipCountMember[]
+}
+
+const SEAT_GROUPS: Partial<Record<Seat, string>> = {
+  incoming: "Incoming senators",
+  outgoing: "Outgoing senators",
 }
 
 /**
- * Gives every member of a bloc to one candidate (or clears them with `null`), except those who
- * have publicly backed someone: a bloc pick is a guess about the uncommitted.
+ * The groups among the voting members: blocs first, then tags, then the incoming and the
+ * outgoing, each kind with its largest group first.
  */
-export function assignBloc(
-  data: WhipCountData,
-  draft: Draft,
-  bloc: string,
-  candidate: string | null,
-): Draft {
-  const next = { ...draft }
+export function groupsOf(data: WhipCountData): MemberGroup[] {
+  const groups = new Map<string, MemberGroup>()
+  const add = (kind: MemberGroup["kind"], name: string, member: WhipCountMember): void => {
+    const key = `${kind}:${name}`
+    const group = groups.get(key) ?? { kind, name, members: [] }
+    group.members.push(member)
+    groups.set(key, group)
+  }
   for (const member of votingMembers(data)) {
-    if (member.bloc !== bloc || member.stance === "backs") continue
+    if (member.bloc) add("bloc", member.bloc, member)
+    for (const tag of member.tags ?? []) add("tag", tag, member)
+    const seat = SEAT_GROUPS[member.seat]
+    if (seat) add("seat", seat, member)
+  }
+  const order = { bloc: 0, tag: 1, seat: 2 }
+  return [...groups.values()].sort(
+    (a, b) =>
+      order[a.kind] - order[b.kind] ||
+      b.members.length - a.members.length ||
+      a.name.localeCompare(b.name),
+  )
+}
+
+/**
+ * Gives every member of a group to one candidate (or clears them with `null`), except those
+ * who have publicly backed someone: a group pick is a guess about the uncommitted.
+ */
+export function assignGroup(draft: Draft, group: MemberGroup, candidate: string | null): Draft {
+  const next = { ...draft }
+  for (const member of group.members) {
+    if (member.stance === "backs") continue
     if (candidate) next[member.name] = candidate
     else delete next[member.name]
   }

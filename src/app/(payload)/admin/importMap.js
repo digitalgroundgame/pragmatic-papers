@@ -53,6 +53,7 @@ import { SlotsField as SlotsField_35f5a6ee20cc4f48b51d355856e648f8 } from '@/blo
 import { SlotRowLabel as SlotRowLabel_5acbd006b7abec438595e7d3bb0b4bb1 } from '@/blocks/CollectionGrid/components/SlotRowLabel'
 import { MerchBlockLabel as MerchBlockLabel_6daaa2c7f385f87544e240d2f03ffa20 } from '@/blocks/Merch/BlockLabel'
 import { SyncNowButton as SyncNowButton_5c40eb2c313f4a5f050c97644b650016 } from '@/collections/InteractiveSnapshots/components/SyncNowButton'
+import { WhipCountDataField as WhipCountDataField_e32e7a5a3c75d32ad0d4f6f28545b99c } from '@/collections/WhipCounts/components/WhipCountDataField'
 import { ProductTitleCell as ProductTitleCell_8dff8d8bb04003b09cb89f916f5bb9bc } from '@/collections/Merch/components/ProductTitleCell'
 import { ProductThumbnailCell as ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264d44732 } from '@/collections/Merch/components/ProductThumbnailCell'
 import { SyncNowButton as SyncNowButton_6b13e2821b4c35428e02347e7578e840 } from '@/collections/Merch/components/SyncNowButton'
@@ -138,6 +139,7 @@ export const importMap = {
   "@/blocks/CollectionGrid/components/SlotRowLabel#SlotRowLabel": SlotRowLabel_5acbd006b7abec438595e7d3bb0b4bb1,
   "@/blocks/Merch/BlockLabel#MerchBlockLabel": MerchBlockLabel_6daaa2c7f385f87544e240d2f03ffa20,
   "@/collections/InteractiveSnapshots/components/SyncNowButton#SyncNowButton": SyncNowButton_5c40eb2c313f4a5f050c97644b650016,
+  "@/collections/WhipCounts/components/WhipCountDataField#WhipCountDataField": WhipCountDataField_e32e7a5a3c75d32ad0d4f6f28545b99c,
   "@/collections/Merch/components/ProductTitleCell#ProductTitleCell": ProductTitleCell_8dff8d8bb04003b09cb89f916f5bb9bc,
   "@/collections/Merch/components/ProductThumbnailCell#ProductThumbnailCell": ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264d44732,
   "@/collections/Merch/components/SyncNowButton#SyncNowButton": SyncNowButton_6b13e2821b4c35428e02347e7578e840,

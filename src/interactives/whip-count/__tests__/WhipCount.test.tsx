@@ -46,15 +46,15 @@ describe("WhipCount", () => {
     expect(screen.getByLabelText("Your pick for Sam Okafor")).toHaveValue("hale")
   })
 
-  it("assigns a bloc at once, except its public backers", () => {
+  it("assigns a group at once, except its public backers", () => {
     render(<WhipCount data={whipCountData} storageKey="test" />)
-    fireEvent.click(screen.getByRole("button", { name: "Give the Progressive bloc to Hale" }))
+    fireEvent.click(screen.getByRole("button", { name: "Give Progressive to Hale" }))
     expect(screen.getByLabelText("Your pick for Ana Whitfield")).toHaveValue("hale")
     expect(screen.getByLabelText("Your pick for Luis Navarro")).toHaveValue("hale")
     expect(screen.getByLabelText("Your pick for Daniel Ortiz")).toHaveValue("ortiz")
     expect(result()).toHaveTextContent("Marion Hale wins in your count.")
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear the Progressive bloc" }))
+    fireEvent.click(screen.getByRole("button", { name: "Clear Progressive" }))
     expect(screen.getByLabelText("Your pick for Ana Whitfield")).toHaveValue("")
   })
 

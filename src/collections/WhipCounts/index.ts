@@ -38,7 +38,7 @@ export const WhipCounts: CollectionConfig<"whip-counts"> = {
   admin: {
     defaultColumns: ["title", "slug", "_status", "updatedAt"],
     description:
-      "A leadership vote tracked voter by voter. Editors own the words and paste the count as JSON; readers draft their own guess on the page.",
+      "A leadership vote tracked voter by voter. Editors own the words and each voter's position, edited row by row or pasted as JSON; readers draft their own guess on the page.",
     group: "Interactives",
     livePreview: {
       url: ({ data, req }) =>
@@ -67,7 +67,10 @@ export const WhipCounts: CollectionConfig<"whip-counts"> = {
       type: "json",
       required: true,
       admin: {
-        description: `The count: candidates and every voter's public position. Paste the whole document (schema "${WHIP_COUNT_SCHEMA}"); saving checks it and says what is wrong.`,
+        components: {
+          Field: "@/collections/WhipCounts/components/WhipCountDataField#WhipCountDataField",
+        },
+        description: `The count: every voter's public position, edited row by row. To start a count or replace it whole, use "Edit as JSON" and paste a document (schema "${WHIP_COUNT_SCHEMA}"). Saving checks it and says what is wrong.`,
       },
       validate: (value: unknown): true | string => {
         const parsed = parseWhipCount(value)

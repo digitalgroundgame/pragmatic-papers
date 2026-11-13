@@ -19,6 +19,7 @@ import { createRichTextShowcaseArticle } from "./features/rich-text-showcase"
 import { createLegacySocialEmbedArticle, createSocialEmbedArticle } from "./features/social-embeds"
 import { createTableOfContentsArticle } from "./features/table-of-contents"
 import { createTimelineArticle } from "./features/timeline"
+import { createWhipCountArticle } from "./features/whip-count"
 import { createStockMedia } from "./media"
 import { createMenus } from "./menus"
 import { createPages } from "./pages"
@@ -88,6 +89,7 @@ export const seed = async (
         // Snapshots point at their interactive, so they go first.
         await payload.delete({ collection: "interactive-snapshots", context, where: {} })
         await payload.delete({ collection: "interactives", context, where: {} })
+        await payload.delete({ collection: "whip-counts", context, where: {} })
         await payload.delete({ collection: "docs", context, where: {} })
         // Last, once the content that uses it is gone. The flag also clears media
         // that content the seed doesn't own (a real user's profile image) still uses,
@@ -336,6 +338,16 @@ export const seed = async (
             [ctx.writers[0]!],
             ctx.media,
             [ctx.topics[3]!, ctx.topics[7]!],
+            context,
+          ),
+        )
+        // Creates the whip count it links to as well.
+        ctx.featureArticles.push(
+          await createWhipCountArticle(
+            payload,
+            [ctx.writers[0]!],
+            ctx.media,
+            [ctx.topics[3]!],
             context,
           ),
         )

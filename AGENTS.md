@@ -691,11 +691,16 @@ page shows (`themePalette`), and saves it as a PNG for sharing. The text in the 
 
 A **whip count** (`/interactives/whip-counts/<slug>`, the `whip-counts` collection,
 `src/interactives/whip-count/`) is a third kind of interactive page, with no map: a leadership
-vote tracked voter by voter. An editor pastes the count into the document's `data` field as
-JSON; `parseWhipCount` (`model.ts`) is its schema, and saving refuses a paste it can't read.
-The page shows the public count and lets a reader draft their own guess of how the vote
-breaks, one voter or one bloc at a time, kept in their browser only. It is part of the
-`interactives` experiment too, and isn't in any sitemap yet.
+vote tracked voter by voter. The count is one JSON document in the document's `data` field,
+which `parseWhipCount` (`model.ts`) checks on save. An editor changes it row by row in a table
+(`WhipCountDataField`: position, statement, source, bloc and tags), or pastes a whole count
+with "Edit as JSON". The page shows the public count and lets a reader draft their own guess
+of how the vote breaks, one voter at a time or a group at a time (a bloc, a tag, the incoming
+or the outgoing), kept in their browser only. Outgoing members are listed but counted only
+when the reader asks, or when the data sets their `voting` to true. It is part of the
+`interactives` experiment too, and isn't in any sitemap yet. The seed and the showcase entry
+`whip-counts-draft-your-own-leadership-vote` create one (a dated snapshot, without
+quotations) and an article that links to it; creating it takes an editor's account.
 
 An SVG never carries records. A drilldown's SVG is checked in, parsed once at
 snapshot time into `geometry/*.json`, and never parsed again;

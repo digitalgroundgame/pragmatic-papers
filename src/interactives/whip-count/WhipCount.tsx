@@ -16,9 +16,9 @@ import { isRecord } from "@/utilities/isRecord"
 import { cn } from "@/utilities/utils"
 
 import {
-  assignBloc,
-  blocsOf,
+  assignGroup,
   cleanDraft,
+  groupsOf,
   hasOutgoing,
   majorityOf,
   publicGroups,
@@ -164,7 +164,7 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
   const data = useMemo(() => withOutgoing(published, countOutgoing), [published, countOutgoing])
   const voters = useMemo(() => votingMembers(data), [data])
   const groups = useMemo(() => publicGroups(data), [data])
-  const blocs = useMemo(() => blocsOf(data), [data])
+  const memberGroups = useMemo(() => groupsOf(data), [data])
   const majority = majorityOf(voters.length)
   const [first] = data.candidates
 
@@ -279,7 +279,7 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
         </h2>
         <p className="text-muted-foreground mt-1 text-sm">
           Guess how the vote breaks. Everyone who has publicly backed a candidate starts with them;
-          assign the rest a bloc at a time here, or one by one in the table. Your count is saved in
+          assign the rest a group at a time here, or one by one in the table. Your count is saved in
           this browser only.
         </p>
         <CountBar
@@ -309,19 +309,22 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
           </strong>
         </p>
 
-        {blocs.length > 0 && (
+        {memberGroups.length > 0 && (
           <div className="mt-5">
-            <h3 className="text-sm font-semibold">Assign a bloc</h3>
+            <h3 className="text-sm font-semibold">Assign a group</h3>
             <p className="text-muted-foreground text-xs">
-              Moves everyone in the bloc who has not publicly backed a candidate.
+              Moves everyone in the group who has not publicly backed a candidate.
             </p>
             <ul className="mt-2 flex flex-col gap-2">
-              {blocs.map((bloc) => {
-                const open = voters.filter((m) => m.bloc === bloc && m.stance !== "backs")
+              {memberGroups.map((group) => {
+                const open = group.members.filter((m) => m.stance !== "backs")
                 return (
-                  <li key={bloc} className="flex flex-wrap items-center gap-2 text-sm">
-                    <span className="min-w-40">
-                      <span className="font-medium">{bloc}</span>{" "}
+                  <li
+                    key={`${group.kind}:${group.name}`}
+                    className="flex flex-wrap items-center gap-2 text-sm"
+                  >
+                    <span className="min-w-56">
+                      <span className="font-medium">{group.name}</span>{" "}
                       <span className="text-muted-foreground">({open.length} uncommitted)</span>
                     </span>
                     {data.candidates.map((c) => (
@@ -330,8 +333,8 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
                         size="sm"
                         variant="outline"
                         disabled={open.length === 0}
-                        aria-label={`Give the ${bloc} bloc to ${c.short}`}
-                        onClick={() => update(assignBloc(data, draft, bloc, c.id))}
+                        aria-label={`Give ${group.name} to ${c.short}`}
+                        onClick={() => update(assignGroup(draft, group, c.id))}
                       >
                         {c.short}
                       </Button>
@@ -340,8 +343,8 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
                       size="sm"
                       variant="ghost"
                       disabled={open.length === 0}
-                      aria-label={`Clear the ${bloc} bloc`}
-                      onClick={() => update(assignBloc(data, draft, bloc, null))}
+                      aria-label={`Clear ${group.name}`}
+                      onClick={() => update(assignGroup(draft, group, null))}
                     >
                       Clear
                     </Button>
@@ -411,7 +414,14 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
                     />
                     {stanceLabel(m.stance, g.candidate)}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">{m.bloc ?? "—"}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {m.bloc ?? "—"}
+                    {m.tags && (
+                      <span className="text-muted-foreground block text-xs">
+                        {m.tags.join(", ")}
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell className="min-w-64 whitespace-normal">
                     {/* Long quotes are cut to three lines on a phone, where the row would
                         otherwise run to a screen's height. */}

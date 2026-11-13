@@ -24,7 +24,7 @@ export const Default: Story = {}
 export const BlocAssigned: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole("button", { name: "Give the Progressive bloc to Hale" }))
+    await userEvent.click(canvas.getByRole("button", { name: "Give Progressive to Hale" }))
     await expect(canvas.getByText("Marion Hale wins in your count.")).toBeInTheDocument()
   },
 }

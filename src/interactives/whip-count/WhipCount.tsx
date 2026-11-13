@@ -419,8 +419,7 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
           {voters.length} vote, so {majority} wins.
           {first && firmFirst
             ? ` ${firmFirst.members.length} have publicly backed ${first.name}, ${short} short of a majority.`
-            : ""}{" "}
-          The ballot is secret: these are public statements, not votes.
+            : ""}
         </p>
         {data.updates && <NextUpdate updates={data.updates} voteAt={data.voteAt} />}
 
@@ -470,8 +469,19 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
           </ul>
         </div>
 
+        {/* The end of what the downloaded picture holds; what follows is detail. The download
+            button reads this logo, in the theme the page is showing. */}
+        <div className="border-border mt-6 flex items-end justify-between gap-4 border-b pb-6">
+          <p className="text-muted-foreground text-xs">
+            Public statements, not votes: the ballot is secret.
+          </p>
+          <div data-whip-count-logo="" className="shrink-0">
+            <Logo size="xs" />
+          </div>
+        </div>
+
         {outgoing && (
-          <label className="mt-5 flex w-fit items-center gap-2 text-sm">
+          <label className="mt-6 flex w-fit items-center gap-2 text-sm">
             <input
               type="checkbox"
               className="accent-foreground size-4"
@@ -485,7 +495,7 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
         {undeclared.length > 0 && (
           <Accordion className="border-border mt-5 border-y" data-whip-count-undeclared="">
             <AccordionItem value="undeclared">
-              <AccordionTrigger className="py-3">
+              <AccordionTrigger className="py-3 font-sans text-sm font-semibold tracking-normal">
                 <span>
                   Undeclared{" "}
                   <span className="text-muted-foreground font-normal tabular-nums">
@@ -734,11 +744,6 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
           </TableBody>
         </Table>
       </section>
-
-      {/* The download button reads this logo, in the theme the page is showing. */}
-      <div data-whip-count-logo="" className="-mt-6 flex justify-end">
-        <Logo size="xs" />
-      </div>
     </div>
   )
 }

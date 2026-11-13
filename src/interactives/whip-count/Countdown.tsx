@@ -2,6 +2,8 @@
 
 import React, { useSyncExternalStore } from "react"
 
+import { cn } from "@/utilities/utils"
+
 import { nextUpdate, type WhipCountUpdates } from "./model"
 
 /** The current second, shared by every clock on the page, ticking only while one is shown. */
@@ -49,7 +51,10 @@ export function Countdown({ to }: { to: string }): React.ReactNode {
         {UNITS.map((unit, i) => (
           <span key={unit} className="text-center">
             <span
-              className={`block font-sans text-2xl leading-none font-semibold tabular-nums sm:text-3xl${values === null ? "invisible" : ""}`}
+              className={cn(
+                "block font-sans text-2xl leading-none font-semibold tabular-nums sm:text-3xl",
+                values === null && "invisible",
+              )}
             >
               {values === null ? "00" : i === 0 ? values[i] : two(values[i]!)}
             </span>

@@ -34,7 +34,7 @@ describe("Countdown", () => {
     const digits = host.querySelectorAll(".tabular-nums")
     expect(digits).toHaveLength(4)
     for (const digit of digits) {
-      expect(digit).toHaveClass("invisible")
+      expect(digit).toHaveClass("invisible", "sm:text-3xl")
       expect(digit).toHaveTextContent("00")
     }
     expect(clock).toHaveTextContent("days")

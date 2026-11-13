@@ -93,4 +93,34 @@ describe("WhipCount", () => {
     expect(within(table).getByText("Walter Finch")).toBeInTheDocument()
     expect(screen.getByText(/10 vote, so 6 wins/)).toBeInTheDocument()
   })
+
+  it("opens a card with who a vote is, where they stand and the source", () => {
+    render(<WhipCount data={whipCountData} storageKey="test" />)
+    const card = (): HTMLElement | null => document.querySelector("[data-vote-card]")
+    expect(card()).not.toBeInTheDocument()
+
+    const vote = document.querySelector<HTMLElement>('[data-vote="Luis Navarro"]')!
+    fireEvent.pointerEnter(vote, { pointerType: "mouse" })
+    expect(card()).toHaveTextContent("Luis Navarro (D-MN)")
+    expect(card()).toHaveTextContent("Won’t back Hale")
+    expect(card()).toHaveTextContent("Incoming · Progressive")
+    expect(within(card()!).getByText("example.com")).toHaveAttribute(
+      "href",
+      "https://example.com/navarro",
+    )
+
+    // A tap pins it, so it stays when the pointer leaves, and a second tap closes it.
+    fireEvent.click(vote)
+    fireEvent.pointerLeave(vote.parentElement!.parentElement!.parentElement!)
+    expect(card()).toBeInTheDocument()
+    fireEvent.click(vote)
+    expect(card()).not.toBeInTheDocument()
+  })
+
+  it("says whose pick a vote is in the reader's count", () => {
+    renderDrafting()
+    const votes = document.querySelectorAll<HTMLElement>('[data-vote="Sam Okafor"]')
+    fireEvent.pointerEnter(votes[1]!, { pointerType: "mouse" })
+    expect(document.querySelector("[data-vote-card]")).toHaveTextContent("Unassigned in your count")
+  })
 })

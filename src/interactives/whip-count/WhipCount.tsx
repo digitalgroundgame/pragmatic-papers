@@ -31,6 +31,7 @@ import {
   type PublicGroup,
   type WhipCountCandidate,
   type WhipCountData,
+  type WhipCountMember,
 } from "./model"
 
 interface Props {
@@ -118,42 +119,140 @@ function groupStyle(data: WhipCountData, group: PublicGroup): React.CSSPropertie
   return { background: candidateColor(data, side), opacity }
 }
 
-/** A row of votes, one rectangle each, with a line where the majority falls. */
+/** One voter's rectangle in a bar: who they are, and what the card that opens on it says. */
+interface Vote {
+  member: WhipCountMember
+  style: React.CSSProperties
+  /** Their place in this bar, in words: a public position, or the reader's pick. */
+  standing: string
+}
+
+const CARD_WIDTH = 256
+
+/**
+ * A row of votes, one rectangle each, with a line where the majority falls. Pointing at a
+ * rectangle (or tapping it, which also pins it) opens a card with who it is, where they
+ * stand and the source. The card is an extra for a pointer: the table under the bars holds
+ * the same for every voter, so the bar stays one image to a screen reader.
+ */
 function CountBar({
   label,
-  segments,
-  total,
+  votes,
   majority,
   ends,
 }: {
   label: string
-  segments: { key: string; count: number; style: React.CSSProperties }[]
-  total: number
+  votes: Vote[]
   majority: number
   /** The candidates at each end of the bar. */
   ends: [string, string]
 }): React.ReactNode {
+  const [open, setOpen] = useState<{ name: string; left: number; pinned: boolean } | null>(null)
+  const vote = open ? votes.find((v) => v.member.name === open.name) : undefined
+
+  const show = (target: HTMLElement, name: string, pin: boolean): void => {
+    if (!pin && open?.pinned) return
+    const row = target.parentElement
+    if (!row) return
+    const box = row.getBoundingClientRect()
+    const at = target.getBoundingClientRect()
+    // Centred on the rectangle, kept inside the bar.
+    const left = Math.max(
+      0,
+      Math.min(at.left + at.width / 2 - box.left - CARD_WIDTH / 2, box.width - CARD_WIDTH),
+    )
+    setOpen(pin && open?.pinned && open.name === name ? null : { name, left, pinned: pin })
+  }
+
   return (
     <div>
-      <div className="relative pt-7" role="img" aria-label={label}>
-        {/* One thin rectangle a voter, so a group reads as that many people. */}
-        <div className="flex h-10 gap-0.5">
-          {segments.flatMap((s) =>
-            Array.from({ length: s.count }, (_, i) => (
-              <div key={`${s.key}-${i}`} className="min-w-0 flex-1 rounded-xs" style={s.style} />
-            )),
-          )}
+      <div
+        className="relative"
+        onPointerLeave={() => setOpen((current) => (current?.pinned ? current : null))}
+      >
+        <div className="relative pt-7" role="img" aria-label={label}>
+          {/* One thin rectangle a voter, so a group reads as that many people. */}
+          <div className="flex h-10 gap-0.5">
+            {votes.map((v) => (
+              <div
+                key={v.member.name}
+                data-vote={v.member.name}
+                className={cn(
+                  "min-w-0 flex-1 cursor-pointer rounded-xs",
+                  open?.name === v.member.name && "ring-foreground ring-2",
+                )}
+                style={v.style}
+                onPointerEnter={(event) => {
+                  if (event.pointerType === "mouse") show(event.currentTarget, v.member.name, false)
+                }}
+                onClick={(event) => show(event.currentTarget, v.member.name, true)}
+              />
+            ))}
+          </div>
+          <div
+            className="border-foreground pointer-events-none absolute top-1 bottom-0 border-l-2"
+            // In the middle of the gap after the last vote needed: each voter takes an equal
+            // share of the bar plus one gap (0.125rem), and the line itself is 2px wide.
+            style={{
+              left: `calc((100% + 0.125rem) * ${majority / votes.length} - 0.0625rem - 1px)`,
+            }}
+          >
+            <span className="absolute top-0 left-1.5 text-xs font-medium whitespace-nowrap">
+              {majority} to win
+            </span>
+          </div>
         </div>
-        <div
-          className="border-foreground pointer-events-none absolute top-1 bottom-0 border-l-2"
-          // In the middle of the gap after the last vote needed: each voter takes an equal
-          // share of the bar plus one gap (0.125rem), and the line itself is 2px wide.
-          style={{ left: `calc((100% + 0.125rem) * ${majority / total} - 0.0625rem - 1px)` }}
-        >
-          <span className="absolute top-0 left-1.5 text-xs font-medium whitespace-nowrap">
-            {majority} to win
-          </span>
-        </div>
+        {open && vote && (
+          // Touching the bar, so the pointer can cross onto the card and reach its link.
+          <div
+            aria-hidden
+            data-vote-card=""
+            className="absolute top-full z-10 pt-1.5"
+            style={{ left: open.left, width: CARD_WIDTH }}
+          >
+            <div className="bg-popover text-popover-foreground border-border rounded-md border p-3 text-sm shadow-md">
+              <p className="font-medium">
+                {vote.member.name}{" "}
+                <span className="text-muted-foreground font-normal">
+                  ({[vote.member.party, vote.member.state].filter(Boolean).join("-")})
+                </span>
+              </p>
+              <p className="mt-1 flex items-center gap-1.5">
+                <span className="size-2.5 shrink-0 rounded-xs" style={vote.style} />
+                {vote.standing}
+              </p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                {[
+                  vote.member.seat === "incoming" || vote.member.seat === "outgoing"
+                    ? vote.member.seat === "incoming"
+                      ? "Incoming"
+                      : "Outgoing"
+                    : null,
+                  vote.member.bloc,
+                  ...(vote.member.tags ?? []),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+              {vote.member.basis && <p className="mt-2 line-clamp-4">{vote.member.basis}</p>}
+              {vote.member.source && (
+                <p className="text-muted-foreground mt-2 text-xs">
+                  {vote.member.basisDate
+                    ? `${formatLongDate(`${vote.member.basisDate}T00:00:00Z`)} · `
+                    : ""}
+                  <a
+                    href={vote.member.source.url}
+                    rel="noopener"
+                    tabIndex={-1}
+                    className="underline"
+                  >
+                    {vote.member.source.label}
+                  </a>
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       <div aria-hidden className="text-muted-foreground mt-1.5 flex justify-between text-xs">
         <span>{ends[0]}</span>
@@ -264,22 +363,23 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
   const firmFirst = groups.find((g) => g.stance === "backs" && g.candidate?.id === first?.id)
   const short = Math.max(0, majority - (firmFirst?.members.length ?? 0))
 
-  const draftSegments = [
-    ...tally.votes.slice(0, 1).map((v) => ({
-      key: v.candidate.id,
-      count: v.count,
-      style: { background: candidateColor(data, v.candidate) },
-    })),
-    { key: "unassigned", count: tally.unassigned, style: { background: "var(--border)" } },
-    ...tally.votes
-      .slice(1)
-      .reverse()
-      .map((v) => ({
-        key: v.candidate.id,
-        count: v.count,
-        style: { background: candidateColor(data, v.candidate) },
+  // The reader's bar: the first candidate's votes, the unassigned, then the last candidate's.
+  const draftVotes: Vote[] = [
+    ...tally.votes.slice(0, 1),
+    null,
+    ...tally.votes.slice(1).reverse(),
+  ].flatMap((side) =>
+    voters
+      .filter((m) => (side ? draft[m.name] === side.candidate.id : !draft[m.name]))
+      .map((member) => ({
+        member,
+        style: { background: side ? candidateColor(data, side.candidate) : "var(--border)" },
+        standing: side ? `Your pick: ${side.candidate.short}` : "Unassigned in your count",
       })),
-  ]
+  )
+  const publicVotes: Vote[] = groups.flatMap((g) =>
+    g.members.map((member) => ({ member, style: groupStyle(data, g), standing: g.label })),
+  )
 
   const count = (stance: "backs" | "leans", candidate: WhipCountCandidate): number =>
     groups.find((g) => g.stance === stance && g.candidate?.id === candidate.id)?.members.length ?? 0
@@ -322,12 +422,7 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
         <div className="mt-6">
           <CountBar
             label={`${groups.map((g) => `${g.label}: ${g.members.length}`).join(", ")}. ${majority} of ${voters.length} needed to win.`}
-            segments={groups.map((g) => ({
-              key: g.key,
-              count: g.members.length,
-              style: groupStyle(data, g),
-            }))}
-            total={voters.length}
+            votes={publicVotes}
             majority={majority}
             ends={ends}
           />
@@ -385,8 +480,7 @@ export function WhipCount({ data: published, storageKey }: Props): React.ReactNo
           <div className="mt-5">
             <CountBar
               label={`Your count: ${tally.votes.map((v) => `${v.candidate.short} ${v.count}`).join(", ")}, unassigned ${tally.unassigned}. ${majority} needed to win.`}
-              segments={draftSegments}
-              total={tally.voters}
+              votes={draftVotes}
               majority={majority}
               ends={ends}
             />

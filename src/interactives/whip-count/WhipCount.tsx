@@ -118,7 +118,7 @@ function groupStyle(data: WhipCountData, group: PublicGroup): React.CSSPropertie
   return { background: candidateColor(data, side), opacity }
 }
 
-/** A bar of segments sized by count, with a line where the majority falls. */
+/** A row of votes, one rectangle each, with a line where the majority falls. */
 function CountBar({
   label,
   segments,
@@ -136,16 +136,19 @@ function CountBar({
   return (
     <div>
       <div className="relative pt-7" role="img" aria-label={label}>
-        <div className="flex h-10 gap-0.5 overflow-hidden rounded-md">
-          {segments
-            .filter((s) => s.count > 0)
-            .map((s) => (
-              <div key={s.key} style={{ ...s.style, flex: `${s.count} 0 0` }} />
-            ))}
+        {/* One thin rectangle a voter, so a group reads as that many people. */}
+        <div className="flex h-10 gap-0.5">
+          {segments.flatMap((s) =>
+            Array.from({ length: s.count }, (_, i) => (
+              <div key={`${s.key}-${i}`} className="min-w-0 flex-1 rounded-xs" style={s.style} />
+            )),
+          )}
         </div>
         <div
           className="border-foreground pointer-events-none absolute top-1 bottom-0 border-l-2"
-          style={{ left: `${(majority / total) * 100}%` }}
+          // In the middle of the gap after the last vote needed: each voter takes an equal
+          // share of the bar plus one gap (0.125rem), and the line itself is 2px wide.
+          style={{ left: `calc((100% + 0.125rem) * ${majority / total} - 0.0625rem - 1px)` }}
         >
           <span className="absolute top-0 left-1.5 text-xs font-medium whitespace-nowrap">
             {majority} to win

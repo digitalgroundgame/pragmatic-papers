@@ -118,13 +118,13 @@ export async function login(
 }
 
 /** The collections a draft push creates as drafts: the ones with a public page of their own. */
-const DRAFTED = new Set(["articles", "whip-counts"])
+const DRAFTED = new Set(["articles", "interactives", "interactive-snapshots"])
 
 /**
  * Stands in for the Local API in seed helpers, which only call `create` and
  * `logger`. Access control and hooks run on the server as for any editor.
  *
- * With `draft`, articles (and the whip counts they link to) are created as
+ * With `draft`, articles (and the interactives they link to, with their snapshots) are created as
  * drafts whatever status the seed asks for, so a seed needs no changes to be
  * pushed to staging.
  */

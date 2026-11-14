@@ -14,10 +14,15 @@ import { link } from "@/fields/link"
 import { slugField } from "@/fields/slug"
 import { populatePublishedAt } from "@/hooks/populatePublishedAt"
 import { profileOptions } from "@/interactives/profiles"
+import { WHIP_COUNT_PROFILE_ID } from "@/interactives/whip-count/profile"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 
 import { revalidateInteractive, revalidateInteractiveDelete } from "./hooks/revalidateInteractive"
 import { rememberReadersCopy } from "@/utilities/readersCopy"
+
+/** Shows a field only on a whip count, or only on a drilldown fed by a sync. */
+const isWhipCount = (data: { profile?: unknown } | undefined): boolean =>
+  data?.profile === WHIP_COUNT_PROFILE_ID
 
 /**
  * Interactives — long-lived interactive pages, one per document, at /interactives/<slug>.
@@ -27,6 +32,10 @@ import { rememberReadersCopy } from "@/utilities/readersCopy"
  * `interactive-snapshots`, written by the sync job; the layout, colours and geometry live in
  * code under `src/interactives/<profile>`. An editor here never touches data and a researcher
  * never touches layout — see `src/interactives/types.ts` for the rule.
+ *
+ * A whip count (profile `whip-count`) is the exception: its snapshot holds one count that
+ * pushes keep current and editors change row by row in the snapshot, so it has no feed to
+ * read and adds a methodology note.
  */
 export const Interactives: CollectionConfig<"interactives"> = {
   slug: "interactives",
@@ -76,7 +85,7 @@ export const Interactives: CollectionConfig<"interactives"> = {
               options: profileOptions(),
               admin: {
                 description:
-                  "Which code-owned profile draws this interactive: its geometry, presentation and feed adapter. Adding one is a code change under src/interactives.",
+                  "Which code-owned profile draws this interactive: a map with its geometry, presentation and feed adapter, or a whip count. Adding one is a code change under src/interactives.",
               },
             },
             {
@@ -105,6 +114,15 @@ export const Interactives: CollectionConfig<"interactives"> = {
                 }),
               ],
             },
+            {
+              name: "methodology",
+              type: "textarea",
+              admin: {
+                condition: (data) => isWhipCount(data),
+                description:
+                  "How positions are assigned and what is unconfirmed. Shown under the count.",
+              },
+            },
           ],
         },
         {
@@ -115,14 +133,17 @@ export const Interactives: CollectionConfig<"interactives"> = {
               type: "group",
               admin: {
                 description:
-                  "How the sync job reads this interactive's data. It runs daily and can be run now from Snapshots. Each run that finds new data writes a draft snapshot for review; auto-publish skips the review.",
+                  "How this interactive's data arrives. A map's sync job runs daily and can be run now from Snapshots; a whip count takes pushes (POST /next/whip-counts/<slug>). Each new version is a draft snapshot for review; auto-publish skips the review.",
               },
               fields: [
                 {
                   name: "enabled",
                   type: "checkbox",
                   defaultValue: true,
-                  admin: { description: "Uncheck to freeze the data at its current snapshot." },
+                  admin: {
+                    condition: (data) => !isWhipCount(data),
+                    description: "Uncheck to freeze the data at its current snapshot.",
+                  },
                 },
                 {
                   name: "ref",
@@ -130,6 +151,7 @@ export const Interactives: CollectionConfig<"interactives"> = {
                   required: true,
                   defaultValue: "release",
                   admin: {
+                    condition: (data) => !isWhipCount(data),
                     description:
                       'Which revision of the researcher\'s repository to read. Leave as "release" to follow their newest published data release, which is an immutable snapshot and the way they ask to be read. A branch, tag or commit is honoured verbatim, for pinning or debugging.',
                   },
@@ -141,7 +163,7 @@ export const Interactives: CollectionConfig<"interactives"> = {
                   label: "Auto-publish new snapshots",
                   admin: {
                     description:
-                      "Publish each new snapshot as soon as it validates, without an editor's review.",
+                      "Publish each new snapshot as soon as it validates, without an editor's review. For a whip count, a push is still saved as a draft while its snapshot has unpublished edits, which publishing would carry live.",
                   },
                 },
               ],

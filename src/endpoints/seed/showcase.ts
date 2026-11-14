@@ -82,7 +82,7 @@ export const showcaseEntries: ShowcaseEntry[] = [
       createLegacySocialEmbedArticle(payload, writers[0]!, media, [], context),
   },
   {
-    // Also creates the whip count the article links to, which takes an editor's account.
+    // Also creates the whip count interactive the article links to, which takes an editor's account.
     slug: "whip-counts-draft-your-own-leadership-vote",
     create: (payload, writers, media, context) =>
       createWhipCountArticle(payload, writers, media, [], context),

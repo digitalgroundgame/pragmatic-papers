@@ -4,7 +4,6 @@ import { Categories } from "@/collections/Categories"
 import { Interactives } from "@/collections/Interactives"
 import { InteractiveSnapshots } from "@/collections/InteractiveSnapshots"
 import { MapAssets } from "@/collections/MapAssets"
-import { WhipCounts } from "@/collections/WhipCounts"
 import { Media } from "@/collections/Media"
 import { Merch } from "@/collections/Merch"
 import { Pages } from "@/collections/Pages"
@@ -166,7 +165,6 @@ export default buildConfig({
     Pages,
     Interactives,
     InteractiveSnapshots,
-    WhipCounts,
     MapAssets,
     Merch,
     Users,

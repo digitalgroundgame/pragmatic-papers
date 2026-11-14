@@ -24,7 +24,7 @@ function fakePayload(fail?: (args: Created) => Error | undefined) {
     const error = fail?.(args)
     if (error) throw error
     created.push(args)
-    return { id: 40 + created.length }
+    return { id: 40 + created.length, ...args.data }
   })
   return { payload: { create, logger } as unknown as Payload, created, logger }
 }
@@ -33,16 +33,33 @@ const writer = { id: 1, roles: ["writer"] } as User
 const media = [{ id: 9 } as Media]
 
 describe("createSenateLeaderWhipCount", () => {
-  it("creates the published count, with data the page accepts", async () => {
+  it("creates a published whip count interactive, then its snapshot with the count", async () => {
     const { payload, created } = fakePayload()
     await createSenateLeaderWhipCount(payload, { disableRevalidate: true })
-    expect(created).toHaveLength(1)
+    expect(created.map((args) => args.collection)).toEqual([
+      "interactives",
+      "interactive-snapshots",
+    ])
     expect(created[0]).toMatchObject({
-      collection: "whip-counts",
       context: { disableRevalidate: true },
-      data: { slug: WHIP_COUNT_SLUG, _status: "published" },
+      data: {
+        slug: WHIP_COUNT_SLUG,
+        profile: "whip-count",
+        feed: { autoPublish: true },
+        _status: "published",
+      },
     })
-    expect(parseWhipCount(created[0]!.data.data).success).toBe(true)
+    const snapshot = created[1]!
+    expect(snapshot).toMatchObject({
+      context: { disableRevalidate: true },
+      data: {
+        interactive: 41,
+        sourceRef: "seed",
+        sourceVersion: "2026-11-13",
+        _status: "published",
+      },
+    })
+    expect(parseWhipCount(snapshot.data.data).success).toBe(true)
   })
 
   it("leaves a count that is already there alone, and says so", async () => {
@@ -51,9 +68,11 @@ describe("createSenateLeaderWhipCount", () => {
     expect(logger.info).toHaveBeenCalledWith(expect.stringContaining("already there"))
     // The same failure as `pnpm showcase` reports it.
     const rest = fakePayload(
-      () => new Error("Creating whip-counts failed (400): The following field is invalid: slug"),
+      () => new Error("Creating interactives failed (400): The following field is invalid: slug"),
     )
     await expect(createSenateLeaderWhipCount(rest.payload)).resolves.toBeUndefined()
+    // Its snapshot is left alone too.
+    expect(rest.created).toEqual([])
   })
 
   it("throws any other failure, such as an account that may not create one", async () => {
@@ -66,23 +85,25 @@ describe("createWhipCountArticle", () => {
   it("creates the count, then an article that links to it", async () => {
     const { payload, created } = fakePayload()
     const id = await createWhipCountArticle(payload, [writer], media, [4])
-    expect(created.map((args) => args.collection)).toEqual(["whip-counts", "articles"])
-    expect(id).toBe(42)
-    const article = created[1]!.data
+    expect(created.map((args) => args.collection)).toEqual([
+      "interactives",
+      "interactive-snapshots",
+      "articles",
+    ])
+    expect(id).toBe(43)
+    const article = created[2]!.data
     expect(article).toMatchObject({
       slug: "whip-counts-draft-your-own-leadership-vote",
       authors: [1],
       topics: [4],
       heroImage: 9,
     })
-    expect(JSON.stringify(article.content)).toContain(
-      `/interactives/whip-counts/${WHIP_COUNT_SLUG}`,
-    )
+    expect(JSON.stringify(article.content)).toContain(`"/interactives/${WHIP_COUNT_SLUG}"`)
   })
 
   it("still creates the article when the count is already there", async () => {
     const { payload, created } = fakePayload((args) =>
-      args.collection === "whip-counts" ? takenSlug : undefined,
+      args.collection === "interactives" ? takenSlug : undefined,
     )
     await createWhipCountArticle(payload, [writer], media)
     expect(created.map((args) => args.collection)).toEqual(["articles"])
@@ -90,7 +111,7 @@ describe("createWhipCountArticle", () => {
 
   it("creates no article that would link to a count it couldn't create", async () => {
     const { payload, created } = fakePayload((args) =>
-      args.collection === "whip-counts" ? new Error("Forbidden") : undefined,
+      args.collection === "interactives" ? new Error("Forbidden") : undefined,
     )
     await expect(createWhipCountArticle(payload, [writer], media)).rejects.toThrow("Forbidden")
     expect(created).toEqual([])

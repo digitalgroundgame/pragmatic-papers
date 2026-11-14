@@ -689,10 +689,16 @@ reader's browser, with the sources and the logo in a footer and the font embedde
 page shows (`themePalette`), and saves it as a PNG for sharing. The text in the picture needs a font in the image
 (both Dockerfiles install fontconfig and the site's own fonts as TTFs from their packages, Geist and Libertinus Serif, since fontconfig can't read woff2; a download embeds the site's woff2). Like the page, the titles and sources are in Libertinus Serif, scaled 112% as `fonts.ts` scales it, and the legend in Geist.
 
-A **whip count** (`/interactives/whip-counts/<slug>`, the `whip-counts` collection,
-`src/interactives/whip-count/`) is a third kind of interactive page, with no map: a leadership
-vote tracked voter by voter. The count is one JSON document in the document's `data` field,
-which `parseWhipCount` (`model.ts`) checks on save. An editor changes it row by row in a table
+A **whip count** (`src/interactives/whip-count/`) is a third kind of interactive page, with no
+map: a leadership vote tracked voter by voter. It is an `interactives` document with the
+`whip-count` profile (`profileKind` in `src/interactives/profiles.ts`; `getProfile` returns
+drilldown profiles only), at `/interactives/<slug>` like the others (the old
+`/interactives/whip-counts/<slug>` redirects there), and the document adds a methodology note.
+The count is one JSON document in its snapshot's `data` field, which `parseWhipCount`
+(`model.ts`) checks on save. The daily sync skips whip counts; their snapshot is written by
+pushes, the seed, and editors, who may create a snapshot or change its `data` only when it
+holds a whip count (a map's feed stays the sync's), and saving restamps its hash and summary
+(`whipCountSnapshotStamp`). An editor changes it row by row in a table
 (`WhipCountDataField`: position, statement, source, bloc and tags), or pastes a whole count
 with "Edit as JSON". The page shows the public count and lets a reader draft their own guess
 of how the vote breaks, one voter at a time or a group at a time (a bloc, a tag, the incoming
@@ -704,11 +710,12 @@ rectangle a voter, each opening a card with their source, and a button saves the
 as a PNG with the logo (`picture.ts`, on the map block's `saveSVGAsPNG`). A job outside the
 site can keep a count current with `POST /next/whip-counts/<slug>` (`Authorization: Bearer
 <WHIP_COUNT_PUSH_TOKEN>`, closed while unset): the count is checked like a save and merged
-into the document's (`mergePushedCount` keeps the editors' blocs and tags), as a draft unless
-the document's "Publish pushed updates" is ticked (and even then while an editor has unpublished
-changes, which publishing would carry live), and refused (409) while an editor holds the
-document's lock, whose form would autosave its older count over the push. It is part of the
-`interactives` experiment too, and isn't in any sitemap yet. The seed and the showcase entry
+into the snapshot's (`mergePushedCount` keeps the editors' blocs and tags; the first push
+creates the snapshot), as a draft unless the interactive's "Auto-publish new snapshots" is
+ticked (and even then while the snapshot has unpublished edits, which publishing would carry
+live), and refused (409) while an editor holds the snapshot's lock, whose form would autosave
+its older count over the push. Readers read the published count at
+`/api/interactive-snapshots?where[interactive.slug][equals]=<slug>`. The seed and the showcase entry
 `whip-counts-draft-your-own-leadership-vote` create one (a dated snapshot, without
 quotations) and an article that links to it; creating it takes an editor's account.
 

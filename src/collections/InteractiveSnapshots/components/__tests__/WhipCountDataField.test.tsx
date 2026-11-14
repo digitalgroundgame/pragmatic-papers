@@ -105,14 +105,16 @@ describe("WhipCountDataField", () => {
     expect(screen.getByLabelText("Name for Marion Hale")).toBeInTheDocument()
   })
 
-  it("shows the JSON editor for a new count, and says why unreadable data has no table", () => {
-    mockValue = undefined
-    const { unmount } = render(<WhipCountDataField {...props} />)
-    expect(screen.getByTestId("json-editor")).toBeInTheDocument()
-    unmount()
+  it("shows nothing for a map's feed, which no editor reads", () => {
+    mockValue = { schema: "pragmatic-papers/drilldown-data@1", regions: [], records: [] }
+    const { container } = render(<WhipCountDataField {...props} />)
+    expect(container).toBeEmptyDOMElement()
+  })
 
+  it("stays once shown, and says why data pasted mid-edit has no table", () => {
+    const { rerender } = render(<WhipCountDataField {...props} />)
     mockValue = { schema: "something else" }
-    render(<WhipCountDataField {...props} />)
+    rerender(<WhipCountDataField {...props} />)
     expect(screen.getByText(/can’t be shown as a table: "schema" must be/)).toBeInTheDocument()
   })
 

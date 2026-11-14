@@ -174,7 +174,6 @@ export interface Config {
     pages: Page;
     interactives: Interactive;
     'interactive-snapshots': InteractiveSnapshot;
-    'whip-counts': WhipCount;
     'map-assets': MapAsset;
     merch: Merch;
     users: User;
@@ -208,7 +207,6 @@ export interface Config {
     pages: PagesSelect<false> | PagesSelect<true>;
     interactives: InteractivesSelect<false> | InteractivesSelect<true>;
     'interactive-snapshots': InteractiveSnapshotsSelect<false> | InteractiveSnapshotsSelect<true>;
-    'whip-counts': WhipCountsSelect<false> | WhipCountsSelect<true>;
     'map-assets': MapAssetsSelect<false> | MapAssetsSelect<true>;
     merch: MerchSelect<false> | MerchSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
@@ -1239,9 +1237,9 @@ export interface Interactive {
   id: number;
   title: string;
   /**
-   * Which code-owned profile draws this interactive: its geometry, presentation and feed adapter. Adding one is a code change under src/interactives.
+   * Which code-owned profile draws this interactive: a map with its geometry, presentation and feed adapter, or a whip count. Adding one is a code change under src/interactives.
    */
-  profile: 'federal-courts';
+  profile: 'federal-courts' | 'whip-count';
   /**
    * Standfirst shown above the interactive.
    */
@@ -1270,9 +1268,13 @@ export interface Interactive {
       }[]
     | null;
   /**
-   * How the sync job reads this interactive's data. It runs daily and can be run now from Snapshots. Each run that finds new data writes a draft snapshot for review; auto-publish skips the review.
+   * How positions are assigned and what is unconfirmed. Shown under the count.
    */
-  feed: {
+  methodology?: string | null;
+  /**
+   * How this interactive's data arrives. A map's sync job runs daily and can be run now from Snapshots; a whip count takes pushes (POST /next/whip-counts/<slug>). Each new version is a draft snapshot for review; auto-publish skips the review.
+   */
+  feed?: {
     /**
      * Uncheck to freeze the data at its current snapshot.
      */
@@ -1280,9 +1282,9 @@ export interface Interactive {
     /**
      * Which revision of the researcher's repository to read. Leave as "release" to follow their newest published data release, which is an immutable snapshot and the way they ask to be read. A branch, tag or commit is honoured verbatim, for pinning or debugging.
      */
-    ref: string;
+    ref?: string | null;
     /**
-     * Publish each new snapshot as soon as it validates, without an editor's review.
+     * Publish each new snapshot as soon as it validates, without an editor's review. For a whip count, a push is still saved as a draft while its snapshot has unpublished edits, which publishing would carry live.
      */
     autoPublish?: boolean | null;
   };
@@ -1338,34 +1340,8 @@ export interface InteractiveSnapshot {
    * When the sync last confirmed this version.
    */
   syncedAt: string;
-  data:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  updatedAt: string;
-  createdAt: string;
-  _status?: ('draft' | 'published') | null;
-}
-/**
- * A leadership vote tracked voter by voter. Editors own the words and each voter's position, edited row by row or pasted as JSON; readers draft their own guess on the page.
- *
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "whip-counts".
- */
-export interface WhipCount {
-  id: number;
-  title: string;
   /**
-   * Standfirst shown above the count, and the page's description in search results and link previews.
-   */
-  intro?: string | null;
-  /**
-   * The count: every voter's public position, edited row by row. To start a count or replace it whole, use "Edit as JSON" and paste a document (schema "pragmatic-papers/whip-count@1"). Saving checks it and says what is wrong.
+   * A whip count: every voter's public position, edited row by row. To replace it whole, use "Edit as JSON" and paste a document (schema "pragmatic-papers/whip-count@1"). Saving checks it and says what is wrong.
    */
   data:
     | {
@@ -1376,20 +1352,6 @@ export interface WhipCount {
     | number
     | boolean
     | null;
-  /**
-   * A count pushed to this document from outside (POST /next/whip-counts/<slug>) is saved as a draft for an editor to publish. Tick this to publish each one as it arrives instead, without a review, except while this document has unpublished changes of yours, which a push never publishes. Blocs and tags set here are kept either way.
-   */
-  autoPublish?: boolean | null;
-  /**
-   * How positions are assigned and what is unconfirmed. Shown under the count.
-   */
-  methodology?: string | null;
-  publishedAt?: string | null;
-  /**
-   * When enabled, the slug will auto-generate from the title field on save and autosave.
-   */
-  generateSlug?: boolean | null;
-  slug: string;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -1820,10 +1782,6 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'interactive-snapshots';
         value: number | InteractiveSnapshot;
-      } | null)
-    | ({
-        relationTo: 'whip-counts';
-        value: number | WhipCount;
       } | null)
     | ({
         relationTo: 'map-assets';
@@ -2339,6 +2297,7 @@ export interface InteractivesSelect<T extends boolean = true> {
         link?: T | LinkFieldSelect<T>;
         id?: T;
       };
+  methodology?: T;
   feed?:
     | T
     | {
@@ -2374,23 +2333,6 @@ export interface InteractiveSnapshotsSelect<T extends boolean = true> {
   generatedAt?: T;
   syncedAt?: T;
   data?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  _status?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "whip-counts_select".
- */
-export interface WhipCountsSelect<T extends boolean = true> {
-  title?: T;
-  intro?: T;
-  data?: T;
-  autoPublish?: T;
-  methodology?: T;
-  publishedAt?: T;
-  generateSlug?: T;
-  slug?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -3394,10 +3336,6 @@ export interface TaskSchedulePublish {
       | ({
           relationTo: 'interactives';
           value: number | Interactive;
-        } | null)
-      | ({
-          relationTo: 'whip-counts';
-          value: number | WhipCount;
         } | null);
     global?: string | null;
     user?: {

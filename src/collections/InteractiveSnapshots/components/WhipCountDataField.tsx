@@ -5,6 +5,7 @@ import type { JSONFieldClientComponent } from "payload"
 import React, { useState } from "react"
 
 import {
+  isWhipCountData,
   parseWhipCount,
   SEATS,
   stanceLabel,
@@ -48,7 +49,7 @@ const EMPTY: WhipCountData = {
  * table for Payload's JSON editor, to paste a whole count. Only one of the two is mounted at
  * a time, so each always starts from the field's current value.
  */
-export const WhipCountDataField: JSONFieldClientComponent = (props) => {
+const WhipCountTable: JSONFieldClientComponent = (props) => {
   const { path, field, readOnly } = props
   const { value, setValue, showError, errorMessage } = useField<unknown>({ path })
   const [asJson, setAsJson] = useState(false)
@@ -341,4 +342,16 @@ export const WhipCountDataField: JSONFieldClientComponent = (props) => {
       )}
     </div>
   )
+}
+
+/**
+ * A snapshot's `data` field: a table for a whip count, and nothing for a map's feed, which is
+ * megabytes the sync owns and no editor reads.
+ */
+export const WhipCountDataField: JSONFieldClientComponent = (props) => {
+  const { value } = useField<unknown>({ path: props.path })
+  // Once shown, it stays: pasting JSON whose schema is mid-edit mustn't unmount the editor.
+  const [shown, setShown] = useState(false)
+  if (!shown && isWhipCountData(value)) setShown(true)
+  return shown || isWhipCountData(value) ? <WhipCountTable {...props} /> : null
 }

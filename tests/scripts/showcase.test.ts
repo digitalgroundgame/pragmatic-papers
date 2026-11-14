@@ -207,21 +207,28 @@ describe("createRestPayload", () => {
     expect(JSON.parse((mediaInit as RequestInit).body as string)).toEqual({ alt: "Alt" })
   })
 
-  it("creates the whip counts an article links to as drafts too", async () => {
+  it("creates the interactives an article links to, and their snapshots, as drafts too", async () => {
     const fetchImpl = fakeFetch({
-      "POST /api/whip-counts": () => json({ doc: { id: 5 } }, 201),
+      "POST /api/interactives": () => json({ doc: { id: 5 } }, 201),
+      "POST /api/interactive-snapshots": () => json({ doc: { id: 6 } }, 201),
     })
     const { create } = createRestPayload(ORIGIN, "tok", fetchImpl, {
       draft: true,
     }) as unknown as { create: RestCreate }
-    await create({ collection: "whip-counts", data: { title: "Count", _status: "published" } })
-
-    const [url, init] = fetchImpl.mock.calls[0]!
-    expect(new URL(String(url)).searchParams.get("draft")).toBe("true")
-    expect(JSON.parse((init as RequestInit).body as string)).toEqual({
-      title: "Count",
-      _status: "draft",
+    await create({ collection: "interactives", data: { title: "Count", _status: "published" } })
+    await create({
+      collection: "interactive-snapshots",
+      data: { label: "Count", _status: "published" },
     })
+
+    for (const [index, body] of [
+      { title: "Count", _status: "draft" },
+      { label: "Count", _status: "draft" },
+    ].entries()) {
+      const [url, init] = fetchImpl.mock.calls[index]!
+      expect(new URL(String(url)).searchParams.get("draft")).toBe("true")
+      expect(JSON.parse((init as RequestInit).body as string)).toEqual(body)
+    }
   })
 
   it("surfaces Payload's error messages", async () => {

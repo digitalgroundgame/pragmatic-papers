@@ -14,6 +14,7 @@ import { InteractiveDrilldown } from "@/interactives/InteractiveDrilldown"
 import { loadInteractiveOverview, queryInteractiveBySlug } from "@/interactives/load"
 import { profileKind } from "@/interactives/profiles"
 import { WhipCountPage } from "@/interactives/whip-count/WhipCountPage"
+import { whipCountMeta } from "@/interactives/whip-count/meta"
 import { generateMeta } from "@/utilities/generateMeta"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 
@@ -31,7 +32,9 @@ interface Args {
 export async function generateMetadata({ params: paramsPromise }: Args): Promise<Metadata> {
   const { slug = "" } = await paramsPromise
   const interactive = await queryInteractiveBySlug(slug)
-  return generateMeta({ doc: interactive, canonicalPath: interactivePath(slug) })
+  const meta = await generateMeta({ doc: interactive, canonicalPath: interactivePath(slug) })
+  if (!interactive || profileKind(interactive.profile) !== "whip-count") return meta
+  return whipCountMeta(meta, interactive, slug)
 }
 
 const dataDate = new Intl.DateTimeFormat("en-US", {

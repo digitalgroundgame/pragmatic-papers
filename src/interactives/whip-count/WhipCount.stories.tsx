@@ -17,11 +17,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** The public count; the reader's own count waits behind a button. */
+/** The public count; the reader's own count waits behind a button. Blocs are hidden. */
 export const Default: Story = {}
 
 /** A reader gives the uncommitted Progressives to the first candidate, who then has a majority. */
 export const BlocAssigned: Story = {
+  args: { showBlocs: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole("button", { name: "Make your own count" }))

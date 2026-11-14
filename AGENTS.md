@@ -724,13 +724,19 @@ holds a whip count (a map's feed stays the sync's), and saving restamps its hash
 (`whipCountSnapshotStamp`). An editor changes it row by row in a table
 (`WhipCountDataField`: position, statement, source, bloc and tags), or pastes a whole count
 with "Edit as JSON". The page shows the public count and lets a reader draft their own guess
-of how the vote breaks, one voter at a time or a group at a time (a bloc, a tag, the incoming
-or the outgoing), kept in their browser only and hidden until they ask for it. Outgoing
+of how the vote breaks, one voter at a time or a group at a time (a tag, the incoming or the
+outgoing, and a bloc when `WhipCount` is given `showBlocs`; the page leaves blocs hidden for now),
+kept in their browser only and hidden until they ask for it. Outgoing
 members aren't counted until the reader ticks the box to count them. With a `voteAt` time in the data the page counts down to the vote. With an `updates`
 schedule (times of day in a time zone) it names the next check for new statements, in the
 reader's own time. The bars draw one
 rectangle a voter, each opening a card with their source, and a button saves the public count
-as a PNG with the logo (`picture.ts`, on the map block's `saveSVGAsPNG`). A job outside the
+as a PNG with the logo (`picture.ts`, on the map block's `saveSVGAsPNG`). Its title puts the two leading
+candidates' public backers ahead of the page's own (`whipCountTitle`, `seo.ts`), and its link
+preview is drawn per count at `/next/whip-counts/<slug>/image` (`WhipCountCard`, with
+`next/og`): the two head to head, one tick a voter, the countdown, the mark and the brand orange.
+The page's metadata names it with a query that changes with the count and the day
+(`whipCountImagePath`), so the route keeps its own `Cache-Control` (a day at the edge). A job outside the
 site can keep a count current with `POST /next/whip-counts/<slug>` (`Authorization: Bearer
 <WHIP_COUNT_PUSH_TOKEN>`, closed while unset): the count is checked like a save and merged
 into the snapshot's (`mergePushedCount` keeps the editors' blocs and tags; the first push

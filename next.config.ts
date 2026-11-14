@@ -34,6 +34,8 @@ const NOT_EDGE_CACHED = [
   "articles/(?:[^/]+/)?substack\\.xml$",
   // - recommendations: no-store.
   "recommended-articles\\.json$",
+  // - a whip count's link preview: a day at the edge, its URL naming the count and the day.
+  "next/whip-counts/[^/]+/image$",
   // - the deploy's switchover check (`/next/purge-edge`): no-store, so the edge never keeps
   //   an answer naming the old container.
   "next/purge-edge$",
@@ -60,6 +62,11 @@ const nextConfig: NextConfig = {
   // The seed reads src/docs/ to load the help docs (loadRepoDocs), which no import traces.
   outputFileTracingIncludes: {
     "/**": ["./src/docs/**/*"],
+    // A whip count's link preview reads Geist's TTFs (next/og can't read woff2).
+    // Keys are picomatch globs, so the route's brackets are escaped.
+    "/next/whip-counts/\\[slug\\]/image": [
+      "./node_modules/geist/dist/fonts/geist-sans/Geist-{Regular,SemiBold,Bold}.ttf",
+    ],
   },
   // The CI image's build sets this (dockerfiles/PragmaticPapers.ci.Dockerfile): CI's Static
   // checks run `next typegen` and `tsc` on the same commit, which cover what next build's

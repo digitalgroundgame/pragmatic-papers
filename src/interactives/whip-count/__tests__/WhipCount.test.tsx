@@ -9,8 +9,10 @@ import { WhipCount } from "../WhipCount"
 const result = (): HTMLElement => document.querySelector<HTMLElement>("[data-whip-count-result]")!
 
 /** Renders the count with the reader's own count opened. */
-function renderDrafting(): ReturnType<typeof render> {
-  const view = render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
+function renderDrafting(showBlocs = false): ReturnType<typeof render> {
+  const view = render(
+    <WhipCount title="Who leads?" data={whipCountData} storageKey="test" showBlocs={showBlocs} />,
+  )
   fireEvent.click(screen.getByRole("button", { name: "Make your own count" }))
   return view
 }
@@ -65,7 +67,7 @@ describe("WhipCount", () => {
   })
 
   it("assigns a group at once, except its public backers", () => {
-    renderDrafting()
+    renderDrafting(true)
     fireEvent.click(screen.getByRole("button", { name: "Give Progressive to Hale" }))
     expect(screen.getByLabelText("Your pick for Ana Whitfield")).toHaveValue("hale")
     expect(screen.getByLabelText("Your pick for Luis Navarro")).toHaveValue("hale")
@@ -74,6 +76,25 @@ describe("WhipCount", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Clear Progressive" }))
     expect(screen.getByLabelText("Your pick for Ana Whitfield")).toHaveValue("")
+  })
+
+  it("hides the blocs unless asked, keeping the other groups", () => {
+    renderDrafting()
+    expect(
+      screen.queryByRole("button", { name: "Give Progressive to Hale" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Give Incoming senators to Hale" }),
+    ).toBeInTheDocument()
+    const table = screen.getByRole("table")
+    expect(within(table).getByRole("columnheader", { name: "Groups" })).toBeInTheDocument()
+    expect(within(table).queryByText("Progressive")).not.toBeInTheDocument()
+
+    const vote = document.querySelector<HTMLElement>('[data-vote="Luis Navarro"]')!
+    fireEvent.pointerEnter(vote, { pointerType: "mouse" })
+    const card = document.querySelector("[data-vote-card]")!
+    expect(card).toHaveTextContent("Incoming")
+    expect(card).not.toHaveTextContent("Progressive")
   })
 
   it("lets a reader take a public backer away, and start over", () => {
@@ -107,7 +128,7 @@ describe("WhipCount", () => {
   })
 
   it("opens a card with who a vote is, where they stand and the source", () => {
-    render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
+    render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" showBlocs />)
     const card = (): HTMLElement | null => document.querySelector("[data-vote-card]")
     expect(card()).not.toBeInTheDocument()
 

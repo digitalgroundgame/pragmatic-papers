@@ -240,6 +240,14 @@ export function withOutgoing(data: WhipCountData, counted: boolean): WhipCountDa
   }
 }
 
+/**
+ * The same count without its blocs, for a page that doesn't show them: each member keeps
+ * their tags, so a reader can still assign those groups at once.
+ */
+export function withoutBlocs(data: WhipCountData): WhipCountData {
+  return { ...data, members: data.members.map(({ bloc: _bloc, ...member }) => member) }
+}
+
 export const hasOutgoing = (data: WhipCountData): boolean =>
   data.members.some((m) => m.seat === "outgoing")
 

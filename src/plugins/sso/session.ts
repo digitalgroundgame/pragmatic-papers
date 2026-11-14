@@ -24,6 +24,7 @@ export function resolveSsoConfig(options: SsoPluginConfig): ResolvedSsoConfig {
     accountPath: "/account",
     sessionSeconds: 60 * 60 * 24 * 7,
     requiredUserColumns: [],
+    hasPicture: async () => false,
     ...rest,
     enabled: ({ payload }) => isPluginOn(given.enabled, payload),
   }

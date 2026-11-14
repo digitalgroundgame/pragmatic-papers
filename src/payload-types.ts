@@ -1249,9 +1249,9 @@ export interface Interactive {
   id: number;
   title: string;
   /**
-   * Which code-owned profile draws this interactive: its geometry, presentation and feed adapter. Adding one is a code change under src/interactives.
+   * Which code-owned profile draws this interactive: a map with its geometry, presentation and feed adapter, or a whip count. Adding one is a code change under src/interactives.
    */
-  profile: 'federal-courts';
+  profile: 'federal-courts' | 'whip-count';
   /**
    * Standfirst shown above the interactive.
    */
@@ -1280,9 +1280,13 @@ export interface Interactive {
       }[]
     | null;
   /**
-   * How the sync job reads this interactive's data. It runs daily and can be run now from Snapshots. Each run that finds new data writes a draft snapshot for review; auto-publish skips the review.
+   * How positions are assigned and what is unconfirmed. Shown under the count.
    */
-  feed: {
+  methodology?: string | null;
+  /**
+   * How this interactive's data arrives. A map's sync job runs daily and can be run now from Snapshots; a whip count takes pushes (POST /next/whip-counts/<slug>). Each new version is a draft snapshot for review; auto-publish skips the review.
+   */
+  feed?: {
     /**
      * Uncheck to freeze the data at its current snapshot.
      */
@@ -1290,9 +1294,9 @@ export interface Interactive {
     /**
      * Which revision of the researcher's repository to read. Leave as "release" to follow their newest published data release, which is an immutable snapshot and the way they ask to be read. A branch, tag or commit is honoured verbatim, for pinning or debugging.
      */
-    ref: string;
+    ref?: string | null;
     /**
-     * Publish each new snapshot as soon as it validates, without an editor's review.
+     * Publish each new snapshot as soon as it validates, without an editor's review. For a whip count, a push is still saved as a draft while its snapshot has unpublished edits, which publishing would carry live.
      */
     autoPublish?: boolean | null;
   };
@@ -1348,6 +1352,9 @@ export interface InteractiveSnapshot {
    * When the sync last confirmed this version.
    */
   syncedAt: string;
+  /**
+   * A whip count: every voter's public position, edited row by row. To replace it whole, use "Edit as JSON" and paste a document (schema "pragmatic-papers/whip-count@1"). Saving checks it and says what is wrong.
+   */
   data:
     | {
         [k: string]: unknown;
@@ -2303,6 +2310,7 @@ export interface InteractivesSelect<T extends boolean = true> {
         link?: T | LinkFieldSelect<T>;
         id?: T;
       };
+  methodology?: T;
   feed?:
     | T
     | {

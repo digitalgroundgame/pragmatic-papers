@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const mockCreateStockMedia = vi.fn()
 const mockCreate = vi.fn()
+const mockEnsure = vi.fn()
 
 vi.mock("dotenv/config", () => ({}))
 
@@ -12,7 +13,7 @@ vi.mock("@/endpoints/seed/media", () => ({
 vi.mock("@/endpoints/seed/showcase", () => ({
   showcaseEntries: [
     { slug: "first", create: mockCreate },
-    { slug: "second", create: mockCreate },
+    { slug: "second", create: mockCreate, ensure: mockEnsure },
   ],
 }))
 
@@ -207,6 +208,30 @@ describe("createRestPayload", () => {
     expect(JSON.parse((mediaInit as RequestInit).body as string)).toEqual({ alt: "Alt" })
   })
 
+  it("creates the interactives an article links to, and their snapshots, as drafts too", async () => {
+    const fetchImpl = fakeFetch({
+      "POST /api/interactives": () => json({ doc: { id: 5 } }, 201),
+      "POST /api/interactive-snapshots": () => json({ doc: { id: 6 } }, 201),
+    })
+    const { create } = createRestPayload(ORIGIN, "tok", fetchImpl, {
+      draft: true,
+    }) as unknown as { create: RestCreate }
+    await create({ collection: "interactives", data: { title: "Count", _status: "published" } })
+    await create({
+      collection: "interactive-snapshots",
+      data: { label: "Count", _status: "published" },
+    })
+
+    for (const [index, body] of [
+      { title: "Count", _status: "draft" },
+      { label: "Count", _status: "draft" },
+    ].entries()) {
+      const [url, init] = fetchImpl.mock.calls[index]!
+      expect(new URL(String(url)).searchParams.get("draft")).toBe("true")
+      expect(JSON.parse((init as RequestInit).body as string)).toEqual(body)
+    }
+  })
+
   it("surfaces Payload's error messages", async () => {
     const fetchImpl = fakeFetch({
       "POST /api/articles": () => json({ errors: [{ message: "Authors is invalid" }] }, 400),
@@ -317,6 +342,32 @@ describe("main", () => {
 
     expect(mockCreateStockMedia).not.toHaveBeenCalled()
     expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it("still makes what an article that is there links to, when its entry says how", async () => {
+    const fetchImpl = fakeFetch({
+      "POST /api/users/login": login(),
+      "GET /api/articles": () => json({ docs: [{ title: "T" }] }),
+    })
+
+    await main(["748", "first", "second"], ENV, fetchImpl)
+
+    expect(mockEnsure).toHaveBeenCalledOnce()
+    expect(mockEnsure).toHaveBeenCalledWith(
+      expect.objectContaining({ create: expect.any(Function) }),
+    )
+  })
+
+  it("leaves it to create for an article that is missing", async () => {
+    const fetchImpl = fakeFetch({
+      "POST /api/users/login": login(),
+      "GET /api/articles": () => json({ docs: [] }),
+    })
+
+    await main(["748", "second"], ENV, fetchImpl)
+
+    expect(mockCreate).toHaveBeenCalledOnce()
+    expect(mockEnsure).not.toHaveBeenCalled()
   })
 
   it("pushes the slugs from the description to staging as drafts", async () => {

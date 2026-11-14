@@ -19,6 +19,7 @@ import { createRichTextShowcaseArticle } from "./features/rich-text-showcase"
 import { createLegacySocialEmbedArticle, createSocialEmbedArticle } from "./features/social-embeds"
 import { createTableOfContentsArticle } from "./features/table-of-contents"
 import { createTimelineArticle } from "./features/timeline"
+import { createWhipCountArticle } from "./features/whip-count"
 import { createStockMedia } from "./media"
 import { createMenus } from "./menus"
 import { createPages } from "./pages"
@@ -336,6 +337,16 @@ export const seed = async (
             [ctx.writers[0]!],
             ctx.media,
             [ctx.topics[3]!, ctx.topics[7]!],
+            context,
+          ),
+        )
+        // Creates the whip count it links to as well.
+        ctx.featureArticles.push(
+          await createWhipCountArticle(
+            payload,
+            [ctx.writers[0]!],
+            ctx.media,
+            [ctx.topics[3]!],
             context,
           ),
         )

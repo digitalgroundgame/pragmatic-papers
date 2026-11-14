@@ -128,7 +128,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                   <TableOfContents content={content} />
                 </ArticleSidebar>
               )}
-              <div className="mx-auto max-w-2xl space-y-3">
+              <div className="mx-auto w-full max-w-2xl min-w-0 space-y-3">
                 <MathJaxProvider enableMathRendering={enableMathRendering}>
                   <RichText data={content} enableGutter={false} className="drop-cap" />
                 </MathJaxProvider>

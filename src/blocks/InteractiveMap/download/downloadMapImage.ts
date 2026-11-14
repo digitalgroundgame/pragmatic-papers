@@ -87,7 +87,8 @@ async function fontFace({ family, weight, url }: (typeof FONTS)[number]): Promis
   }
 }
 
-async function fontFaces(): Promise<string | undefined> {
+/** The site's fonts as `@font-face` rules for a standalone SVG; nothing when none loaded. */
+export async function fontFaces(): Promise<string | undefined> {
   return (await Promise.all(FONTS.map(fontFace))).join("") || undefined
 }
 
@@ -115,9 +116,33 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
     image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error("The map's picture did not load"))
+    image.onerror = () => reject(new Error("The picture did not load"))
     image.src = url
   })
+}
+
+/** Rasterizes a standalone SVG in the reader's browser and saves it as a PNG file. */
+export async function saveSVGAsPNG(svg: string, fileName: string): Promise<void> {
+  const svgUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }))
+  try {
+    const image = await loadImage(svgUrl)
+    const canvas = document.createElement("canvas")
+    canvas.width = image.naturalWidth
+    canvas.height = image.naturalHeight
+    canvas.getContext("2d")?.drawImage(image, 0, 0)
+    const png = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"))
+    if (!png) throw new Error("The picture could not be saved as a PNG")
+
+    const pngUrl = URL.createObjectURL(png)
+    const link = document.createElement("a")
+    link.href = pngUrl
+    link.download = fileName
+    link.click()
+    // Some browsers start the download after the click returns, so the file stays a while.
+    setTimeout(() => URL.revokeObjectURL(pngUrl), 60_000)
+  } finally {
+    URL.revokeObjectURL(svgUrl)
+  }
 }
 
 /** Draws the map, with a footer naming its sources and the logo, and saves it as a PNG. */
@@ -129,24 +154,5 @@ export async function downloadMapImage({ sources, logo, ...drawing }: Download):
     footer: { sources, logo: logoMarkup(logo, palette?.ink ?? "#171717") },
     fontFaces: await fontFaces(),
   })
-  const svgUrl = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }))
-  try {
-    const image = await loadImage(svgUrl)
-    const canvas = document.createElement("canvas")
-    canvas.width = image.naturalWidth
-    canvas.height = image.naturalHeight
-    canvas.getContext("2d")?.drawImage(image, 0, 0)
-    const png = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"))
-    if (!png) throw new Error("The map could not be saved as a PNG")
-
-    const pngUrl = URL.createObjectURL(png)
-    const link = document.createElement("a")
-    link.href = pngUrl
-    link.download = mapFileName(drawing.widgetTitle)
-    link.click()
-    // Some browsers start the download after the click returns, so the file stays a while.
-    setTimeout(() => URL.revokeObjectURL(pngUrl), 60_000)
-  } finally {
-    URL.revokeObjectURL(svgUrl)
-  }
+  await saveSVGAsPNG(svg, mapFileName(drawing.widgetTitle))
 }

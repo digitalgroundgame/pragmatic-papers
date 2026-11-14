@@ -25,7 +25,7 @@ const achievements: HeldAchievement[] = [
     key: "early-member",
     label: "Early member",
     description: "One of the first readers to make an account.",
-    badge: "Early member",
+    badge: { key: "early-member", label: "Early member" },
     earnedAt: "2026-10-18T12:00:00.000Z",
   },
 ]
@@ -101,7 +101,12 @@ export const NoEmailAddress: Story = {
   beforeEach: serve({ ...member, name: "DestinyFan", email: null }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByText(/no email address yet/)).toBeInTheDocument()
+    const nudge = await canvas.findByRole("region", { name: "Verify your email" })
+    await expect(within(nudge).getByText(/no email address yet/)).toBeInTheDocument()
+    await expect(within(nudge).getByRole("link", { name: "Connect an account" })).toHaveAttribute(
+      "href",
+      "#sign-ins",
+    )
     await expect(canvas.queryByText(/@/)).not.toBeInTheDocument()
   },
 }

@@ -469,11 +469,25 @@ or member, and staff get a badge.
   option). A failure saves the comment as `auto-hidden`, shown only to its author, and adds a
   violation. A moderator hiding a published comment adds one too; publishing a held or hidden
   one reverses it (`recordModeration`).
+- **Per article**, the plugin adds a `commenting` choice to the target collection's sidebar
+  (moderators, and whoever the `commentingEditors` option names: here a writer on their own
+  article, `canChooseArticleCommenting`): `open`, `locked` (the thread stays readable, marked
+  `closed`, and posts get 403) or `off` (the section is hidden and the thread answers 404). It's
+  read from the published version, so a change reaches readers once the article is published
+  (`commentingOf`): a writer's choice on a live article waits in their draft for an editor.
 - **Require a verified email address** (off by default) in Comment settings limits posting
   to authors `isVerified` accepts: staff, or a provider-verified `emailVerified`.
 - **Violations** (`comment-violations`) lock commenting once the settings' threshold is active
   within its window, until enough age out or are reversed (`lockFor`); a `block` locks until
   it's reversed.
+- **Markers that come and go** sit beside the badge (`markers.ts`): First comment on an
+  author's first published comment (`PublicComment.firstComment`), New commenter for
+  `newCommenterDays` (7) after it (`AuthorDisplay.newcomer`), New member for `newMemberDays`
+  (30) after the account's `createdAt` (`newMember`), and Cake day on its anniversary
+  (`cakeDay`, UTC). All four read the author's record, so a thread read asks nothing more: the
+  first two read `firstCommentedAt`, a read-only field the plugin adds to users and keeps at
+  their earliest published comment's time (`hooks/firstCommented.ts`, run whenever a comment
+  is posted, published, hidden or deleted).
 - Deleting an article deletes its comments. Deleting a comment deletes its replies. Deleting a
   user empties their comments (status `deleted`, no author) so others' replies keep their place.
 - `tests/integration/comments.test.ts` signs readers up with Discord stubbed, and posts.
@@ -501,12 +515,16 @@ join field, on each user's record. Only admins delete either.
   (`markFilled`), so an award an admin deletes stays deleted. Revoked rows, and rows whose account
   was deleted (kept with no user), still count, so nobody moves up. They're awarded even while
   the switch is off.
-- **Starter achievements**: Early member (`earlyMemberLimit`, 1000) and Verified
-  (`starterAchievements`) are created once per site by `/next/revalidate-all` and the seed
+- **Starter achievements** (`starterAchievements`): Verified (given by hand to someone the
+  editors vouch for, first so its badge wins), Early member (`earlyMemberLimit`, 1000) and Email
+  verified (the `verified` rule, no badge: nearly everyone has it) are created once per site by `/next/revalidate-all` and the seed
   (`readerAchievements.seed`, recorded with `markSeeded`), so one an editor deletes stays deleted.
+  Each carries its starter `key` (read-only in the admin), so editors can rename it.
 - **Badges on comments**: the comments plugin's `authorBadges` option asks
   `readerAchievements.badgesFor` once per thread; the first achievement in the editors' order
-  with a badge shows, and a badge `describeAuthor` gives (Staff) wins.
+  with a badge shows, and a badge `describeAuthor` gives (a staff role's, `staffBadge`) wins.
+  A badge is a `BadgeInfo`, its label and a `key` (the role's slug, or the starter's key; null
+  for one an editor made), and `AuthorBadges` picks its icon and color by the key.
   `/api/achievements/mine` lists the signed-in reader's for `/account`. Switched off, no
   achievement shows anywhere.
 - The host's options (roles, access, the starter limit) are `achievementsOptions` in

@@ -1,5 +1,6 @@
 import { findRule } from "./rules"
 import type {
+  AchievementBadge,
   AchievementDoc,
   AchievementRow,
   AchievementUser,
@@ -40,11 +41,11 @@ export function heldAchievements(
       key: String(achievement.id),
       label: achievement.name,
       description: achievement.description ?? "",
-      badge: achievement.badge ? achievement.name : null,
+      badge: achievement.badge ? { key: achievement.key ?? null, label: achievement.name } : null,
       earnedAt: rowFor.get(String(achievement.id))?.earnedAt ?? null,
     }))
 }
 
 /** The one badge shown beside a user's name: the first of those they hold, if any. */
-export const topBadge = (held: HeldAchievement[]): string | null =>
+export const topBadge = (held: HeldAchievement[]): AchievementBadge | null =>
   held.find((achievement) => achievement.badge)?.badge ?? null

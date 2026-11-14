@@ -349,6 +349,10 @@ export interface Article {
    */
   substackUrl?: string | null;
   createdBy?: (number | null) | User;
+  /**
+   * Locked keeps its comments readable but closes them to new comments and replies. Off hides them. Readers see the change once it's published.
+   */
+  commenting?: ('open' | 'locked' | 'off') | null;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -588,6 +592,10 @@ export interface User {
   avatarUrl?: string | null;
   ssoConnections?: boolean | null;
   /**
+   * When their earliest published comment was posted. Comments keep it up to date.
+   */
+  firstCommentedAt?: string | null;
+  /**
    * Give an achievement that's given by hand with Add new, or open one to revoke it. Verified isn't listed until it's revoked: add a row for it with Revoked ticked.
    */
   awards?: {
@@ -663,6 +671,10 @@ export interface Achievement {
    */
   limit?: number | null;
   badge?: boolean | null;
+  /**
+   * The site knows this achievement by this, so it can be renamed.
+   */
+  key?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1909,6 +1921,7 @@ export interface ArticlesSelect<T extends boolean = true> {
   syndicateToSubstack?: T;
   substackUrl?: T;
   createdBy?: T;
+  commenting?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -2406,6 +2419,7 @@ export interface UsersSelect<T extends boolean = true> {
   emailVerified?: T;
   avatarUrl?: T;
   ssoConnections?: T;
+  firstCommentedAt?: T;
   awards?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -2716,6 +2730,7 @@ export interface AchievementsSelect<T extends boolean = true> {
   rule?: T;
   limit?: T;
   badge?: T;
+  key?: T;
   updatedAt?: T;
   createdAt?: T;
 }

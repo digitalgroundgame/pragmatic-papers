@@ -86,7 +86,8 @@ export function signUpProviders(): Array<{ id: SsoProviderId; label: string }> {
     discord: discordSignIn.credentials(),
     destiny: destinySignIn.credentials(),
   }
-  return (["google", "discord", "destiny"] as const)
+  // Destiny.gg first: most of our readers come from its community.
+  return (["destiny", "google", "discord"] as const)
     .filter((id) => credentials[id])
     .map((id) => ({ id, label: SSO_PROVIDER_LABELS[id] }))
 }

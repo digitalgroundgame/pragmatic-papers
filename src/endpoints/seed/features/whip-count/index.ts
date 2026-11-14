@@ -35,7 +35,7 @@ function isTakenSlug(err: unknown): boolean {
  * whip count profile, and its snapshot holding the count. The data is a snapshot from
  * November 13, 2026: each senator's public position with the link it came from, and no
  * quotations, since the statements behind them were not checked against their sources.
- * Pushed updates publish at once ("Publish pushed updates" is ticked).
+ * Pushed updates publish at once ("Auto-publish new snapshots" is ticked).
  *
  * An interactive that is already there is left alone, snapshot and all, so this can run again
  * on a site that has one. Any other failure (an account that may not create interactives) is

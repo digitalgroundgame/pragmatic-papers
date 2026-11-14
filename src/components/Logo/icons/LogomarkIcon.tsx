@@ -1,11 +1,11 @@
 import React from "react"
 
-export const LogomarkIcon: React.FC<React.ComponentProps<"svg">> = ({
-  fill = "currentColor",
-  className,
-  width,
-  height,
-}) => {
+export const LogomarkIcon: React.FC<
+  React.ComponentProps<"svg"> & {
+    /** The square's fill where the site's CSS doesn't reach (a `next/og` image). */
+    brandFill?: string
+  }
+> = ({ fill = "currentColor", className, width, height, brandFill }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -22,7 +22,7 @@ export const LogomarkIcon: React.FC<React.ComponentProps<"svg">> = ({
         <path d="M83.19.74h-2s0,10.53,0,10.53h2.03v-4.11c1.53,0,2.75-.99,2.75-3.09v-.23c0-2.11-1.23-3.09-2.78-3.09ZM83.9,4.9c0,.67-.23.93-.56.93h-.13v-3.77h.13c.33,0,.56.25.56.93v1.92Z" />
         <path d="M79.9.74h-2.99l-.95,10.4v.13h1.78l.16-2.59h.81l.17,2.59h1.98v-.13l-.95-10.4ZM78,7.08l.24-3.74h.13l.24,3.74h-.61Z" />
         <path d="M73.48.74h-2s0,10.53,0,10.53h2.03v-4.11c1.53,0,2.75-.99,2.75-3.09v-.23c0-2.11-1.23-3.09-2.78-3.09ZM74.19,4.9c0,.67-.23.93-.56.93h-.13v-3.77h.13c.33,0,.56.25.56.93v1.92Z" />
-        <path d="M62.23.74h6.95v10.53h-6.95V.74Z" className="fill-brand" />
+        <path d="M62.23.74h6.95v10.53h-6.95V.74Z" className="fill-brand" fill={brandFill} />
         <path d="M54.89,4.76c0-2.87,1.03-4.15,2.65-4.15s2.38,1.24,2.38,3.25v.81h-1.93c-.09-.38-.1-.82-.1-1.27v-.95c0-.29-.11-.48-.34-.48s-.36.19-.36.49v7.08c0,.3.13.49.36.49s.34-.19.34-.48v-1.02c0-.44.01-.89.1-1.27h1.93v.87c0,2-.8,3.25-2.38,3.25s-2.65-1.28-2.65-4.15v-2.49Z" />
         <rect x="52.4" y=".74" width="2.05" height="10.53" />
         <polygon points="47.45 .74 52.03 .74 52.03 2.32 50.76 2.32 50.76 11.26 48.71 11.26 48.71 2.32 47.45 2.32 47.45 .74" />

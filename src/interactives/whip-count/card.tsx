@@ -92,7 +92,12 @@ export function WhipCountCard({ title, data, now }: Props): React.ReactElement {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <LogomarkIcon fill={INK} width={(LOGO_HEIGHT * 100) / 12} height={LOGO_HEIGHT} />
+        <LogomarkIcon
+          fill={INK}
+          brandFill={BRAND}
+          width={(LOGO_HEIGHT * 100) / 12}
+          height={LOGO_HEIGHT}
+        />
         <div
           style={{
             display: "flex",

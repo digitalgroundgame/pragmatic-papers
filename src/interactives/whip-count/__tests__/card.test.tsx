@@ -18,6 +18,8 @@ describe("WhipCountCard", () => {
       />,
     )
     expect(container.querySelector('svg[viewBox="0 0 100 12"]')).toBeInTheDocument()
+    // The wordmark's square in the brand orange, which the site's CSS can't paint here.
+    expect(container.querySelector('svg [fill="#ff401a"]')).toBeInTheDocument()
     expect(container).toHaveTextContent("WHIP COUNT · AS OF NOVEMBER 13, 2026")
     expect(container).toHaveTextContent(/Marion Hale\s*3\s*backing, plus 1 leaning/)
     expect(container).toHaveTextContent(/vs\s*Daniel Ortiz\s*2\s*publicly backing/)

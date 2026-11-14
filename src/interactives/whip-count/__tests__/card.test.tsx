@@ -17,7 +17,7 @@ describe("WhipCountCard", () => {
         now={now}
       />,
     )
-    expect(container).toHaveTextContent("Pragmatic Papers")
+    expect(container.querySelector('svg[viewBox="0 0 100 12"]')).toBeInTheDocument()
     expect(container).toHaveTextContent("WHIP COUNT · AS OF NOVEMBER 13, 2026")
     expect(container).toHaveTextContent(/Marion Hale\s*3\s*backing, plus 1 leaning/)
     expect(container).toHaveTextContent(/vs\s*Daniel Ortiz\s*2\s*publicly backing/)

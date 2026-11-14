@@ -1,5 +1,6 @@
 import React from "react"
 
+import { LogomarkIcon } from "@/components/Logo/icons/LogomarkIcon"
 import { formatLongDate } from "@/utilities/formatDate"
 
 import { barGroups, majorityOf, publicGroups, votingMembers, type WhipCountData } from "./model"
@@ -18,11 +19,8 @@ const BRAND_FILL = "#e0330f"
 const INK = "#171717"
 const QUIET = "#525252"
 const PAD = 56
-
-/** The site's mark: a white "P" and panel on the brand's orange, as in the favicon. */
-const MARK = `data:image/svg+xml;utf8,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="#ff401a"/><path d="M8.34,6.7h-3.54s0,18.6,0,18.6h3.59v-7.26c2.71,0,4.86-1.75,4.86-5.47v-.4c0-3.72-2.17-5.47-4.91-5.47Z" fill="#fff"/><rect x="14.91" y="6.7" width="12.29" height="18.6" fill="#fff"/><path d="M9.6,10.67v3.38c0,1.19-.4,1.64-.99,1.64h-.22v-6.66h.22c.58,0,.99.45.99,1.64Z" fill="#ff401a"/></svg>',
-)}`
+/** The wordmark is 100×12, so this height draws it 300 wide. */
+const LOGO_HEIGHT = 36
 
 interface Props {
   title: string
@@ -67,7 +65,7 @@ function Side({
 /**
  * A whip count as a link preview: the two leading candidates set against each other with their
  * public backers, one tick a voter with the line to win, the countdown to the vote, and the
- * site's mark. Drawn with `next/og`, so it is plain flexbox and inline styles.
+ * site's logo. Drawn with `next/og`, so it is plain flexbox and inline styles.
  */
 export function WhipCountCard({ title, data, now }: Props): React.ReactElement {
   const shown = asOpened(data)
@@ -94,11 +92,7 @@ export function WhipCountCard({ title, data, now }: Props): React.ReactElement {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- next/og draws <img>, not next/image */}
-          <img src={MARK} width={44} height={44} alt="" />
-          <div style={{ fontSize: 26, fontWeight: 700, color: INK }}>Pragmatic Papers</div>
-        </div>
+        <LogomarkIcon fill={INK} width={(LOGO_HEIGHT * 100) / 12} height={LOGO_HEIGHT} />
         <div
           style={{
             display: "flex",

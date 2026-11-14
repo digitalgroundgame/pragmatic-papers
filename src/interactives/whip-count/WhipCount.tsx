@@ -38,6 +38,7 @@ import {
   tallyDraft,
   votingMembers,
   withOutgoing,
+  withoutBlocs,
   type Draft,
   type PublicGroup,
   type WhipCountCandidate,
@@ -51,6 +52,11 @@ interface Props {
   data: WhipCountData
   /** Names the reader's saved draft in their browser; the document's slug. */
   storageKey: string
+  /**
+   * Show each member's bloc, and let readers assign a bloc at once. Off, the page shows only
+   * the tags, while the blocs the editors filed stay in the data.
+   */
+  showBlocs?: boolean
 }
 
 const storageName = (key: string): string => `whip-count-draft:${key}`
@@ -304,14 +310,22 @@ const sectionTitle = `${heading} mt-1 text-2xl md:text-3xl`
 
 /**
  * A whip count: the public count of a leadership vote, and a draft the reader fills in with
- * their own guess of how the uncommitted break, one voter at a time or a bloc at a time. The
+ * their own guess of how the uncommitted break, one voter at a time or a group at a time. The
  * draft lives in the reader's browser only.
  */
-export function WhipCount({ title, data: published, storageKey }: Props): React.ReactNode {
+export function WhipCount({
+  title,
+  data: published,
+  storageKey,
+  showBlocs = false,
+}: Props): React.ReactNode {
   const outgoing = hasOutgoing(published)
   // Outgoing members start uncounted; the reader ticks the box to count them.
   const [countOutgoing, setCountOutgoing] = useState(false)
-  const data = useMemo(() => withOutgoing(published, countOutgoing), [published, countOutgoing])
+  const data = useMemo(
+    () => withOutgoing(showBlocs ? published : withoutBlocs(published), countOutgoing),
+    [published, countOutgoing, showBlocs],
+  )
   const voters = useMemo(() => votingMembers(data), [data])
   const groups = useMemo(() => publicGroups(data), [data])
   // Only groups with someone left to assign: one whose members have all publicly backed a
@@ -320,6 +334,8 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
     () => groupsOf(data).filter((group) => group.members.some((m) => m.stance !== "backs")),
     [data],
   )
+  // The groups column, when anyone is in a group to show.
+  const grouped = voters.some((m) => m.bloc || m.tags?.length)
   const majority = majorityOf(voters.length)
   const [first] = data.candidates
 
@@ -645,7 +661,7 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
               Think you know how it breaks?
             </h2>
             <p className="text-muted-foreground mt-1.5 text-sm">
-              Assign the uncommitted yourself, one senator or one bloc at a time, and see who wins.
+              Assign the uncommitted yourself, one senator or one group at a time, and see who wins.
             </p>
           </div>
           <Button variant="branded" onClick={() => setOpened(true)}>
@@ -665,7 +681,7 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
               <TableHead>Name</TableHead>
               {drafting && <TableHead>Your pick</TableHead>}
               <TableHead>Public position</TableHead>
-              <TableHead>Bloc</TableHead>
+              {grouped && <TableHead>{showBlocs ? "Bloc" : "Groups"}</TableHead>}
               <TableHead>What they said</TableHead>
             </TableRow>
           </TableHeader>
@@ -712,14 +728,22 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
                     />
                     {stanceLabel(m.stance, g.candidate)}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {m.bloc ?? "—"}
-                    {m.tags && (
-                      <span className="text-muted-foreground block text-xs">
-                        {m.tags.join(", ")}
-                      </span>
-                    )}
-                  </TableCell>
+                  {grouped && (
+                    <TableCell className="whitespace-nowrap">
+                      {showBlocs ? (
+                        <>
+                          {m.bloc ?? "—"}
+                          {m.tags && (
+                            <span className="text-muted-foreground block text-xs">
+                              {m.tags.join(", ")}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        (m.tags?.join(", ") ?? "—")
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell className="min-w-64 whitespace-normal">
                     {/* Long quotes are cut to three lines on a phone, where the row would
                         otherwise run to a screen's height. */}

@@ -18,6 +18,7 @@ import {
   tallyDraft,
   votingMembers,
   withOutgoing,
+  withoutBlocs,
 } from "../model"
 
 const raw = (): Record<string, unknown> =>
@@ -238,6 +239,14 @@ describe("a reader's draft", () => {
     ])
     const counted = groupsOf(withOutgoing(whipCountData, true))
     expect(counted.at(-1)).toMatchObject({ kind: "seat", name: "Outgoing senators" })
+  })
+
+  it("drops the blocs, keeping the tags as groups", () => {
+    const plain = withoutBlocs(whipCountData)
+    expect(plain.members.some((m) => "bloc" in m)).toBe(false)
+    expect(plain.members.map((m) => m.tags)).toEqual(whipCountData.members.map((m) => m.tags))
+    expect(groupsOf(plain).map((g) => g.kind)).not.toContain("bloc")
+    expect(groupsOf(plain).map((g) => g.name)).toContain("Anti-establishment")
   })
 
   it("assigns a group's uncommitted members and leaves public backers alone", () => {

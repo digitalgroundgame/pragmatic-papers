@@ -19,10 +19,10 @@ import { asOpened, countdownLine, headToHead, type CandidateCount } from "./seo"
 export const CARD_SIZE = { width: 1200, height: 630 }
 
 const BRAND = "#ff401a"
-// Brand-colored text on white, and the fill behind white text: the brand's own orange is too
-// light for either (the site's --brand-text and --brand-fill).
+// Brand-colored text on white: the brand's own orange is too light for it (the site's
+// --brand-text). The brand stays in the frame (the top bar, the logo, the eyebrow) and out of
+// the count, where it would sit beside the second candidate's red.
 const BRAND_TEXT = "#e0330f"
-const BRAND_FILL = "#e0330f"
 const INK = "#171717"
 const QUIET = "#525252"
 // The forecast, lighter than the count it stands beside.
@@ -156,7 +156,7 @@ export function WhipCountCard({ title, data, now }: Props): React.ReactElement {
               display: "flex",
               fontSize: 36,
               fontWeight: 700,
-              color: BRAND_TEXT,
+              color: QUIET,
               padding: "0 24px",
               marginTop: 96,
             }}
@@ -217,7 +217,7 @@ export function WhipCountCard({ title, data, now }: Props): React.ReactElement {
           <div
             style={{
               display: "flex",
-              background: BRAND_FILL,
+              background: INK,
               color: "#ffffff",
               fontWeight: 700,
               fontSize: 26,

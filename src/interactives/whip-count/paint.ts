@@ -10,12 +10,12 @@ export interface Paint {
 export const UNASSIGNED: Paint = { color: "var(--border)", opacity: 1 }
 
 /**
- * The second candidate's colour: teal, which no theme token offers. Never the brand orange,
- * which would read as the site endorsing them.
+ * The second candidate's colour: a true red, which no theme token offers. Never the brand
+ * orange, which would read as the site endorsing them; the count keeps the brand away from it.
  */
-export const SECOND_CANDIDATE = "#0d9488"
+export const SECOND_CANDIDATE = "#dc2626"
 
-/** The first candidate is drawn in blue, the second in teal, any other in ink. */
+/** The first candidate is drawn in blue, the second in red, any other in ink. */
 export function candidateColor(data: WhipCountData, candidate?: WhipCountCandidate): string {
   if (!candidate) return "var(--muted-foreground)"
   if (data.candidates[0]?.id === candidate.id) return "var(--chart-3)"

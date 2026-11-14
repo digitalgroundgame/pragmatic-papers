@@ -265,6 +265,8 @@ export interface PublicGroup {
   candidate?: WhipCountCandidate
   label: string
   members: WhipCountMember[]
+  /** Toward the first candidate (-1), the second (1), or the middle (0): see `sideOf`. */
+  side: -1 | 0 | 1
 }
 
 export function stanceLabel(stance: Stance, candidate?: WhipCountCandidate): string {
@@ -285,48 +287,69 @@ export function stanceLabel(stance: Stance, candidate?: WhipCountCandidate): str
 }
 
 /**
- * Where a stance sits between the first candidate (0) and the last (1): their backers at the
- * ends, leaners next, then those who ruled the other side out, with the undeclared in the
- * middle. Works for two candidates; any others sort between them by their place in the list.
+ * Which way a stance pulls on the bar: toward the first candidate (-1), toward the second (1),
+ * or neither (0). Only the first two candidates have a side. Everything that doesn't count
+ * toward one of them or lean their way is in the middle: the undeclared, those who declined to
+ * comment (who may still be negotiating, so the bar doesn't read them as leaning), those open
+ * to a change, and anyone backing, leaning to or ruling out a third candidate.
  */
-function lean(member: WhipCountMember, data: WhipCountData): number {
-  const last = data.candidates.length - 1
-  const at = data.candidates.findIndex((c) => c.id === member.candidate)
-  const side = at < 0 ? 0.5 : at / last
-  const toward = side <= 0.5 ? -1 : 1
+function sideOf(member: WhipCountMember, data: WhipCountData): -1 | 0 | 1 {
+  const at = data.candidates.slice(0, 2).findIndex((c) => c.id === member.candidate)
+  if (at < 0) return 0
+  const toward = at === 0 ? -1 : 1
   switch (member.stance) {
     case "backs":
-      return side
     case "leans":
-      return side - toward * 0.1
+      return toward
     case "opposes":
-      // Ruling a candidate out moves a voter away from that candidate's end.
-      return 0.5 - toward * 0.25
-    case "open":
-      return 0.52
-    case "declined":
-      return 0.51
+      // Ruling a candidate out moves a voter away from that candidate's side.
+      return toward === -1 ? 1 : -1
     default:
-      return 0.5
+      return 0
   }
 }
 
 /**
- * The groups as the bar draws them: those who declined to comment sit in the middle, with the
- * undeclared split around them, half on each side (the extra one on the left). Without anyone
- * declining, the groups stay as they are.
+ * Where a group sits between the first candidate (0) and the second (1): their backers at the
+ * ends, leaners next, then those who ruled the other side out, and the middle (`sideOf`) at
+ * 0.5, the undeclared first, then those who declined, those open to a change, and any other
+ * candidate's groups in the order of the list.
+ */
+function lean(member: WhipCountMember, data: WhipCountData): number {
+  const side = sideOf(member, data)
+  if (side === 0) {
+    const at = data.candidates.findIndex((c) => c.id === member.candidate)
+    const order = ["undeclared", "declined", "open"].indexOf(member.stance)
+    return 0.5 + (order >= 0 ? order : 3 + at) * 0.001
+  }
+  const end = side === -1 ? 0 : 1
+  switch (member.stance) {
+    case "backs":
+      return end
+    case "leans":
+      return end - side * 0.1
+    default:
+      return end - side * 0.25
+  }
+}
+
+/**
+ * The groups as the bar draws them: the middle groups (`side` 0) together, with the undeclared
+ * split around them, half on each side (the extra one on the left). With nothing in the middle
+ * but the undeclared, the groups stay as they are.
  */
 export function barGroups(groups: PublicGroup[]): PublicGroup[] {
-  const declined = groups.find((g) => g.stance === "declined")
   const undeclared = groups.find((g) => g.stance === "undeclared")
-  if (!declined || !undeclared) return groups
+  const middle = groups.filter((g) => g.side === 0 && g !== undeclared)
+  if (!undeclared || middle.length === 0) return groups
   const half = Math.ceil(undeclared.members.length / 2)
-  const halves = [
+  return [
+    ...groups.filter((g) => g.side === -1),
     { ...undeclared, members: undeclared.members.slice(0, half) },
-    declined,
+    ...middle,
     { ...undeclared, key: `${undeclared.key}:after`, members: undeclared.members.slice(half) },
+    ...groups.filter((g) => g.side === 1),
   ].filter((g) => g.members.length > 0)
-  return groups.flatMap((g) => (g === undeclared ? halves : g === declined ? [] : [g]))
 }
 
 /** The voting members grouped by what they have said, ordered from the first candidate's side. */
@@ -343,6 +366,7 @@ export function publicGroups(data: WhipCountData): PublicGroup[] {
         candidate,
         label: stanceLabel(member.stance, candidate),
         members: [],
+        side: sideOf(member, data),
         at: lean(member, data),
       }
       groups.set(key, group)

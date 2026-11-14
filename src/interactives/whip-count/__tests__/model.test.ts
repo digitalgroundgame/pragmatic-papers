@@ -21,7 +21,7 @@ import {
   withOutgoing,
   withoutBlocs,
 } from "../model"
-import { groupPaint } from "../paint"
+import { candidateColor, groupPaint } from "../paint"
 import { describeWhipCount } from "../snapshot"
 
 const raw = (): Record<string, unknown> =>
@@ -221,8 +221,43 @@ describe("the public count", () => {
     expect(bar[middle + 1]?.stance).toBe("undeclared")
     expect(bar.flatMap((g) => g.members)).toHaveLength(votingMembers(data).length)
     expect(new Set(bar.map((g) => g.key)).size).toBe(bar.length)
-    // Nobody declining leaves the bar as the groups are.
+    // One undeclared voter beside the open stays one place, so the bar is as the groups are.
     expect(barGroups(publicGroups(whipCountData))).toEqual(publicGroups(whipCountData))
+  })
+
+  it("puts a third candidate's groups in the middle with the undecided, not on a side", () => {
+    const third = { id: "reyes", name: "Lena Reyes", short: "Reyes" }
+    const data = {
+      ...whipCountData,
+      candidates: [...whipCountData.candidates, third],
+      members: whipCountData.members.map((m) =>
+        m.name === "Ana Whitfield"
+          ? { ...m, stance: "backs" as const, candidate: "reyes" }
+          : m.name === "Tom Becker"
+            ? { ...m, stance: "undeclared" as const, candidate: undefined }
+            : m,
+      ),
+    }
+    const groups = publicGroups(data)
+    expect(groups.map((g) => [g.label, g.side])).toEqual([
+      ["Backs Hale", -1],
+      ["Undeclared", 0],
+      ["Open to a change", 0],
+      ["Backs Reyes", 0],
+      ["Won’t back Hale", 1],
+      ["Backs Ortiz", 1],
+    ])
+    expect(barGroups(groups).map((g) => `${g.label} ${g.members.length}`)).toEqual([
+      "Backs Hale 2",
+      "Undeclared 1",
+      "Open to a change 1",
+      "Backs Reyes 1",
+      "Undeclared 1",
+      "Won’t back Hale 1",
+      "Backs Ortiz 2",
+    ])
+    expect(candidateColor(data, third)).toBe("var(--foreground)")
+    expect(candidateColor(data, whipCountData.candidates[1])).toBe("var(--brand-fill)")
   })
 
   it("puts those who ruled the last candidate out, or lean their way, on the right side", () => {

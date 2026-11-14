@@ -9,10 +9,11 @@ export interface Paint {
 
 export const UNASSIGNED: Paint = { color: "var(--border)", opacity: 1 }
 
-/** The first candidate is drawn in blue, the last in the brand colour. */
+/** The first candidate is drawn in blue, the second in the brand colour, any other in ink. */
 export function candidateColor(data: WhipCountData, candidate?: WhipCountCandidate): string {
   if (!candidate) return "var(--muted-foreground)"
-  return data.candidates[0]?.id === candidate.id ? "var(--chart-3)" : "var(--brand-fill)"
+  if (data.candidates[0]?.id === candidate.id) return "var(--chart-3)"
+  return data.candidates[1]?.id === candidate.id ? "var(--brand-fill)" : "var(--foreground)"
 }
 
 /** How a public position is drawn, on the page and in the downloaded picture. */

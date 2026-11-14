@@ -418,7 +418,7 @@ export function WhipCount({
   const undeclared = [...(groups.find((g) => g.stance === "undeclared")?.members ?? [])].sort(
     (a, b) => (a.name.split(" ").at(-1) ?? "").localeCompare(b.name.split(" ").at(-1) ?? ""),
   )
-  const ends: [string, string] = [first?.short ?? "", data.candidates.at(-1)?.short ?? ""]
+  const ends: [string, string] = [first?.short ?? "", data.candidates[1]?.short ?? ""]
 
   return (
     <div data-whip-count="" className="flex flex-col gap-12">

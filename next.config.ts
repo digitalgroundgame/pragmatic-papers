@@ -66,6 +66,7 @@ const nextConfig: NextConfig = {
     // Keys are picomatch globs, so the route's brackets are escaped.
     "/next/whip-counts/\\[slug\\]/image": [
       "./node_modules/geist/dist/fonts/geist-sans/Geist-{Regular,SemiBold,Bold}.ttf",
+      "./node_modules/@expo-google-fonts/libertinus-serif/700Bold/LibertinusSerif_700Bold.ttf",
     ],
   },
   // The CI image's build sets this (dockerfiles/PragmaticPapers.ci.Dockerfile): CI's Static

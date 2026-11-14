@@ -13,25 +13,32 @@ interface Args {
   params: Promise<{ slug: string }>
 }
 
-const FONTS = join(process.cwd(), "node_modules/geist/dist/fonts/geist-sans")
+const GEIST = "node_modules/geist/dist/fonts/geist-sans"
+const LIBERTINUS = "node_modules/@expo-google-fonts/libertinus-serif/700Bold"
 
 /**
- * Geist in the weights the card uses, read from the package (`outputFileTracingIncludes`
- * copies them into the build). Without them, as in the Worker, which has no files to read,
- * `next/og` draws everything in its own Geist Regular.
+ * The site's fonts in the weights the card uses, read from their packages
+ * (`outputFileTracingIncludes` copies them into the build): Geist, and Libertinus Serif Bold
+ * for the eyebrow. Without them, as in the Worker, which has no files to read, `next/og` draws
+ * everything in its own Geist Regular.
  */
-async function geist(): Promise<
+async function siteFonts(): Promise<
   { name: string; data: ArrayBuffer; weight: 400 | 600 | 700 }[] | undefined
 > {
   const read = async (file: string): Promise<ArrayBuffer> => {
-    const bytes = await readFile(join(FONTS, file))
+    const bytes = await readFile(join(process.cwd(), file))
     return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
   }
   try {
     return [
-      { name: "Geist", data: await read("Geist-Regular.ttf"), weight: 400 },
-      { name: "Geist", data: await read("Geist-SemiBold.ttf"), weight: 600 },
-      { name: "Geist", data: await read("Geist-Bold.ttf"), weight: 700 },
+      { name: "Geist", data: await read(`${GEIST}/Geist-Regular.ttf`), weight: 400 },
+      { name: "Geist", data: await read(`${GEIST}/Geist-SemiBold.ttf`), weight: 600 },
+      { name: "Geist", data: await read(`${GEIST}/Geist-Bold.ttf`), weight: 700 },
+      {
+        name: "Libertinus Serif",
+        data: await read(`${LIBERTINUS}/LibertinusSerif_700Bold.ttf`),
+        weight: 700,
+      },
     ]
   } catch {
     return undefined
@@ -56,7 +63,7 @@ export async function GET(_request: Request, { params }: Args): Promise<Response
     <WhipCountCard title={interactive.title} data={count.value} now={new Date()} />,
     {
       ...CARD_SIZE,
-      fonts: await geist(),
+      fonts: await siteFonts(),
       headers: { "Cache-Control": "public, max-age=3600, s-maxage=86400" },
     },
   )

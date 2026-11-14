@@ -123,8 +123,11 @@ export function WhipCountCard({ title, data, now }: Props): React.ReactElement {
         <div
           style={{
             display: "flex",
-            fontSize: 20,
-            fontWeight: 600,
+            // The site's eyebrow: Libertinus Serif, scaled 112% as the site scales it, in bold
+            // (it has no semibold).
+            fontFamily: "Libertinus Serif",
+            fontSize: 22,
+            fontWeight: 700,
             letterSpacing: 2,
             color: BRAND_TEXT,
           }}

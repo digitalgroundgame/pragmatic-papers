@@ -1,5 +1,6 @@
 import { act, cleanup, render, screen } from "@testing-library/react"
 import React from "react"
+import { renderToString } from "react-dom/server"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Countdown, NextUpdate } from "../Countdown"
@@ -22,6 +23,21 @@ describe("Countdown", () => {
       vi.advanceTimersByTime(1000)
     })
     expect(screen.getByRole("timer")).toHaveTextContent("17days16hours59minutes59seconds")
+  })
+
+  it("holds its place on the server with hidden digits, so the page doesn't move", () => {
+    const host = document.createElement("div")
+    host.innerHTML = renderToString(<Countdown to="2026-12-01T00:00:00-05:00" />)
+    const clock = host.querySelector("[data-whip-count-countdown]")
+    expect(clock).toHaveAttribute("aria-hidden", "true")
+    expect(host.querySelector("[role=timer]")).not.toBeInTheDocument()
+    const digits = host.querySelectorAll(".tabular-nums")
+    expect(digits).toHaveLength(4)
+    for (const digit of digits) {
+      expect(digit).toHaveClass("invisible", "sm:text-3xl")
+      expect(digit).toHaveTextContent("00")
+    }
+    expect(clock).toHaveTextContent("days")
   })
 
   it("draws nothing once the vote has passed, or for a time it can't read", () => {
@@ -47,6 +63,17 @@ describe("NextUpdate", () => {
     const line = document.querySelector("[data-whip-count-next-update]")!
     expect(line).toHaveTextContent(/Next check for new statements: (today|tomorrow) at \d/)
     expect(line.querySelector("time")).toHaveAttribute("datetime", "2026-11-13T12:37:00.000Z")
+  })
+
+  it("holds its line on the server with hidden text", () => {
+    const host = document.createElement("div")
+    host.innerHTML = renderToString(
+      <NextUpdate updates={{ times: ["07:37"], timeZone: "America/New_York" }} />,
+    )
+    const line = host.querySelector("[data-whip-count-next-update]")
+    expect(line).toHaveAttribute("aria-hidden", "true")
+    expect(line?.firstElementChild).toHaveClass("invisible")
+    expect(line?.querySelector("time")).not.toBeInTheDocument()
   })
 
   it("says nothing once the vote has passed", () => {

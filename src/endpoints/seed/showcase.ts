@@ -10,7 +10,7 @@ import { createRichTextShowcaseArticle } from "./features/rich-text-showcase"
 import { createLegacySocialEmbedArticle, createSocialEmbedArticle } from "./features/social-embeds"
 import { createTableOfContentsArticle } from "./features/table-of-contents"
 import { createTimelineArticle } from "./features/timeline"
-import { createWhipCountArticle } from "./features/whip-count"
+import { createSenateLeaderWhipCount, createWhipCountArticle } from "./features/whip-count"
 
 /**
  * Feature articles that `pnpm showcase` can push onto a live environment, such
@@ -33,6 +33,12 @@ export interface ShowcaseEntry {
     media: Media[],
     context?: Record<string, unknown>,
   ) => Promise<number>
+  /**
+   * What the article links to, made again when it is missing though the article is there
+   * (a migration that dropped it, an editor who deleted it). Runs instead of `create` for an
+   * article that exists, and must leave what it finds alone.
+   */
+  ensure?: (payload: Payload) => Promise<void>
 }
 
 export const showcaseEntries: ShowcaseEntry[] = [
@@ -86,6 +92,7 @@ export const showcaseEntries: ShowcaseEntry[] = [
     slug: "whip-counts-draft-your-own-leadership-vote",
     create: (payload, writers, media, context) =>
       createWhipCountArticle(payload, writers, media, [], context),
+    ensure: (payload) => createSenateLeaderWhipCount(payload),
   },
   {
     slug: "missouri-shifting-margins-119-120-congressional-maps",

@@ -5,6 +5,7 @@ import { getPayloadClient } from "@/data/payload"
 import { createSenateLeaderWhipCount, WHIP_COUNT_SLUG } from "@/endpoints/seed/features/whip-count"
 import type { WhipCountData } from "@/interactives/whip-count/model"
 import type { InteractiveSnapshot, User } from "@/payload-types"
+import { whipCountData } from "@/stories/fixtures/whipCount"
 
 import { createUser } from "../helpers/testUsers"
 
@@ -123,6 +124,33 @@ describe("whip count snapshots", () => {
     })
   })
 
+  it("can be created by an editor for a whip count interactive", async () => {
+    const count = await payload.create({
+      collection: "interactives",
+      data: { title: "A count", slug: WHIP_COUNT_SLUG, profile: "whip-count", _status: "draft" },
+      context,
+    })
+    const created = await payload.create({
+      collection: "interactive-snapshots",
+      data: {
+        label: "By hand",
+        interactive: count.id,
+        sourceVersion: "v1",
+        sourceRef: "hand",
+        contentHash: "x",
+        generatedAt: new Date().toISOString(),
+        syncedAt: new Date().toISOString(),
+        data: { ...whipCountData },
+      },
+      user: editor,
+      overrideAccess: false,
+      draft: true,
+      context,
+    })
+    // Stamped from the count, not from what was sent.
+    expect(created.sourceVersion).toBe(whipCountData.asOf)
+  })
+
   it("can be created by an editor only for a whip count", async () => {
     const map = await payload.create({
       collection: "interactives",
@@ -141,6 +169,25 @@ describe("whip count snapshots", () => {
           generatedAt: new Date().toISOString(),
           syncedAt: new Date().toISOString(),
           data: { schema: "pragmatic-papers/drilldown-data@1" },
+        },
+        user: editor,
+        overrideAccess: false,
+        context,
+      }),
+    ).rejects.toThrow()
+    // Nor a count, which would leave the map's sync unable to write its feed.
+    await expect(
+      payload.create({
+        collection: "interactive-snapshots",
+        data: {
+          label: "By hand",
+          interactive: map.id,
+          sourceVersion: "v1",
+          sourceRef: "hand",
+          contentHash: "x",
+          generatedAt: new Date().toISOString(),
+          syncedAt: new Date().toISOString(),
+          data: { ...whipCountData },
         },
         user: editor,
         overrideAccess: false,

@@ -26,15 +26,27 @@ function namedFields(fields: Field[]): Extract<Field, { name: string }>[] {
 describe("InteractiveSnapshots access", () => {
   const feed = { schema: "pragmatic-papers/drilldown-data@1", regions: [], records: [] }
 
-  it("lets only an editor create one, and only with a whip count", () => {
-    const create = InteractiveSnapshots.access!.create as (args: unknown) => boolean
-    const as = (user: User | null, data: unknown) => create({ req: { user }, data: { data } })
-    expect(as(editor, whipCountData)).toBe(true)
-    expect(as(writer, whipCountData)).toBe(false)
-    expect(as(null, whipCountData)).toBe(false)
-    // A map's feed comes from the sync, never by hand.
-    expect(as(editor, feed)).toBe(false)
-    expect(as(editor, undefined)).toBe(false)
+  it("lets only an editor create one, only with a whip count, only for a whip count", async () => {
+    const create = InteractiveSnapshots.access!.create as (args: unknown) => Promise<boolean>
+    const profiles: Record<string, string> = { "3": "whip-count", "4": "federal-courts" }
+    const findByID = vi.fn(async ({ id }: { id: number | string }) => {
+      const profile = profiles[String(id)]
+      if (!profile) throw new Error("Not Found")
+      return { id, profile }
+    })
+    const as = (user: User | null, data: unknown, interactive: unknown = 3) =>
+      create({ req: { user, payload: { findByID } }, data: { data, interactive } })
+    expect(await as(editor, whipCountData)).toBe(true)
+    expect(await as(editor, whipCountData, { id: 3 })).toBe(true)
+    expect(await as(writer, whipCountData)).toBe(false)
+    expect(await as(null, whipCountData)).toBe(false)
+    // A map's feed comes from the sync, never by hand, and a map can't be given a count.
+    expect(await as(editor, feed)).toBe(false)
+    expect(await as(editor, undefined)).toBe(false)
+    expect(await as(editor, whipCountData, 4)).toBe(false)
+    expect(await as(editor, whipCountData, 99)).toBe(false)
+    expect(await as(editor, whipCountData, null)).toBe(false)
+    expect(findByID).toHaveBeenCalledWith(expect.objectContaining({ id: 3, draft: true }))
   })
 
   it("lets editors change a whip count's data, and nothing else", () => {

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const mockCreateStockMedia = vi.fn()
 const mockCreate = vi.fn()
+const mockEnsure = vi.fn()
 
 vi.mock("dotenv/config", () => ({}))
 
@@ -12,7 +13,7 @@ vi.mock("@/endpoints/seed/media", () => ({
 vi.mock("@/endpoints/seed/showcase", () => ({
   showcaseEntries: [
     { slug: "first", create: mockCreate },
-    { slug: "second", create: mockCreate },
+    { slug: "second", create: mockCreate, ensure: mockEnsure },
   ],
 }))
 
@@ -341,6 +342,32 @@ describe("main", () => {
 
     expect(mockCreateStockMedia).not.toHaveBeenCalled()
     expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it("still makes what an article that is there links to, when its entry says how", async () => {
+    const fetchImpl = fakeFetch({
+      "POST /api/users/login": login(),
+      "GET /api/articles": () => json({ docs: [{ title: "T" }] }),
+    })
+
+    await main(["748", "first", "second"], ENV, fetchImpl)
+
+    expect(mockEnsure).toHaveBeenCalledOnce()
+    expect(mockEnsure).toHaveBeenCalledWith(
+      expect.objectContaining({ create: expect.any(Function) }),
+    )
+  })
+
+  it("leaves it to create for an article that is missing", async () => {
+    const fetchImpl = fakeFetch({
+      "POST /api/users/login": login(),
+      "GET /api/articles": () => json({ docs: [] }),
+    })
+
+    await main(["748", "second"], ENV, fetchImpl)
+
+    expect(mockCreate).toHaveBeenCalledOnce()
+    expect(mockEnsure).not.toHaveBeenCalled()
   })
 
   it("pushes the slugs from the description to staging as drafts", async () => {

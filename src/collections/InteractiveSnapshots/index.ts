@@ -8,6 +8,7 @@ import type {
 import { admin, editor } from "@/access/collections"
 import { isPublishedOrStaff } from "@/access/policies"
 import { isEditor } from "@/access/roles"
+import { profileKind } from "@/interactives/profiles"
 import { parseWhipCount, WHIP_COUNT_SCHEMA } from "@/interactives/whip-count/model"
 import { isWhipCountData, whipCountSnapshotStamp } from "@/interactives/whip-count/snapshot"
 
@@ -20,6 +21,26 @@ import { revalidateSnapshot, revalidateSnapshotDelete } from "./hooks/revalidate
  */
 const syncOwned: FieldAccess = () => false
 const syncOwnedAdmin = { readOnly: true, disableBulkEdit: true } as const
+
+/** Whether a snapshot's `interactive` names a whip count interactive, drafts included. */
+async function forWhipCount(req: PayloadRequest, interactive: unknown): Promise<boolean> {
+  const id =
+    typeof interactive === "object" && interactive !== null && "id" in interactive
+      ? (interactive as { id: unknown }).id
+      : interactive
+  if (typeof id !== "number" && typeof id !== "string") return false
+  const doc = await req.payload
+    .findByID({
+      req,
+      collection: "interactives",
+      id,
+      draft: true,
+      depth: 0,
+      select: { profile: true },
+    })
+    .catch(() => null)
+  return profileKind(doc?.profile) === "whip-count"
+}
 
 /**
  * A whip count's data is the one thing here an editor writes: positions, statements, blocs
@@ -62,8 +83,13 @@ export const InteractiveSnapshots: CollectionConfig = {
   access: {
     // Rows come from the sync; a hand-made one has no feed behind it. A whip count has no
     // feed, so an editor may create its snapshot with a count in it (the showcase does, over
-    // REST); without a count to check, as when the admin asks whether to offer Create, no.
-    create: ({ req, data }) => isEditor(req.user) && isWhipCountData(data?.data),
+    // REST), and only for a whip count interactive: a map's snapshot holding a count would
+    // block its sync. Without a count to check, as when the admin asks whether to offer
+    // Create, no.
+    create: async ({ req, data }) =>
+      isEditor(req.user) &&
+      isWhipCountData(data?.data) &&
+      (await forWhipCount(req, data?.interactive)),
     delete: admin,
     // Editors publish and unpublish; the fields themselves are sync-owned.
     update: editor,

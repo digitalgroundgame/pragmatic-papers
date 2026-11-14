@@ -26,7 +26,7 @@ const BRAND_FILL = "#e0330f"
 const INK = "#171717"
 const QUIET = "#525252"
 // The forecast, lighter than the count it stands beside.
-const FORECAST = "#8a8a8a"
+const FORECAST = "#737373"
 const PAD = 56
 /** The wordmark is 100×12, so this height draws it 300 wide. */
 const LOGO_HEIGHT = 36

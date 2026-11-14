@@ -283,33 +283,50 @@ function CountBar({
   )
 }
 
-/** A candidate's public backers: the largest number on the page, centred over its label. */
+/**
+ * A candidate's public backers, as the link preview draws them: their colour and name, the
+ * count, and beside it, lighter and toward the middle, what they'd have if those refusing
+ * their rival hold to it. `align` puts it at its end of the row, over its end of the bar.
+ */
 function Total({
+  name,
   value,
-  label,
   detail,
   color,
   forecast,
-  inward = "right",
+  align = "center",
 }: {
+  name: string
   value: number
-  label: string
   detail: string
   color: string
   /** What they'd have if those who refused their rival hold to it, in lighter type. */
   forecast?: RefusalForecast | null
-  /** Which side of the count the forecast sits on: toward the middle of the row. */
-  inward?: "left" | "right"
+  align?: "start" | "end" | "center"
 }): React.ReactNode {
+  const items = {
+    start: "items-start text-left",
+    end: "items-end text-right",
+    center: "items-center text-center",
+  }[align]
   return (
-    <div className="text-center">
+    <div className={cn("flex min-w-0 flex-col", items)}>
+      <p className="flex items-center gap-2 text-base font-semibold sm:text-xl md:text-2xl">
+        <span
+          aria-hidden
+          className="size-3 shrink-0 rounded-xs sm:size-4"
+          style={{ background: color }}
+        />
+        {name}
+      </p>
       <p
         className={cn(
-          "flex items-baseline justify-center gap-2 font-sans leading-none font-bold tracking-tight tabular-nums",
-          inward === "left" && "flex-row-reverse",
+          "mt-1 flex items-baseline gap-2 font-sans leading-none font-bold tracking-tight tabular-nums",
+          // The forecast sits toward the middle, so the big counts hold the outer edges.
+          align === "end" && "flex-row-reverse",
         )}
       >
-        <span className="text-7xl md:text-8xl">{value}</span>
+        <span className="text-6xl sm:text-7xl md:text-8xl">{value}</span>
         {forecast && (
           <Tooltip>
             <TooltipTrigger
@@ -331,14 +348,14 @@ function Total({
           </Tooltip>
         )}
       </p>
-      <p className="mt-3 flex items-center justify-center gap-1.5 font-medium">
-        <span aria-hidden className="size-3 rounded-xs" style={{ background: color }} />
-        {label}
-      </p>
-      <p className="text-muted-foreground mt-0.5 text-sm">{detail}</p>
+      <p className="text-muted-foreground mt-2 text-sm">{detail}</p>
     </div>
   )
 }
+
+/** Under a total, as on the link preview: "backing, plus 5 leaning" or "publicly backing". */
+const backingDetail = (leans: number): string =>
+  leans > 0 ? `backing, plus ${leans} leaning` : "publicly backing"
 
 const eyebrow = "text-brand-text font-serif text-xs font-semibold tracking-widest uppercase"
 // Headings here are set in the body sans, not the site's display face.
@@ -482,21 +499,43 @@ export function WhipCount({
           </div>
         )}
 
-        <div className="mt-8 flex justify-center gap-10 sm:gap-20 md:gap-28">
-          {data.candidates.map((c, i) => (
-            <Total
-              key={c.id}
-              inward={i === 0 ? "right" : "left"}
-              value={count("backs", c)}
-              label={`Back ${c.short}`}
-              detail={
-                count("leans", c) > 0 ? `plus ${count("leans", c)} leaning` : "publicly committed"
-              }
-              color={candidateColor(data, c)}
-              forecast={refusalForecast(data, c)}
-            />
-          ))}
-        </div>
+        {data.candidates.length === 2 ? (
+          // Head to head, as in the link preview: each total over its own end of the bar.
+          <div
+            data-whip-count-totals=""
+            className="mt-8 grid grid-cols-[1fr_auto_1fr] items-start gap-3"
+          >
+            {data.candidates.map((c, i) => (
+              <React.Fragment key={c.id}>
+                {i === 1 && (
+                  <p className="text-muted-foreground mt-12 font-sans text-lg font-semibold sm:mt-16 md:text-2xl">
+                    vs
+                  </p>
+                )}
+                <Total
+                  align={i === 0 ? "start" : "end"}
+                  name={c.name}
+                  value={count("backs", c)}
+                  detail={backingDetail(count("leans", c))}
+                  color={candidateColor(data, c)}
+                  forecast={refusalForecast(data, c)}
+                />
+              </React.Fragment>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-8 flex justify-center gap-10 sm:gap-20 md:gap-28">
+            {data.candidates.map((c) => (
+              <Total
+                key={c.id}
+                name={c.name}
+                value={count("backs", c)}
+                detail={backingDetail(count("leans", c))}
+                color={candidateColor(data, c)}
+              />
+            ))}
+          </div>
+        )}
         <p className="text-muted-foreground mt-5 text-center text-sm">
           <span className="text-foreground font-medium tabular-nums">
             {voters.length - committed}

@@ -45,6 +45,7 @@ describe("DownloadWhipCountButton", () => {
       palette: { background: "#000", ink: "#fff", quietInk: "#aaa" },
       logo: "<svg logo/>",
       fontFaces: "@font-face{}",
+      now: expect.any(Date),
     })
     await waitFor(() => expect(screen.getByRole("button", { name: "Download PNG" })).toBeEnabled())
   })

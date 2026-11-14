@@ -63,12 +63,13 @@ export const DeclinedToComment: Story = {
 /** Pointing at the lighter forecast beside a total explains how it is made. */
 export const ForecastExplained: Story = {
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
     const forecast = canvasElement.querySelector<HTMLElement>("[data-whip-count-forecast]")!
     await userEvent.hover(forecast)
     const body = within(canvasElement.ownerDocument.body)
     await expect(await body.findByText(/^A forecast, not a count/)).toBeInTheDocument()
     await expect(body.getByText("3 if the 1 who won’t back Hale hold to it")).toBeInTheDocument()
-    await expect(canvas.getByText("Back Ortiz")).toBeInTheDocument()
+    // Ortiz's total is the right-hand one, with the forecast inward of the count.
+    const totals = canvasElement.querySelector<HTMLElement>("[data-whip-count-totals]")!
+    await expect(within(totals).getByText("Daniel Ortiz")).toBeInTheDocument()
   },
 }

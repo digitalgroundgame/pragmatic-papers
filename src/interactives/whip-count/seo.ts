@@ -50,7 +50,10 @@ export function whipCountTitle(title: string, data: WhipCountData): string {
 
 const DAY = 24 * 60 * 60 * 1000
 
-/** Whole days left until the vote, counting a part day as one; null with no vote time. */
+/**
+ * Whole days left until the vote, counting a part day as one: 1 in its last 24 hours, 0 once
+ * it has started. Null with no vote time.
+ */
 export function daysUntilVote(data: WhipCountData, now: Date): number | null {
   if (!data.voteAt) return null
   const left = Date.parse(data.voteAt) - now.getTime()
@@ -58,11 +61,13 @@ export function daysUntilVote(data: WhipCountData, now: Date): number | null {
   return left <= 0 ? 0 : Math.ceil(left / DAY)
 }
 
-/** The countdown as a line: "17 days to the vote", "1 day to the vote", "Vote day". */
+/**
+ * The countdown as a line: "17 days to the vote", "1 day to the vote". Null with no vote time
+ * and once the vote has started, as the page's clock stops drawing then.
+ */
 export function countdownLine(data: WhipCountData, now: Date): string | null {
   const days = daysUntilVote(data, now)
-  if (days === null) return null
-  if (days === 0) return "Vote day"
+  if (!days) return null
   return `${days} ${days === 1 ? "day" : "days"} to the vote`
 }
 
@@ -77,12 +82,13 @@ function fingerprint(text: string): string {
 }
 
 /**
- * The preview image's path. Its query changes with the count and with the day, so a platform
- * that keeps images by URL fetches a new one when the count or the countdown changes.
+ * The preview image's path. Its query changes with the count and with the countdown's number
+ * of days, so a platform that keeps images by URL fetches a new one exactly when the card's
+ * text changes. A count with no vote time keeps one URL until its data changes.
  */
 export function whipCountImagePath(slug: string, data: WhipCountData, now: Date): string {
-  const day = now.toISOString().slice(0, 10)
-  return `/next/whip-counts/${encodeURIComponent(slug)}/image?v=${fingerprint(JSON.stringify(data))}-${day}`
+  const days = daysUntilVote(data, now) ?? "none"
+  return `/next/whip-counts/${encodeURIComponent(slug)}/image?v=${fingerprint(JSON.stringify(data))}-${days}`
 }
 
 /**

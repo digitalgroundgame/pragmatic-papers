@@ -27,7 +27,7 @@ describe("whipCountMeta", () => {
       siteName: "The Pragmatic Papers",
       images: [
         {
-          url: expect.stringMatching(/\/next\/whip-counts\/leader\/image\?v=.+-2026-11-14$/),
+          url: expect.stringMatching(/\/next\/whip-counts\/leader\/image\?v=.+-none$/),
           width: 1200,
           height: 630,
           alt: "The whip count: 3 publicly back Marion Hale, 2 publicly back Daniel Ortiz.",
@@ -46,6 +46,27 @@ describe("whipCountMeta", () => {
       now,
     )
     expect(meta.title).toBe("Marion Hale 3, Daniel Ortiz 2: The caucus vote")
+  })
+
+  it("draws the card even when an editor picked a meta image, so the count stays current", async () => {
+    loadWhipCount.mockResolvedValue(success(whipCountData))
+    const picked = { url: "https://example.com/picked.jpg" }
+    const meta = await whipCountMeta(
+      {
+        ...page,
+        openGraph: { ...page.openGraph, images: [picked] },
+        twitter: { images: [picked] },
+      },
+      { ...interactive, meta: { image: 88 } },
+      "leader",
+      now,
+    )
+    expect(meta.openGraph?.images).toEqual([
+      expect.objectContaining({ url: expect.stringContaining("/image?v=") }),
+    ])
+    expect(meta.twitter?.images).toEqual([
+      expect.objectContaining({ url: expect.stringContaining("/image?v=") }),
+    ])
   })
 
   it("leaves the page's metadata alone with no count to read", async () => {

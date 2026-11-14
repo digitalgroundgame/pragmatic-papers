@@ -38,19 +38,25 @@ describe("whip count SEO", () => {
     expect(daysUntilVote(voting, now)).toBe(17)
     expect(countdownLine(voting, now)).toBe("17 days to the vote")
     expect(countdownLine(voting, new Date("2026-11-30T20:00:00Z"))).toBe("1 day to the vote")
-    expect(countdownLine(voting, new Date("2026-12-02T00:00:00Z"))).toBe("Vote day")
+    expect(countdownLine(voting, new Date("2026-12-01T14:00:00Z"))).toBe("1 day to the vote")
+    expect(daysUntilVote(voting, new Date("2026-12-01T15:00:00Z"))).toBe(0)
+    expect(countdownLine(voting, new Date("2026-12-01T15:00:00Z"))).toBeNull()
+    expect(countdownLine(voting, new Date("2026-12-05T00:00:00Z"))).toBeNull()
   })
 
-  it("names a new image when the count or the day changes, and the same one otherwise", () => {
+  it("names a new image when the count or the countdown changes, and the same one otherwise", () => {
     const path = whipCountImagePath("leader", whipCountData, now)
-    expect(path).toMatch(/^\/next\/whip-counts\/leader\/image\?v=[0-9a-z]+-2026-11-14$/)
-    expect(whipCountImagePath("leader", whipCountData, now)).toBe(path)
+    expect(path).toMatch(/^\/next\/whip-counts\/leader\/image\?v=[0-9a-z]+-none$/)
+    expect(whipCountImagePath("leader", whipCountData, new Date("2026-11-20T00:00:00Z"))).toBe(path)
     expect(whipCountImagePath("leader", { ...whipCountData, asOf: "2026-11-14" }, now)).not.toBe(
       path,
     )
-    expect(whipCountImagePath("leader", whipCountData, new Date("2026-11-15T01:00:00Z"))).not.toBe(
-      path,
-    )
+
+    // The countdown ticks at the vote's time of day (14:30 UTC), not at midnight.
+    const counting = whipCountImagePath("leader", voting, now)
+    expect(counting).toMatch(/-17$/)
+    expect(whipCountImagePath("leader", voting, new Date("2026-11-15T14:00:00Z"))).toBe(counting)
+    expect(whipCountImagePath("leader", voting, new Date("2026-11-15T15:00:00Z"))).toMatch(/-16$/)
   })
 
   describe("updatedLine", () => {

@@ -9,8 +9,9 @@ import { headToHead, whipCountImagePath, whipCountTitle } from "./seo"
 
 /**
  * A whip count page's metadata: the count in the title, and the generated card as its link
- * preview image, in place of the site's default. The rest is the page's (`generateMeta`).
- * Without a count to read, the page's metadata stands as it is.
+ * preview image, in place of the site's default and of any meta image an editor picked on the
+ * SEO tab, since a fixed picture would go stale as the count moves. The rest is the page's
+ * (`generateMeta`). Without a count to read, the page's metadata stands as it is.
  */
 export async function whipCountMeta(
   meta: Metadata,

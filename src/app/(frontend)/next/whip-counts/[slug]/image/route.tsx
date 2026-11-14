@@ -48,7 +48,8 @@ async function siteFonts(): Promise<
 /**
  * A whip count's link preview, 1200×630: the leading candidates head to head, one tick a voter,
  * the countdown and the site's mark (`WhipCountCard`). The page's metadata points at it, with
- * a query that changes with the count and the day, so the edge may keep each one a day.
+ * a query that changes with the count and the countdown's days, so the edge may keep each one a
+ * day.
  */
 export async function GET(_request: Request, { params }: Args): Promise<Response> {
   const { slug } = await params

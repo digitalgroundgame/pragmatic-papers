@@ -267,6 +267,11 @@ export interface PublicGroup {
   members: WhipCountMember[]
   /** Toward the first candidate (-1), the second (1), or the middle (0): see `sideOf`. */
   side: -1 | 0 | 1
+  /**
+   * For those ruling out one of the first two candidates: the side of the line to win they
+   * keep to, away from the one they refuse (`right` for those refusing the first).
+   */
+  pin?: "left" | "right"
 }
 
 export function stanceLabel(stance: Stance, candidate?: WhipCountCandidate): string {
@@ -318,22 +323,44 @@ function lean(member: WhipCountMember, data: WhipCountData): number {
   return member.stance === "backs" ? end : end - side * 0.1
 }
 
+/** Which side of the line to win a refusal of one of the first two candidates keeps to. */
+function pinOf(member: WhipCountMember, data: WhipCountData): "left" | "right" | undefined {
+  if (member.stance !== "opposes") return undefined
+  const at = data.candidates.slice(0, 2).findIndex((c) => c.id === member.candidate)
+  return at === 0 ? "right" : at === 1 ? "left" : undefined
+}
+
 /**
- * The groups as the bar draws them: the middle groups (`side` 0) together, with the undeclared
- * split around them, half on each side (the extra one on the left). With nothing in the middle
- * but the undeclared, the groups stay as they are.
+ * The groups as the bar draws them. Each candidate's backers and leaners hold their end. The
+ * undecided sit in the middle, with the undeclared split around them, so many on the left that
+ * the line to win falls between those refusing the second candidate and those refusing the
+ * first: a refusal always sits on the far side of the line from the candidate it rules out,
+ * however the rest of the count moves.
  */
 export function barGroups(groups: PublicGroup[]): PublicGroup[] {
   const undeclared = groups.find((g) => g.stance === "undeclared")
-  const middle = groups.filter((g) => g.side === 0 && g !== undeclared)
-  if (!undeclared || middle.length === 0) return groups
-  const half = Math.ceil(undeclared.members.length / 2)
+  const left = groups.filter((g) => g.side === -1)
+  const right = groups.filter((g) => g.side === 1)
+  const middle = groups.filter((g) => g.side === 0 && g !== undeclared && !g.pin)
+  const pinnedLeft = groups.filter((g) => g.pin === "left")
+  const pinnedRight = groups.filter((g) => g.pin === "right")
+  const size = (list: PublicGroup[]): number => list.reduce((n, g) => n + g.members.length, 0)
+  const line = majorityOf(size(groups))
+  const pending = undeclared?.members ?? []
+  const before = Math.max(
+    0,
+    Math.min(pending.length, line - size(left) - size(middle) - size(pinnedLeft)),
+  )
   return [
-    ...groups.filter((g) => g.side === -1),
-    { ...undeclared, members: undeclared.members.slice(0, half) },
+    ...left,
+    ...(undeclared ? [{ ...undeclared, members: pending.slice(0, before) }] : []),
     ...middle,
-    { ...undeclared, key: `${undeclared.key}:after`, members: undeclared.members.slice(half) },
-    ...groups.filter((g) => g.side === 1),
+    ...pinnedLeft,
+    ...pinnedRight,
+    ...(undeclared
+      ? [{ ...undeclared, key: `${undeclared.key}:after`, members: pending.slice(before) }]
+      : []),
+    ...right,
   ].filter((g) => g.members.length > 0)
 }
 
@@ -352,6 +379,7 @@ export function publicGroups(data: WhipCountData): PublicGroup[] {
         label: stanceLabel(member.stance, candidate),
         members: [],
         side: sideOf(member, data),
+        pin: pinOf(member, data),
         at: lean(member, data),
       }
       groups.set(key, group)

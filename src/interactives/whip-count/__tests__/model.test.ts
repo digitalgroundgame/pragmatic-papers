@@ -231,8 +231,31 @@ describe("the public count", () => {
     ])
     expect(bar.flatMap((g) => g.members)).toHaveLength(votingMembers(data).length)
     expect(new Set(bar.map((g) => g.key)).size).toBe(bar.length)
-    // One undeclared voter beside the open stays one place, so the bar is as the groups are.
-    expect(barGroups(publicGroups(whipCountData))).toEqual(publicGroups(whipCountData))
+  })
+
+  it("keeps those refusing the first candidate just past the line to win, on the far side", () => {
+    // Nine voters, five to win: Hale's four, the one open to a change, then the line, then the
+    // one who won't back Hale, the undeclared, and Ortiz's.
+    const bar = barGroups(publicGroups(whipCountData))
+    expect(bar.map((g) => `${g.label} ${g.members.length}`)).toEqual([
+      "Backs Hale 3",
+      "Leaning Hale 1",
+      "Open to a change 1",
+      "Won’t back Hale 1",
+      "Undeclared 1",
+      "Backs Ortiz 2",
+    ])
+    // With more undeclared, they fill the left up to the line, so the refusal starts after it.
+    const data = {
+      ...whipCountData,
+      members: whipCountData.members.map((m) =>
+        m.name === "Priya Raman" || m.name === "Ana Whitfield"
+          ? { ...m, stance: "undeclared" as const, candidate: undefined }
+          : m,
+      ),
+    }
+    const places = barGroups(publicGroups(data)).flatMap((g) => g.members.map(() => g.stance))
+    expect(places.indexOf("opposes")).toBe(majorityOf(places.length))
   })
 
   it("forecasts a candidate's count if those who refused their rival hold to it", () => {
@@ -282,8 +305,8 @@ describe("the public count", () => {
       "Backs Hale 2",
       "Undeclared 1",
       "Open to a change 1",
-      "Won’t back Hale 1",
       "Backs Reyes 1",
+      "Won’t back Hale 1",
       "Undeclared 1",
       "Backs Ortiz 2",
     ])

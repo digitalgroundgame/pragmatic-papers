@@ -19,6 +19,9 @@ export function candidateColor(data: WhipCountData, candidate?: WhipCountCandida
 export function groupPaint(data: WhipCountData, group: PublicGroup): Paint {
   if (group.stance === "undeclared") return UNASSIGNED
   if (group.stance === "open") return { color: "var(--muted-foreground)", opacity: 0.45 }
+  // Asked and said nothing: greyer than the open, but a place with a source, unlike the
+  // undeclared's empty one.
+  if (group.stance === "declined") return { color: "var(--muted-foreground)", opacity: 0.25 }
   // Ruling one candidate out is a public position, but not a vote for another, so it is the
   // theme's amber and not a tint of the other candidate's colour, which is kept for those
   // leaning their way.

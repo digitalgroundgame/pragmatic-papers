@@ -5,6 +5,7 @@ import { whipCountData } from "@/stories/fixtures/whipCount"
 
 import {
   assignGroup,
+  barGroups,
   cleanDraft,
   groupsOf,
   hasOutgoing,
@@ -20,6 +21,8 @@ import {
   withOutgoing,
   withoutBlocs,
 } from "../model"
+import { groupPaint } from "../paint"
+import { describeWhipCount } from "../snapshot"
 
 const raw = (): Record<string, unknown> =>
   JSON.parse(JSON.stringify(whipCountData)) as Record<string, unknown>
@@ -151,6 +154,7 @@ describe("stanceLabel", () => {
     expect(stanceLabel("opposes")).toBe("Won’t back a candidate")
     expect(stanceLabel("backs")).toBe("Backs a candidate")
     expect(stanceLabel("open", hale)).toBe("Open to a change")
+    expect(stanceLabel("declined")).toBe("Declined to comment")
     expect(stanceLabel("undeclared")).toBe("Undeclared")
   })
 })
@@ -171,6 +175,54 @@ describe("the public count", () => {
       ["Won’t back Hale", 1],
       ["Backs Ortiz", 2],
     ])
+  })
+
+  it("keeps those who declined to comment apart from the undeclared, between them and the open", () => {
+    const data = {
+      ...whipCountData,
+      members: whipCountData.members.map((m) =>
+        m.name === "Sam Okafor" ? { ...m, stance: "declined" as const } : m,
+      ),
+    }
+    expect(parseWhipCount(data).success).toBe(true)
+    expect(publicGroups(data).map((g) => g.label)).toEqual([
+      "Backs Hale",
+      "Leaning Hale",
+      "Declined to comment",
+      "Open to a change",
+      "Won’t back Hale",
+      "Backs Ortiz",
+    ])
+    expect(groupPaint(data, publicGroups(data)[2]!)).toEqual({
+      color: "var(--muted-foreground)",
+      opacity: 0.25,
+    })
+    expect(describeWhipCount(data)).toBe(
+      `${data.members.length} voters · ${data.members.length - 3} on the record · as of ${data.asOf}`,
+    )
+  })
+
+  it("draws those who declined in the middle of the bar, with the undeclared around them", () => {
+    const names = ["Sam Okafor", "Grace Lindqvist", "Ana Whitfield", "Tom Becker"]
+    const data = {
+      ...whipCountData,
+      members: whipCountData.members.map((m) =>
+        m.name === names[0]
+          ? { ...m, stance: "declined" as const, candidate: undefined }
+          : names.slice(1).includes(m.name)
+            ? { ...m, stance: "undeclared" as const, candidate: undefined }
+            : m,
+      ),
+    }
+    const groups = publicGroups(data)
+    const bar = barGroups(groups)
+    const middle = bar.findIndex((g) => g.stance === "declined")
+    expect(bar[middle - 1]?.stance).toBe("undeclared")
+    expect(bar[middle + 1]?.stance).toBe("undeclared")
+    expect(bar.flatMap((g) => g.members)).toHaveLength(votingMembers(data).length)
+    expect(new Set(bar.map((g) => g.key)).size).toBe(bar.length)
+    // Nobody declining leaves the bar as the groups are.
+    expect(barGroups(publicGroups(whipCountData))).toEqual(publicGroups(whipCountData))
   })
 
   it("puts those who ruled the last candidate out, or lean their way, on the right side", () => {

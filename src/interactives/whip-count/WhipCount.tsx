@@ -28,6 +28,7 @@ import { candidateColor, groupPaint, UNASSIGNED, type Paint } from "./paint"
 
 import {
   assignGroup,
+  barGroups,
   cleanDraft,
   groupsOf,
   hasOutgoing,
@@ -402,7 +403,7 @@ export function WhipCount({
         unclaimed: !side,
       })),
   )
-  const publicVotes: Vote[] = groups.flatMap((g) =>
+  const publicVotes: Vote[] = barGroups(groups).flatMap((g) =>
     g.members.map((member) => ({
       member,
       style: groupStyle(data, g),

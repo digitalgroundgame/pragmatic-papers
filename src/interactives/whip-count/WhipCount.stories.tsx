@@ -39,3 +39,23 @@ export const OutgoingCounted: Story = {
     await expect(canvas.getByText(/10 vote, so 6 wins/)).toBeInTheDocument()
   },
 }
+
+/** One voter declined to comment: drawn in the middle of the bar, between the undeclared. */
+export const DeclinedToComment: Story = {
+  args: {
+    data: {
+      ...whipCountData,
+      members: whipCountData.members.map((m) =>
+        m.name === "Grace Lindqvist"
+          ? { ...m, stance: "declined" as const, basis: "Declined to comment to reporters." }
+          : m.name === "Tom Becker"
+            ? { ...m, stance: "undeclared" as const, candidate: undefined, basis: undefined }
+            : m,
+      ),
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole("img", { name: /Declined to comment: 1/ })).toBeInTheDocument()
+  },
+}

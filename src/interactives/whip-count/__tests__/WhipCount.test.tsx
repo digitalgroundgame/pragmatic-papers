@@ -163,6 +163,29 @@ describe("WhipCount", () => {
     expect(within(list).getAllByRole("listitem")).toHaveLength(1)
   })
 
+  it("draws those who declined to comment between the undeclared, each opening a card", () => {
+    const data = {
+      ...whipCountData,
+      members: whipCountData.members.map((m) =>
+        m.name === "Grace Lindqvist"
+          ? { ...m, stance: "declined" as const, basis: "Declined to comment to reporters." }
+          : m.name === "Tom Becker"
+            ? { ...m, stance: "undeclared" as const, candidate: undefined, basis: undefined }
+            : m,
+      ),
+    }
+    render(<WhipCount title="Who leads?" data={data} storageKey="test" />)
+    const row = document.querySelector<HTMLElement>('[data-vote="Grace Lindqvist"]')!
+    const places = [...row.parentElement!.children]
+    const at = places.indexOf(row)
+    // The two undeclared are empty places on either side of the one who declined.
+    expect(places[at - 1]).not.toHaveAttribute("data-vote")
+    expect(places[at + 1]).not.toHaveAttribute("data-vote")
+    fireEvent.pointerEnter(row, { pointerType: "mouse" })
+    expect(document.querySelector("[data-vote-card]")).toHaveTextContent("Declined to comment")
+    expect(screen.getByRole("img", { name: /Declined to comment: 1/ })).toBeInTheDocument()
+  })
+
   it("says whose pick a vote is in the reader's count, and leaves the unassigned empty", () => {
     renderDrafting()
     expect(document.querySelector('[data-vote="Sam Okafor"]')).not.toBeInTheDocument()

@@ -11,10 +11,11 @@ import { failure, success, type Result } from "@/utilities/result"
 
 export const WHIP_COUNT_SCHEMA = "pragmatic-papers/whip-count@1"
 
-export const STANCES = ["backs", "leans", "opposes", "open", "undeclared"] as const
+export const STANCES = ["backs", "leans", "opposes", "open", "declined", "undeclared"] as const
 /**
  * What a voter has said. `backs`, `leans` and `opposes` name a candidate (for `opposes`, the
- * one they ruled out); `open` is on the record as wanting a change without ruling anyone out.
+ * one they ruled out); `open` is on the record as wanting a change without ruling anyone out;
+ * `declined` was asked and declined to say, where `undeclared` has said nothing we know of.
  */
 export type Stance = (typeof STANCES)[number]
 
@@ -47,7 +48,7 @@ export interface WhipCountMember {
    */
   tags?: string[]
   stance: Stance
-  /** The candidate `stance` is about; absent for `open` and `undeclared`. */
+  /** The candidate `stance` is about; absent for `open`, `declined` and `undeclared`. */
   candidate?: string
   /** The statement behind the stance: a quote or a close paraphrase. */
   basis?: string
@@ -276,6 +277,8 @@ export function stanceLabel(stance: Stance, candidate?: WhipCountCandidate): str
       return `Won’t back ${candidate?.short ?? "a candidate"}`
     case "open":
       return "Open to a change"
+    case "declined":
+      return "Declined to comment"
     default:
       return "Undeclared"
   }
@@ -301,9 +304,29 @@ function lean(member: WhipCountMember, data: WhipCountData): number {
       return 0.5 - toward * 0.25
     case "open":
       return 0.52
+    case "declined":
+      return 0.51
     default:
       return 0.5
   }
+}
+
+/**
+ * The groups as the bar draws them: those who declined to comment sit in the middle, with the
+ * undeclared split around them, half on each side (the extra one on the left). Without anyone
+ * declining, the groups stay as they are.
+ */
+export function barGroups(groups: PublicGroup[]): PublicGroup[] {
+  const declined = groups.find((g) => g.stance === "declined")
+  const undeclared = groups.find((g) => g.stance === "undeclared")
+  if (!declined || !undeclared) return groups
+  const half = Math.ceil(undeclared.members.length / 2)
+  const halves = [
+    { ...undeclared, members: undeclared.members.slice(0, half) },
+    declined,
+    { ...undeclared, key: `${undeclared.key}:after`, members: undeclared.members.slice(half) },
+  ].filter((g) => g.members.length > 0)
+  return groups.flatMap((g) => (g === undeclared ? halves : g === declined ? [] : [g]))
 }
 
 /** The voting members grouped by what they have said, ordered from the first candidate's side. */

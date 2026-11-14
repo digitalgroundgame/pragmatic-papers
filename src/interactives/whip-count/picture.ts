@@ -1,7 +1,7 @@
 import { escapeHTML } from "@/utilities/feedHTML"
 import { formatLongDate } from "@/utilities/formatDate"
 
-import { majorityOf, publicGroups, votingMembers, type WhipCountData } from "./model"
+import { barGroups, majorityOf, publicGroups, votingMembers, type WhipCountData } from "./model"
 import { candidateColor, groupPaint, type Paint } from "./paint"
 
 /** The colors a picture is drawn in: the theme the page is showing, or the light theme. */
@@ -132,7 +132,7 @@ export function drawWhipCountSVG({
   const gap = 4
   const width = (inner - gap * (voters.length - 1)) / voters.length
   let index = 0
-  for (const group of groups) {
+  for (const group of barGroups(groups)) {
     for (let i = 0; i < group.members.length; i++, index++) {
       parts.push(
         `<rect x="${round(PADDING + index * (width + gap))}" y="${y}" width="${round(width)}" height="56" rx="3" ${fill(groupPaint(data, group))}/>`,

@@ -2,7 +2,7 @@ import React from "react"
 
 import { formatLongDate } from "@/utilities/formatDate"
 
-import { majorityOf, publicGroups, votingMembers, type WhipCountData } from "./model"
+import { barGroups, majorityOf, publicGroups, votingMembers, type WhipCountData } from "./model"
 import { candidateColor, groupPaint } from "./paint"
 import { lightColor } from "./picture"
 import { asOpened, countdownLine, headToHead, type CandidateCount } from "./seo"
@@ -76,7 +76,7 @@ export function WhipCountCard({ title, data, now }: Props): React.ReactElement {
   const majority = majorityOf(voters.length)
   const [first, second] = headToHead(data)
   const countdown = countdownLine(data, now)
-  const ticks = groups.flatMap((group) =>
+  const ticks = barGroups(groups).flatMap((group) =>
     group.members.map((member) => ({ key: member.name, paint: groupPaint(shown, group) })),
   )
 

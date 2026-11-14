@@ -288,6 +288,7 @@ function Total({
   detail,
   color,
   forecast,
+  inward = "right",
 }: {
   value: number
   label: string
@@ -295,10 +296,17 @@ function Total({
   color: string
   /** What they'd have if those who refused their rival hold to it, in lighter type. */
   forecast?: RefusalForecast | null
+  /** Which side of the count the forecast sits on: toward the middle of the row. */
+  inward?: "left" | "right"
 }): React.ReactNode {
   return (
     <div className="text-center">
-      <p className="flex items-baseline justify-center gap-2 font-sans leading-none font-bold tracking-tight tabular-nums">
+      <p
+        className={cn(
+          "flex items-baseline justify-center gap-2 font-sans leading-none font-bold tracking-tight tabular-nums",
+          inward === "left" && "flex-row-reverse",
+        )}
+      >
         <span className="text-7xl md:text-8xl">{value}</span>
         {forecast && (
           <span
@@ -468,9 +476,10 @@ export function WhipCount({
         )}
 
         <div className="mt-8 flex justify-center gap-10 sm:gap-20 md:gap-28">
-          {data.candidates.map((c) => (
+          {data.candidates.map((c, i) => (
             <Total
               key={c.id}
+              inward={i === 0 ? "right" : "left"}
               value={count("backs", c)}
               label={`Back ${c.short}`}
               detail={

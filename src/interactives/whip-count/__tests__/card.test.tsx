@@ -24,6 +24,11 @@ describe("WhipCountCard", () => {
     expect(container).toHaveTextContent(/Marion Hale\s*3\s*backing, plus 1 leaning/)
     expect(container).toHaveTextContent(/vs\s*Daniel Ortiz\s*2\s*3\s*publicly backing/)
     expect(container).toHaveTextContent("3 if the 1 who won’t back Hale hold to it")
+    // The forecast sits inward of the right-hand count.
+    const forecast = [...container.querySelectorAll("div")].find(
+      (d) => d.textContent === "3" && d.style.fontSize === "64px",
+    )!
+    expect(forecast.parentElement).toHaveStyle({ flexDirection: "row-reverse" })
     expect(container).toHaveTextContent("5 of 9 votes to win")
     expect(container).toHaveTextContent("17 days to the vote")
   })

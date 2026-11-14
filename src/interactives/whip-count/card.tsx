@@ -58,6 +58,8 @@ function Side({
           fontSize: 132,
           fontWeight: 700,
           alignItems: "baseline",
+          // The forecast sits inward of the count, so the big numbers hold the outer edges.
+          flexDirection: align === "flex-end" ? "row-reverse" : "row",
           lineHeight: 1,
           marginTop: 6,
           color: INK,
@@ -65,7 +67,7 @@ function Side({
       >
         <div style={{ display: "flex" }}>{count.backs}</div>
         {count.forecast && (
-          <div style={{ display: "flex", fontSize: 64, color: FORECAST, marginLeft: 16 }}>
+          <div style={{ display: "flex", fontSize: 64, color: FORECAST, margin: "0 16px" }}>
             {count.forecast.total}
           </div>
         )}

@@ -35,6 +35,8 @@ describe("WhipCount", () => {
     expect(forecasts).toHaveLength(1)
     expect(forecasts[0]).toHaveTextContent("3, or 3 if the 1 who won’t back Hale hold to it")
     expect(screen.getByText("3 if the 1 who won’t back Hale hold to it")).toBeInTheDocument()
+    // The second candidate's forecast sits inward, to the left of their count.
+    expect(forecasts[0]!.parentElement).toHaveClass("flex-row-reverse")
   })
 
   it("keeps the reader's count out of the way until they ask for it", () => {

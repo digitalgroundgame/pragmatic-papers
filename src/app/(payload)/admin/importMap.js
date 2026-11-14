@@ -36,6 +36,7 @@ import { MetaImageComponent as MetaImageComponent_a8a977ebc872c5d5ea7ee689724c08
 import { MetaDescriptionComponent as MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { PreviewComponent as PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { ExtractNarrationButton as ExtractNarrationButton_100e898a8737273f0d647b5ef7ea8c8c } from '@/collections/Articles/components/ExtractNarrationButton'
+import { ArticleStats as ArticleStats_69534125f0e71f5767ae2d1bf6803aca } from '@/collections/Articles/components/ArticleStats'
 import { SlugField as SlugField_2b8867833a34864a02ddf429b0728a40 } from '@payloadcms/next/client'
 import { TableOfContentsCheckbox as TableOfContentsCheckbox_679ff03e93c2593eb9331b15a9a3e34d } from '@/components/TableOfContents/admin'
 import { SubstackImportUrl as SubstackImportUrl_1c3253008a5f10553f86efb4b10e0c79 } from '@/collections/Articles/components/SubstackImportUrl'
@@ -122,6 +123,7 @@ export const importMap = {
   "@payloadcms/plugin-seo/client#MetaDescriptionComponent": MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@payloadcms/plugin-seo/client#PreviewComponent": PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@/collections/Articles/components/ExtractNarrationButton#ExtractNarrationButton": ExtractNarrationButton_100e898a8737273f0d647b5ef7ea8c8c,
+  "@/collections/Articles/components/ArticleStats#ArticleStats": ArticleStats_69534125f0e71f5767ae2d1bf6803aca,
   "@payloadcms/next/client#SlugField": SlugField_2b8867833a34864a02ddf429b0728a40,
   "@/components/TableOfContents/admin#TableOfContentsCheckbox": TableOfContentsCheckbox_679ff03e93c2593eb9331b15a9a3e34d,
   "@/collections/Articles/components/SubstackImportUrl#SubstackImportUrl": SubstackImportUrl_1c3253008a5f10553f86efb4b10e0c79,

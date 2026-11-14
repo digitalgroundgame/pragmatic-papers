@@ -5,6 +5,9 @@ import { isolatedDocs } from "@/stories/isolatedDocs"
 
 import { ReadingBeacon } from "."
 
+/** The views the beacon counted, by URL. */
+const views: string[] = []
+
 /**
  * Signs the browser in (the cookie sign-in sets for the page) when `signedIn`, and answers
  * `/api/reading` with 204. Returns the fetch spy for the story to check.
@@ -20,8 +23,18 @@ function setUp(signedIn: boolean) {
     const fetchSpy = spyOn(window, "fetch").mockImplementation(
       async () => new Response(null, { status: 204 }),
     )
+    const original = navigator.sendBeacon
+    views.length = 0
+    Object.defineProperty(navigator, "sendBeacon", {
+      configurable: true,
+      value: (url: string | URL) => {
+        views.push(String(url))
+        return true
+      },
+    })
     return () => {
       fetchSpy.mockRestore()
+      Object.defineProperty(navigator, "sendBeacon", { value: original, configurable: true })
       document.cookie = "pp-signed-in=; path=/; max-age=0"
     }
   }
@@ -49,11 +62,12 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** On every page: a signed-in reader's visit, once a day. */
+/** On every page: a signed-in reader's visit, once a day. No article, so no view. */
 export const Visit: Story = {
   beforeEach: setUp(true),
   play: async () => {
     await waitFor(() => expect(reports()).toEqual([{ day: expect.any(String) }]))
+    await expect(views).toEqual([])
   },
 }
 
@@ -63,14 +77,16 @@ export const ArticleRead: Story = {
   beforeEach: setUp(true),
   play: async () => {
     await waitFor(() => expect(reports()).toEqual([{ day: expect.any(String), article: 10 }]))
+    await expect(views).toEqual(["/api/articles/10/view"])
   },
 }
 
-/** Nobody signed in: nothing is sent. */
+/** Nobody signed in: only the article's view is counted, with no cookie and nothing else. */
 export const SignedOut: Story = {
   args: { articleId: 10 },
   beforeEach: setUp(false),
   play: async () => {
+    await waitFor(() => expect(views).toEqual(["/api/articles/10/view"]))
     await new Promise((resolve) => setTimeout(resolve, 100))
     await expect(reports()).toEqual([])
   },

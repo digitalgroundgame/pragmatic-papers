@@ -54,7 +54,11 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
             same 16px on its right, and `mr-auto` pushes the player away from the buttons
             when the row has room to spare. */}
         <div data-slot="article-meta-controls" className="flex grow items-center justify-end">
-          <NarrationPlayer narration={narration} className="mr-auto shrink-0" />
+          <NarrationPlayer
+            narration={narration}
+            articleSlug={article.slug}
+            className="mr-auto shrink-0"
+          />
           {showTableOfContents && <TableOfContentsButton content={content} />}
           {showComments && <CommentsLink />}
           <ReadOnSubstack article={article} variant="icon" />

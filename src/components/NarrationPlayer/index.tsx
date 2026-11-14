@@ -4,6 +4,8 @@ import React from "react"
 import { isAudioMedia, Media } from "@/components/Media"
 import { isResolved, type Relationship } from "@/utilities/relationships"
 
+import { NARRATION_PLAY_EVENT } from "./events"
+
 /**
  * The narrator credit lives in the player's settings panel rather than on its own
  * line, so the whole player fits on one row. It stays a link to the narrator's
@@ -34,16 +36,26 @@ function narratorCredit(narrator: Relationship<User>): React.ReactNode {
 
 interface NarrationPlayerProps {
   narration: number | MediaType | null | undefined
+  /** The narrated article's slug, sent with the play event as `item_id`, as shares are. */
+  articleSlug?: string | null
   className?: string
 }
 
-export function NarrationPlayer({ narration, className }: NarrationPlayerProps): React.ReactNode {
+export function NarrationPlayer({
+  narration,
+  articleSlug,
+  className,
+}: NarrationPlayerProps): React.ReactNode {
   if (!isAudioMedia(narration)) return null
   return (
     <Media
       media={narration}
       variant="collapsible"
       extraSettings={narratorCredit(narration.narrator)}
+      playEvent={{
+        name: NARRATION_PLAY_EVENT,
+        params: { content_type: "article", ...(articleSlug && { item_id: articleSlug }) },
+      }}
       className={className}
     />
   )

@@ -288,49 +288,34 @@ export function stanceLabel(stance: Stance, candidate?: WhipCountCandidate): str
 
 /**
  * Which way a stance pulls on the bar: toward the first candidate (-1), toward the second (1),
- * or neither (0). Only the first two candidates have a side. Everything that doesn't count
- * toward one of them or lean their way is in the middle: the undeclared, those who declined to
+ * or neither (0). Only backing or leaning to one of the first two candidates has a side.
+ * Everything else is undecided and sits in the middle: the undeclared, those who declined to
  * comment (who may still be negotiating, so the bar doesn't read them as leaning), those open
- * to a change, and anyone backing, leaning to or ruling out a third candidate.
+ * to a change, those who ruled a candidate out without naming who they would back, and anyone
+ * backing or leaning to a third candidate.
  */
 function sideOf(member: WhipCountMember, data: WhipCountData): -1 | 0 | 1 {
+  if (member.stance !== "backs" && member.stance !== "leans") return 0
   const at = data.candidates.slice(0, 2).findIndex((c) => c.id === member.candidate)
-  if (at < 0) return 0
-  const toward = at === 0 ? -1 : 1
-  switch (member.stance) {
-    case "backs":
-    case "leans":
-      return toward
-    case "opposes":
-      // Ruling a candidate out moves a voter away from that candidate's side.
-      return toward === -1 ? 1 : -1
-    default:
-      return 0
-  }
+  return at < 0 ? 0 : at === 0 ? -1 : 1
 }
+
+const MIDDLE_ORDER: Stance[] = ["undeclared", "declined", "open", "opposes"]
 
 /**
  * Where a group sits between the first candidate (0) and the second (1): their backers at the
- * ends, leaners next, then those who ruled the other side out, and the middle (`sideOf`) at
- * 0.5, the undeclared first, then those who declined, those open to a change, and any other
+ * ends and leaners next, and the middle (`sideOf`) at 0.5, in `MIDDLE_ORDER`, then any other
  * candidate's groups in the order of the list.
  */
 function lean(member: WhipCountMember, data: WhipCountData): number {
   const side = sideOf(member, data)
   if (side === 0) {
     const at = data.candidates.findIndex((c) => c.id === member.candidate)
-    const order = ["undeclared", "declined", "open"].indexOf(member.stance)
-    return 0.5 + (order >= 0 ? order : 3 + at) * 0.001
+    const order = MIDDLE_ORDER.indexOf(member.stance)
+    return 0.5 + (member.stance === "opposes" || order < 0 ? 4 + at : order) * 0.001
   }
   const end = side === -1 ? 0 : 1
-  switch (member.stance) {
-    case "backs":
-      return end
-    case "leans":
-      return end - side * 0.1
-    default:
-      return end - side * 0.25
-  }
+  return member.stance === "backs" ? end : end - side * 0.1
 }
 
 /**

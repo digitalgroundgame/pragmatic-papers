@@ -163,7 +163,7 @@ describe("WhipCount", () => {
     expect(within(list).getAllByRole("listitem")).toHaveLength(1)
   })
 
-  it("draws those who declined to comment between the undeclared, each opening a card", () => {
+  it("draws those who declined to comment in the middle, between the undeclared, each opening a card", () => {
     const data = {
       ...whipCountData,
       members: whipCountData.members.map((m) =>
@@ -176,11 +176,11 @@ describe("WhipCount", () => {
     }
     render(<WhipCount title="Who leads?" data={data} storageKey="test" />)
     const row = document.querySelector<HTMLElement>('[data-vote="Grace Lindqvist"]')!
-    const places = [...row.parentElement!.children]
-    const at = places.indexOf(row)
-    // The two undeclared are empty places on either side of the one who declined.
-    expect(places[at - 1]).not.toHaveAttribute("data-vote")
-    expect(places[at + 1]).not.toHaveAttribute("data-vote")
+    const places = [...row.parentElement!.children].map((p) => p.getAttribute("data-vote"))
+    // The middle (one who declined, one who ruled Hale out) between the two undeclared's
+    // empty places.
+    const at = places.indexOf("Grace Lindqvist")
+    expect(places.slice(at - 1, at + 3)).toEqual([null, "Grace Lindqvist", "Luis Navarro", null])
     fireEvent.pointerEnter(row, { pointerType: "mouse" })
     expect(document.querySelector("[data-vote-card]")).toHaveTextContent("Declined to comment")
     expect(screen.getByRole("img", { name: /Declined to comment: 1/ })).toBeInTheDocument()

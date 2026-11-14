@@ -216,9 +216,15 @@ describe("the public count", () => {
     }
     const groups = publicGroups(data)
     const bar = barGroups(groups)
-    const middle = bar.findIndex((g) => g.stance === "declined")
-    expect(bar[middle - 1]?.stance).toBe("undeclared")
-    expect(bar[middle + 1]?.stance).toBe("undeclared")
+    // The undecided (here one who declined and one who ruled Hale out) between the undeclared.
+    expect(bar.map((g) => `${g.stance} ${g.members.length}`)).toEqual([
+      "backs 2",
+      "undeclared 2",
+      "declined 1",
+      "opposes 1",
+      "undeclared 1",
+      "backs 2",
+    ])
     expect(bar.flatMap((g) => g.members)).toHaveLength(votingMembers(data).length)
     expect(new Set(bar.map((g) => g.key)).size).toBe(bar.length)
     // One undeclared voter beside the open stays one place, so the bar is as the groups are.
@@ -243,24 +249,24 @@ describe("the public count", () => {
       ["Backs Hale", -1],
       ["Undeclared", 0],
       ["Open to a change", 0],
+      ["Won’t back Hale", 0],
       ["Backs Reyes", 0],
-      ["Won’t back Hale", 1],
       ["Backs Ortiz", 1],
     ])
     expect(barGroups(groups).map((g) => `${g.label} ${g.members.length}`)).toEqual([
       "Backs Hale 2",
       "Undeclared 1",
       "Open to a change 1",
+      "Won’t back Hale 1",
       "Backs Reyes 1",
       "Undeclared 1",
-      "Won’t back Hale 1",
       "Backs Ortiz 2",
     ])
     expect(candidateColor(data, third)).toBe("var(--foreground)")
     expect(candidateColor(data, whipCountData.candidates[1])).toBe("var(--brand-fill)")
   })
 
-  it("puts those who ruled the last candidate out, or lean their way, on the right side", () => {
+  it("puts those who ruled a candidate out in the middle, as undecided, and leaners by their candidate", () => {
     const data = {
       ...whipCountData,
       members: whipCountData.members.map((m) =>
@@ -274,11 +280,12 @@ describe("the public count", () => {
     expect(publicGroups(data).map((g) => g.label)).toEqual([
       "Backs Hale",
       "Leaning Hale",
-      "Won’t back Ortiz",
       "Won’t back Hale",
+      "Won’t back Ortiz",
       "Leaning Ortiz",
       "Backs Ortiz",
     ])
+    expect(publicGroups(data).map((g) => g.side)).toEqual([-1, -1, 0, 0, 1, 1])
     expect(hasOutgoing(data)).toBe(true)
     expect(hasOutgoing({ ...data, members: data.members.slice(0, 3) })).toBe(false)
   })

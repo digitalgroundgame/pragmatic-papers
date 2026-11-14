@@ -206,6 +206,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "content_updated_at": {
+          "name": "content_updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "show_table_of_contents": {
           "name": "show_table_of_contents",
           "type": "boolean",
@@ -231,6 +237,14 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
+        },
+        "commenting": {
+          "name": "commenting",
+          "type": "enum_articles_commenting",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'open'"
         },
         "updated_at": {
           "name": "updated_at",
@@ -880,6 +894,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "version_content_updated_at": {
+          "name": "version_content_updated_at",
+          "type": "timestamp(3) with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "version_show_table_of_contents": {
           "name": "version_show_table_of_contents",
           "type": "boolean",
@@ -905,6 +925,14 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
+        },
+        "version_commenting": {
+          "name": "version_commenting",
+          "type": "enum__articles_v_version_commenting",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'open'"
         },
         "version_updated_at": {
           "name": "version_updated_at",
@@ -8012,6 +8040,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "methodology": {
+          "name": "methodology",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
         "feed_enabled": {
           "name": "feed_enabled",
           "type": "boolean",
@@ -8544,6 +8578,12 @@
         "version_intro": {
           "name": "version_intro",
           "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version_methodology": {
+          "name": "version_methodology",
+          "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
@@ -10571,6 +10611,12 @@
         "avatar_url": {
           "name": "avatar_url",
           "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_commented_at": {
+          "name": "first_commented_at",
+          "type": "timestamp(3) with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -15054,6 +15100,12 @@
           "notNull": false,
           "default": true
         },
+        "key": {
+          "name": "key",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp(3) with time zone",
@@ -15081,6 +15133,21 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "achievements_key_idx": {
+          "name": "achievements_key_idx",
+          "columns": [
+            {
+              "expression": "key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -19450,6 +19517,11 @@
       "schema": "public",
       "values": ["link", "default", "outline", "ghost", "branded"]
     },
+    "public.enum_articles_commenting": {
+      "name": "enum_articles_commenting",
+      "schema": "public",
+      "values": ["open", "locked", "off"]
+    },
     "public.enum_articles_status": {
       "name": "enum_articles_status",
       "schema": "public",
@@ -19464,6 +19536,11 @@
       "name": "enum__articles_v_version_footnotes_link_variant",
       "schema": "public",
       "values": ["link", "default", "outline", "ghost", "branded"]
+    },
+    "public.enum__articles_v_version_commenting": {
+      "name": "enum__articles_v_version_commenting",
+      "schema": "public",
+      "values": ["open", "locked", "off"]
     },
     "public.enum__articles_v_version_status": {
       "name": "enum__articles_v_version_status",
@@ -19685,7 +19762,7 @@
     "public.enum_interactives_profile": {
       "name": "enum_interactives_profile",
       "schema": "public",
-      "values": ["federal-courts"]
+      "values": ["federal-courts", "whip-count"]
     },
     "public.enum_interactives_status": {
       "name": "enum_interactives_status",
@@ -19705,7 +19782,7 @@
     "public.enum__interactives_v_version_profile": {
       "name": "enum__interactives_v_version_profile",
       "schema": "public",
-      "values": ["federal-courts"]
+      "values": ["federal-courts", "whip-count"]
     },
     "public.enum__interactives_v_version_status": {
       "name": "enum__interactives_v_version_status",
@@ -19905,6 +19982,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "03f6c612-8eb5-49fa-8438-d6e63a4b1a3c",
+  "id": "ef7b2bf6-4df9-4230-8370-86c428df8ab1",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

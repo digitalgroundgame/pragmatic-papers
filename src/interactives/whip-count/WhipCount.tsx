@@ -34,6 +34,8 @@ import {
   hasOutgoing,
   majorityOf,
   publicGroups,
+  refusalForecast,
+  refusalForecastLine,
   stanceLabel,
   startingDraft,
   tallyDraft,
@@ -42,6 +44,7 @@ import {
   withoutBlocs,
   type Draft,
   type PublicGroup,
+  type RefusalForecast,
   type WhipCountCandidate,
   type WhipCountData,
   type WhipCountMember,
@@ -284,22 +287,40 @@ function Total({
   label,
   detail,
   color,
+  forecast,
 }: {
   value: number
   label: string
   detail: string
   color: string
+  /** What they'd have if those who refused their rival hold to it, in lighter type. */
+  forecast?: RefusalForecast | null
 }): React.ReactNode {
   return (
     <div className="text-center">
-      <p className="font-sans text-7xl leading-none font-bold tracking-tight tabular-nums md:text-8xl">
-        {value}
+      <p className="flex items-baseline justify-center gap-2 font-sans leading-none font-bold tracking-tight tabular-nums">
+        <span className="text-7xl md:text-8xl">{value}</span>
+        {forecast && (
+          <span
+            data-whip-count-forecast=""
+            className="text-muted-foreground/70 text-3xl md:text-4xl"
+            title={refusalForecastLine(forecast)}
+          >
+            <span aria-hidden>{forecast.total}</span>
+            <span className="sr-only">{`, or ${refusalForecastLine(forecast)}`}</span>
+          </span>
+        )}
       </p>
       <p className="mt-3 flex items-center justify-center gap-1.5 font-medium">
         <span aria-hidden className="size-3 rounded-xs" style={{ background: color }} />
         {label}
       </p>
       <p className="text-muted-foreground mt-0.5 text-sm">{detail}</p>
+      {forecast && (
+        <p aria-hidden className="text-muted-foreground/80 mt-0.5 text-xs">
+          {refusalForecastLine(forecast)}
+        </p>
+      )}
     </div>
   )
 }
@@ -456,6 +477,7 @@ export function WhipCount({
                 count("leans", c) > 0 ? `plus ${count("leans", c)} leaning` : "publicly committed"
               }
               color={candidateColor(data, c)}
+              forecast={refusalForecast(data, c)}
             />
           ))}
         </div>

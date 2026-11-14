@@ -27,7 +27,8 @@ describe("whip count SEO", () => {
         m.seat === "outgoing" ? { ...m, stance: "backs" as const, candidate: "hale" } : m,
       ),
     }
-    expect(headToHead(counted)[0]).toMatchObject({ backs: 3, leans: 1 })
+    expect(headToHead(counted)[0]).toMatchObject({ backs: 3, leans: 1, forecast: null })
+    expect(headToHead(counted)[1]?.forecast).toMatchObject({ refusals: 1, total: 3 })
   })
 
   it("counts the days to the vote, a part day as one, and stops at the vote", () => {

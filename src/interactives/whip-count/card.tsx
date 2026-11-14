@@ -3,7 +3,14 @@ import React from "react"
 import { LogomarkIcon } from "@/components/Logo/icons/LogomarkIcon"
 import { formatLongDate } from "@/utilities/formatDate"
 
-import { barGroups, majorityOf, publicGroups, votingMembers, type WhipCountData } from "./model"
+import {
+  barGroups,
+  majorityOf,
+  publicGroups,
+  refusalForecastLine,
+  votingMembers,
+  type WhipCountData,
+} from "./model"
 import { candidateColor, groupPaint } from "./paint"
 import { lightColor } from "./picture"
 import { asOpened, countdownLine, headToHead, type CandidateCount } from "./seo"
@@ -18,6 +25,8 @@ const BRAND_TEXT = "#e0330f"
 const BRAND_FILL = "#e0330f"
 const INK = "#171717"
 const QUIET = "#525252"
+// The forecast, lighter than the count it stands beside.
+const FORECAST = "#8a8a8a"
 const PAD = 56
 /** The wordmark is 100×12, so this height draws it 300 wide. */
 const LOGO_HEIGHT = 36
@@ -48,16 +57,27 @@ function Side({
           display: "flex",
           fontSize: 132,
           fontWeight: 700,
+          alignItems: "baseline",
           lineHeight: 1,
           marginTop: 6,
           color: INK,
         }}
       >
-        {count.backs}
+        <div style={{ display: "flex" }}>{count.backs}</div>
+        {count.forecast && (
+          <div style={{ display: "flex", fontSize: 64, color: FORECAST, marginLeft: 16 }}>
+            {count.forecast.total}
+          </div>
+        )}
       </div>
       <div style={{ display: "flex", fontSize: 24, color: QUIET, marginTop: 6 }}>
         {count.leans > 0 ? `backing, plus ${count.leans} leaning` : "publicly backing"}
       </div>
+      {count.forecast && (
+        <div style={{ display: "flex", fontSize: 20, color: FORECAST, marginTop: 4 }}>
+          {refusalForecastLine(count.forecast)}
+        </div>
+      )}
     </div>
   )
 }
@@ -125,7 +145,7 @@ export function WhipCountCard({ title, data, now }: Props): React.ReactElement {
       </div>
 
       {first && (
-        <div style={{ display: "flex", alignItems: "center", marginTop: 26 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", marginTop: 26 }}>
           <Side
             count={first}
             color={lightColor(candidateColor(data, first.candidate))}
@@ -138,7 +158,7 @@ export function WhipCountCard({ title, data, now }: Props): React.ReactElement {
               fontWeight: 700,
               color: BRAND_TEXT,
               padding: "0 24px",
-              marginTop: 40,
+              marginTop: 96,
             }}
           >
             vs

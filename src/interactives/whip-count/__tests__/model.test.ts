@@ -14,12 +14,15 @@ import {
   nextUpdate,
   parseWhipCount,
   publicGroups,
+  refusalForecast,
+  refusalForecastLine,
   stanceLabel,
   startingDraft,
   tallyDraft,
   votingMembers,
   withOutgoing,
   withoutBlocs,
+  type WhipCountCandidate,
 } from "../model"
 import { candidateColor, groupPaint } from "../paint"
 import { describeWhipCount } from "../snapshot"
@@ -231,6 +234,24 @@ describe("the public count", () => {
     expect(barGroups(publicGroups(whipCountData))).toEqual(publicGroups(whipCountData))
   })
 
+  it("forecasts a candidate's count if those who refused their rival hold to it", () => {
+    const [hale, ortiz] = whipCountData.candidates as [WhipCountCandidate, WhipCountCandidate]
+    const forecast = refusalForecast(whipCountData, ortiz)
+    expect(forecast).toEqual({ refused: hale, refusals: 1, total: 3 })
+    expect(refusalForecastLine(forecast!)).toBe("3 if the 1 who won’t back Hale hold to it")
+    // Nobody refused Ortiz.
+    expect(refusalForecast(whipCountData, hale)).toBeNull()
+    // With a third candidate, refusing Hale says nothing about who they'd pick.
+    const three = {
+      ...whipCountData,
+      candidates: [
+        ...whipCountData.candidates,
+        { id: "reyes", name: "Lena Reyes", short: "Reyes" },
+      ],
+    }
+    expect(refusalForecast(three, ortiz)).toBeNull()
+  })
+
   it("puts a third candidate's groups in the middle with the undecided, not on a side", () => {
     const third = { id: "reyes", name: "Lena Reyes", short: "Reyes" }
     const data = {
@@ -263,7 +284,7 @@ describe("the public count", () => {
       "Backs Ortiz 2",
     ])
     expect(candidateColor(data, third)).toBe("var(--foreground)")
-    expect(candidateColor(data, whipCountData.candidates[1])).toBe("var(--brand-fill)")
+    expect(candidateColor(data, whipCountData.candidates[1])).toBe("#0d9488")
   })
 
   it("puts those who ruled a candidate out in the middle, as undecided, and leaners by their candidate", () => {

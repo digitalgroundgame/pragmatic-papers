@@ -361,6 +361,40 @@ export function publicGroups(data: WhipCountData): PublicGroup[] {
   return [...groups.values()].sort((a, b) => a.at - b.at).map(({ at: _at, ...group }) => group)
 }
 
+/** What a candidate would have if those who refused their rival hold to it. */
+export interface RefusalForecast {
+  /** The candidate they refused. */
+  refused: WhipCountCandidate
+  /** How many refused them. */
+  refusals: number
+  /** The candidate's public backers plus those refusals. */
+  total: number
+}
+
+/**
+ * A candidate's forecast if everyone who ruled out their rival follows through. Only with two
+ * candidates: with three, refusing one says nothing about which of the others they'd pick.
+ * Null when nobody has refused the rival.
+ */
+export function refusalForecast(
+  data: WhipCountData,
+  candidate: WhipCountCandidate,
+): RefusalForecast | null {
+  if (data.candidates.length !== 2) return null
+  const refused = data.candidates.find((c) => c.id !== candidate.id)
+  if (!refused) return null
+  const groups = publicGroups(data)
+  const size = (stance: Stance, of: WhipCountCandidate): number =>
+    groups.find((g) => g.stance === stance && g.candidate?.id === of.id)?.members.length ?? 0
+  const refusals = size("opposes", refused)
+  if (refusals === 0) return null
+  return { refused, refusals, total: size("backs", candidate) + refusals }
+}
+
+/** The forecast in words: "10 if the 5 who won't back Schumer hold to it". */
+export const refusalForecastLine = (forecast: RefusalForecast): string =>
+  `${forecast.total} if the ${forecast.refusals} who won’t back ${forecast.refused.short} hold to it`
+
 /** A reader's own guess: a candidate id for each member they have assigned, by member name. */
 export type Draft = Record<string, string>
 

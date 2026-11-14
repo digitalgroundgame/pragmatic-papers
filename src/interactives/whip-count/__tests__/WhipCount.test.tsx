@@ -29,6 +29,14 @@ describe("WhipCount", () => {
     expect(screen.getByRole("img", { name: /Backs Hale: 3, Leaning Hale: 1/ })).toBeInTheDocument()
   })
 
+  it("shows beside a total, lighter, what it would be if those refusing the rival hold to it", () => {
+    render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
+    const forecasts = document.querySelectorAll("[data-whip-count-forecast]")
+    expect(forecasts).toHaveLength(1)
+    expect(forecasts[0]).toHaveTextContent("3, or 3 if the 1 who won’t back Hale hold to it")
+    expect(screen.getByText("3 if the 1 who won’t back Hale hold to it")).toBeInTheDocument()
+  })
+
   it("keeps the reader's count out of the way until they ask for it", () => {
     render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
     expect(result()).not.toBeInTheDocument()

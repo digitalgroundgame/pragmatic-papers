@@ -9,11 +9,17 @@ export interface Paint {
 
 export const UNASSIGNED: Paint = { color: "var(--border)", opacity: 1 }
 
-/** The first candidate is drawn in blue, the second in the brand colour, any other in ink. */
+/**
+ * The second candidate's colour: teal, which no theme token offers. Never the brand orange,
+ * which would read as the site endorsing them.
+ */
+export const SECOND_CANDIDATE = "#0d9488"
+
+/** The first candidate is drawn in blue, the second in teal, any other in ink. */
 export function candidateColor(data: WhipCountData, candidate?: WhipCountCandidate): string {
   if (!candidate) return "var(--muted-foreground)"
   if (data.candidates[0]?.id === candidate.id) return "var(--chart-3)"
-  return data.candidates[1]?.id === candidate.id ? "var(--brand-fill)" : "var(--foreground)"
+  return data.candidates[1]?.id === candidate.id ? SECOND_CANDIDATE : "var(--foreground)"
 }
 
 /** How a public position is drawn, on the page and in the downloaded picture. */

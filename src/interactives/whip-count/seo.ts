@@ -1,4 +1,11 @@
-import { publicGroups, withOutgoing, type WhipCountCandidate, type WhipCountData } from "./model"
+import {
+  publicGroups,
+  refusalForecast,
+  withOutgoing,
+  type RefusalForecast,
+  type WhipCountCandidate,
+  type WhipCountData,
+} from "./model"
 
 /**
  * The count as the page opens on it: outgoing members aren't counted until a reader asks, so a
@@ -11,17 +18,21 @@ export interface CandidateCount {
   candidate: WhipCountCandidate
   backs: number
   leans: number
+  /** What they'd have if those who refused their rival hold to it (`refusalForecast`). */
+  forecast: RefusalForecast | null
 }
 
 /** The first two candidates, the ones a link preview sets against each other, with their counts. */
 export function headToHead(data: WhipCountData): CandidateCount[] {
-  const groups = publicGroups(asOpened(data))
+  const opened = asOpened(data)
+  const groups = publicGroups(opened)
   const count = (candidate: WhipCountCandidate, stance: "backs" | "leans"): number =>
     groups.find((g) => g.stance === stance && g.candidate?.id === candidate.id)?.members.length ?? 0
   return data.candidates.slice(0, 2).map((candidate) => ({
     candidate,
     backs: count(candidate, "backs"),
     leans: count(candidate, "leans"),
+    forecast: refusalForecast(opened, candidate),
   }))
 }
 

@@ -28,6 +28,7 @@ import { generateMeta } from "@/utilities/generateMeta"
 import { getPayloadClient } from "@/data/payload"
 import { PRERENDER_LIMIT } from "@/utilities/prerender"
 import { queryArticleBySlug, queryVolumesForArticles } from "@/data/queries"
+import { commentingOf } from "@/plugins/comments"
 import { isResolved } from "@/utilities/relationships"
 import { buildArticleJsonLd, buildBreadcrumbJsonLd } from "@/utilities/structuredData"
 
@@ -94,7 +95,8 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
       // Preview stays on across pages, so it keeps comments wherever readers have them.
       draft ? isArticlePublished(article.id) : true,
     ])
-  const commentsEnabled = commentsSwitch && ssoSwitch
+  // Editors switch an article's comments off in its sidebar; locked ones still show, closed.
+  const commentsEnabled = commentsSwitch && ssoSwitch && commentingOf(article) !== "off"
   const showTableOfContents = tableOfContentsEnabled && article.showTableOfContents === true
 
   return (
@@ -127,7 +129,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                   <TableOfContents content={content} />
                 </ArticleSidebar>
               )}
-              <div className="mx-auto max-w-2xl space-y-3">
+              <div className="mx-auto w-full max-w-2xl min-w-0 space-y-3">
                 <MathJaxProvider enableMathRendering={enableMathRendering}>
                   <RichText data={content} enableGutter={false} className="drop-cap" />
                 </MathJaxProvider>
@@ -143,7 +145,11 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                   </div>
                   <AuthorList aria-label="Article Authors" authors={populatedAuthors} />
                   {commentsEnabled &&
-                    (published ? <Comments articleId={article.id} /> : <CommentsUnpublished />)}
+                    (published ? (
+                      <Comments articleId={article.id} slug={article.slug ?? undefined} />
+                    ) : (
+                      <CommentsUnpublished />
+                    ))}
                 </ArticleFooter>
               </div>
             </div>

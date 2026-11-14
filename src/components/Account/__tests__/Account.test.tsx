@@ -49,6 +49,30 @@ describe("Account", () => {
     })
   })
 
+  it("asks a member with no email address to verify one, and nobody else", async () => {
+    route({
+      "GET /api/account": () => Response.json({ ...member, email: null }),
+      "GET /api/auth-links": () => Response.json({ providers: [] }),
+    })
+
+    const { unmount } = render(<Account providers={providers} />)
+    const nudge = await screen.findByRole("region", { name: "Verify your email" })
+    expect(nudge).toHaveTextContent("earn the Email verified achievement")
+    expect(screen.getByRole("link", { name: "Connect an account" })).toHaveAttribute(
+      "href",
+      "#sign-ins",
+    )
+    unmount()
+
+    route({
+      "GET /api/account": () => Response.json(member),
+      "GET /api/auth-links": () => Response.json({ providers: [] }),
+    })
+    render(<Account providers={providers} />)
+    await screen.findByRole("textbox", { name: "Display name" })
+    expect(screen.queryByRole("region", { name: "Verify your email" })).not.toBeInTheDocument()
+  })
+
   it("renames a member", async () => {
     route({
       "GET /api/account": () => Response.json(member),

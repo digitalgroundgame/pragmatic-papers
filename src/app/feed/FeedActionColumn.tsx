@@ -3,11 +3,11 @@
 import { Media } from "@/components/Media"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { ShareIcon } from "@/components/ShareIcon"
 import type { User } from "@/payload-types"
 import { getClientURL } from "@/utilities/getURL"
 import { isResolved } from "@/utilities/relationships"
 import { cn } from "@/utilities/utils"
-import { Share2 } from "lucide-react"
 import Link from "next/link"
 import React, { useCallback } from "react"
 import type { FeedArticleSummary } from "./types"
@@ -121,7 +121,7 @@ export function FeedActionColumn({ article }: FeedActionColumnProps): React.Reac
         className="size-10.5 rounded-full border-2 border-white/15 bg-white/10 text-white backdrop-blur-md hover:bg-white/20 hover:text-white"
         aria-label="Share article"
       >
-        <Share2 className="size-5" />
+        <ShareIcon className="size-5" />
       </Button>
     </div>
   )

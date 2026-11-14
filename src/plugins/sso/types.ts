@@ -91,6 +91,12 @@ export interface SsoPluginConfig {
    * a table with a required column it couldn't insert, so they're named to it here.
    */
   requiredUserColumns?: string[]
+  /**
+   * Whether the user has a picture of their own (a profile image). Linking a provider saves
+   * its picture to the user (`avatarUrl`) only when they have neither that nor a saved one.
+   * Default: never.
+   */
+  hasPicture?: (args: { payload: Payload; userId: string }) => Promise<boolean>
 }
 
 export interface SsoSignUpConfig {

@@ -92,6 +92,10 @@ Public pages are cached at Cloudflare's edge for 10 minutes, then served stale f
 - Unset (or with `SERVER_URL` on localhost), each save logs `Skipping Cloudflare purge (…) — … set CLOUDFLARE_ZONE_ID, CLOUDFLARE_PURGE_TOKEN` and carries on. A purge Cloudflare refuses is logged as a warning, never thrown at the save.
 - Purges within a second of each other go out as one request. Hostname purges are rate-limited per account (5 a minute on the Free plan, more on paid plans); a refused one just leaves the edge to expire on its own.
 
+**Whip count pushes (optional; only where a job keeps a whip count up to date):**
+
+- `WHIP_COUNT_PUSH_TOKEN` — a long random value (`openssl rand -hex 32`), a **Runtime Variable**. A job sending `Authorization: Bearer <it>` to `POST /next/whip-counts/<slug>` updates that whip count interactive's snapshot, as a draft unless the interactive's "Auto-publish new snapshots" is ticked. Unset, the route answers 401 to everyone. Give each environment its own value, and only the ones that should take pushes.
+
 #### Ticker
 
 The strip under the header on every page (`src/components/Ticker`, rendered by the header), shown when **Ticker** is switched on in **Site → Header → Ticker**. Each source is skipped with a `[ticker] skipping …` log line until it's configured; all are **Runtime Variables**, set in the production, staging **and** preview apps (`dockerfiles/.env.example` lists them).

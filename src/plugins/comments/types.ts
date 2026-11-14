@@ -1,4 +1,4 @@
-import type { Access, CollectionSlug, Payload, PayloadRequest } from "payload"
+import type { Access, CollectionSlug, FieldAccess, Payload, PayloadRequest } from "payload"
 
 import type { PluginEnabled } from "@/utilities/registerPlugin"
 
@@ -10,12 +10,30 @@ export type ViolationSource = (typeof VIOLATION_SOURCES)[number]
 /** A row of the authors collection, as Payload returns it. */
 export type CommentAuthor = Record<string, unknown> & { id: number | string }
 
+/** A badge beside an author's name. */
+export interface BadgeInfo {
+  /**
+   * What the site knows the badge by, so its look survives a rename: a staff role's slug, or the
+   * key of an achievement the site starts with. Null for one an editor added.
+   */
+  key: string | null
+  /** Its name, like "Editor". */
+  label: string
+}
+
 /** How an author shows beside their comments. */
 export interface AuthorDisplay {
   name: string
   image: string | null
-  /** A short label beside their name, like "Staff". */
-  badge: string | null
+  badge: BadgeInfo | null
+  /** One of the writers of what the comments are on (`targetWriters`). */
+  writer?: true
+  /** Published their first comment within the last `newCommenterDays`: a New commenter. */
+  newcomer?: true
+  /** Made their account within the last `newMemberDays`: a New member. */
+  newMember?: true
+  /** Today (UTC) is the anniversary of the day they made their account. */
+  cakeDay?: true
 }
 
 /** A way to sign in, as the comment box offers it. */
@@ -87,9 +105,14 @@ export interface CommentsPluginConfig {
   /**
    * A badge for each author who has one from outside the plugin (readers' achievements), by author ID,
    * asked once per request for every author shown. A badge `describeAuthor` gives (like
-   * Staff) wins. Default none.
+   * a staff role) wins. Default none.
    */
-  authorBadges?: (authors: CommentAuthor[], req: PayloadRequest) => Promise<Map<string, string>>
+  authorBadges?: (authors: CommentAuthor[], req: PayloadRequest) => Promise<Map<string, BadgeInfo>>
+  /**
+   * The authors IDs of whoever wrote the document comments are on, so their comments show as
+   * the writer's. Asked once per request. Default none.
+   */
+  targetWriters?: (targetId: number | string, req: PayloadRequest) => Promise<(number | string)[]>
   /**
    * The ways to sign in that the comment box offers someone signed out, passed through as the
    * thread's `providers`. The site's own page starts the sign-in. Default none.
@@ -104,6 +127,11 @@ export interface CommentsPluginConfig {
   baseURL: () => string
   /** Who can see, hide, restore and delete comments, and see and reverse violations. */
   moderators: Access
+  /**
+   * Who besides moderators may choose whether a document takes comments (its `commenting`
+   * field), such as the writers of their own articles. Only a plain yes counts. Default none.
+   */
+  commentingEditors?: FieldAccess
   /** Who can change the settings global. */
   admins: Access
   /** More checks, run after the built-in ones (links and duplicates). */
@@ -117,6 +145,16 @@ export interface CommentsPluginConfig {
   maxLength?: number
   /** How long an author waits between two comments, in seconds. Default 20. */
   cooldownSeconds?: number
+  /**
+   * How long after an author's first published comment their comments are marked New
+   * commenter, in days. 0 turns the marker off. Default 7.
+   */
+  newCommenterDays?: number
+  /**
+   * How long after an author makes their account (`createdAt`) they're marked New member, in
+   * days. 0 turns the marker off. Default 30.
+   */
+  newMemberDays?: number
 }
 
 /** Where each part of the plugin sits in the admin sidebar. */
@@ -150,6 +188,8 @@ export interface PublicComment {
   removed?: true
   /** The viewer's own comment, held back by a check: nobody else sees it. */
   held?: true
+  /** Its author's first published comment anywhere on the site. */
+  firstComment?: true
 }
 
 /** The signed-in author, as the thread endpoint describes them to themselves. */
@@ -170,4 +210,6 @@ export interface CommentThread {
   maxLength: number
   /** Whether older comments were left out: a thread shows its newest `THREAD_LIMIT`. */
   truncated?: boolean
+  /** Locked: its comments stay readable, but it takes no new comments or replies. */
+  closed?: true
 }

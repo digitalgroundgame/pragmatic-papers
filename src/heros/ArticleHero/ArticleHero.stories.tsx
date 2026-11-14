@@ -15,7 +15,7 @@ const meta = {
     article: articleFixture({
       authors: authors.slice(0, 2),
       publishedAt: "2026-01-12T15:00:00.000Z",
-      updatedAt: "2026-01-12T15:00:00.000Z",
+      contentUpdatedAt: "2026-01-12T15:00:00.000Z",
     }),
   },
   decorators: [
@@ -48,7 +48,7 @@ export const Updated: Story = {
     article: articleFixture({
       authors: authors.slice(0, 1),
       publishedAt: "2026-01-12T15:00:00.000Z",
-      updatedAt: "2026-01-14T09:30:00.000Z",
+      contentUpdatedAt: "2026-01-14T09:30:00.000Z",
     }),
   },
 }
@@ -172,7 +172,7 @@ export const WithNarrationAndComments: Story = {
 const longestDates = articleFixture({
   authors: authors.slice(0, 1),
   publishedAt: "2026-09-23T16:59:00.000Z",
-  updatedAt: "2026-09-30T16:59:00.000Z",
+  contentUpdatedAt: "2026-09-30T16:59:00.000Z",
 })
 
 async function openDatelineTooltip(canvasElement: HTMLElement): Promise<HTMLElement> {

@@ -21,6 +21,13 @@ describe("ssoOptions", () => {
     expect(await enabled(payloadWith({ sso: false }))).toBe(false)
   })
 
+  it("says a user has a picture of their own only when they have a profile image", async () => {
+    const withImage = (profileImage: number | null) =>
+      ({ findByID: vi.fn(async () => ({ id: 3, profileImage })) }) as unknown as Payload
+    expect(await ssoOptions.hasPicture?.({ payload: withImage(8), userId: "3" })).toBe(true)
+    expect(await ssoOptions.hasPicture?.({ payload: withImage(null), userId: "3" })).toBe(false)
+  })
+
   it("makes only staff Payload's user", () => {
     expect(ssoOptions.isPayloadUser?.({ roles: ["editor"] })).toBe(true)
     expect(ssoOptions.isPayloadUser?.({ roles: ["member"] })).toBe(false)
@@ -74,8 +81,17 @@ describe("signUpProviders", () => {
     vi.stubEnv("DESTINY_CLIENT_SECRET", "g")
 
     expect(signUpProviders()).toEqual([
-      { id: "discord", label: "Discord" },
       { id: "destiny", label: "Destiny.gg" },
+      { id: "discord", label: "Discord" },
     ])
+  })
+
+  it("puts Destiny.gg first", () => {
+    for (const name of ["GOOGLE", "DISCORD", "DESTINY"]) {
+      vi.stubEnv(`${name}_CLIENT_ID`, "x")
+      vi.stubEnv(`${name}_CLIENT_SECRET`, "x")
+    }
+
+    expect(signUpProviders().map(({ id }) => id)).toEqual(["destiny", "google", "discord"])
   })
 })

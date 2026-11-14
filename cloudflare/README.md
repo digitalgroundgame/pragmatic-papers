@@ -3,9 +3,10 @@
 The zone's rules live here, one file per [ruleset phase](https://developers.cloudflare.com/ruleset-engine/reference/phases-list/)
 in `rulesets/`, and `scripts/cloudflare-rules.ts` keeps Cloudflare in step with them:
 
-| File                                        | Dashboard             |
-| ------------------------------------------- | --------------------- |
-| `rulesets/http_request_cache_settings.json` | Caching → Cache Rules |
+| File                                          | Dashboard                                 |
+| --------------------------------------------- | ----------------------------------------- |
+| `rulesets/http_request_cache_settings.json`   | Caching → Cache Rules                     |
+| `rulesets/http_request_dynamic_redirect.json` | Rules → Redirect Rules (Single Redirects) |
 
 Change a rule by editing its file in a PR, not in the dashboard. The
 **Cloudflare rules** workflow (`.github/workflows/cloudflare-rules.yml`):
@@ -27,6 +28,10 @@ A rule is known by its `description`, which must be unique in its file: renaming
 one deletes it and creates a new one. `apply` replaces a phase's rules whole, so
 it refuses to delete a rule that is only in Cloudflare unless given `--prune`.
 
+The redirect sends `www.pragmaticpapers.com` to the apex with a 301 at the edge,
+before the request reaches Coolify or the Worker, so it holds whichever one serves
+the apex.
+
 ## A change made in the dashboard
 
 When the weekly check fails, or a rule had to change in a hurry, copy
@@ -36,19 +41,18 @@ Cloudflare's rules into the files and commit them:
 CLOUDFLARE_ZONE_ID=… CLOUDFLARE_RULES_TOKEN=… node scripts/cloudflare-rules.ts export
 ```
 
-`export <phase>` adds a phase that has no file yet, such as
-`http_request_dynamic_redirect` (Single Redirects).
+`export <phase>` adds a phase that has no file yet.
 
 ## Secrets
 
 Two Cloudflare API tokens, each scoped to this zone alone, so that a PR can read
 the rules but only a release can change them:
 
-| Secret                        | Where                                 | Permission                     | Used by         |
-| ----------------------------- | ------------------------------------- | ------------------------------ | --------------- |
-| `CLOUDFLARE_ZONE_ID`          | repository                            | (the zone's ID, Overview page) | every run       |
-| `CLOUDFLARE_RULES_READ_TOKEN` | repository                            | **Zone → Cache Rules → Read**  | `plan`, `check` |
-| `CLOUDFLARE_RULES_TOKEN`      | the **`cloudflare` environment** only | **Zone → Cache Rules → Edit**  | `apply`         |
+| Secret                        | Where                                 | Permission                                                             | Used by         |
+| ----------------------------- | ------------------------------------- | ---------------------------------------------------------------------- | --------------- |
+| `CLOUDFLARE_ZONE_ID`          | repository                            | (the zone's ID, Overview page)                                         | every run       |
+| `CLOUDFLARE_RULES_READ_TOKEN` | repository                            | **Zone → Cache Rules → Read**, **Zone → Dynamic URL Redirects → Read** | `plan`, `check` |
+| `CLOUDFLARE_RULES_TOKEN`      | the **`cloudflare` environment** only | **Zone → Cache Rules → Edit**, **Zone → Dynamic URL Redirects → Edit** | `apply`         |
 
 Set up the `cloudflare` environment in **Settings → Environments** with
 **Deployment branches and tags → Selected branches and tags → `main`**. GitHub
@@ -66,8 +70,8 @@ cloudflare** still shows `main` as its only deployment branch.
 PRs never get them); `apply` fails instead, so a release's rules never quietly
 stay unapplied.
 
-A phase added later needs its permission on both tokens (Single Redirects need
-**Zone → Dynamic URL Redirects**, for example). Keep both apart from
+A phase added later needs its permission on both tokens, as Single Redirects
+need **Zone → Dynamic URL Redirects**. Keep both apart from
 `CLOUDFLARE_API_TOKEN`, which only deploys Storybook, and from
 `CLOUDFLARE_PURGE_TOKEN` (**Zone → Cache Purge**), which the running site uses
 to purge its hostname when an editor saves; it's a Coolify runtime variable,

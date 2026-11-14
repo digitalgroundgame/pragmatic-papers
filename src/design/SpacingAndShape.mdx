@@ -1,0 +1,38 @@
+import { Meta, Unstyled } from "@storybook/addon-docs/blocks"
+import { Radii, SpacingTable } from "./DesignGuide"
+
+<Meta title="Design guide/Spacing and shape" />
+
+# Spacing and shape
+
+Spacing is Tailwind's 4px scale (`1` = 0.25rem). There are no spacing tokens of our own; these
+are the values the pages repeat.
+
+<Unstyled>
+  <SpacingTable />
+</Unstyled>
+
+## Where it's inconsistent today
+
+- Section spacing is `space-y-6` on most pages, `space-y-3` on a volume and `space-y-8` on
+  the account page.
+- A Separator gets `my-6` almost everywhere and `my-16` on a contributor's page.
+- Nothing pads a page's bottom: the space above the footer is whatever margin the last
+  element brings, from none to 140px.
+- Blocks on built pages each choose their own vertical margins.
+
+## Corners
+
+`--radius` is 0.625rem (10px), and Tailwind's radius steps are multiples of it. The site's
+default is `rounded-sm` (6px). shadcn's Card is `rounded-xl`, and every card on the site
+overrides it to `rounded-sm`.
+
+<Unstyled>
+  <Radii />
+</Unstyled>
+
+## Borders and shadows
+
+Every element's border is `border-border` by default, 1px. Images and cards get a `border`;
+article and doc hero images add `shadow`. Rules between sections are the Separator
+component, or a `border-t` / `border-b` on the section.

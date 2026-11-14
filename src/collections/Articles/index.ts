@@ -1,5 +1,9 @@
-import { canDeleteArticle, isDraftOrEditor, isPublishedOrStaff } from "@/access/policies"
-import { writerOrEditor } from "@/access/collections"
+import {
+  canCreateArticle,
+  canDeleteArticle,
+  isDraftOrEditor,
+  isPublishedOrStaff,
+} from "@/access/policies"
 import { editorFieldLevel, shownToEditors } from "@/access/fields"
 import { AUTHOR_ROLES } from "@/access/roles"
 import { Banner } from "@/blocks/Banner/config"
@@ -31,6 +35,7 @@ import { populateMetaImageFromHero } from "@/collections/Articles/hooks/populate
 import { keepWritersOffLiveArticles } from "@/collections/Articles/hooks/keepWritersOffLiveArticles"
 import { removeFromRankings } from "@/collections/Articles/hooks/removeFromRankings"
 import { revalidateArticle, revalidateDelete } from "@/collections/Articles/hooks/revalidateArticle"
+import { setContentUpdatedAt } from "@/collections/Articles/hooks/setContentUpdatedAt"
 import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
 import { populateTableOfContentsAnchors, tableOfContentsField } from "@/components/TableOfContents"
 import { TableOfContentsLabelsFeature } from "@/components/TableOfContents/feature"
@@ -74,7 +79,7 @@ import { setPublishedAtDefault } from "@/collections/Articles/hooks/setPublished
 export const Articles: CollectionConfig = {
   slug: "articles",
   access: {
-    create: writerOrEditor,
+    create: canCreateArticle,
     delete: canDeleteArticle,
     read: isPublishedOrStaff,
     update: isDraftOrEditor,
@@ -280,6 +285,24 @@ export const Articles: CollectionConfig = {
       },
       hooks: {
         beforeChange: [setPublishedAtDefault],
+      },
+    },
+    // After the content and publishedAt, so it compares what their own hooks produced.
+    {
+      name: "contentUpdatedAt",
+      type: "date",
+      label: "Content updated",
+      admin: {
+        position: "sidebar",
+        readOnly: true,
+        date: {
+          pickerAppearance: "dayAndTime",
+        },
+        description:
+          'When readers last saw a change to the title, text, hero image, authors or narration. The article shows it as "Updated".',
+      },
+      hooks: {
+        beforeChange: [setContentUpdatedAt],
       },
     },
     {

@@ -197,8 +197,79 @@ describe("comments", () => {
       badge: null,
       locked: null,
       needsVerifiedEmail: false,
+      // A new account that just made its first comment.
+      newcomer: true,
+      newMember: true,
     })
     expect(own.providers).toEqual([])
+    expect(own.comments.find((c) => c.id === comment.id)).toMatchObject({ firstComment: true })
+  })
+
+  it("marks neither First comment nor New commenter for someone who commented weeks ago", async () => {
+    const profile = reader()
+    const cookie = await signIn(profile)
+    const user = await userByEmail(profile.email)
+    // Their earlier comment, on another article, from a month ago.
+    await payload.create({
+      collection: "comments",
+      data: {
+        body: "Long ago",
+        target: article.id,
+        author: user.id,
+        depth: 0,
+        status: "published",
+        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      overrideAccess: true,
+    })
+    const other = await createArticle({ authors: [] })
+    const { comment } = await posted(other, cookie, "Back again")
+    expect(comment).not.toHaveProperty("firstComment")
+    expect(comment.author).not.toHaveProperty("newcomer")
+
+    const seen = await thread(other, cookie)
+    expect(seen.comments.find((c) => c.id === comment.id)).not.toHaveProperty("firstComment")
+    expect(seen.viewer).not.toHaveProperty("newcomer")
+  })
+
+  it("keeps each commenter's first-commented time as comments are posted, hidden and restored", async () => {
+    const profile = reader()
+    const cookie = await signIn(profile)
+    const firstCommented = async () => (await userByEmail(profile.email)).firstCommentedAt ?? null
+
+    expect(await firstCommented()).toBeNull()
+    const { comment: first } = await posted(article, cookie, "First")
+    const stored = await firstCommented()
+    expect(stored).not.toBeNull()
+    expect(new Date(stored!).getTime()).toBe(new Date(first.createdAt).getTime())
+
+    const other = await createArticle({ authors: [] })
+    vi.useFakeTimers({ now: Date.now() + 60_000, toFake: ["Date"] })
+    const { comment: second } = await posted(other, cookie, "Second")
+    expect(await firstCommented()).toBe(stored)
+
+    // Hiding the first moves it to the second; restoring the first moves it back.
+    const hide = (status: "hidden" | "published") =>
+      payload.update({
+        collection: "comments",
+        id: first.id,
+        data: { status },
+        overrideAccess: true,
+      })
+    await hide("hidden")
+    expect(new Date((await firstCommented())!).getTime()).toBe(new Date(second.createdAt).getTime())
+    await hide("published")
+    expect(await firstCommented()).toBe(stored)
+
+    // Deleting the article takes its comments, and the time with them.
+    await payload.delete({
+      collection: "articles",
+      id: other.id,
+      overrideAccess: true,
+      context: { disableRevalidate: true },
+    })
+    await payload.delete({ collection: "comments", id: first.id, overrideAccess: true })
+    expect(await firstCommented()).toBeNull()
   })
 
   it("badges staff, who comment through their Payload login", async () => {
@@ -214,7 +285,7 @@ describe("comments", () => {
       .join("; ")
 
     const { comment } = await posted(article, cookie, "From the desk")
-    expect(comment.author?.badge).toBe("Staff")
+    expect(comment.author?.badge).toEqual({ key: "editor", label: "Editor" })
   })
 
   it("nests replies, up to the depth the settings allow when they're posted", async () => {
@@ -400,6 +471,94 @@ describe("comments", () => {
 
     expect((await post(draft, cookie, "Early")).status).toBe(404)
     expect((await post({ id: 99_999_999 }, cookie, "Nowhere")).status).toBe(404)
+  })
+
+  it("stops showing an article's comments once it's taken down", async () => {
+    const cookie = await signIn(reader())
+    const writer = await createUser("writer")
+    const live = await createArticle({ authors: [writer.id] })
+    await posted(live, cookie, "Here while it's live")
+    expect((await api(`/comments/thread/${live.id}`)).status).toBe(200)
+
+    await payload.update({
+      collection: "articles",
+      id: live.id,
+      data: { _status: "draft" },
+      context: { disableRevalidate: true },
+    })
+
+    expect((await api(`/comments/thread/${live.id}`)).status).toBe(404)
+    expect((await api(`/comments/thread/${live.id}`, { headers: { Cookie: cookie } })).status).toBe(
+      404,
+    )
+  })
+
+  it("lets editors lock an article's comments or switch them off", async () => {
+    const cookie = await signIn(reader())
+    const editor = await createUser("editor")
+    const live = await createArticle({ authors: [] })
+    await posted(live, cookie, "Before the lock")
+    const setCommenting = (commenting: "open" | "locked" | "off") =>
+      payload.update({
+        collection: "articles",
+        id: live.id,
+        data: { commenting, _status: "published" },
+        user: editor,
+        overrideAccess: false,
+        context: { disableRevalidate: true },
+      })
+
+    await setCommenting("locked")
+    const closed = await thread(live, cookie)
+    expect(closed.closed).toBe(true)
+    expect(closed.comments.map((c) => c.body)).toEqual(["Before the lock"])
+    const refused = await post(live, cookie, "After the lock")
+    expect(refused.status).toBe(403)
+    expect(((await refused.json()) as { message: string }).message).toBe(
+      "Comments are closed on this article.",
+    )
+
+    await setCommenting("off")
+    expect((await api(`/comments/thread/${live.id}`)).status).toBe(404)
+    expect((await post(live, cookie, "Anyone there?")).status).toBe(404)
+
+    await setCommenting("open")
+    // Someone else, so the first reader's cooldown doesn't answer instead.
+    expect((await post(live, await signIn(reader()), "Open again")).status).toBe(201)
+  })
+
+  it("lets writers switch their own article's comments off in a draft, for an editor to publish", async () => {
+    const writer = await createUser("writer")
+    const otherWriter = await createUser("writer")
+    const editor = await createUser("editor")
+    const live = await createArticle({ authors: [writer.id] })
+    const saveDraft = (user: typeof writer) =>
+      payload.update({
+        collection: "articles",
+        id: live.id,
+        data: { commenting: "off" },
+        draft: true,
+        user,
+        overrideAccess: false,
+        context: { disableRevalidate: true },
+      })
+
+    // A writer who isn't credited can't save the article at all.
+    await expect(saveDraft(otherWriter)).rejects.toThrow()
+    const draft = await saveDraft(writer)
+    expect(draft.commenting).toBe("off")
+    // Readers still see the published article's comments until an editor publishes the draft.
+    expect((await api(`/comments/thread/${live.id}`)).status).toBe(200)
+
+    await payload.update({
+      collection: "articles",
+      id: live.id,
+      data: { _status: "published" },
+      user: editor,
+      overrideAccess: false,
+      context: { disableRevalidate: true },
+    })
+    expect((await api(`/comments/thread/${live.id}`)).status).toBe(404)
   })
 
   it("empties a deleted account's comments, keeping replies to them", async () => {

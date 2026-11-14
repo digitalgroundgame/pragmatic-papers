@@ -6,6 +6,7 @@ import {
   countdownLine,
   daysUntilVote,
   headToHead,
+  updatedLine,
   whipCountImagePath,
   whipCountTitle,
 } from "../seo"
@@ -50,5 +51,22 @@ describe("whip count SEO", () => {
     expect(whipCountImagePath("leader", whipCountData, new Date("2026-11-15T01:00:00Z"))).not.toBe(
       path,
     )
+  })
+
+  describe("updatedLine", () => {
+    it("names the time of day the count last changed, in its schedule's zone", () => {
+      const at = "2026-11-14T19:37:00Z"
+      expect(updatedLine(whipCountData, at)).toBe("WHIP COUNT · UPDATED NOV 14, 2:37 PM EST")
+      const pacific = {
+        ...whipCountData,
+        updates: { times: ["09:00"], timeZone: "America/Los_Angeles" },
+      }
+      expect(updatedLine(pacific, at)).toBe("WHIP COUNT · UPDATED NOV 14, 11:37 AM PST")
+    })
+
+    it("falls back to the count's own date", () => {
+      expect(updatedLine(whipCountData)).toBe("WHIP COUNT · AS OF NOVEMBER 13, 2026")
+      expect(updatedLine(whipCountData, "not a date")).toBe("WHIP COUNT · AS OF NOVEMBER 13, 2026")
+    })
   })
 })

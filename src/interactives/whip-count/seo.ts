@@ -1,3 +1,5 @@
+import { formatLongDate } from "@/utilities/formatDate"
+
 import {
   publicGroups,
   refusalForecast,
@@ -81,4 +83,27 @@ function fingerprint(text: string): string {
 export function whipCountImagePath(slug: string, data: WhipCountData, now: Date): string {
   const day = now.toISOString().slice(0, 10)
   return `/next/whip-counts/${encodeURIComponent(slug)}/image?v=${fingerprint(JSON.stringify(data))}-${day}`
+}
+
+/**
+ * The card's eyebrow: when the count last changed, to the minute, in the zone its updates
+ * are scheduled in (Eastern without a schedule), since the race moves within a day:
+ * "WHIP COUNT · UPDATED NOV 14, 2:37 PM EST". Without a time, the count's own date.
+ */
+export function updatedLine(data: WhipCountData, updatedAt?: string): string {
+  const at = updatedAt ? new Date(updatedAt) : null
+  if (!at || Number.isNaN(at.getTime())) {
+    return `WHIP COUNT · AS OF ${formatLongDate(`${data.asOf}T00:00:00Z`).toUpperCase()}`
+  }
+  const when = new Intl.DateTimeFormat("en-US", {
+    timeZone: data.updates?.timeZone ?? "America/New_York",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  })
+    .format(at)
+    .replace(/\u202f/g, " ")
+  return `WHIP COUNT · UPDATED ${when.toUpperCase()}`
 }

@@ -4,12 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { whipCountData } from "@/stories/fixtures/whipCount"
 import { failure, success } from "@/utilities/result"
 
-const { queryInteractiveBySlug, loadWhipCount } = vi.hoisted(() => ({
+const { queryInteractiveBySlug, loadWhipCount, whipCountUpdatedAt } = vi.hoisted(() => ({
   queryInteractiveBySlug: vi.fn(),
   loadWhipCount: vi.fn(),
+  whipCountUpdatedAt: vi.fn(),
 }))
 vi.mock("@/interactives/load", () => ({ queryInteractiveBySlug }))
-vi.mock("@/interactives/whip-count/load", () => ({ loadWhipCount }))
+vi.mock("@/interactives/whip-count/load", () => ({ loadWhipCount, whipCountUpdatedAt }))
 
 const { GET } = await import("../route")
 
@@ -22,6 +23,7 @@ describe("GET /next/whip-counts/[slug]/image", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     queryInteractiveBySlug.mockResolvedValue({ id: 3, title: "Who leads?", profile: "whip-count" })
+    whipCountUpdatedAt.mockResolvedValue("2026-11-14T19:37:00Z")
     loadWhipCount.mockResolvedValue(
       success({ ...whipCountData, voteAt: "2026-12-01T09:30:00-05:00" }),
     )

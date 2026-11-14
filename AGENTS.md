@@ -729,7 +729,7 @@ rectangle a voter, each opening a card with their source, and a button saves the
 as a PNG with the logo (`picture.ts`, on the map block's `saveSVGAsPNG`). Its title puts the two leading
 candidates' public backers ahead of the page's own (`whipCountTitle`, `seo.ts`), and its link
 preview is drawn per count at `/next/whip-counts/<slug>/image` (`WhipCountCard`, with
-`next/og`): the two head to head, one tick a voter, the countdown, the mark and the brand orange.
+`next/og`): the two head to head with any refusal forecast, one tick a voter, the countdown, the wordmark, and the time the count last changed (the snapshot's `syncedAt`) in the eyebrow. The brand orange stays on the frame, away from the candidates' colors.
 The page's metadata names it with a query that changes with the count and the day
 (`whipCountImagePath`), so the route keeps its own `Cache-Control` (a day at the edge). A job outside the
 site can keep a count current with `POST /next/whip-counts/<slug>` (`Authorization: Bearer

@@ -7,7 +7,7 @@ import React from "react"
 import { queryInteractiveBySlug } from "@/interactives/load"
 import { profileKind } from "@/interactives/profiles"
 import { CARD_SIZE, WhipCountCard } from "@/interactives/whip-count/card"
-import { loadWhipCount } from "@/interactives/whip-count/load"
+import { loadWhipCount, whipCountUpdatedAt } from "@/interactives/whip-count/load"
 
 interface Args {
   params: Promise<{ slug: string }>
@@ -60,7 +60,12 @@ export async function GET(_request: Request, { params }: Args): Promise<Response
   if (!count.success) return new Response("Not found", { status: 404 })
 
   return new ImageResponse(
-    <WhipCountCard title={interactive.title} data={count.value} now={new Date()} />,
+    <WhipCountCard
+      title={interactive.title}
+      data={count.value}
+      now={new Date()}
+      updatedAt={await whipCountUpdatedAt(interactive)}
+    />,
     {
       ...CARD_SIZE,
       fonts: await siteFonts(),

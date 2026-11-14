@@ -1,7 +1,6 @@
 import React from "react"
 
 import { LogomarkIcon } from "@/components/Logo/icons/LogomarkIcon"
-import { formatLongDate } from "@/utilities/formatDate"
 
 import {
   barGroups,
@@ -13,7 +12,7 @@ import {
 } from "./model"
 import { candidateColor, groupPaint } from "./paint"
 import { lightColor } from "./picture"
-import { asOpened, countdownLine, headToHead, type CandidateCount } from "./seo"
+import { asOpened, countdownLine, headToHead, updatedLine, type CandidateCount } from "./seo"
 
 /** The size link previews are drawn at: Open Graph's 1.91:1. */
 export const CARD_SIZE = { width: 1200, height: 630 }
@@ -35,6 +34,8 @@ interface Props {
   title: string
   data: WhipCountData
   now: Date
+  /** When the count last changed, for the eyebrow (`updatedLine`). */
+  updatedAt?: string
 }
 
 function Side({
@@ -89,7 +90,7 @@ function Side({
  * public backers, one tick a voter with the line to win, the countdown to the vote, and the
  * site's logo. Drawn with `next/og`, so it is plain flexbox and inline styles.
  */
-export function WhipCountCard({ title, data, now }: Props): React.ReactElement {
+export function WhipCountCard({ title, data, now, updatedAt }: Props): React.ReactElement {
   const shown = asOpened(data)
   const voters = votingMembers(shown)
   const groups = publicGroups(shown)
@@ -132,7 +133,7 @@ export function WhipCountCard({ title, data, now }: Props): React.ReactElement {
             color: BRAND_TEXT,
           }}
         >
-          {`WHIP COUNT · AS OF ${formatLongDate(`${data.asOf}T00:00:00Z`).toUpperCase()}`}
+          {updatedLine(data, updatedAt)}
         </div>
       </div>
 

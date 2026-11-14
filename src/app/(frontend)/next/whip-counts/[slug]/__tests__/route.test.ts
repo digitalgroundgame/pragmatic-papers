@@ -3,12 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { WhipCountData } from "@/interactives/whip-count/model"
 import { whipCountData } from "@/stories/fixtures/whipCount"
 
-const { find, update, isExperimentEnabled } = vi.hoisted(() => ({
+const { find, create, update, isExperimentEnabled } = vi.hoisted(() => ({
   find: vi.fn(),
+  create: vi.fn(async () => ({})),
   update: vi.fn(async () => ({})),
   isExperimentEnabled: vi.fn(async () => true),
 }))
-const payload = { find, update, logger: { info: vi.fn() } }
+const payload = { find, create, update, logger: { info: vi.fn() } }
 
 vi.mock("@/data/payload", () => ({ getPayloadClient: async () => payload }))
 vi.mock("@/globals/SiteSettings/isExperimentEnabled", () => ({ isExperimentEnabled }))
@@ -28,14 +29,36 @@ const push = (body: unknown, authorization = "Bearer t0ken"): Promise<Response> 
     { params: Promise.resolve({ slug: "leader" }) },
   )
 
+interface Snapshot {
+  id: number
+  _status: "draft" | "published"
+  data: unknown
+}
+
+/** The whip count interactive (null for none) and its snapshot (null for none yet). */
+function holds({
+  autoPublish = false,
+  interactive = true,
+  snapshot = { id: 7, _status: "published", data: copy() },
+}: { autoPublish?: boolean; interactive?: boolean; snapshot?: Snapshot | null } = {}) {
+  find.mockImplementation(async ({ collection }: { collection: string }) => {
+    if (collection === "interactives") {
+      return {
+        docs: interactive
+          ? [{ id: 3, title: "Leader", slug: "leader", feed: { autoPublish } }]
+          : [],
+      }
+    }
+    return { docs: snapshot ? [snapshot] : [] }
+  })
+}
+
 describe("POST /next/whip-counts/[slug]", () => {
   beforeEach(() => {
     vi.stubEnv("WHIP_COUNT_PUSH_TOKEN", "t0ken")
     vi.clearAllMocks()
     isExperimentEnabled.mockResolvedValue(true)
-    find.mockResolvedValue({
-      docs: [{ id: 7, autoPublish: false, _status: "published", data: copy() }],
-    })
+    holds()
   })
 
   it("refuses a request without the token, and any request while the token is unset", async () => {
@@ -45,12 +68,49 @@ describe("POST /next/whip-counts/[slug]", () => {
     expect(find).not.toHaveBeenCalled()
   })
 
-  it("is not there while the experiment is off, or for a slug with no document", async () => {
+  it("is not there while the experiment is off, or for a slug with no whip count", async () => {
     isExperimentEnabled.mockResolvedValue(false)
     expect((await push(copy())).status).toBe(404)
     isExperimentEnabled.mockResolvedValue(true)
-    find.mockResolvedValue({ docs: [] })
+    holds({ interactive: false })
     expect((await push(copy())).status).toBe(404)
+    expect(update).not.toHaveBeenCalled()
+    expect(create).not.toHaveBeenCalled()
+  })
+
+  it("looks only among whip count interactives, drafts included", async () => {
+    await push(copy())
+    expect(find.mock.calls[0]).toMatchObject([
+      {
+        collection: "interactives",
+        draft: true,
+        where: { slug: { equals: "leader" }, profile: { equals: "whip-count" } },
+      },
+    ])
+    expect(find.mock.calls[1]).toMatchObject([
+      { collection: "interactive-snapshots", draft: true, where: { interactive: { equals: 3 } } },
+    ])
+  })
+
+  it("creates the snapshot on the first push, as a draft or published", async () => {
+    holds({ snapshot: null })
+    await expect((await push(copy())).json()).resolves.toEqual({ status: "draft" })
+    expect(create.mock.calls[0]).toMatchObject([
+      {
+        collection: "interactive-snapshots",
+        draft: true,
+        data: {
+          interactive: 3,
+          label: "Leader — whip count",
+          sourceRef: "push",
+          sourceVersion: whipCountData.asOf,
+          _status: "draft",
+        },
+      },
+    ])
+    holds({ snapshot: null, autoPublish: true })
+    await expect((await push(copy())).json()).resolves.toEqual({ status: "published" })
+    expect(create.mock.calls[1]).toMatchObject([{ draft: false, data: { _status: "published" } }])
     expect(update).not.toHaveBeenCalled()
   })
 
@@ -79,7 +139,12 @@ describe("POST /next/whip-counts/[slug]", () => {
     const [args] = update.mock.calls[0] as unknown as [
       { id: number; draft: boolean; data: { data: WhipCountData; _status?: string } },
     ]
-    expect(args).toMatchObject({ collection: "whip-counts", id: 7, draft: true })
+    expect(args).toMatchObject({
+      collection: "interactive-snapshots",
+      id: 7,
+      draft: true,
+      data: { sourceRef: "push" },
+    })
     expect(args.data._status).toBeUndefined()
     expect(args.data.data.members.find((m) => m.name === "Sam Okafor")).toMatchObject({
       stance: "backs",
@@ -88,20 +153,18 @@ describe("POST /next/whip-counts/[slug]", () => {
     })
   })
 
-  it("publishes it when the document asks for that", async () => {
-    find.mockResolvedValue({
-      docs: [{ id: 7, autoPublish: true, _status: "published", data: copy() }],
-    })
+  it("publishes it when the interactive asks for that, restamping the snapshot", async () => {
+    holds({ autoPublish: true })
     const pushed = { ...copy(), asOf: "2026-11-14" }
     await expect((await push(pushed)).json()).resolves.toEqual({ status: "published" })
-    expect(update.mock.calls[0]).toMatchObject([{ draft: false, data: { _status: "published" } }])
+    expect(update.mock.calls[0]).toMatchObject([
+      { draft: false, data: { _status: "published", sourceVersion: "2026-11-14" } },
+    ])
   })
 
   it("saves a draft, not publishing, while an editor has unpublished changes", async () => {
     // Publishing starts from the newest version, which is the editor's draft.
-    find.mockResolvedValue({
-      docs: [{ id: 7, autoPublish: true, _status: "draft", data: copy() }],
-    })
+    holds({ autoPublish: true, snapshot: { id: 7, _status: "draft", data: copy() } })
     const pushed = { ...copy(), asOf: "2026-11-14" }
     await expect((await push(pushed)).json()).resolves.toEqual({
       status: "draft",

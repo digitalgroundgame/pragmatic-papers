@@ -8,7 +8,6 @@ export const COLLECTION_PATHS = {
   volumes: "/volumes",
   topics: "/topics",
   interactives: "/interactives",
-  "whip-counts": "/interactives/whip-counts",
   docs: "/docs",
 } as const satisfies Partial<Record<CollectionSlug, string>>
 

@@ -146,6 +146,12 @@ const nextConfig: NextConfig = {
     // Contributor pages were /authors, which didn't fit narrators. `/authors/:path*` also
     // covers the index, its `?p=` pages and the old id URLs the profile page resolves.
     { source: "/authors/:path*", destination: "/contributors/:path*", permanent: true },
+    // Whip counts are interactives now, at /interactives/<slug>.
+    {
+      source: "/interactives/whip-counts/:slug",
+      destination: "/interactives/:slug",
+      permanent: true,
+    },
     {
       source: "/iceout/:state*",
       destination: "https://iceout.org/en/location/report",

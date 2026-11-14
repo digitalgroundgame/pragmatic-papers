@@ -94,7 +94,7 @@ Public pages are cached at Cloudflare's edge for 10 minutes, then served stale f
 
 **Whip count pushes (optional; only where a job keeps a whip count up to date):**
 
-- `WHIP_COUNT_PUSH_TOKEN` — a long random value (`openssl rand -hex 32`), a **Runtime Variable**. A job sending `Authorization: Bearer <it>` to `POST /next/whip-counts/<slug>` updates that whip count's data, as a draft unless the document's "Publish pushed updates" is ticked. Unset, the route answers 401 to everyone. Give each environment its own value, and only the ones that should take pushes.
+- `WHIP_COUNT_PUSH_TOKEN` — a long random value (`openssl rand -hex 32`), a **Runtime Variable**. A job sending `Authorization: Bearer <it>` to `POST /next/whip-counts/<slug>` updates that whip count interactive's snapshot, as a draft unless the interactive's "Auto-publish new snapshots" is ticked. Unset, the route answers 401 to everyone. Give each environment its own value, and only the ones that should take pushes.
 
 #### Ticker
 

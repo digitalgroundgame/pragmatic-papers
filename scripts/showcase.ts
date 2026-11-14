@@ -118,13 +118,13 @@ export async function login(
 }
 
 /** The collections a draft push creates as drafts: the ones with a public page of their own. */
-const DRAFTED = new Set(["articles", "whip-counts"])
+const DRAFTED = new Set(["articles", "interactives", "interactive-snapshots"])
 
 /**
  * Stands in for the Local API in seed helpers, which only call `create` and
  * `logger`. Access control and hooks run on the server as for any editor.
  *
- * With `draft`, articles (and the whip counts they link to) are created as
+ * With `draft`, articles (and the interactives they link to, with their snapshots) are created as
  * drafts whatever status the seed asks for, so a seed needs no changes to be
  * pushed to staging.
  */
@@ -228,6 +228,7 @@ export async function main(
         `articles there (has: ${user.roles?.join(", ")}). Give it the role, or pass --draft.`,
     )
   }
+  const payload = createRestPayload(origin, token, fetchImpl, { draft })
   const links = new Map<string, string>()
   const pending: ShowcaseEntry[] = []
   for (const entry of entries) {
@@ -236,6 +237,8 @@ export async function main(
       const url = `${origin}/articles/${entry.slug}`
       links.set(entry.slug, showcaseItem(entry.slug, article.title || entry.slug, url))
       console.warn(`✔ Already there: ${url}`)
+      // The article is there, but what it links to may not be.
+      await entry.ensure?.(payload)
     } else {
       pending.push(entry)
     }
@@ -243,7 +246,6 @@ export async function main(
   const list = () => entries.flatMap((entry) => links.get(entry.slug) ?? [])
   if (pending.length === 0) return list()
 
-  const payload = createRestPayload(origin, token, fetchImpl, { draft })
   console.warn(`Uploading stock images to ${origin}…`)
   const media = await createStockMedia(payload)
   for (const entry of pending) {

@@ -3,9 +3,10 @@ import { failure, success, type Result } from "@/utilities/result"
 
 /**
  * A whip count: who votes in a leadership election, what each has said in public, and the
- * arithmetic of who is ahead. The data is pasted into a `whip-counts` document as JSON, so
- * everything here is checked by `parseWhipCount` before a page reads it. Browser- and
- * Node-safe: the collection validates with it and the page's client component counts with it.
+ * arithmetic of who is ahead. The data is pasted or pushed into a whip count interactive's
+ * snapshot as JSON, so everything here is checked by `parseWhipCount` before a page reads it.
+ * Browser- and Node-safe: the snapshot collection validates with it and the page's client
+ * component counts with it.
  */
 
 export const WHIP_COUNT_SCHEMA = "pragmatic-papers/whip-count@1"
@@ -87,6 +88,13 @@ export interface WhipCountData {
   candidates: WhipCountCandidate[]
   members: WhipCountMember[]
 }
+
+/**
+ * Whether a value is meant as a whip count (it names the schema), as against a map's feed
+ * in the same snapshot field. Whether it is a valid one is `parseWhipCount`'s question.
+ */
+export const isWhipCountData = (value: unknown): boolean =>
+  isRecord(value) && value.schema === WHIP_COUNT_SCHEMA
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/

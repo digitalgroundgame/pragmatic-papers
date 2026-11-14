@@ -1,7 +1,10 @@
-import type { Media, User } from "@/payload-types"
+import type { Interactive, Media, User } from "@/payload-types"
 import type { Payload } from "payload"
 
-import { whipCountPath } from "@/collections/WhipCounts/tag"
+import { interactivePath } from "@/collections/InteractiveSnapshots/tag"
+import { WHIP_COUNT_PROFILE_ID } from "@/interactives/whip-count/profile"
+import { whipCountSnapshotFields } from "@/interactives/whip-count/snapshot"
+import type { WhipCountData } from "@/interactives/whip-count/model"
 
 import { createArticle, validateWriters } from "../../articles"
 import {
@@ -28,38 +31,63 @@ function isTakenSlug(err: unknown): boolean {
 }
 
 /**
- * The Senate Democrats' 2026 leadership vote as a whip count. The data is a snapshot from
+ * The Senate Democrats' 2026 leadership vote as a whip count: an interactive with the
+ * whip count profile, and its snapshot holding the count. The data is a snapshot from
  * November 13, 2026: each senator's public position with the link it came from, and no
  * quotations, since the statements behind them were not checked against their sources.
+ * Pushed updates publish at once ("Auto-publish new snapshots" is ticked).
  *
- * A count that is already there is left alone, so this can run again on a site that has one.
- * Any other failure (an account that may not create whip counts) is thrown, so a showcase
- * fails rather than publish an article that links to a missing page.
+ * An interactive that is already there is left alone, snapshot and all, so this can run again
+ * on a site that has one. Any other failure (an account that may not create interactives) is
+ * thrown, so a showcase fails rather than publish an article that links to a missing page.
  */
 export async function createSenateLeaderWhipCount(
   payload: Payload,
   context?: Record<string, unknown>,
 ): Promise<void> {
+  const title = "Who will lead Senate Democrats?"
+  let interactive: Interactive
   try {
-    await payload.create({
-      collection: "whip-counts",
+    interactive = await payload.create({
+      collection: "interactives",
       context,
       data: {
-        title: "Who will lead Senate Democrats?",
+        title,
         slug: WHIP_COUNT_SLUG,
-        intro:
-          "Chuck Schumer and Chris Van Hollen are competing to be Senate majority leader. The Democratic caucus votes by secret ballot on December 1.",
+        profile: WHIP_COUNT_PROFILE_ID,
+        intro: createRichText([
+          createParagraph(
+            "Chuck Schumer and Chris Van Hollen are competing to be Senate majority leader. The Democratic caucus votes by secret ballot on December 1.",
+          ),
+        ]),
         methodology:
           "A snapshot from November 13, 2026, for demonstration. A senator counts as backing a candidate only when they or their office said so on the record; a lean is praise without a commitment, or reporting that their support is expected. Blocs and tags are editorial groupings.",
-        data: senateLeader2026,
+        feed: { autoPublish: true },
         _status: "published",
         publishedAt: new Date().toISOString(),
+        meta: {
+          title,
+          description:
+            "Where every Senate Democrat stands in the vote for majority leader, with the source for each position.",
+        },
       },
     })
   } catch (err) {
     if (!isTakenSlug(err)) throw err
     payload.logger.info(`Whip count "${WHIP_COUNT_SLUG}" is already there; left as it is.`)
+    return
   }
+  await payload.create({
+    collection: "interactive-snapshots",
+    context,
+    data: {
+      ...whipCountSnapshotFields(interactive, senateLeader2026 as WhipCountData, {
+        source: "seed",
+        now: new Date(),
+      }),
+      _status: "published",
+    },
+  })
 }
 
 /** An article that introduces whip counts and links to the seeded one, which it creates. */
@@ -95,7 +123,7 @@ export const createWhipCountArticle = async (
           createTextNode(
             "A whip count is an interactive page that follows a leadership vote one voter at a time. The first is the Senate Democrats' choice of majority leader: ",
           ),
-          createLinkNode("Who will lead Senate Democrats?", whipCountPath(WHIP_COUNT_SLUG)),
+          createLinkNode("Who will lead Senate Democrats?", interactivePath(WHIP_COUNT_SLUG)),
           createTextNode(
             " It needs the interactives experiment switched on in Settings; with it off, the link is a 404.",
           ),
@@ -117,7 +145,7 @@ export const createWhipCountArticle = async (
         ),
         createHeadingNode("What an editor can do", "h2"),
         createParagraph(
-          "Under Whip counts in the admin, an editor changes a senator's position, the statement behind it and its source in a table and saves, or pastes a whole count as JSON. Saving checks the data and says what is wrong with it.",
+          "Under Interactives in the admin, an editor opens the count's snapshot and changes a senator's position, the statement behind it and its source in a table and saves, or pastes a whole count as JSON. Saving checks the data and says what is wrong with it.",
         ),
       ]),
     },

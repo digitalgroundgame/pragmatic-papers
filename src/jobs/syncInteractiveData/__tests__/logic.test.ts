@@ -280,6 +280,18 @@ describe("syncInteractive", () => {
     })
     expect(writes).toHaveLength(0)
   })
+
+  it("leaves a whip count to its pushes and editors, even with its feed on", async () => {
+    const { payload, writes } = stubPayload(null)
+    await expect(
+      syncInteractive(payload, interactive({ profile: "whip-count" }), {
+        log: silentLog,
+        files: await upstream(),
+        force: true,
+      }),
+    ).resolves.toEqual({ outcome: "skipped", reason: "a whip count has no feed to read" })
+    expect(writes).toHaveLength(0)
+  })
 })
 
 describe("describeData", () => {

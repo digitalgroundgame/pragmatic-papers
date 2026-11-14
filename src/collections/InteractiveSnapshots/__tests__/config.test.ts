@@ -3,6 +3,7 @@ import type { Field, PayloadRequest } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { User } from "@/payload-types"
+import { whipCountData } from "@/stories/fixtures/whipCount"
 
 import { InteractiveSnapshots } from "../index"
 
@@ -23,12 +24,41 @@ function namedFields(fields: Field[]): Extract<Field, { name: string }>[] {
 }
 
 describe("InteractiveSnapshots access", () => {
-  it("never lets anyone create a snapshot by hand", () => {
-    const create = InteractiveSnapshots.access!.create as () => boolean
-    expect(create()).toBe(false)
+  const feed = { schema: "pragmatic-papers/drilldown-data@1", regions: [], records: [] }
+
+  it("lets only an editor create one, only with a whip count, only for a whip count", async () => {
+    const create = InteractiveSnapshots.access!.create as (args: unknown) => Promise<boolean>
+    const profiles: Record<string, string> = { "3": "whip-count", "4": "federal-courts" }
+    const findByID = vi.fn(async ({ id }: { id: number | string }) => {
+      const profile = profiles[String(id)]
+      if (!profile) throw new Error("Not Found")
+      return { id, profile }
+    })
+    const as = (user: User | null, data: unknown, interactive: unknown = 3) =>
+      create({ req: { user, payload: { findByID } }, data: { data, interactive } })
+    expect(await as(editor, whipCountData)).toBe(true)
+    expect(await as(editor, whipCountData, { id: 3 })).toBe(true)
+    expect(await as(writer, whipCountData)).toBe(false)
+    expect(await as(null, whipCountData)).toBe(false)
+    // A map's feed comes from the sync, never by hand, and a map can't be given a count.
+    expect(await as(editor, feed)).toBe(false)
+    expect(await as(editor, undefined)).toBe(false)
+    expect(await as(editor, whipCountData, 4)).toBe(false)
+    expect(await as(editor, whipCountData, 99)).toBe(false)
+    expect(await as(editor, whipCountData, null)).toBe(false)
+    expect(findByID).toHaveBeenCalledWith(expect.objectContaining({ id: 3, draft: true }))
   })
 
-  it("locks every field against updates, so only the sync writes them", () => {
+  it("lets editors change a whip count's data, and nothing else", () => {
+    const fields = namedFields(InteractiveSnapshots.fields)
+    const data = fields.find((field) => field.name === "data")!
+    const update = (data as { access: { update: (args: unknown) => boolean } }).access.update
+    expect(update({ req: { user: editor }, doc: { data: whipCountData } })).toBe(true)
+    expect(update({ req: { user: writer }, doc: { data: whipCountData } })).toBe(false)
+    expect(update({ req: { user: editor }, doc: { data: feed } })).toBe(false)
+  })
+
+  it("locks every other field against updates, so only the sync and pushes write them", () => {
     const fields = namedFields(InteractiveSnapshots.fields)
     expect(fields.length).toBeGreaterThan(0)
     for (const field of fields) {
@@ -39,6 +69,41 @@ describe("InteractiveSnapshots access", () => {
         `${field.name} can be updated`,
       ).toBe(false)
     }
+  })
+})
+
+describe("InteractiveSnapshots data", () => {
+  const data = namedFields(InteractiveSnapshots.fields).find((field) => field.name === "data")!
+  const validate = (
+    data as unknown as {
+      validate: (value: unknown, opts: { previousValue?: unknown }) => true | string
+    }
+  ).validate
+  const stamp = InteractiveSnapshots.hooks!.beforeChange![0] as unknown as (args: {
+    data: Record<string, unknown>
+  }) => Record<string, unknown>
+
+  it("checks a whip count like the page reads it", () => {
+    expect(validate(whipCountData, {})).toBe(true)
+    expect(validate({ ...whipCountData, asOf: "today" }, {})).toBe(
+      '"asOf" must be a date like 2026-11-13.',
+    )
+  })
+
+  it("won't turn a whip count into something else, and leaves a feed to the sync", () => {
+    expect(validate({ schema: "other" }, { previousValue: whipCountData })).toBe(
+      '"schema" must be "pragmatic-papers/whip-count@1".',
+    )
+    expect(validate({ schema: "pragmatic-papers/drilldown-data@1" }, {})).toBe(true)
+  })
+
+  it("restamps a whip count's provenance when it changes, and leaves a feed's alone", () => {
+    const stamped = stamp({ data: { data: { ...whipCountData, asOf: "2026-11-14" } } })
+    expect(stamped).toMatchObject({ sourceVersion: "2026-11-14" })
+    expect(stamped.contentHash).toMatch(/^[0-9a-f]{16}$/)
+    expect(stamped.summary).toContain("as of 2026-11-14")
+    const feedData = { data: { schema: "pragmatic-papers/drilldown-data@1" }, summary: "x" }
+    expect(stamp({ data: feedData })).toBe(feedData)
   })
 })
 

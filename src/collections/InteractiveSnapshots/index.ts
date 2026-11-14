@@ -1,8 +1,16 @@
-import type { CollectionConfig, FieldAccess, PayloadRequest } from "payload"
+import type {
+  CollectionBeforeChangeHook,
+  CollectionConfig,
+  FieldAccess,
+  PayloadRequest,
+} from "payload"
 
 import { admin, editor } from "@/access/collections"
 import { isPublishedOrStaff } from "@/access/policies"
 import { isEditor } from "@/access/roles"
+import { profileKind } from "@/interactives/profiles"
+import { parseWhipCount, WHIP_COUNT_SCHEMA } from "@/interactives/whip-count/model"
+import { isWhipCountData, whipCountSnapshotStamp } from "@/interactives/whip-count/snapshot"
 
 import { revalidateSnapshot, revalidateSnapshotDelete } from "./hooks/revalidateSnapshot"
 
@@ -14,6 +22,43 @@ import { revalidateSnapshot, revalidateSnapshotDelete } from "./hooks/revalidate
 const syncOwned: FieldAccess = () => false
 const syncOwnedAdmin = { readOnly: true, disableBulkEdit: true } as const
 
+/** Whether a snapshot's `interactive` names a whip count interactive, drafts included. */
+async function forWhipCount(req: PayloadRequest, interactive: unknown): Promise<boolean> {
+  const id =
+    typeof interactive === "object" && interactive !== null && "id" in interactive
+      ? (interactive as { id: unknown }).id
+      : interactive
+  if (typeof id !== "number" && typeof id !== "string") return false
+  const doc = await req.payload
+    .findByID({
+      req,
+      collection: "interactives",
+      id,
+      draft: true,
+      depth: 0,
+      select: { profile: true },
+    })
+    .catch(() => null)
+  return profileKind(doc?.profile) === "whip-count"
+}
+
+/**
+ * A whip count's data is the one thing here an editor writes: positions, statements, blocs
+ * and tags, row by row. A map's feed stays the sync's alone.
+ */
+const editableWhipCount: FieldAccess = ({ req, doc }) =>
+  isEditor(req.user) && isWhipCountData(doc?.data)
+
+/**
+ * Keeps a whip count's provenance true to its data when an editor changes it in the table:
+ * the hash the push route compares with, the summary, and the day it is as of.
+ */
+const stampWhipCount: CollectionBeforeChangeHook = ({ data }) => {
+  const parsed = isWhipCountData(data.data) ? parseWhipCount(data.data) : null
+  if (!parsed?.success) return data
+  return { ...data, ...whipCountSnapshotStamp(parsed.value, new Date()) }
+}
+
 /**
  * Snapshots — the researcher's half of an interactive, as the sync job last
  * read it. One document per interactive; every sync that changes something writes a new
@@ -24,6 +69,10 @@ const syncOwnedAdmin = { readOnly: true, disableBulkEdit: true } as const
  * feed is set to auto-publish. Nothing here is hand-edited: the fields are what upstream said,
  * validated against the profile's geometry before they were written. A feed that fails
  * validation never becomes a version, so the last good one keeps serving.
+ *
+ * A whip count's snapshot is the exception: there is no feed behind it. It is created by the
+ * first push (`POST /next/whip-counts/<slug>`) or the seed, every push writes a version of it,
+ * and editors change its count row by row (`WhipCountDataField`).
  */
 export const InteractiveSnapshots: CollectionConfig = {
   slug: "interactive-snapshots",
@@ -32,8 +81,15 @@ export const InteractiveSnapshots: CollectionConfig = {
     plural: "Snapshots",
   },
   access: {
-    // Rows come from the sync; a hand-made one has no feed behind it.
-    create: () => false,
+    // Rows come from the sync; a hand-made one has no feed behind it. A whip count has no
+    // feed, so an editor may create its snapshot with a count in it (the showcase does, over
+    // REST), and only for a whip count interactive: a map's snapshot holding a count would
+    // block its sync. Without a count to check, as when the admin asks whether to offer
+    // Create, no.
+    create: async ({ req, data }) =>
+      isEditor(req.user) &&
+      isWhipCountData(data?.data) &&
+      (await forWhipCount(req, data?.interactive)),
     delete: admin,
     // Editors publish and unpublish; the fields themselves are sync-owned.
     update: editor,
@@ -52,6 +108,7 @@ export const InteractiveSnapshots: CollectionConfig = {
     group: "Interactives",
   },
   hooks: {
+    beforeChange: [stampWhipCount],
     afterChange: [revalidateSnapshot],
     afterDelete: [revalidateSnapshotDelete],
   },
@@ -172,12 +229,30 @@ export const InteractiveSnapshots: CollectionConfig = {
       ],
     },
     {
-      // The validated feed (`DrilldownData`). Megabytes; never shown in a JSON editor.
+      // The validated feed (`DrilldownData`), megabytes and never shown, or a whip count,
+      // which editors change in a table. The field component draws nothing for a feed.
       name: "data",
       type: "json",
       required: true,
-      access: { update: syncOwned },
-      admin: { ...syncOwnedAdmin, hidden: true },
+      access: { update: editableWhipCount },
+      admin: {
+        components: {
+          Field:
+            "@/collections/InteractiveSnapshots/components/WhipCountDataField#WhipCountDataField",
+        },
+        description: `A whip count: every voter's public position, edited row by row. To replace it whole, use "Edit as JSON" and paste a document (schema "${WHIP_COUNT_SCHEMA}"). Saving checks it and says what is wrong.`,
+      },
+      validate: (value: unknown, { previousValue }: { previousValue?: unknown }): true | string => {
+        if (isWhipCountData(value)) {
+          const parsed = parseWhipCount(value)
+          return parsed.success ? true : parsed.error
+        }
+        // A count can't be turned into something the page can't draw.
+        if (isWhipCountData(previousValue)) {
+          return `"schema" must be "${WHIP_COUNT_SCHEMA}".`
+        }
+        return true
+      },
     },
   ],
   versions: {

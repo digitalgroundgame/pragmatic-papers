@@ -4,11 +4,14 @@ import { writeFileSync } from "node:fs"
 
 import { articleSlug, slugsFromDescription } from "./showcase-pr"
 
-import { AUTHOR_ROLES, hasRole } from "@/access/roles"
+import { AUTHOR_ROLES, hasRole, type Role } from "@/access/roles"
 import type { User } from "@/payload-types"
 import { createStockMedia } from "@/endpoints/seed/media"
 import { type ShowcaseEntry, showcaseEntries } from "@/endpoints/seed/showcase"
 import type { File, Payload } from "payload"
+
+/** The author roles that may create an article already published. */
+const PUBLISHING_ROLES: Role[] = ["editor", "chief-editor"]
 
 const USAGE = `Usage: pnpm showcase <pr-number | staging | url> (<slug...> | --all) [--draft]
 
@@ -114,12 +117,16 @@ export async function login(
   return { token: body.token as string, user: body.user as User }
 }
 
+/** The collections a draft push creates as drafts: the ones with a public page of their own. */
+const DRAFTED = new Set(["articles", "interactives", "interactive-snapshots"])
+
 /**
  * Stands in for the Local API in seed helpers, which only call `create` and
  * `logger`. Access control and hooks run on the server as for any editor.
  *
- * With `draft`, articles are created as drafts whatever status the seed asks
- * for, so a seed needs no changes to be pushed to staging.
+ * With `draft`, articles (and the interactives they link to, with their snapshots) are created as
+ * drafts whatever status the seed asks for, so a seed needs no changes to be
+ * pushed to staging.
  */
 export function createRestPayload(
   origin: string,
@@ -129,7 +136,7 @@ export function createRestPayload(
 ): Payload {
   const headers = { Authorization: `JWT ${token}` }
   const create = async ({ collection, data: seedData, file }: CreateArgs) => {
-    const asDraft = draft && collection === "articles"
+    const asDraft = draft && DRAFTED.has(collection)
     const data = asDraft ? { ...seedData, _status: "draft" } : seedData
     let init: RequestInit
     if (file) {
@@ -214,6 +221,14 @@ export async function main(
         `author (has: ${user.roles?.join(", ")}).`,
     )
   }
+  // Only editors publish (`canCreateArticle`), so a writer's push would be refused part-way.
+  if (!draft && !hasRole(user, PUBLISHING_ROLES)) {
+    throw new Error(
+      `${email} must hold one of ${PUBLISHING_ROLES.join(", ")} on ${origin} to publish ` +
+        `articles there (has: ${user.roles?.join(", ")}). Give it the role, or pass --draft.`,
+    )
+  }
+  const payload = createRestPayload(origin, token, fetchImpl, { draft })
   const links = new Map<string, string>()
   const pending: ShowcaseEntry[] = []
   for (const entry of entries) {
@@ -222,6 +237,8 @@ export async function main(
       const url = `${origin}/articles/${entry.slug}`
       links.set(entry.slug, showcaseItem(entry.slug, article.title || entry.slug, url))
       console.warn(`✔ Already there: ${url}`)
+      // The article is there, but what it links to may not be.
+      await entry.ensure?.(payload)
     } else {
       pending.push(entry)
     }
@@ -229,7 +246,6 @@ export async function main(
   const list = () => entries.flatMap((entry) => links.get(entry.slug) ?? [])
   if (pending.length === 0) return list()
 
-  const payload = createRestPayload(origin, token, fetchImpl, { draft })
   console.warn(`Uploading stock images to ${origin}…`)
   const media = await createStockMedia(payload)
   for (const entry of pending) {

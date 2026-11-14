@@ -40,8 +40,8 @@ const betterAuthFields: Field[] = [
     admin: { hidden: true },
   },
   {
-    // Better Auth's `image`. Its user model reads the column, but only a user it
-    // created would have one written, and it creates none.
+    // Better Auth's `image`: the picture of the first account linked while the user had
+    // none of their own (`pictures.ts`), or a sign-up's. The admin's avatar falls back to it.
     name: "avatarUrl",
     type: "text",
     access: { create: () => false, read: () => false, update: () => false },

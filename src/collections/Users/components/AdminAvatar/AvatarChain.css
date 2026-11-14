@@ -1,0 +1,18 @@
+.admin-avatar {
+  display: inline-flex;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: middle;
+}
+
+.admin-avatar--initials {
+  align-items: center;
+  justify-content: center;
+  background: var(--theme-elevation-800);
+  color: var(--theme-elevation-0);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}

@@ -1,0 +1,711 @@
+{
+  "schema": "pragmatic-papers/whip-count@1",
+  "asOf": "2026-11-13",
+  "voteAt": "2026-12-01T00:00:00-05:00",
+  "candidates": [
+    {
+      "id": "schumer",
+      "name": "Chuck Schumer",
+      "short": "Schumer"
+    },
+    {
+      "id": "van-hollen",
+      "name": "Chris Van Hollen",
+      "short": "Van Hollen"
+    }
+  ],
+  "members": [
+    {
+      "name": "Ruben Gallego",
+      "state": "AZ",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Moderate",
+      "stance": "backs",
+      "candidate": "schumer",
+      "basisDate": "2026-11-12",
+      "source": {
+        "label": "axios.com",
+        "url": "https://www.axios.com/2026/11/13/schumer-van-hollen-senate-majority-leader"
+      }
+    },
+    {
+      "name": "Mark Kelly",
+      "state": "AZ",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Moderate",
+      "stance": "backs",
+      "candidate": "schumer",
+      "basisDate": "2026-11-07",
+      "source": {
+        "label": "cnn.com",
+        "url": "https://www.cnn.com/2026/11/07/politics/senate-democrats-new-majority-leader"
+      }
+    },
+    {
+      "name": "Alex Padilla",
+      "state": "CA",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Progressive",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Adam Schiff",
+      "state": "CA",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Mainstream",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Michael Bennet",
+      "state": "CO",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Mainstream",
+      "stance": "undeclared"
+    },
+    {
+      "name": "John Hickenlooper",
+      "state": "CO",
+      "party": "D",
+      "seat": "re-elected",
+      "bloc": "Moderate",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Richard Blumenthal",
+      "state": "CT",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Mainstream",
+      "stance": "backs",
+      "candidate": "schumer",
+      "basisDate": "2026-11-12",
+      "source": {
+        "label": "semafor.com",
+        "url": "https://www.semafor.com/article/11/12/2026/democrats-mire-themselves-in-schumer-debate-after-landslide-win"
+      }
+    },
+    {
+      "name": "Chris Murphy",
+      "state": "CT",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Progressive",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Chris Coons",
+      "state": "DE",
+      "party": "D",
+      "seat": "re-elected",
+      "bloc": "Mainstream",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Lisa Blunt Rochester",
+      "state": "DE",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Mainstream",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Jon Ossoff",
+      "state": "GA",
+      "party": "D",
+      "seat": "re-elected",
+      "bloc": "Mainstream",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Raphael Warnock",
+      "state": "GA",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Mainstream",
+      "stance": "open",
+      "basisDate": "2026-11-09",
+      "source": {
+        "label": "thehill.com",
+        "url": "https://thehill.com/blogs/in-the-know/6211082-warnock-schumer-senate-majority-leader-breakfast-club/"
+      }
+    },
+    {
+      "name": "Mazie Hirono",
+      "state": "HI",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Progressive",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Brian Schatz",
+      "state": "HI",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Progressive",
+      "stance": "backs",
+      "candidate": "schumer",
+      "basisDate": "2026-11-09",
+      "source": {
+        "label": "ms.now",
+        "url": "https://www.ms.now/news/democrats-leadership-fight-historic-election-gains"
+      }
+    },
+    {
+      "name": "Tammy Duckworth",
+      "state": "IL",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Mainstream",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Angus King",
+      "state": "ME",
+      "party": "I",
+      "seat": "continuing",
+      "bloc": "Moderate",
+      "tags": ["Independent"],
+      "stance": "backs",
+      "candidate": "schumer",
+      "basisDate": "2026-11-12",
+      "source": {
+        "label": "rollcall.com",
+        "url": "https://rollcall.com/2026/11/12/van-hollen-announces-bid-for-majority-leader-but-schumer-says-he-has-the-votes/"
+      }
+    },
+    {
+      "name": "Angela Alsobrooks",
+      "state": "MD",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Mainstream",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Chris Van Hollen",
+      "state": "MD",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Progressive",
+      "tags": ["Anti-establishment"],
+      "stance": "backs",
+      "candidate": "van-hollen",
+      "basisDate": "2026-11-13",
+      "source": {
+        "label": "Bluesky",
+        "url": "https://bsky.app/profile/vanhollen.senate.gov/post/3n25vfwoml22m"
+      }
+    },
+    {
+      "name": "Ed Markey",
+      "state": "MA",
+      "party": "D",
+      "seat": "re-elected",
+      "bloc": "Progressive",
+      "stance": "undeclared",
+      "basisDate": "2026-11-06",
+      "source": {
+        "label": "bostonglobe.com",
+        "url": "https://www.bostonglobe.com/2026/11/06/newsletters/markey-senate-leader-schumer-the-scrum/"
+      }
+    },
+    {
+      "name": "Elizabeth Warren",
+      "state": "MA",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Progressive",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Elissa Slotkin",
+      "state": "MI",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Moderate",
+      "stance": "opposes",
+      "candidate": "schumer",
+      "basisDate": "2026-11-12",
+      "source": {
+        "label": "cnn.com",
+        "url": "https://www.cnn.com/2026/11/12/politics/chris-van-hollen-chuck-schumer-senate-democratic-leader"
+      }
+    },
+    {
+      "name": "Amy Klobuchar",
+      "state": "MN",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Mainstream",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Catherine Cortez Masto",
+      "state": "NV",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Moderate",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Jacky Rosen",
+      "state": "NV",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Moderate",
+      "stance": "backs",
+      "candidate": "schumer",
+      "basisDate": "2026-11-13",
+      "source": {
+        "label": "axios.com",
+        "url": "https://www.axios.com/2026/11/13/schumer-van-hollen-senate-majority-leader"
+      }
+    },
+    {
+      "name": "Maggie Hassan",
+      "state": "NH",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Moderate",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Cory Booker",
+      "state": "NJ",
+      "party": "D",
+      "seat": "re-elected",
+      "bloc": "Progressive",
+      "stance": "leans",
+      "candidate": "schumer",
+      "basisDate": "2026-11-04",
+      "source": {
+        "label": "aljazeera.com",
+        "url": "https://www.aljazeera.com/news/2026/11/5/division-among-us-democrats-over-schumers-leadership-role"
+      }
+    },
+    {
+      "name": "Andy Kim",
+      "state": "NJ",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Progressive",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Martin Heinrich",
+      "state": "NM",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Progressive",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Ben Ray Luján",
+      "state": "NM",
+      "party": "D",
+      "seat": "re-elected",
+      "bloc": "Progressive",
+      "stance": "undeclared",
+      "basisDate": "2026-11-10",
+      "source": {
+        "label": "washingtontimes.com",
+        "url": "https://www.washingtontimes.com/news/2026/nov/10/senate-democrats-call-new-leadership-grows-uprising-lacks-champion/"
+      }
+    },
+    {
+      "name": "Kirsten Gillibrand",
+      "state": "NY",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Mainstream",
+      "stance": "backs",
+      "candidate": "schumer",
+      "basisDate": "2026-11-10",
+      "source": {
+        "label": "newsweek.com",
+        "url": "https://www.newsweek.com/chuck-schumer-senate-majority-leadership-democrats-12700175"
+      }
+    },
+    {
+      "name": "Chuck Schumer",
+      "state": "NY",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Mainstream",
+      "stance": "backs",
+      "candidate": "schumer",
+      "basisDate": "2026-11-12",
+      "source": {
+        "label": "rollcall.com",
+        "url": "https://rollcall.com/2026/11/12/van-hollen-announces-bid-for-majority-leader-but-schumer-says-he-has-the-votes/"
+      }
+    },
+    {
+      "name": "Jeff Merkley",
+      "state": "OR",
+      "party": "D",
+      "seat": "re-elected",
+      "bloc": "Progressive",
+      "stance": "leans",
+      "candidate": "schumer",
+      "basisDate": "2026-11-10",
+      "source": {
+        "label": "kgw.com",
+        "url": "https://www.kgw.com/article/news/politics/national-politics/medicare-for-all-debt-free-college-oregon-senators-reveal-plans-democratic-controlled-congress/283-542d2850-4219-4323-bd76-8452c71aef5c"
+      }
+    },
+    {
+      "name": "Ron Wyden",
+      "state": "OR",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Progressive",
+      "stance": "undeclared",
+      "basisDate": "2026-11-10",
+      "source": {
+        "label": "kgw.com",
+        "url": "https://www.kgw.com/article/news/politics/national-politics/medicare-for-all-debt-free-college-oregon-senators-reveal-plans-democratic-controlled-congress/283-542d2850-4219-4323-bd76-8452c71aef5c"
+      }
+    },
+    {
+      "name": "John Fetterman",
+      "state": "PA",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Moderate",
+      "stance": "backs",
+      "candidate": "schumer",
+      "basisDate": "2026-11-11",
+      "source": {
+        "label": "wccsradio.com",
+        "url": "https://www.wccsradio.com/2026/11/11/fetterman-backs-schumer-as-next-senate-majority-leader/"
+      }
+    },
+    {
+      "name": "Jack Reed",
+      "state": "RI",
+      "party": "D",
+      "seat": "re-elected",
+      "bloc": "Mainstream",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Sheldon Whitehouse",
+      "state": "RI",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Mainstream",
+      "stance": "backs",
+      "candidate": "schumer",
+      "basisDate": "2026-11-11",
+      "source": {
+        "label": "newsweek.com",
+        "url": "https://www.newsweek.com/chuck-schumer-senate-majority-leadership-democrats-12700175"
+      }
+    },
+    {
+      "name": "Bernie Sanders",
+      "state": "VT",
+      "party": "I",
+      "seat": "continuing",
+      "bloc": "Democratic socialist",
+      "tags": ["Independent"],
+      "stance": "backs",
+      "candidate": "van-hollen",
+      "basisDate": "2026-11-12",
+      "source": {
+        "label": "commondreams.org",
+        "url": "https://www.commondreams.org/news/van-hollen-running-for-senate-majority-leader"
+      }
+    },
+    {
+      "name": "Peter Welch",
+      "state": "VT",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Progressive",
+      "stance": "leans",
+      "candidate": "schumer",
+      "basisDate": "2026-11-10",
+      "source": {
+        "label": "washingtontimes.com",
+        "url": "https://www.washingtontimes.com/news/2026/nov/10/senate-democrats-call-new-leadership-grows-uprising-lacks-champion/"
+      }
+    },
+    {
+      "name": "Tim Kaine",
+      "state": "VA",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Mainstream",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Mark Warner",
+      "state": "VA",
+      "party": "D",
+      "seat": "re-elected",
+      "bloc": "Moderate",
+      "stance": "undeclared",
+      "basisDate": "2026-11-10",
+      "source": {
+        "label": "wset.com",
+        "url": "https://wset.com/news/local/mark-warner-shares-thoughts-on-future-of-democratic-senate-leadership-novembr-2026"
+      }
+    },
+    {
+      "name": "Maria Cantwell",
+      "state": "WA",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Mainstream",
+      "stance": "leans",
+      "candidate": "schumer",
+      "basisDate": "2026-11-04",
+      "source": {
+        "label": "spokesman.com",
+        "url": "https://www.spokesman.com/stories/2026/nov/04/impeach-trump-work-with-him-washington-democrats-c/"
+      }
+    },
+    {
+      "name": "Patty Murray",
+      "state": "WA",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Mainstream",
+      "stance": "undeclared"
+    },
+    {
+      "name": "Tammy Baldwin",
+      "state": "WI",
+      "party": "D",
+      "seat": "continuing",
+      "bloc": "Progressive",
+      "stance": "backs",
+      "candidate": "schumer",
+      "basisDate": "2026-11-12",
+      "source": {
+        "label": "semafor.com",
+        "url": "https://www.semafor.com/article/11/12/2026/democrats-mire-themselves-in-schumer-debate-after-landslide-win"
+      }
+    },
+    {
+      "name": "Juliana Stratton",
+      "state": "IL",
+      "party": "D",
+      "seat": "incoming",
+      "bloc": "Progressive",
+      "stance": "opposes",
+      "candidate": "schumer",
+      "basisDate": "2026-11-05",
+      "source": {
+        "label": "axios.com",
+        "url": "https://www.axios.com/2026/11/13/schumer-van-hollen-senate-majority-leader"
+      }
+    },
+    {
+      "name": "Josh Turek",
+      "state": "IA",
+      "party": "D",
+      "seat": "incoming",
+      "bloc": "Moderate",
+      "stance": "leans",
+      "candidate": "schumer",
+      "basisDate": "2026-11-11",
+      "source": {
+        "label": "thehill.com",
+        "url": "https://thehill.com/homenews/senate/6214626-schumer-democratic-senate-leadership-rebellion/"
+      }
+    },
+    {
+      "name": "Adam Hamilton",
+      "state": "KS",
+      "party": "D",
+      "seat": "incoming",
+      "bloc": "Moderate",
+      "stance": "opposes",
+      "candidate": "schumer",
+      "basisDate": "2026-09-01",
+      "source": {
+        "label": "democracynow.org",
+        "url": "https://www.democracynow.org/2026/11/6/headlines/incoming_freshman_senators_call_for_new_leadership_to_replace_top_democrat_chuck_schumer"
+      }
+    },
+    {
+      "name": "Troy Jackson",
+      "state": "ME",
+      "party": "D",
+      "seat": "incoming",
+      "bloc": "Progressive",
+      "stance": "opposes",
+      "candidate": "schumer",
+      "basisDate": "2026-11-04",
+      "source": {
+        "label": "aljazeera.com",
+        "url": "https://www.aljazeera.com/news/2026/11/5/division-among-us-democrats-over-schumers-leadership-role"
+      }
+    },
+    {
+      "name": "Abdul El-Sayed",
+      "state": "MI",
+      "party": "D",
+      "seat": "incoming",
+      "bloc": "Social democrat",
+      "tags": ["Populist"],
+      "stance": "backs",
+      "candidate": "van-hollen",
+      "basisDate": "2026-11-12",
+      "source": {
+        "label": "rollcall.com",
+        "url": "https://rollcall.com/2026/11/12/van-hollen-announces-bid-for-majority-leader-but-schumer-says-he-has-the-votes/"
+      }
+    },
+    {
+      "name": "Peggy Flanagan",
+      "state": "MN",
+      "party": "D",
+      "seat": "incoming",
+      "bloc": "Progressive",
+      "stance": "opposes",
+      "candidate": "schumer",
+      "basisDate": "2026-11-04",
+      "source": {
+        "label": "minnpost.com",
+        "url": "https://www.minnpost.com/elections/2026/11/flanagan-wants-democrats-to-replace-chuck-schumer-as-senate-leader/"
+      }
+    },
+    {
+      "name": "Scott Colom",
+      "state": "MS",
+      "party": "D",
+      "seat": "incoming",
+      "bloc": "Moderate",
+      "stance": "undeclared",
+      "basisDate": "2026-11-12",
+      "source": {
+        "label": "ms.now",
+        "url": "https://www.ms.now/news/scott-colom-interview-mississippi-schumer-senate-leader"
+      }
+    },
+    {
+      "name": "Chris Pappas",
+      "state": "NH",
+      "party": "D",
+      "seat": "incoming",
+      "bloc": "Moderate",
+      "stance": "undeclared",
+      "basisDate": "2026-11-05",
+      "source": {
+        "label": "newrepublic.com",
+        "url": "https://newrepublic.com/article/217856/chuck-schumer-senate-leader-race-midterm-elections"
+      }
+    },
+    {
+      "name": "Roy Cooper",
+      "state": "NC",
+      "party": "D",
+      "seat": "incoming",
+      "bloc": "Moderate",
+      "stance": "leans",
+      "candidate": "schumer",
+      "basisDate": "2026-11-11",
+      "source": {
+        "label": "thehill.com",
+        "url": "https://thehill.com/homenews/senate/6214626-schumer-democratic-senate-leadership-rebellion/"
+      }
+    },
+    {
+      "name": "Sherrod Brown",
+      "state": "OH",
+      "party": "D",
+      "seat": "incoming",
+      "bloc": "Progressive",
+      "stance": "backs",
+      "candidate": "schumer",
+      "basisDate": "2026-11-09",
+      "source": {
+        "label": "semafor.com",
+        "url": "https://www.semafor.com/article/11/12/2026/democrats-mire-themselves-in-schumer-debate-after-landslide-win"
+      }
+    },
+    {
+      "name": "Annie Andrews",
+      "state": "SC",
+      "party": "D",
+      "seat": "incoming",
+      "bloc": "Moderate",
+      "stance": "opposes",
+      "candidate": "schumer",
+      "basisDate": "2026-11-05",
+      "source": {
+        "label": "thehill.com",
+        "url": "https://thehill.com/homenews/senate/6203427-annie-andrews-south-carolina-senate-leadership-overhaul-midterms/amp/"
+      }
+    },
+    {
+      "name": "James Talarico",
+      "state": "TX",
+      "party": "D",
+      "seat": "incoming",
+      "bloc": "Moderate",
+      "stance": "undeclared",
+      "basisDate": "2026-11-04",
+      "source": {
+        "label": "X",
+        "url": "https://x.com/AhmadRehanKhan/status/2118460955004895482"
+      }
+    },
+    {
+      "name": "Mary Peltola",
+      "state": "AK",
+      "party": "D",
+      "seat": "incoming",
+      "bloc": "Moderate",
+      "tags": ["Progressive-leaning"],
+      "stance": "undeclared",
+      "note": "Counted as elected; the Alaska race had not been called when this was written."
+    },
+    {
+      "name": "Dick Durbin",
+      "state": "IL",
+      "party": "D",
+      "seat": "outgoing",
+      "bloc": "Mainstream",
+      "stance": "undeclared",
+      "note": "Retiring; not in the new Congress."
+    },
+    {
+      "name": "Jeanne Shaheen",
+      "state": "NH",
+      "party": "D",
+      "seat": "outgoing",
+      "bloc": "Moderate",
+      "stance": "undeclared",
+      "note": "Retiring; not in the new Congress."
+    },
+    {
+      "name": "Gary Peters",
+      "state": "MI",
+      "party": "D",
+      "seat": "outgoing",
+      "bloc": "Moderate",
+      "stance": "undeclared",
+      "note": "Retiring; not in the new Congress."
+    },
+    {
+      "name": "Tina Smith",
+      "state": "MN",
+      "party": "D",
+      "seat": "outgoing",
+      "bloc": "Progressive",
+      "stance": "undeclared",
+      "note": "Retiring; not in the new Congress."
+    }
+  ]
+}

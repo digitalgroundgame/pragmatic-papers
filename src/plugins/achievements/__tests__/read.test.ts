@@ -36,10 +36,10 @@ describe("achievementsReader().badgesFor", () => {
     const { payload } = fakePayload({ rows: rows() })
     const req = { payload } as unknown as PayloadRequest
 
-    const labels = await achievementsReader(options).badgesFor([ada, ben, cy, ada], req)
+    const badges = await achievementsReader(options).badgesFor([ada, ben, cy, ada], req)
 
     // Ada: Early member beats Verified. Ben: Verified revoked. Cy: unverified.
-    expect(labels).toEqual(new Map([["1", "Early member"]]))
+    expect(badges).toEqual(new Map([["1", { key: "early-member", label: "Early member" }]]))
     expect(payload.find).toHaveBeenCalledTimes(2)
     expect(payload.find).toHaveBeenCalledWith(
       expect.objectContaining({ collection: "awards", where: { user: { in: ["1", "2", "3"] } } }),

@@ -18,7 +18,8 @@ function FullTimestamp({ timestamp }: { timestamp: string }): React.ReactNode {
 
 interface PublicationDatesProps {
   publishedAt: string | null | undefined
-  updatedAt: string
+  /** When readers last saw the content change: the article's `contentUpdatedAt`. */
+  updatedAt?: string | null
 }
 
 /**
@@ -31,7 +32,7 @@ export function PublicationDates({
   updatedAt,
 }: PublicationDatesProps): React.ReactNode {
   if (!publishedAt) return null
-  const revised = revision(publishedAt, updatedAt)
+  const revised = updatedAt ? revision(publishedAt, updatedAt) : null
 
   return (
     <TooltipProvider>

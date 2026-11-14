@@ -12,9 +12,10 @@ import { Button } from "@/components/ui/button"
 import { LinkButton } from "@/components/ui/link-button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { sendGAEvent } from "@next/third-parties/google"
-import { Check, Copy, Mail, Share2 } from "lucide-react"
+import { Check, Copy, Mail } from "lucide-react"
 import { useRef, useState } from "react"
 
+import { ShareIcon } from "@/components/ShareIcon"
 import { cn } from "@/utilities/utils"
 
 interface ShareButtonsProps {
@@ -125,7 +126,7 @@ export function ShareButtons({
           )
         }
       >
-        <Share2 />
+        <ShareIcon />
         {showLabel && "Share"}
       </PopoverTrigger>
       <PopoverContent align="end" aria-label="Share">

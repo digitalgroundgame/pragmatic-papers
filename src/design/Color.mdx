@@ -1,0 +1,36 @@
+import { Meta, Unstyled } from "@storybook/addon-docs/blocks"
+import { AllColorTokens, BrandInUse } from "./DesignGuide"
+
+<Meta title="Design guide/Color" />
+
+# Color
+
+Two themes, light and dark, switched by a `dark` class on `<html>` (the reader's system
+setting by default). Every color is a CSS custom property in `globals.css`, reached through a
+Tailwind utility (`bg-background`, `text-brand-text`). The swatches below read their values
+from that file.
+
+## The brand in use
+
+The brand color appears as itself only where there's no text on it. Text in the brand color
+uses `brand-text`, and white labels sit on `brand-fill`.
+
+<Unstyled>
+  <BrandInUse />
+</Unstyled>
+
+## Rules of thumb
+
+- Text: `text-foreground`, or `text-muted-foreground` for anything secondary. Not
+  `text-primary`, which only the Button's and Badge's `link` variants and a few link hovers
+  still use.
+- Brand-colored text: `text-brand-text`. White on orange: `bg-brand-fill text-white` (the
+  Button's `branded` variant, the Badge's `brand` variant).
+- Raw palette colors (`bg-zinc-…`, `#…`) don't appear on the site. White and black do:
+  white labels on `brand-fill`, white text over photographs (the reading feed, the
+  high-impact hero), and black for the admin bar and the sheet's overlay.
+- Emails (`src/emails/`) can't use custom properties, and hard-code `#ff401a`.
+
+<Unstyled>
+  <AllColorTokens />
+</Unstyled>

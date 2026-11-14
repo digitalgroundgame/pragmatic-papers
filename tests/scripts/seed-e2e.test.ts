@@ -291,16 +291,17 @@ describe("seed-e2e main()", () => {
     expect(createUser).toHaveBeenCalledTimes(6)
   })
 
-  it("pins every article's and volume's updatedAt so no dateline can drift", async () => {
+  it("pins every article's update stamps and volume's updatedAt so no dateline can drift", async () => {
     await main()
 
     // Payload overwrites updatedAt on every non-draft save, so the revision
     // line would otherwise read the day the seed ran, and
     // article-meta-row.spec.ts asserts the pinned one. Whole-table rather than
-    // per-id, so every hero reads the same stamp.
+    // per-id, so every hero reads the same stamp. An article's hero reads
+    // contentUpdatedAt, so it's pinned alongside.
     const statements = mockExecute.mock.calls.map(([statement]) => renderStatement(statement))
     expect(statements.slice(-2)).toEqual([
-      `UPDATE articles SET updated_at = ${SEEDED_UPDATED_AT}`,
+      `UPDATE articles SET updated_at = ${SEEDED_UPDATED_AT}, content_updated_at = ${SEEDED_UPDATED_AT}`,
       `UPDATE volumes SET updated_at = ${SEEDED_UPDATED_AT}`,
     ])
   })

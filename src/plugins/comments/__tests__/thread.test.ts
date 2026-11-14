@@ -94,4 +94,10 @@ describe("buildThread", () => {
     const stored = [comment(1, { status: "hidden" }), comment(2, { parent: 1, depth: 1 })]
     expect(buildThread(stored, 1, describeAuthor)[0]).toMatchObject({ removed: true, body: "" })
   })
+
+  it("marks the comments named as their author's first, but never a held one", () => {
+    const stored = [comment(1), comment(2, { author: bob }), comment(3, { status: "auto-hidden" })]
+    const thread = buildThread(stored, 1, describeAuthor, new Set(["2", "3"]))
+    expect(thread.map((c) => c.firstComment)).toEqual([undefined, true, undefined])
+  })
 })

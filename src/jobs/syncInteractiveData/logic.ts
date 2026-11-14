@@ -5,7 +5,7 @@ import { hashDrilldownData } from "@/interactives/hash"
 import { describeStatus, integrationStatus } from "@/integrations"
 import type { FileSource } from "@/integrations/files"
 import { RELEASE_REF } from "@/integrations/github"
-import { getProfile } from "@/interactives/profiles"
+import { getProfile, profileKind } from "@/interactives/profiles"
 import type { DrilldownData, InteractiveProfile } from "@/interactives/types"
 import type { Interactive, InteractiveSnapshot } from "@/payload-types"
 
@@ -107,6 +107,10 @@ export async function syncInteractive(
   { log, force = false, fetchImpl, files, now = () => new Date() }: SyncOptions,
 ): Promise<SyncOutcome> {
   const tag = prefix(interactive)
+  if (profileKind(interactive.profile) === "whip-count") {
+    // Kept current by pushes and editors, not by a feed this job reads.
+    return { outcome: "skipped", reason: "a whip count has no feed to read" }
+  }
   const profile: InteractiveProfile | null = getProfile(interactive.profile)
   if (!profile) {
     log.warn(`${tag} unknown profile "${interactive.profile}" — skipping`)

@@ -175,6 +175,33 @@ describe("ArticleHero", () => {
     expect(screen.getByRole("link", { name: "Comments" })).toHaveAttribute("href", "#comments")
   })
 
+  it("dates the update from the content, not from a save that changed nothing readers see", () => {
+    render(
+      <ArticleHero
+        article={{
+          ...baseArticle,
+          // Ticking Syndicate to Substack a day later saved the article without changing it.
+          updatedAt: "2024-06-16T12:00:00.000Z",
+          contentUpdatedAt: "2024-06-15T12:00:00.000Z",
+        }}
+      />,
+    )
+    expect(screen.queryByText(/^Updated/)).not.toBeInTheDocument()
+  })
+
+  it("shows the content's update when there is one", () => {
+    render(
+      <ArticleHero
+        article={{
+          ...baseArticle,
+          updatedAt: "2024-06-18T12:00:00.000Z",
+          contentUpdatedAt: "2024-06-17T12:00:00.000Z",
+        }}
+      />,
+    )
+    expect(screen.getByText("Updated June 17, 2024")).toBeInTheDocument()
+  })
+
   it("leaves the Substack button out of an article that isn't on Substack", () => {
     render(<ArticleHero article={baseArticle} />)
     expect(screen.queryByRole("link", { name: "Read on Substack" })).not.toBeInTheDocument()

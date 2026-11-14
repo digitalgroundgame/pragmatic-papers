@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import {
+  canChooseArticleCommenting,
+  canCreateArticle,
   canDeleteArticle,
   isSelfOrAdmin,
   isCreatedByOrEditor,
@@ -35,6 +37,34 @@ describe("isSelfOrAdmin policy", () => {
 
   it("denies anonymous users", () => {
     expect(isSelfOrAdmin(makeArgs(null))).toBe(false)
+  })
+})
+
+describe("canCreateArticle policy", () => {
+  const creating = (user: User | null, data?: Record<string, unknown>) =>
+    canCreateArticle({ req: { user }, data } as unknown as AccessArgs<User>)
+
+  it("allows admins, chief-editors, and editors to create a published article", () => {
+    for (const role of ["admin", "chief-editor", "editor"]) {
+      expect(creating(makeUser(role), { _status: "published" })).toBe(true)
+    }
+  })
+
+  it("allows writers to create drafts", () => {
+    expect(creating(makeUser("writer"), { _status: "draft" })).toBe(true)
+    expect(creating(makeUser("writer"), {})).toBe(true)
+    // The admin asks without data, to decide whether to show Create New.
+    expect(creating(makeUser("writer"))).toBe(true)
+  })
+
+  it("refuses writers a published article", () => {
+    expect(creating(makeUser("writer"), { _status: "published" })).toBe(false)
+  })
+
+  it("denies narrators, members and anonymous users", () => {
+    expect(creating(makeUser("narrator"), { _status: "draft" })).toBe(false)
+    expect(creating(makeUser("member"), { _status: "draft" })).toBe(false)
+    expect(creating(null, { _status: "draft" })).toBe(false)
   })
 })
 
@@ -218,5 +248,36 @@ describe("readUsers policy", () => {
         },
       ],
     })
+  })
+})
+
+describe("canChooseArticleCommenting", () => {
+  const writer = { id: 789, roles: ["writer"] } as unknown as User
+  type Args = Parameters<typeof canChooseArticleCommenting>[0]
+  const choose = (user: User | null, latest?: object | null, data?: object) =>
+    canChooseArticleCommenting({
+      id: latest === undefined ? undefined : 1,
+      req: { user, payload: { findByID: vi.fn().mockResolvedValue(latest) } },
+      data,
+    } as unknown as Args)
+
+  it("lets writers and editors choose on an article they're creating", async () => {
+    expect(await choose(writer)).toBe(true)
+    expect(await choose(makeUser("editor"))).toBe(true)
+    expect(await choose(makeUser("narrator"))).toBe(false)
+    expect(await choose(null)).toBe(false)
+  })
+
+  it("lets a writer choose in a draft of their own article, and not someone else's", async () => {
+    expect(await choose(writer, { createdBy: 5, authors: [789] }, { _status: "draft" })).toBe(true)
+    expect(await choose(writer, { createdBy: 789, authors: [] }, { _status: "draft" })).toBe(true)
+    expect(await choose(writer, { createdBy: 5, authors: [4] }, { _status: "draft" })).toBe(false)
+  })
+
+  it("leaves publishing the choice to an editor", async () => {
+    expect(await choose(writer, { createdBy: 789, authors: [] }, { _status: "published" })).toBe(
+      false,
+    )
+    expect(await choose(makeUser("editor"), { createdBy: 5 }, { _status: "published" })).toBe(true)
   })
 })

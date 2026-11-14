@@ -12,6 +12,8 @@ import RichText from "@/components/RichText"
 import { Separator } from "@/components/ui/separator"
 import { InteractiveDrilldown } from "@/interactives/InteractiveDrilldown"
 import { loadInteractiveOverview, queryInteractiveBySlug } from "@/interactives/load"
+import { profileKind } from "@/interactives/profiles"
+import { WhipCountPage } from "@/interactives/whip-count/WhipCountPage"
 import { generateMeta } from "@/utilities/generateMeta"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 
@@ -40,7 +42,8 @@ const dataDate = new Intl.DateTimeFormat("en-US", {
 })
 
 /**
- * A long-lived interactive page. The editorial frame — title, standfirst, sources — comes
+ * A long-lived interactive page. A whip count draws its count (`WhipCountPage`); a map,
+ * below, is the rest of this function. The editorial frame — title, standfirst, sources — comes
  * from the `interactives` document; the map comes from the code-owned profile it names and
  * the published snapshot of its data feed (the newest draft in preview). Regions load lazily
  * from `./regions/[regionId]`, composed the same way.
@@ -55,6 +58,24 @@ export default async function InteractivePage({
 
   if (!interactive) return <PayloadRedirects url={url} />
 
+  const crumbs = [
+    { name: "Interactives", path: "/interactives" },
+    { name: interactive.title, path: url },
+  ]
+
+  if (profileKind(interactive.profile) === "whip-count") {
+    return (
+      <>
+        <Breadcrumbs fullWidth items={crumbs} />
+        <div className="container pt-8 pb-16">
+          <PayloadRedirects disableNotFound url={url} />
+          {draft && <LivePreviewListener />}
+          <WhipCountPage interactive={interactive} />
+        </div>
+      </>
+    )
+  }
+
   const composed = await loadInteractiveOverview(interactive)
   // Parked: the overview pane stays empty until the reader picks something, the same as every
   // other unselected state, rather than landing on a filled-in SCOTUS bench. The profile still
@@ -65,13 +86,7 @@ export default async function InteractivePage({
 
   return (
     <>
-      <Breadcrumbs
-        fullWidth
-        items={[
-          { name: "Interactives", path: "/interactives" },
-          { name: interactive.title, path: url },
-        ]}
-      />
+      <Breadcrumbs fullWidth items={crumbs} />
       <div className="container pt-8 pb-16">
         <PayloadRedirects disableNotFound url={url} />
         {draft && <LivePreviewListener />}

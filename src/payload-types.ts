@@ -332,6 +332,10 @@ export interface Article {
   slug: string;
   enableMathRendering?: boolean | null;
   publishedAt?: string | null;
+  /**
+   * When readers last saw a change to the title, text, hero image, authors or narration. The article shows it as "Updated".
+   */
+  contentUpdatedAt?: string | null;
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;
   /**
@@ -347,6 +351,10 @@ export interface Article {
    */
   substackUrl?: string | null;
   createdBy?: (number | null) | User;
+  /**
+   * Locked keeps its comments readable but closes them to new comments and replies. Off hides them. Readers see the change once it's published.
+   */
+  commenting?: ('open' | 'locked' | 'off') | null;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -586,6 +594,10 @@ export interface User {
   avatarUrl?: string | null;
   ssoConnections?: boolean | null;
   /**
+   * When their earliest published comment was posted. Comments keep it up to date.
+   */
+  firstCommentedAt?: string | null;
+  /**
    * Give an achievement that's given by hand with Add new, or open one to revoke it. Verified isn't listed until it's revoked: add a row for it with Revoked ticked.
    */
   awards?: {
@@ -670,6 +682,10 @@ export interface Achievement {
    */
   limit?: number | null;
   badge?: boolean | null;
+  /**
+   * The site knows this achievement by this, so it can be renamed.
+   */
+  key?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1244,9 +1260,9 @@ export interface Interactive {
   id: number;
   title: string;
   /**
-   * Which code-owned profile draws this interactive: its geometry, presentation and feed adapter. Adding one is a code change under src/interactives.
+   * Which code-owned profile draws this interactive: a map with its geometry, presentation and feed adapter, or a whip count. Adding one is a code change under src/interactives.
    */
-  profile: 'federal-courts';
+  profile: 'federal-courts' | 'whip-count';
   /**
    * Standfirst shown above the interactive.
    */
@@ -1275,9 +1291,13 @@ export interface Interactive {
       }[]
     | null;
   /**
-   * How the sync job reads this interactive's data. It runs daily and can be run now from Snapshots. Each run that finds new data writes a draft snapshot for review; auto-publish skips the review.
+   * How positions are assigned and what is unconfirmed. Shown under the count.
    */
-  feed: {
+  methodology?: string | null;
+  /**
+   * How this interactive's data arrives. A map's sync job runs daily and can be run now from Snapshots; a whip count takes pushes (POST /next/whip-counts/<slug>). Each new version is a draft snapshot for review; auto-publish skips the review.
+   */
+  feed?: {
     /**
      * Uncheck to freeze the data at its current snapshot.
      */
@@ -1285,9 +1305,9 @@ export interface Interactive {
     /**
      * Which revision of the researcher's repository to read. Leave as "release" to follow their newest published data release, which is an immutable snapshot and the way they ask to be read. A branch, tag or commit is honoured verbatim, for pinning or debugging.
      */
-    ref: string;
+    ref?: string | null;
     /**
-     * Publish each new snapshot as soon as it validates, without an editor's review.
+     * Publish each new snapshot as soon as it validates, without an editor's review. For a whip count, a push is still saved as a draft while its snapshot has unpublished edits, which publishing would carry live.
      */
     autoPublish?: boolean | null;
   };
@@ -1343,6 +1363,9 @@ export interface InteractiveSnapshot {
    * When the sync last confirmed this version.
    */
   syncedAt: string;
+  /**
+   * A whip count: every voter's public position, edited row by row. To replace it whole, use "Edit as JSON" and paste a document (schema "pragmatic-papers/whip-count@1"). Saving checks it and says what is wrong.
+   */
   data:
     | {
         [k: string]: unknown;
@@ -1916,12 +1939,14 @@ export interface ArticlesSelect<T extends boolean = true> {
   slug?: T;
   enableMathRendering?: T;
   publishedAt?: T;
+  contentUpdatedAt?: T;
   authors?: T;
   topics?: T;
   showTableOfContents?: T;
   syndicateToSubstack?: T;
   substackUrl?: T;
   createdBy?: T;
+  commenting?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -2310,6 +2335,7 @@ export interface InteractivesSelect<T extends boolean = true> {
         link?: T | LinkFieldSelect<T>;
         id?: T;
       };
+  methodology?: T;
   feed?:
     | T
     | {
@@ -2418,6 +2444,7 @@ export interface UsersSelect<T extends boolean = true> {
   emailVerified?: T;
   avatarUrl?: T;
   ssoConnections?: T;
+  firstCommentedAt?: T;
   awards?: T;
   reading?:
     | T
@@ -2736,6 +2763,7 @@ export interface AchievementsSelect<T extends boolean = true> {
   rule?: T;
   limit?: T;
   badge?: T;
+  key?: T;
   updatedAt?: T;
   createdAt?: T;
 }

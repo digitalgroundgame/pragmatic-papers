@@ -21,11 +21,14 @@ const LIGHT_COLORS: Record<string, string> = {
   "var(--border)": "#e5e5e5",
 }
 
+/** A theme color as the light theme draws it, for pictures drawn without the page. */
+export const lightColor = (color: string): string => LIGHT_COLORS[color] ?? color
+
 const LIGHT: PicturePalette = {
   background: "#ffffff",
   ink: "#171717",
   quietInk: "#525252",
-  color: (color) => LIGHT_COLORS[color] ?? color,
+  color: lightColor,
 }
 
 export interface WhipCountPicture {

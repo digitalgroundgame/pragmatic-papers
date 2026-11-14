@@ -87,6 +87,27 @@ describe("parseRuleset", () => {
     expect(rules.map((rule) => rule.description)).toEqual(["cache static pages"])
     expect(rules[0]!.expression).toContain('http.host ne "list.pragmaticpapers.com"')
   })
+
+  it("parses the committed redirect, which sends www to the apex for good", () => {
+    const phase = "http_request_dynamic_redirect"
+    const rules = parseRuleset(phase, readFileSync(`${RULESETS_DIR}/${phase}.json`, "utf8"))
+    expect(rules).toEqual([
+      expect.objectContaining({
+        description: "www to apex",
+        expression: '(http.host eq "www.pragmaticpapers.com")',
+        action: "redirect",
+        action_parameters: {
+          from_value: {
+            status_code: 301,
+            target_url: {
+              expression: 'concat("https://pragmaticpapers.com", http.request.uri.path)',
+            },
+            preserve_query_string: true,
+          },
+        },
+      }),
+    ])
+  })
 })
 
 describe("plan", () => {

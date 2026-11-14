@@ -752,7 +752,7 @@ the same database and sets `DEPLOY_SEED=false` (`wrangler.jsonc`), so its deploy
 pages away. Two seeders could each create the same content at once. Deploy-seeded content
 added later goes through that route, so it follows the same switch.
 
-The zone's Cloudflare rules (Cache Rules today) are version-controlled in
+The zone's Cloudflare rules (Cache Rules, and the Single Redirect from www to the apex) are version-controlled in
 `cloudflare/rulesets/` and applied on release by `.github/workflows/cloudflare-rules.yml`;
 change them there, not in the dashboard (`cloudflare/README.md`).
 

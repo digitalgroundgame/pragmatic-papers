@@ -303,7 +303,7 @@ function Total({
         {forecast && (
           <span
             data-whip-count-forecast=""
-            className="text-muted-foreground/70 text-3xl md:text-4xl"
+            className="text-muted-foreground text-3xl md:text-4xl"
             title={refusalForecastLine(forecast)}
           >
             <span aria-hidden>{forecast.total}</span>
@@ -317,7 +317,7 @@ function Total({
       </p>
       <p className="text-muted-foreground mt-0.5 text-sm">{detail}</p>
       {forecast && (
-        <p aria-hidden className="text-muted-foreground/80 mt-0.5 text-xs">
+        <p aria-hidden className="text-muted-foreground mt-0.5 text-xs">
           {refusalForecastLine(forecast)}
         </p>
       )}

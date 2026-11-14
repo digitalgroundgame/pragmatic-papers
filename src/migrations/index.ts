@@ -71,12 +71,10 @@ import * as migration_20261109_234427_add_article_substack_url from "./20261109_
 import * as migration_20261110_063538_ticker_substack from "./20261110_063538_ticker_substack"
 import * as migration_20261110_082331_ticker_substack_types from "./20261110_082331_ticker_substack_types"
 import * as migration_20261111_000420_article_content_updated_at from "./20261111_000420_article_content_updated_at"
-import * as migration_20261111_044629_achievements_key from "./20261111_044629_achievements_key"
-import * as migration_20261111_062705_article_commenting from "./20261111_062705_article_commenting"
-import * as migration_20261111_210909_comment_first_commented from "./20261111_210909_comment_first_commented"
 import * as migration_20261113_041133_whip_counts from "./20261113_041133_whip_counts"
 import * as migration_20261113_061907_whip_counts_auto_publish from "./20261113_061907_whip_counts_auto_publish"
 import * as migration_20261114_003655_interactives_whip_count from "./20261114_003655_interactives_whip_count"
+import * as migration_20261114_055741_comments_redesign from "./20261114_055741_comments_redesign"
 
 export const migrations = [
   {
@@ -445,21 +443,6 @@ export const migrations = [
     name: "20261111_000420_article_content_updated_at",
   },
   {
-    up: migration_20261111_044629_achievements_key.up,
-    down: migration_20261111_044629_achievements_key.down,
-    name: "20261111_044629_achievements_key",
-  },
-  {
-    up: migration_20261111_062705_article_commenting.up,
-    down: migration_20261111_062705_article_commenting.down,
-    name: "20261111_062705_article_commenting",
-  },
-  {
-    up: migration_20261111_210909_comment_first_commented.up,
-    down: migration_20261111_210909_comment_first_commented.down,
-    name: "20261111_210909_comment_first_commented",
-  },
-  {
     up: migration_20261113_041133_whip_counts.up,
     down: migration_20261113_041133_whip_counts.down,
     name: "20261113_041133_whip_counts",
@@ -473,5 +456,10 @@ export const migrations = [
     up: migration_20261114_003655_interactives_whip_count.up,
     down: migration_20261114_003655_interactives_whip_count.down,
     name: "20261114_003655_interactives_whip_count",
+  },
+  {
+    up: migration_20261114_055741_comments_redesign.up,
+    down: migration_20261114_055741_comments_redesign.down,
+    name: "20261114_055741_comments_redesign",
   },
 ]

@@ -8040,6 +8040,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "methodology": {
+          "name": "methodology",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
         "feed_enabled": {
           "name": "feed_enabled",
           "type": "boolean",
@@ -8572,6 +8578,12 @@
         "version_intro": {
           "name": "version_intro",
           "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version_methodology": {
+          "name": "version_methodology",
+          "type": "varchar",
           "primaryKey": false,
           "notNull": false
         },
@@ -19522,7 +19534,7 @@
     "public.enum_interactives_profile": {
       "name": "enum_interactives_profile",
       "schema": "public",
-      "values": ["federal-courts"]
+      "values": ["federal-courts", "whip-count"]
     },
     "public.enum_interactives_status": {
       "name": "enum_interactives_status",
@@ -19542,7 +19554,7 @@
     "public.enum__interactives_v_version_profile": {
       "name": "enum__interactives_v_version_profile",
       "schema": "public",
-      "values": ["federal-courts"]
+      "values": ["federal-courts", "whip-count"]
     },
     "public.enum__interactives_v_version_status": {
       "name": "enum__interactives_v_version_status",
@@ -19742,6 +19754,6 @@
     "tables": {},
     "columns": {}
   },
-  "id": "dc9ae171-74fc-4cf3-a482-e06b056b84fa",
+  "id": "e310cb3d-c226-40b8-b87f-99b648920b7a",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

@@ -66,9 +66,9 @@ export const ForecastExplained: Story = {
     const canvas = within(canvasElement)
     const forecast = canvasElement.querySelector<HTMLElement>("[data-whip-count-forecast]")!
     await userEvent.hover(forecast)
-    await expect(
-      await within(canvasElement.ownerDocument.body).findByText(/^A forecast, not a count/),
-    ).toBeInTheDocument()
-    await expect(canvas.getByText(/3 if the 1 who won’t back Hale/)).toBeInTheDocument()
+    const body = within(canvasElement.ownerDocument.body)
+    await expect(await body.findByText(/^A forecast, not a count/)).toBeInTheDocument()
+    await expect(body.getByText("3 if the 1 who won’t back Hale hold to it")).toBeInTheDocument()
+    await expect(canvas.getByText("Back Ortiz")).toBeInTheDocument()
   },
 }

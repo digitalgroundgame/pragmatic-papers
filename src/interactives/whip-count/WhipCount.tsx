@@ -325,7 +325,8 @@ function Total({
               side="top"
               className="max-w-xs text-left font-sans text-xs font-normal tracking-normal"
             >
-              {refusalForecastMethod(forecast)}
+              <p className="font-semibold">{refusalForecastLine(forecast)}</p>
+              <p className="mt-1">{refusalForecastMethod(forecast)}</p>
             </TooltipContent>
           </Tooltip>
         )}
@@ -335,11 +336,6 @@ function Total({
         {label}
       </p>
       <p className="text-muted-foreground mt-0.5 text-sm">{detail}</p>
-      {forecast && (
-        <p aria-hidden className="text-muted-foreground mt-0.5 text-xs">
-          {refusalForecastLine(forecast)}
-        </p>
-      )}
     </div>
   )
 }

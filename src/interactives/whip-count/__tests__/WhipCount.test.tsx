@@ -38,7 +38,8 @@ describe("WhipCount", () => {
     )
     // It takes focus, so the explanation's tooltip opens from the keyboard too.
     expect(forecasts[0]).toHaveAttribute("tabindex", "0")
-    expect(screen.getByText("3 if the 1 who won’t back Hale hold to it")).toBeInTheDocument()
+    // The explanation is in the tooltip, not under the total.
+    expect(screen.queryByText("3 if the 1 who won’t back Hale hold to it")).not.toBeInTheDocument()
     // The second candidate's forecast sits inward, to the left of their count.
     expect(forecasts[0]!.parentElement).toHaveClass("flex-row-reverse")
   })

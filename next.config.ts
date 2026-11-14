@@ -63,7 +63,8 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/**": ["./src/docs/**/*"],
     // A whip count's link preview reads Geist's TTFs (next/og can't read woff2).
-    "/next/whip-counts/[slug]/image": [
+    // Keys are picomatch globs, so the route's brackets are escaped.
+    "/next/whip-counts/\\[slug\\]/image": [
       "./node_modules/geist/dist/fonts/geist-sans/Geist-{Regular,SemiBold,Bold}.ttf",
     ],
   },

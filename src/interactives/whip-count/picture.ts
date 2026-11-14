@@ -20,6 +20,7 @@ const LIGHT_COLORS: Record<string, string> = {
   "var(--warning)": "#d78e00",
   "var(--border)": "#e5e5e5",
   "var(--foreground)": "#171717",
+  "var(--map-positive-4)": "#d81334",
 }
 
 /** A theme color as the light theme draws it, for pictures drawn without the page. */

@@ -284,7 +284,7 @@ describe("the public count", () => {
       "Backs Ortiz 2",
     ])
     expect(candidateColor(data, third)).toBe("var(--foreground)")
-    expect(candidateColor(data, whipCountData.candidates[1])).toBe("#dc2626")
+    expect(candidateColor(data, whipCountData.candidates[1])).toBe("var(--map-positive-4)")
   })
 
   it("puts those who ruled a candidate out in the middle, as undecided, and leaners by their candidate", () => {

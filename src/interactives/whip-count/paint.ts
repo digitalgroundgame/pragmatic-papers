@@ -10,10 +10,10 @@ export interface Paint {
 export const UNASSIGNED: Paint = { color: "var(--border)", opacity: 1 }
 
 /**
- * The second candidate's colour: a true red, which no theme token offers. Never the brand
+ * The second candidate's colour: the red the maps use for their strongest R+. Never the brand
  * orange, which would read as the site endorsing them; the count keeps the brand away from it.
  */
-export const SECOND_CANDIDATE = "#dc2626"
+export const SECOND_CANDIDATE = "var(--map-positive-4)"
 
 /** The first candidate is drawn in blue, the second in red, any other in ink. */
 export function candidateColor(data: WhipCountData, candidate?: WhipCountCandidate): string {

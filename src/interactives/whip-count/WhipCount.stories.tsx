@@ -59,3 +59,16 @@ export const DeclinedToComment: Story = {
     await expect(canvas.getByRole("img", { name: /Declined to comment: 1/ })).toBeInTheDocument()
   },
 }
+
+/** Pointing at the lighter forecast beside a total explains how it is made. */
+export const ForecastExplained: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const forecast = canvasElement.querySelector<HTMLElement>("[data-whip-count-forecast]")!
+    await userEvent.hover(forecast)
+    await expect(
+      await within(canvasElement.ownerDocument.body).findByText(/^A forecast, not a count/),
+    ).toBeInTheDocument()
+    await expect(canvas.getByText(/3 if the 1 who won’t back Hale/)).toBeInTheDocument()
+  },
+}

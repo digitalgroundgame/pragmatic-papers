@@ -363,6 +363,8 @@ export function publicGroups(data: WhipCountData): PublicGroup[] {
 
 /** What a candidate would have if those who refused their rival hold to it. */
 export interface RefusalForecast {
+  /** The candidate forecast. */
+  candidate: WhipCountCandidate
   /** The candidate they refused. */
   refused: WhipCountCandidate
   /** How many refused them. */
@@ -388,8 +390,20 @@ export function refusalForecast(
     groups.find((g) => g.stance === stance && g.candidate?.id === of.id)?.members.length ?? 0
   const refusals = size("opposes", refused)
   if (refusals === 0) return null
-  return { refused, refusals, total: size("backs", candidate) + refusals }
+  return { candidate, refused, refusals, total: size("backs", candidate) + refusals }
 }
+
+/** How the forecast is made, for a reader who asks. */
+export const refusalForecastMethod = ({
+  candidate,
+  refused,
+  refusals,
+  total,
+}: RefusalForecast): string =>
+  `A forecast, not a count: ${candidate.short}’s ${total - refusals} public backers plus the ` +
+  `${refusals} who have said they won’t back ${refused.short}. With two candidates, anyone who ` +
+  `holds to that and votes can only vote for ${candidate.short}. The ballot is secret, so ` +
+  `nobody can check that they do.`
 
 /** The forecast in words: "10 if the 5 who won't back Schumer hold to it". */
 export const refusalForecastLine = (forecast: RefusalForecast): string =>

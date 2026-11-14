@@ -33,7 +33,11 @@ describe("WhipCount", () => {
     render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
     const forecasts = document.querySelectorAll("[data-whip-count-forecast]")
     expect(forecasts).toHaveLength(1)
-    expect(forecasts[0]).toHaveTextContent("3, or 3 if the 1 who won’t back Hale hold to it")
+    expect(forecasts[0]).toHaveTextContent(
+      /^3, or 3 if the 1 who won’t back Hale hold to it\. A forecast, not a count/,
+    )
+    // It takes focus, so the explanation's tooltip opens from the keyboard too.
+    expect(forecasts[0]).toHaveAttribute("tabindex", "0")
     expect(screen.getByText("3 if the 1 who won’t back Hale hold to it")).toBeInTheDocument()
     // The second candidate's forecast sits inward, to the left of their count.
     expect(forecasts[0]!.parentElement).toHaveClass("flex-row-reverse")

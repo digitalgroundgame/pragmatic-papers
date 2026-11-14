@@ -16,6 +16,7 @@ import {
   publicGroups,
   refusalForecast,
   refusalForecastLine,
+  refusalForecastMethod,
   stanceLabel,
   startingDraft,
   tallyDraft,
@@ -237,7 +238,10 @@ describe("the public count", () => {
   it("forecasts a candidate's count if those who refused their rival hold to it", () => {
     const [hale, ortiz] = whipCountData.candidates as [WhipCountCandidate, WhipCountCandidate]
     const forecast = refusalForecast(whipCountData, ortiz)
-    expect(forecast).toEqual({ refused: hale, refusals: 1, total: 3 })
+    expect(forecast).toEqual({ candidate: ortiz, refused: hale, refusals: 1, total: 3 })
+    expect(refusalForecastMethod(forecast!)).toBe(
+      "A forecast, not a count: Ortiz’s 2 public backers plus the 1 who have said they won’t back Hale. With two candidates, anyone who holds to that and votes can only vote for Ortiz. The ballot is secret, so nobody can check that they do.",
+    )
     expect(refusalForecastLine(forecast!)).toBe("3 if the 1 who won’t back Hale hold to it")
     // Nobody refused Ortiz.
     expect(refusalForecast(whipCountData, hale)).toBeNull()

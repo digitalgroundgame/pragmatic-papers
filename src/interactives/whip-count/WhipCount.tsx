@@ -20,6 +20,7 @@ import {
 import { formatLongDate } from "@/utilities/formatDate"
 import { isRecord } from "@/utilities/isRecord"
 import { Logo } from "@/components/Logo"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/utilities/utils"
 
 import { Countdown, NextUpdate } from "./Countdown"
@@ -36,6 +37,7 @@ import {
   publicGroups,
   refusalForecast,
   refusalForecastLine,
+  refusalForecastMethod,
   stanceLabel,
   startingDraft,
   tallyDraft,
@@ -309,14 +311,23 @@ function Total({
       >
         <span className="text-7xl md:text-8xl">{value}</span>
         {forecast && (
-          <span
-            data-whip-count-forecast=""
-            className="text-muted-foreground text-3xl md:text-4xl"
-            title={refusalForecastLine(forecast)}
-          >
-            <span aria-hidden>{forecast.total}</span>
-            <span className="sr-only">{`, or ${refusalForecastLine(forecast)}`}</span>
-          </span>
+          <Tooltip>
+            <TooltipTrigger
+              render={<span />}
+              tabIndex={0}
+              data-whip-count-forecast=""
+              className="text-muted-foreground cursor-help text-3xl underline-offset-8 hover:underline hover:decoration-dotted md:text-4xl"
+            >
+              <span aria-hidden>{forecast.total}</span>
+              <span className="sr-only">{`, or ${refusalForecastLine(forecast)}. ${refusalForecastMethod(forecast)}`}</span>
+            </TooltipTrigger>
+            <TooltipContent
+              side="top"
+              className="max-w-xs text-left font-sans text-xs font-normal tracking-normal"
+            >
+              {refusalForecastMethod(forecast)}
+            </TooltipContent>
+          </Tooltip>
         )}
       </p>
       <p className="mt-3 flex items-center justify-center gap-1.5 font-medium">

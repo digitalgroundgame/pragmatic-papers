@@ -5,6 +5,7 @@ import { sentryHtmlAttributes } from "@/sentryConfig"
 import { getSiteURL } from "@/utilities/getURL"
 import { DEFAULT_DESCRIPTION, mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import { GoogleAnalytics } from "@/components/GoogleAnalytics.lazy"
+import { ReadingBeacon } from "@/components/ReadingBeacon"
 import { ThemeProvider } from "@wrksz/themes/next"
 import type { Metadata } from "next"
 import React from "react"
@@ -46,6 +47,7 @@ export default async function RootLayout({
           </main>
           <Footer />
         </ThemeProvider>
+        <ReadingBeacon />
       </body>
       {process.env.GOOGLE_ANALYTICS_ID ? (
         <GoogleAnalytics gaId={process.env.GOOGLE_ANALYTICS_ID} />

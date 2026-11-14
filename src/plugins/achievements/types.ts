@@ -2,6 +2,8 @@ import type { Access, CollectionSlug, Payload, PayloadRequest } from "payload"
 
 import type { SitePluginOptions } from "@/utilities/registerPlugin"
 
+import type { ReadingOptions } from "./reading/types"
+
 /** A row of the users collection, as Payload returns it. */
 export type AchievementUser = Record<string, unknown> & { id: number | string }
 
@@ -96,6 +98,11 @@ export interface AchievementsPluginConfig extends SitePluginOptions {
   admins: Access
   /** The admin sidebar group. Default `Content`. */
   adminGroup?: string
+  /**
+   * What readers read, which reading achievements count: the articles collection and the
+   * groups of articles (volumes) a reader can finish. Admins (`admins`) see what's kept.
+   */
+  reading?: ReadingOptions
 }
 
 export type ResolvedAchievementsConfig = Required<

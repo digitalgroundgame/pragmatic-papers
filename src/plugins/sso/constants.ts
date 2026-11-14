@@ -5,6 +5,13 @@ export const DEFAULT_COOKIE_NAME = "pp-session"
 /** The cookie the cache rules look for: set beside the session for Payload's users only. */
 export const DEFAULT_PAYLOAD_USER_COOKIE = "payload-token-sso"
 
+/**
+ * A cookie the page's own scripts can read, set beside every session, so they know someone is
+ * signed in without asking the server (the session cookie is httpOnly). It says nothing about
+ * who, and grants nothing.
+ */
+export const DEFAULT_SIGNED_IN_COOKIE = "pp-signed-in"
+
 /** Where Better Auth's endpoints are mounted, under Payload's API route. */
 export const AUTH_ENDPOINT_PATH = "/auth"
 

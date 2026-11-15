@@ -68,11 +68,13 @@ describe("withReading", () => {
     ])
   })
 
-  it("keeps its schema, and nothing else, when it's disabled", async () => {
+  it("keeps its schema and the delete hooks, and drops the endpoints, when it's disabled", async () => {
     const config = await install({ disabled: true })
     const usersAfter = config.collections!.find((c) => c.slug === "users")!
     expect(usersAfter.fields).toEqual([expect.objectContaining({ name: "reading" })])
-    expect(usersAfter.hooks?.beforeDelete).toBeUndefined()
+    expect(usersAfter.hooks?.beforeDelete).toEqual([deleteUsersReads])
+    const articlesAfter = config.collections!.find((c) => c.slug === "articles")!
+    expect(articlesAfter.hooks?.beforeDelete).toEqual([deleteArticlesReads])
     expect(config.collections!.map((c) => c.slug)).toContain(READS_SLUG)
     expect(config.endpoints).toEqual([])
   })

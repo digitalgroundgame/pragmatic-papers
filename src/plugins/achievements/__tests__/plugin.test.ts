@@ -5,6 +5,7 @@ import { achievementsPlugin, type AchievementsPluginConfig, resolveAchievementsC
 import { awardChanges, deleteAchievementsAwards, fillOnSave } from "../collection"
 import { ACHIEVEMENTS_SLUG, AWARDING, AWARDS_SLUG } from "../constants"
 import { READS_SLUG, VISITS_FIELD } from "../reading/constants"
+import { deleteUsersReads } from "../reading/hooks/deleteReads"
 import { registeredPlugins } from "@/utilities/registerPlugin"
 
 import { fakePayload } from "./fakePayload"
@@ -143,9 +144,14 @@ describe("achievementsPlugin", () => {
     const config = apply({ ...options, disabled: true })
     expect(collection(config, ACHIEVEMENTS_SLUG).endpoints).toEqual([])
     expect(collection(config, ACHIEVEMENTS_SLUG).hooks?.afterChange).toEqual([])
-    // The schema stays: the join field's and the visits' columns, and the reads.
+    // The schema stays: the join field's and the visits' columns, and the reads, with the hook
+    // that deletes a user's reads, since a read's user can't be null.
     const usersConfig = collection(config, "users")
-    expect(usersConfig.hooks).toBe(users.hooks)
+    expect(usersConfig.hooks?.afterChange).toEqual(users.hooks?.afterChange ?? [])
+    expect(usersConfig.hooks?.beforeDelete).toEqual([
+      ...(users.hooks?.beforeDelete ?? []),
+      deleteUsersReads,
+    ])
     expect(field(usersConfig, VISITS_FIELD)).toBeDefined()
     expect(config.collections!.map(({ slug }) => slug)).toContain(READS_SLUG)
     expect(config.endpoints ?? []).toEqual([])

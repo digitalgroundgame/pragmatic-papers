@@ -8,7 +8,9 @@ export { isWhipCountData } from "./model"
 
 /** What a whip count snapshot holds: how many voters and where they stand. */
 export function describeWhipCount(data: WhipCountData): string {
-  const declared = data.members.filter((m) => m.stance !== "undeclared").length
+  const declared = data.members.filter(
+    (m) => m.stance !== "undeclared" && m.stance !== "declined",
+  ).length
   return `${data.members.length} voters · ${declared} on the record · as of ${data.asOf}`
 }
 

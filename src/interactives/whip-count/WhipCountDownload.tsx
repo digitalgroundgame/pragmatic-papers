@@ -39,6 +39,7 @@ export function DownloadWhipCountButton({
         palette,
         logo: map.logoMarkup(logo, palette?.ink ?? "#171717"),
         fontFaces: await map.fontFaces(),
+        now: new Date(),
       })
       await map.saveSVGAsPNG(svg, map.mapFileName(title).replace(/^map\.png$/, "whip-count.png"))
     } catch (error) {

@@ -86,6 +86,7 @@ const WhipCountTable: JSONFieldClientComponent = (props) => {
       })),
     ),
     { key: "open", label: stanceLabel("open") },
+    { key: "declined", label: stanceLabel("declined") },
     { key: "undeclared", label: stanceLabel("undeclared") },
   ]
 

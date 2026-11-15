@@ -7,19 +7,29 @@ import { drawWhipCountSVG } from "../picture"
 describe("drawWhipCountSVG", () => {
   const svg = drawWhipCountSVG({ title: "Who leads <the> caucus?", data: whipCountData })
 
-  it("draws the title, the totals, the majority and the legend", () => {
+  it("draws the title, the totals head to head, the majority and the legend", () => {
     expect(svg).toContain("Who leads &lt;the&gt; caucus?")
-    expect(svg).toContain("AS OF NOVEMBER 13, 2026")
-    expect(svg).toContain(">Back Hale<")
-    expect(svg).toContain(">Back Ortiz<")
-    expect(svg).toContain(">plus 1 leaning<")
+    // The site's eyebrow, in its serif and the brand's text colour.
+    expect(svg).toMatch(
+      /Libertinus Serif[^>]*fill="#e0330f"[^>]*>WHIP COUNT · AS OF NOVEMBER 13, 2026</,
+    )
+    expect(svg).toMatch(/text-anchor="start">Marion Hale</)
+    expect(svg).toMatch(/text-anchor="end">Daniel Ortiz</)
+    expect(svg).toContain(">backing, plus 1 leaning<")
+    expect(svg).toContain(">vs<")
+    // Ortiz's forecast, lighter and inward of his count, with what it means.
+    expect(svg).toMatch(/font-size="64"[^>]*fill="#525252"[^>]*>3</)
+    expect(svg).toContain(">3 if the 1 who won’t back Hale hold to it<")
     expect(svg).toContain(">5 to win<")
     expect(svg).toContain(">3 Backs Hale<")
     expect(svg).toContain(">1 Won’t back Hale<")
   })
 
   it("leaves out the list of votes and any reader's own count", () => {
-    for (const member of whipCountData.members) expect(svg).not.toContain(member.name)
+    const candidates = new Set(whipCountData.candidates.map((c) => c.name))
+    for (const member of whipCountData.members) {
+      if (!candidates.has(member.name)) expect(svg).not.toContain(member.name)
+    }
     expect(svg).not.toMatch(/your count|your pick|every vote/i)
   })
 
@@ -34,13 +44,21 @@ describe("drawWhipCountSVG", () => {
     expect(svg).not.toContain('fill="#e2330f" fill-opacity')
   })
 
-  it("puts the logo in the bottom right corner", () => {
+  it("puts the logo top left, as the link preview does, with the date across from it", () => {
     const logo = '<svg viewBox="0 0 200 20" class="h-4"><path d="M0 0h200v20H0z"/></svg>'
     const withLogo = drawWhipCountSVG({ title: "T", data: whipCountData, logo })
-    // 22 tall, so 220 wide, ending 56 from the right edge of 1200.
-    expect(withLogo).toContain('<svg x="924" ')
-    expect(withLogo).toContain('width="220" height="22" viewBox="0 0 200 20"')
+    // 30 tall, so 300 wide, 56 in from the top left.
+    expect(withLogo).toContain('<svg x="56" y="56" width="300" height="30" viewBox="0 0 200 20"')
+    expect(withLogo).toMatch(/x="1144"[^>]*text-anchor="end">WHIP COUNT/)
     expect(svg).not.toContain("<svg x=")
+  })
+
+  it("counts down to the vote in an ink badge when it knows the time", () => {
+    const data = { ...whipCountData, voteAt: "2026-12-01T09:30:00-05:00" }
+    const counting = drawWhipCountSVG({ title: "T", data, now: new Date("2026-11-14T15:00:00Z") })
+    expect(counting).toContain(">17 days to the vote<")
+    expect(counting).toMatch(/fill="#171717"\/><text[^>]*fill="#ffffff"[^>]*>17 days to the vote</)
+    expect(drawWhipCountSVG({ title: "T", data })).not.toContain("to the vote")
   })
 
   it("draws in the palette it is given, and inlines the fonts", () => {

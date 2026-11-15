@@ -9,16 +9,26 @@ export interface Paint {
 
 export const UNASSIGNED: Paint = { color: "var(--border)", opacity: 1 }
 
-/** The first candidate is drawn in blue, the last in the brand colour. */
+/**
+ * The second candidate's colour: the red the maps use for their strongest R+. Never the brand
+ * orange, which would read as the site endorsing them; the count keeps the brand away from it.
+ */
+export const SECOND_CANDIDATE = "var(--map-positive-4)"
+
+/** The first candidate is drawn in blue, the second in red, any other in ink. */
 export function candidateColor(data: WhipCountData, candidate?: WhipCountCandidate): string {
   if (!candidate) return "var(--muted-foreground)"
-  return data.candidates[0]?.id === candidate.id ? "var(--chart-3)" : "var(--brand-fill)"
+  if (data.candidates[0]?.id === candidate.id) return "var(--chart-3)"
+  return data.candidates[1]?.id === candidate.id ? SECOND_CANDIDATE : "var(--foreground)"
 }
 
 /** How a public position is drawn, on the page and in the downloaded picture. */
 export function groupPaint(data: WhipCountData, group: PublicGroup): Paint {
   if (group.stance === "undeclared") return UNASSIGNED
   if (group.stance === "open") return { color: "var(--muted-foreground)", opacity: 0.45 }
+  // Asked and said nothing: greyer than the open, but a place with a source, unlike the
+  // undeclared's empty one.
+  if (group.stance === "declined") return { color: "var(--muted-foreground)", opacity: 0.25 }
   // Ruling one candidate out is a public position, but not a vote for another, so it is the
   // theme's amber and not a tint of the other candidate's colour, which is kept for those
   // leaning their way.

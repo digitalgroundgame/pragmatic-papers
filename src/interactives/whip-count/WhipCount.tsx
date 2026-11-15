@@ -20,6 +20,7 @@ import {
 import { formatLongDate } from "@/utilities/formatDate"
 import { isRecord } from "@/utilities/isRecord"
 import { Logo } from "@/components/Logo"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/utilities/utils"
 
 import { Countdown, NextUpdate } from "./Countdown"
@@ -28,18 +29,24 @@ import { candidateColor, groupPaint, UNASSIGNED, type Paint } from "./paint"
 
 import {
   assignGroup,
+  barGroups,
   cleanDraft,
   groupsOf,
   hasOutgoing,
   majorityOf,
   publicGroups,
+  refusalForecast,
+  refusalForecastLine,
+  refusalForecastMethod,
   stanceLabel,
   startingDraft,
   tallyDraft,
   votingMembers,
   withOutgoing,
+  withoutBlocs,
   type Draft,
   type PublicGroup,
+  type RefusalForecast,
   type WhipCountCandidate,
   type WhipCountData,
   type WhipCountMember,
@@ -51,6 +58,11 @@ interface Props {
   data: WhipCountData
   /** Names the reader's saved draft in their browser; the document's slug. */
   storageKey: string
+  /**
+   * Show each member's bloc, and let readers assign a bloc at once. Off, the page shows only
+   * the tags, while the blocs the editors filed stay in the data.
+   */
+  showBlocs?: boolean
 }
 
 const storageName = (key: string): string => `whip-count-draft:${key}`
@@ -271,31 +283,79 @@ function CountBar({
   )
 }
 
-/** A candidate's public backers: the largest number on the page, centred over its label. */
+/**
+ * A candidate's public backers, as the link preview draws them: their colour and name, the
+ * count, and beside it, lighter and toward the middle, what they'd have if those refusing
+ * their rival hold to it. `align` puts it at its end of the row, over its end of the bar.
+ */
 function Total({
+  name,
   value,
-  label,
   detail,
   color,
+  forecast,
+  align = "center",
 }: {
+  name: string
   value: number
-  label: string
   detail: string
   color: string
+  /** What they'd have if those who refused their rival hold to it, in lighter type. */
+  forecast?: RefusalForecast | null
+  align?: "start" | "end" | "center"
 }): React.ReactNode {
+  const items = {
+    start: "items-start text-left",
+    end: "items-end text-right",
+    center: "items-center text-center",
+  }[align]
   return (
-    <div className="text-center">
-      <p className="font-sans text-7xl leading-none font-bold tracking-tight tabular-nums md:text-8xl">
-        {value}
+    <div className={cn("flex min-w-0 flex-col", items)}>
+      <p className="flex items-center gap-2 text-base font-semibold sm:text-xl md:text-2xl">
+        <span
+          aria-hidden
+          className="size-3 shrink-0 rounded-xs sm:size-4"
+          style={{ background: color }}
+        />
+        {name}
       </p>
-      <p className="mt-3 flex items-center justify-center gap-1.5 font-medium">
-        <span aria-hidden className="size-3 rounded-xs" style={{ background: color }} />
-        {label}
+      <p
+        className={cn(
+          "mt-1 flex items-baseline gap-2 font-sans leading-none font-bold tracking-tight tabular-nums",
+          // The forecast sits toward the middle, so the big counts hold the outer edges.
+          align === "end" && "flex-row-reverse",
+        )}
+      >
+        <span className="text-6xl sm:text-7xl md:text-8xl">{value}</span>
+        {forecast && (
+          <Tooltip>
+            <TooltipTrigger
+              render={<span />}
+              tabIndex={0}
+              data-whip-count-forecast=""
+              className="text-muted-foreground cursor-help text-3xl underline-offset-8 hover:underline hover:decoration-dotted md:text-4xl"
+            >
+              <span aria-hidden>{forecast.total}</span>
+              <span className="sr-only">{`, or ${refusalForecastLine(forecast)}. ${refusalForecastMethod(forecast)}`}</span>
+            </TooltipTrigger>
+            <TooltipContent
+              side="top"
+              className="max-w-xs text-left font-sans text-xs font-normal tracking-normal"
+            >
+              <p className="font-semibold">{refusalForecastLine(forecast)}</p>
+              <p className="mt-1">{refusalForecastMethod(forecast)}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
       </p>
-      <p className="text-muted-foreground mt-0.5 text-sm">{detail}</p>
+      <p className="text-muted-foreground mt-2 text-sm">{detail}</p>
     </div>
   )
 }
+
+/** Under a total, as on the link preview: "backing, plus 5 leaning" or "publicly backing". */
+const backingDetail = (leans: number): string =>
+  leans > 0 ? `backing, plus ${leans} leaning` : "publicly backing"
 
 const eyebrow = "text-brand-text font-serif text-xs font-semibold tracking-widest uppercase"
 // Headings here are set in the body sans, not the site's display face.
@@ -304,14 +364,22 @@ const sectionTitle = `${heading} mt-1 text-2xl md:text-3xl`
 
 /**
  * A whip count: the public count of a leadership vote, and a draft the reader fills in with
- * their own guess of how the uncommitted break, one voter at a time or a bloc at a time. The
+ * their own guess of how the uncommitted break, one voter at a time or a group at a time. The
  * draft lives in the reader's browser only.
  */
-export function WhipCount({ title, data: published, storageKey }: Props): React.ReactNode {
+export function WhipCount({
+  title,
+  data: published,
+  storageKey,
+  showBlocs = false,
+}: Props): React.ReactNode {
   const outgoing = hasOutgoing(published)
   // Outgoing members start uncounted; the reader ticks the box to count them.
   const [countOutgoing, setCountOutgoing] = useState(false)
-  const data = useMemo(() => withOutgoing(published, countOutgoing), [published, countOutgoing])
+  const data = useMemo(
+    () => withOutgoing(showBlocs ? published : withoutBlocs(published), countOutgoing),
+    [published, countOutgoing, showBlocs],
+  )
   const voters = useMemo(() => votingMembers(data), [data])
   const groups = useMemo(() => publicGroups(data), [data])
   // Only groups with someone left to assign: one whose members have all publicly backed a
@@ -320,6 +388,8 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
     () => groupsOf(data).filter((group) => group.members.some((m) => m.stance !== "backs")),
     [data],
   )
+  // The groups column, when anyone is in a group to show.
+  const grouped = voters.some((m) => m.bloc || m.tags?.length)
   const majority = majorityOf(voters.length)
   const [first] = data.candidates
 
@@ -386,7 +456,7 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
         unclaimed: !side,
       })),
   )
-  const publicVotes: Vote[] = groups.flatMap((g) =>
+  const publicVotes: Vote[] = barGroups(groups).flatMap((g) =>
     g.members.map((member) => ({
       member,
       style: groupStyle(data, g),
@@ -401,7 +471,7 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
   const undeclared = [...(groups.find((g) => g.stance === "undeclared")?.members ?? [])].sort(
     (a, b) => (a.name.split(" ").at(-1) ?? "").localeCompare(b.name.split(" ").at(-1) ?? ""),
   )
-  const ends: [string, string] = [first?.short ?? "", data.candidates.at(-1)?.short ?? ""]
+  const ends: [string, string] = [first?.short ?? "", data.candidates[1]?.short ?? ""]
 
   return (
     <div data-whip-count="" className="flex flex-col gap-12">
@@ -429,19 +499,43 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
           </div>
         )}
 
-        <div className="mt-8 flex justify-center gap-10 sm:gap-20 md:gap-28">
-          {data.candidates.map((c) => (
-            <Total
-              key={c.id}
-              value={count("backs", c)}
-              label={`Back ${c.short}`}
-              detail={
-                count("leans", c) > 0 ? `plus ${count("leans", c)} leaning` : "publicly committed"
-              }
-              color={candidateColor(data, c)}
-            />
-          ))}
-        </div>
+        {data.candidates.length === 2 ? (
+          // Head to head, as in the link preview: each total over its own end of the bar.
+          <div
+            data-whip-count-totals=""
+            className="mt-8 grid grid-cols-[1fr_auto_1fr] items-start gap-3"
+          >
+            {data.candidates.map((c, i) => (
+              <React.Fragment key={c.id}>
+                {i === 1 && (
+                  <p className="text-muted-foreground mt-12 font-sans text-lg font-semibold sm:mt-16 md:text-2xl">
+                    vs
+                  </p>
+                )}
+                <Total
+                  align={i === 0 ? "start" : "end"}
+                  name={c.name}
+                  value={count("backs", c)}
+                  detail={backingDetail(count("leans", c))}
+                  color={candidateColor(data, c)}
+                  forecast={refusalForecast(data, c)}
+                />
+              </React.Fragment>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-8 flex justify-center gap-10 sm:gap-20 md:gap-28">
+            {data.candidates.map((c) => (
+              <Total
+                key={c.id}
+                name={c.name}
+                value={count("backs", c)}
+                detail={backingDetail(count("leans", c))}
+                color={candidateColor(data, c)}
+              />
+            ))}
+          </div>
+        )}
         <p className="text-muted-foreground mt-5 text-center text-sm">
           <span className="text-foreground font-medium tabular-nums">
             {voters.length - committed}
@@ -645,7 +739,7 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
               Think you know how it breaks?
             </h2>
             <p className="text-muted-foreground mt-1.5 text-sm">
-              Assign the uncommitted yourself, one senator or one bloc at a time, and see who wins.
+              Assign the uncommitted yourself, one senator or one group at a time, and see who wins.
             </p>
           </div>
           <Button variant="branded" onClick={() => setOpened(true)}>
@@ -665,7 +759,7 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
               <TableHead>Name</TableHead>
               {drafting && <TableHead>Your pick</TableHead>}
               <TableHead>Public position</TableHead>
-              <TableHead>Bloc</TableHead>
+              {grouped && <TableHead>{showBlocs ? "Bloc" : "Groups"}</TableHead>}
               <TableHead>What they said</TableHead>
             </TableRow>
           </TableHeader>
@@ -712,14 +806,22 @@ export function WhipCount({ title, data: published, storageKey }: Props): React.
                     />
                     {stanceLabel(m.stance, g.candidate)}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {m.bloc ?? "—"}
-                    {m.tags && (
-                      <span className="text-muted-foreground block text-xs">
-                        {m.tags.join(", ")}
-                      </span>
-                    )}
-                  </TableCell>
+                  {grouped && (
+                    <TableCell className="whitespace-nowrap">
+                      {showBlocs ? (
+                        <>
+                          {m.bloc ?? "—"}
+                          {m.tags && (
+                            <span className="text-muted-foreground block text-xs">
+                              {m.tags.join(", ")}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        (m.tags?.join(", ") ?? "—")
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell className="min-w-64 whitespace-normal">
                     {/* Long quotes are cut to three lines on a phone, where the row would
                         otherwise run to a screen's height. */}

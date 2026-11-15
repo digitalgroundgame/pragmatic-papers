@@ -5,6 +5,7 @@ import path from "path"
 import { fileURLToPath } from "url"
 
 import { withCloudflare } from "./src/cloudflare/withCloudflare"
+import { CARD_FONTS } from "./src/interactives/whip-count/cardFonts"
 
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
@@ -62,12 +63,9 @@ const nextConfig: NextConfig = {
   // The seed reads src/docs/ to load the help docs (loadRepoDocs), which no import traces.
   outputFileTracingIncludes: {
     "/**": ["./src/docs/**/*"],
-    // A whip count's link preview reads Geist's TTFs (next/og can't read woff2).
+    // A whip count's link preview reads its fonts' TTFs (next/og can't read woff2).
     // Keys are picomatch globs, so the route's brackets are escaped.
-    "/next/whip-counts/\\[slug\\]/image": [
-      "./node_modules/geist/dist/fonts/geist-sans/Geist-{Regular,SemiBold,Bold}.ttf",
-      "./node_modules/@expo-google-fonts/libertinus-serif/700Bold/LibertinusSerif_700Bold.ttf",
-    ],
+    "/next/whip-counts/\\[slug\\]/image": CARD_FONTS.map((font) => `./${font.file}`),
   },
   // The CI image's build sets this (dockerfiles/PragmaticPapers.ci.Dockerfile): CI's Static
   // checks run `next typegen` and `tsc` on the same commit, which cover what next build's

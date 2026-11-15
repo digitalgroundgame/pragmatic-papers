@@ -1,48 +1,14 @@
-import { readFile } from "node:fs/promises"
-import { join } from "node:path"
-
 import { ImageResponse } from "next/og"
 import React from "react"
 
 import { queryInteractiveBySlug } from "@/interactives/load"
 import { profileKind } from "@/interactives/profiles"
 import { CARD_SIZE, WhipCountCard } from "@/interactives/whip-count/card"
+import { loadCardFonts } from "@/interactives/whip-count/cardFonts"
 import { loadWhipCount, whipCountUpdatedAt } from "@/interactives/whip-count/load"
 
 interface Args {
   params: Promise<{ slug: string }>
-}
-
-const GEIST = "node_modules/geist/dist/fonts/geist-sans"
-const LIBERTINUS = "node_modules/@expo-google-fonts/libertinus-serif/700Bold"
-
-/**
- * The site's fonts in the weights the card uses, read from their packages
- * (`outputFileTracingIncludes` copies them into the build): Geist, and Libertinus Serif Bold
- * for the eyebrow. Without them, as in the Worker, which has no files to read, `next/og` draws
- * everything in its own Geist Regular.
- */
-async function siteFonts(): Promise<
-  { name: string; data: ArrayBuffer; weight: 400 | 600 | 700 }[] | undefined
-> {
-  const read = async (file: string): Promise<ArrayBuffer> => {
-    const bytes = await readFile(join(process.cwd(), file))
-    return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
-  }
-  try {
-    return [
-      { name: "Geist", data: await read(`${GEIST}/Geist-Regular.ttf`), weight: 400 },
-      { name: "Geist", data: await read(`${GEIST}/Geist-SemiBold.ttf`), weight: 600 },
-      { name: "Geist", data: await read(`${GEIST}/Geist-Bold.ttf`), weight: 700 },
-      {
-        name: "Libertinus Serif",
-        data: await read(`${LIBERTINUS}/LibertinusSerif_700Bold.ttf`),
-        weight: 700,
-      },
-    ]
-  } catch {
-    return undefined
-  }
 }
 
 /**
@@ -69,7 +35,7 @@ export async function GET(_request: Request, { params }: Args): Promise<Response
     />,
     {
       ...CARD_SIZE,
-      fonts: await siteFonts(),
+      fonts: await loadCardFonts(),
       headers: { "Cache-Control": "public, max-age=3600, s-maxage=86400" },
     },
   )

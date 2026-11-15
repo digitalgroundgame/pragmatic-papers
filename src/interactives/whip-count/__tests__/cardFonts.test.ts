@@ -69,6 +69,15 @@ describe("the link preview card's fonts", () => {
     )
   })
 
+  it("finds the Worker's assets where OpenNext keeps its context", async () => {
+    // The key is OpenNext's, not a public API: if a release moves it, this fails, where
+    // the card would otherwise quietly fall back to next/og's own font.
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare")
+    const worker = assets()
+    global[CONTEXT] = { env: { ASSETS: worker } }
+    expect(getCloudflareContext().env.ASSETS).toBe(worker)
+  })
+
   it("leaves next/og its own font when neither has them", async () => {
     readFile.mockRejectedValue(new Error("ENOENT"))
     expect(await loadCardFonts()).toBeUndefined()

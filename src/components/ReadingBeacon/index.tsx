@@ -66,12 +66,13 @@ export const ReadingBeacon: React.FC<ReadingBeaconProps> = ({
         keepalive: true,
       })
         .then((response) => {
+          // Only a visit the server took counts for the day: a failed one is tried on the next page.
+          if (response.ok) storeDay(day)
           if (response.status === 401) {
             document.cookie = `${signedInCookie}=; Path=/; Max-Age=0; SameSite=Lax`
           }
         })
         .catch(() => undefined)
-      storeDay(day)
     }
 
     if (articleId === undefined) {

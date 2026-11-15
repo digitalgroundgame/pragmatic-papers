@@ -107,6 +107,44 @@ describe("whip count snapshots", () => {
     ).rejects.toThrow()
   })
 
+  it("keep a statement an editor replaces in the count's history", async () => {
+    await createSenateLeaderWhipCount(payload, context)
+    const snapshot = await snapshotOf(WHIP_COUNT_SLUG)
+    const count = snapshot.data as unknown as WhipCountData
+    const name = count.members[0]!.name
+    const saying = (basis: string, basisDate: string, url: string): WhipCountData => ({
+      ...count,
+      members: count.members.map((m) =>
+        m.name === name ? { ...m, basis, basisDate, source: { label: "example.com", url } } : m,
+      ),
+    })
+    const save = async (data: WhipCountData): Promise<WhipCountData> => {
+      const updated = await payload.update({
+        collection: "interactive-snapshots",
+        id: snapshot.id,
+        data: { data: { ...data } },
+        user: editor,
+        overrideAccess: false,
+        draft: true,
+        context,
+      })
+      return updated.data as unknown as WhipCountData
+    }
+
+    await save(saying("“An older statement.”", "2026-11-10", "https://example.com/older"))
+    const saved = await save(
+      saying("“A newer statement.”", "2026-11-20", "https://example.com/newer"),
+    )
+    expect(saved.statements).toContainEqual({
+      name,
+      state: count.members[0]!.state,
+      saidOn: "2026-11-10",
+      statement: "“An older statement.”",
+      source: { label: "example.com", url: "https://example.com/older" },
+    })
+    expect(saved.statements?.some((s) => s.saidOn === "2026-11-20")).toBe(false)
+  })
+
   it("can't be turned into something the page can't draw", async () => {
     await createSenateLeaderWhipCount(payload, context)
     const snapshot = await snapshotOf(WHIP_COUNT_SLUG)

@@ -4,7 +4,7 @@ import React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { parseWhipCount, type WhipCountData } from "@/interactives/whip-count/model"
-import { whipCountData } from "@/stories/fixtures/whipCount"
+import { whipCountData, whipCountWithStatements } from "@/stories/fixtures/whipCount"
 
 import { WhipCountDataField } from "../WhipCountDataField"
 
@@ -184,5 +184,48 @@ describe("WhipCountDataField", () => {
     render(<WhipCountDataField {...props} />)
     fireEvent.click(screen.getByRole("button", { name: "Add a person" }))
     expect(screen.getByLabelText("Name for row 12")).toHaveValue("")
+  })
+  it("adds an earlier statement, filling in a member's state, and removes one", () => {
+    render(<WhipCountDataField {...props} />)
+    fireEvent.click(screen.getByRole("button", { name: "Add a statement" }))
+    fireEvent.change(screen.getByLabelText("Name for statement 1"), {
+      target: { value: "Sam Okafor" },
+    })
+    fireEvent.change(screen.getByLabelText("Date of statement 1"), {
+      target: { value: "2026-11-09" },
+    })
+    fireEvent.change(screen.getByLabelText("Words of statement 1"), {
+      target: { value: "“Not yet.”" },
+    })
+    fireEvent.change(screen.getByLabelText("Source link for statement 1"), {
+      target: { value: "https://example.org/okafor-early" },
+    })
+    const parsed = parseWhipCount(saved())
+    expect(parsed.success && parsed.value.statements).toEqual([
+      {
+        name: "Sam Okafor",
+        state: "VA",
+        saidOn: "2026-11-09",
+        statement: "“Not yet.”",
+        source: { url: "https://example.org/okafor-early", label: "example.org" },
+      },
+    ])
+    fireEvent.change(screen.getByLabelText("State for statement 1"), { target: { value: "MD" } })
+    expect(saved().statements?.[0]?.state).toBe("MD")
+    fireEvent.change(screen.getByLabelText("Source link for statement 1"), {
+      target: { value: "" },
+    })
+    expect(saved().statements?.[0]?.source).toBeUndefined()
+    fireEvent.click(screen.getByRole("button", { name: "Remove statement 1" }))
+    expect(saved()).not.toHaveProperty("statements")
+  })
+
+  it("lists the count's earlier statements", () => {
+    mockValue = JSON.parse(JSON.stringify(whipCountWithStatements))
+    render(<WhipCountDataField {...props} />)
+    expect(screen.getByLabelText("Name for statement 5")).toHaveValue("Former Member")
+    expect(screen.getByLabelText("Words of statement 1")).toHaveValue(
+      "“I want to hear from both of them before I decide.”",
+    )
   })
 })

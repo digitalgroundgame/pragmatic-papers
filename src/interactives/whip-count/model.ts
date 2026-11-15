@@ -64,6 +64,20 @@ export interface WhipCountMember {
   voting: boolean
 }
 
+/**
+ * Something a member said on the record, as the "Latest statements" feed lists it. It names
+ * the member and their state itself, so it outlives their row in the count.
+ */
+export interface WhipCountStatement {
+  name: string
+  state: string
+  /** The day it was said (YYYY-MM-DD). */
+  saidOn: string
+  /** A quote or a close paraphrase. */
+  statement: string
+  source?: WhipCountSource
+}
+
 export interface WhipCountUpdates {
   /** Times of day, 24-hour (`"07:37"`). */
   times: string[]
@@ -88,6 +102,12 @@ export interface WhipCountData {
   /** In the order the page lays them out: the first on the left, the last on the right. */
   candidates: WhipCountCandidate[]
   members: WhipCountMember[]
+  /**
+   * Earlier statements, newest first: what members said before their latest `basis`, which
+   * a push or an editor replaced (`keepReplacedStatements`), and any a push sends on its own.
+   * The feed adds each member's latest statement to these (`latestStatements`).
+   */
+  statements?: WhipCountStatement[]
 }
 
 /**
@@ -127,6 +147,14 @@ function hostOf(url: string): string {
   } catch {
     return "Source"
   }
+}
+
+/** A source as the data gives it: an https link (the page renders it as an href) and a label. */
+function sourceOf(value: unknown): WhipCountSource | null | undefined {
+  if (value === undefined || value === null) return undefined
+  const url = isRecord(value) ? text(value.url) : undefined
+  if (!isRecord(value) || !url || !url.startsWith("https://")) return null
+  return { url, label: text(value.label) ?? hostOf(url) }
 }
 
 /**
@@ -202,14 +230,9 @@ export function parseWhipCount(input: unknown): Result<WhipCountData, string> {
     if (basisDate && !DAY.test(basisDate)) {
       return failure(`${name}'s "basisDate" must be a date like 2026-11-13.`)
     }
-    let source: WhipCountSource | undefined
-    if (raw.source !== undefined && raw.source !== null) {
-      const url = isRecord(raw.source) ? text(raw.source.url) : undefined
-      // Only https links: the page renders this as an href.
-      if (!isRecord(raw.source) || !url || !url.startsWith("https://")) {
-        return failure(`${name}'s "source" needs a "url" that starts with https://.`)
-      }
-      source = { url, label: text(raw.source.label) ?? hostOf(url) }
+    const source = sourceOf(raw.source)
+    if (source === null) {
+      return failure(`${name}'s "source" needs a "url" that starts with https://.`)
     }
     members.push({
       name,
@@ -227,7 +250,112 @@ export function parseWhipCount(input: unknown): Result<WhipCountData, string> {
       voting: raw.voting !== false,
     })
   }
-  return success({ schema: WHIP_COUNT_SCHEMA, asOf, voteAt, updates, candidates, members })
+  let statements: WhipCountStatement[] | undefined
+  if (input.statements !== undefined && input.statements !== null) {
+    if (!Array.isArray(input.statements)) return failure('"statements" must be a list.')
+    statements = []
+    for (const [i, raw] of input.statements.entries()) {
+      const at = `Statement ${i + 1}`
+      if (!isRecord(raw)) return failure(`${at} must be an object.`)
+      const name = text(raw.name)
+      const state = text(raw.state)
+      const statement = text(raw.statement)
+      if (!name || !state || !statement) {
+        return failure(`${at} needs a "name", a "state" and a "statement".`)
+      }
+      const saidOn = text(raw.saidOn)
+      if (!saidOn || !DAY.test(saidOn)) {
+        return failure(`${at} (${name}) needs a "saidOn" date like 2026-11-13.`)
+      }
+      const source = sourceOf(raw.source)
+      if (source === null) {
+        return failure(`${at} (${name}) needs a "source" "url" that starts with https://.`)
+      }
+      statements.push({ name, state, saidOn, statement, source })
+    }
+    if (statements.length === 0) statements = undefined
+  }
+  return success({
+    schema: WHIP_COUNT_SCHEMA,
+    asOf,
+    voteAt,
+    updates,
+    candidates,
+    members,
+    statements,
+  })
+}
+
+/** A member's latest statement, when it is dated: the feed lists only dated statements. */
+export function memberStatement(member: WhipCountMember): WhipCountStatement | null {
+  if (!member.basis || !member.basisDate) return null
+  return {
+    name: member.name,
+    state: member.state,
+    saidOn: member.basisDate,
+    statement: member.basis,
+    source: member.source,
+  }
+}
+
+/**
+ * What makes two statements the same one: who, the day, and the link (or, without one, the
+ * words). Rewording a statement under the same link doesn't make it a new one.
+ */
+const statementKey = (s: WhipCountStatement): string =>
+  `${s.name}\n${s.saidOn}\n${s.source?.url ?? s.statement}`
+
+/** The statements once each (the first of any two the same), newest first, stable within a day. */
+function newestFirst(statements: WhipCountStatement[]): WhipCountStatement[] {
+  const seen = new Set<string>()
+  return statements
+    .filter((s) => {
+      const key = statementKey(s)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .map((s, at) => ({ s, at }))
+    .sort((a, b) => b.s.saidOn.localeCompare(a.s.saidOn) || a.at - b.at)
+    .map(({ s }) => s)
+}
+
+/**
+ * The "Latest statements" feed: each member's latest statement and the earlier ones the
+ * count keeps, once each, newest first.
+ */
+export function latestStatements(data: WhipCountData): WhipCountStatement[] {
+  return newestFirst([
+    ...data.members.flatMap((m) => memberStatement(m) ?? []),
+    ...(data.statements ?? []),
+  ])
+}
+
+/** The history a count stores: `statements` without anyone's latest, which the feed adds. */
+function historyOf(
+  members: WhipCountMember[],
+  statements: WhipCountStatement[],
+): WhipCountStatement[] | undefined {
+  const latest = new Set(members.flatMap((m) => memberStatement(m) ?? []).map(statementKey))
+  const history = newestFirst(statements).filter((s) => !latest.has(statementKey(s)))
+  return history.length > 0 ? history : undefined
+}
+
+/**
+ * The count `next` with the statements `previous` members had and `next` replaced moved into
+ * its history, so a newer statement doesn't erase the one before it. Statements already in
+ * `next`'s history stay as they are: an editor who removes one there removes it.
+ */
+export function keepReplacedStatements(
+  previous: WhipCountMember[],
+  next: WhipCountData,
+): WhipCountData {
+  const statements = historyOf(next.members, [
+    ...(next.statements ?? []),
+    ...previous.flatMap((m) => memberStatement(m) ?? []),
+  ])
+  const { statements: _statements, ...rest } = next
+  return statements ? { ...rest, statements } : rest
 }
 
 /**
@@ -545,7 +673,8 @@ export function assignGroup(draft: Draft, group: MemberGroup, candidate: string 
  * A count pushed from outside, laid over the one a document holds. The push owns what was
  * said (positions, statements, sources, the dates) and the roster's facts; the document keeps
  * what its editors decide: each member's bloc and tags, and anyone they added by hand whom
- * the push doesn't know.
+ * the push doesn't know. Statements accumulate: the push's are added to the document's
+ * history, and a member's statement the push replaces joins it.
  */
 export function mergePushedCount(
   current: WhipCountData | null,
@@ -558,12 +687,14 @@ export function mergePushedCount(
     return mine ? { ...member, bloc: mine.bloc, tags: mine.tags } : member
   })
   const pushedNames = new Set(pushed.members.map((m) => m.name))
-  return {
+  // The push adds to the history and never takes from it: it sends only what's new.
+  return keepReplacedStatements(current.members, {
     ...pushed,
     // A schedule is the document's to keep when the push says nothing of one.
     updates: pushed.updates ?? current.updates,
     members: [...members, ...current.members.filter((m) => !pushedNames.has(m.name))],
-  }
+    statements: [...(pushed.statements ?? []), ...(current.statements ?? [])],
+  })
 }
 
 /**

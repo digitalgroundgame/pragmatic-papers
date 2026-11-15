@@ -138,3 +138,47 @@ export const whipCountData: WhipCountData = {
     },
   ],
 }
+
+/**
+ * The same count with earlier statements: what members said before their latest, enough
+ * that the "Latest statements" feed hides some behind "Show all".
+ */
+export const whipCountWithStatements: WhipCountData = {
+  ...whipCountData,
+  statements: [
+    {
+      name: "Sam Okafor",
+      state: "VA",
+      saidOn: "2026-11-11",
+      statement: "“I want to hear from both of them before I decide.”",
+      source: { label: "example.org", url: "https://example.org/okafor" },
+    },
+    {
+      name: "Luis Navarro",
+      state: "MN",
+      saidOn: "2026-11-03",
+      statement: "Said the caucus should hold an open contest.",
+      source: { label: "example.org", url: "https://example.org/navarro-open" },
+    },
+    {
+      name: "Priya Raman",
+      state: "AZ",
+      saidOn: "2026-11-02",
+      statement: "“It’s too early to talk about leadership.”",
+      source: { label: "example.org", url: "https://example.org/raman-early" },
+    },
+    {
+      name: "Grace Lindqvist",
+      state: "GA",
+      saidOn: "2026-11-01",
+      statement: "Declined to say whom she would back.",
+    },
+    {
+      name: "Former Member",
+      state: "OH",
+      saidOn: "2026-10-30",
+      statement: "“The leader has my full support.”",
+      source: { label: "example.org", url: "https://example.org/former" },
+    },
+  ],
+}

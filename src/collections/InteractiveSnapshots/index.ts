@@ -9,7 +9,11 @@ import { admin, editor } from "@/access/collections"
 import { isPublishedOrStaff } from "@/access/policies"
 import { isEditor } from "@/access/roles"
 import { profileKind } from "@/interactives/profiles"
-import { parseWhipCount, WHIP_COUNT_SCHEMA } from "@/interactives/whip-count/model"
+import {
+  keepReplacedStatements,
+  parseWhipCount,
+  WHIP_COUNT_SCHEMA,
+} from "@/interactives/whip-count/model"
 import { isWhipCountData, whipCountSnapshotStamp } from "@/interactives/whip-count/snapshot"
 
 import { revalidateSnapshot, revalidateSnapshotDelete } from "./hooks/revalidateSnapshot"
@@ -51,12 +55,22 @@ const editableWhipCount: FieldAccess = ({ req, doc }) =>
 
 /**
  * Keeps a whip count's provenance true to its data when an editor changes it in the table:
- * the hash the push route compares with, the summary, and the day it is as of.
+ * the hash the push route compares with, the summary, and the day it is as of. A statement
+ * the editor replaced in a member's row moves into the count's history, as a push's does.
  */
-const stampWhipCount: CollectionBeforeChangeHook = ({ data }) => {
+const stampWhipCount: CollectionBeforeChangeHook = ({ data, originalDoc }) => {
   const parsed = isWhipCountData(data.data) ? parseWhipCount(data.data) : null
   if (!parsed?.success) return data
-  return { ...data, ...whipCountSnapshotStamp(parsed.value, new Date()) }
+  const before = isWhipCountData(originalDoc?.data) ? parseWhipCount(originalDoc?.data) : null
+  const count = before?.success
+    ? keepReplacedStatements(before.value.members, parsed.value)
+    : parsed.value
+  const { statements: _statements, ...rest } = data.data as Record<string, unknown>
+  return {
+    ...data,
+    data: count.statements ? { ...rest, statements: count.statements } : rest,
+    ...whipCountSnapshotStamp(count, new Date()),
+  }
 }
 
 /**

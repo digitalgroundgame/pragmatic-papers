@@ -9,8 +9,10 @@ import { WhipCount } from "../WhipCount"
 const result = (): HTMLElement => document.querySelector<HTMLElement>("[data-whip-count-result]")!
 
 /** Renders the count with the reader's own count opened. */
-function renderDrafting(): ReturnType<typeof render> {
-  const view = render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
+function renderDrafting(showBlocs = false): ReturnType<typeof render> {
+  const view = render(
+    <WhipCount title="Who leads?" data={whipCountData} storageKey="test" showBlocs={showBlocs} />,
+  )
   fireEvent.click(screen.getByRole("button", { name: "Make your own count" }))
   return view
 }
@@ -25,6 +27,21 @@ describe("WhipCount", () => {
       screen.getByText(/9 vote, so 5 wins\. 3 have publicly backed Marion Hale, 2 short/),
     ).toBeInTheDocument()
     expect(screen.getByRole("img", { name: /Backs Hale: 3, Leaning Hale: 1/ })).toBeInTheDocument()
+  })
+
+  it("shows beside a total, lighter, what it would be if those refusing the rival hold to it", () => {
+    render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
+    const forecasts = document.querySelectorAll("[data-whip-count-forecast]")
+    expect(forecasts).toHaveLength(1)
+    expect(forecasts[0]).toHaveTextContent(
+      /^3, or 3 if the 1 who won’t back Hale hold to it\. A forecast, not a count/,
+    )
+    // It takes focus, so the explanation's tooltip opens from the keyboard too.
+    expect(forecasts[0]).toHaveAttribute("tabindex", "0")
+    // The explanation is in the tooltip, not under the total.
+    expect(screen.queryByText("3 if the 1 who won’t back Hale hold to it")).not.toBeInTheDocument()
+    // The second candidate's forecast sits inward, to the left of their count.
+    expect(forecasts[0]!.parentElement).toHaveClass("flex-row-reverse")
   })
 
   it("keeps the reader's count out of the way until they ask for it", () => {
@@ -65,7 +82,7 @@ describe("WhipCount", () => {
   })
 
   it("assigns a group at once, except its public backers", () => {
-    renderDrafting()
+    renderDrafting(true)
     fireEvent.click(screen.getByRole("button", { name: "Give Progressive to Hale" }))
     expect(screen.getByLabelText("Your pick for Ana Whitfield")).toHaveValue("hale")
     expect(screen.getByLabelText("Your pick for Luis Navarro")).toHaveValue("hale")
@@ -74,6 +91,25 @@ describe("WhipCount", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Clear Progressive" }))
     expect(screen.getByLabelText("Your pick for Ana Whitfield")).toHaveValue("")
+  })
+
+  it("hides the blocs unless asked, keeping the other groups", () => {
+    renderDrafting()
+    expect(
+      screen.queryByRole("button", { name: "Give Progressive to Hale" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Give Incoming senators to Hale" }),
+    ).toBeInTheDocument()
+    const table = screen.getByRole("table")
+    expect(within(table).getByRole("columnheader", { name: "Groups" })).toBeInTheDocument()
+    expect(within(table).queryByText("Progressive")).not.toBeInTheDocument()
+
+    const vote = document.querySelector<HTMLElement>('[data-vote="Luis Navarro"]')!
+    fireEvent.pointerEnter(vote, { pointerType: "mouse" })
+    const card = document.querySelector("[data-vote-card]")!
+    expect(card).toHaveTextContent("Incoming")
+    expect(card).not.toHaveTextContent("Progressive")
   })
 
   it("lets a reader take a public backer away, and start over", () => {
@@ -107,7 +143,7 @@ describe("WhipCount", () => {
   })
 
   it("opens a card with who a vote is, where they stand and the source", () => {
-    render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" />)
+    render(<WhipCount title="Who leads?" data={whipCountData} storageKey="test" showBlocs />)
     const card = (): HTMLElement | null => document.querySelector("[data-vote-card]")
     expect(card()).not.toBeInTheDocument()
 
@@ -140,6 +176,29 @@ describe("WhipCount", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "true")
     expect(within(list).getByText("Sam Okafor")).toBeInTheDocument()
     expect(within(list).getAllByRole("listitem")).toHaveLength(1)
+  })
+
+  it("draws those who declined to comment in the middle, between the undeclared, each opening a card", () => {
+    const data = {
+      ...whipCountData,
+      members: whipCountData.members.map((m) =>
+        m.name === "Grace Lindqvist"
+          ? { ...m, stance: "declined" as const, basis: "Declined to comment to reporters." }
+          : m.name === "Tom Becker"
+            ? { ...m, stance: "undeclared" as const, candidate: undefined, basis: undefined }
+            : m,
+      ),
+    }
+    render(<WhipCount title="Who leads?" data={data} storageKey="test" />)
+    const row = document.querySelector<HTMLElement>('[data-vote="Grace Lindqvist"]')!
+    const places = [...row.parentElement!.children].map((p) => p.getAttribute("data-vote"))
+    // The middle (one who declined, one who ruled Hale out) between the two undeclared's
+    // empty places.
+    const at = places.indexOf("Grace Lindqvist")
+    expect(places.slice(at - 1, at + 3)).toEqual([null, "Grace Lindqvist", "Luis Navarro", null])
+    fireEvent.pointerEnter(row, { pointerType: "mouse" })
+    expect(document.querySelector("[data-vote-card]")).toHaveTextContent("Declined to comment")
+    expect(screen.getByRole("img", { name: /Declined to comment: 1/ })).toBeInTheDocument()
   })
 
   it("says whose pick a vote is in the reader's count, and leaves the unassigned empty", () => {

@@ -228,4 +228,17 @@ describe("WhipCountDataField", () => {
       "“I want to hear from both of them before I decide.”",
     )
   })
+  it("takes up the count a save brings back, keeping the statements it moved", () => {
+    const { rerender } = render(<WhipCountDataField {...props} />)
+    fireEvent.change(screen.getByLabelText("Note for Sam Okafor"), { target: { value: "A note." } })
+    // The save's hook moved a statement into the history; the form now holds the server's count.
+    mockValue = { ...saved(), statements: whipCountWithStatements.statements }
+    rerender(<WhipCountDataField {...props} />)
+    expect(screen.getByLabelText("Name for statement 1")).toHaveValue("Sam Okafor")
+    fireEvent.change(screen.getByLabelText("Note for Daniel Ortiz"), {
+      target: { value: "Another." },
+    })
+    expect(saved().statements).toEqual(whipCountWithStatements.statements)
+    expect(saved().members.find((m) => m.name === "Sam Okafor")?.note).toBe("A note.")
+  })
 })

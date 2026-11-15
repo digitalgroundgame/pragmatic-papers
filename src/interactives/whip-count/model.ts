@@ -342,18 +342,32 @@ function historyOf(
 }
 
 /**
- * The count `next` with the statements `previous` members had and `next` replaced moved into
- * its history, so a newer statement doesn't erase the one before it. Statements already in
- * `next`'s history stay as they are: an editor who removes one there removes it.
+ * Whether `after` is a new statement that replaces `before`, rather than a correction of it:
+ * said on another day, under another link (or, without one, in other words). Fixing a date,
+ * a link or a typo, or clearing a statement, replaces nothing.
+ */
+function replaces(after: WhipCountStatement | null, before: WhipCountStatement): boolean {
+  if (!after) return false
+  const ref = (s: WhipCountStatement): string => s.source?.url ?? s.statement
+  return after.saidOn !== before.saidOn && ref(after) !== ref(before)
+}
+
+/**
+ * The count `next` with the statements `previous` members had and `next` replaced with newer
+ * ones moved into its history, so a newer statement doesn't erase the one before it. A
+ * correction isn't kept (`replaces`). Statements already in `next`'s history stay as they
+ * are: an editor who removes one there removes it.
  */
 export function keepReplacedStatements(
   previous: WhipCountMember[],
   next: WhipCountData,
 ): WhipCountData {
-  const statements = historyOf(next.members, [
-    ...(next.statements ?? []),
-    ...previous.flatMap((m) => memberStatement(m) ?? []),
-  ])
+  const now = new Map(next.members.map((m) => [m.name, memberStatement(m)]))
+  const replaced = previous.flatMap((m) => {
+    const before = memberStatement(m)
+    return before && replaces(now.get(m.name) ?? null, before) ? [before] : []
+  })
+  const statements = historyOf(next.members, [...(next.statements ?? []), ...replaced])
   const { statements: _statements, ...rest } = next
   return statements ? { ...rest, statements } : rest
 }

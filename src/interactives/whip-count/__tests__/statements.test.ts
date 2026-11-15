@@ -137,6 +137,27 @@ describe("keepReplacedStatements", () => {
     expect(kept.statements).toBeUndefined()
   })
 
+  it.each([
+    ["a corrected date", { basisDate: "2026-11-11" }],
+    [
+      "a corrected link",
+      { source: { label: "example.com", url: "https://example.com/okafor-fixed" } },
+    ],
+    ["a cleared statement", { basis: undefined, basisDate: undefined, source: undefined }],
+  ])("keeps nothing for %s", (_name, change) => {
+    const kept = keepReplacedStatements(okafor(said).members, okafor({ ...said, ...change }))
+    expect(kept.statements).toBeUndefined()
+  })
+
+  it("keeps nothing for a member the count no longer has", () => {
+    const before = okafor(said)
+    const after = {
+      ...whipCountData,
+      members: whipCountData.members.filter((m) => m.name !== "Sam Okafor"),
+    }
+    expect(keepReplacedStatements(before.members, after).statements).toBeUndefined()
+  })
+
   it("leaves out an earlier statement the editor removed", () => {
     const before = { ...whipCountWithStatements }
     const after = { ...whipCountWithStatements, statements: before.statements!.slice(1) }

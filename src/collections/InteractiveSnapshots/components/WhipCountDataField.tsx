@@ -59,10 +59,15 @@ const WhipCountTable: JSONFieldClientComponent = (props) => {
   // through `parseWhipCount` on every keystroke would trim a name's trailing space before the
   // next word, and refuse a row whose name is still empty.
   const [typed, setTyped] = useState<WhipCountData | null>(null)
+  // The value changed from outside, as when a save brings back the server's count with the
+  // statements it moved into the history: show that, and write on top of it, not the rows as
+  // typed before.
+  const editing = typed && JSON.stringify(value) === JSON.stringify(typed) ? typed : null
+  if (typed && !editing) setTyped(null)
 
   const parsed = parseWhipCount(value)
   const empty = value === undefined || value === null
-  const data = typed ?? (parsed.success ? parsed.value : EMPTY)
+  const data = editing ?? (parsed.success ? parsed.value : EMPTY)
   const fieldLabel = typeof field.label === "string" ? field.label : "Data"
   const write = (next: WhipCountData): void => {
     setTyped(next)
@@ -99,7 +104,7 @@ const WhipCountTable: JSONFieldClientComponent = (props) => {
     { key: "undeclared", label: stanceLabel("undeclared") },
   ]
 
-  if (asJson || (!typed && !parsed.success && !empty) || data.candidates.length === 0) {
+  if (asJson || (!editing && !parsed.success && !empty) || data.candidates.length === 0) {
     return (
       <div>
         {!asJson && !empty && !parsed.success && (
@@ -350,7 +355,9 @@ const WhipCountTable: JSONFieldClientComponent = (props) => {
       <h4 style={{ margin: "24px 0 4px" }}>Earlier statements</h4>
       <p style={{ margin: "0 0 8px", color: "var(--theme-elevation-500)" }}>
         The page’s “Latest statements” lists each person’s statement above and these, newest first.
-        When a push or a save replaces someone’s statement, the old one is added here.
+        When a push or a save gives someone a newer statement (another day and another link), the
+        old one is added here. Fixing a date, a link or a typo adds nothing, but a quote moved off
+        the wrong person’s row onto a newer one stays here under their name: remove it.
       </p>
       {statements.length > 0 && (
         <div style={{ overflowX: "auto" }}>

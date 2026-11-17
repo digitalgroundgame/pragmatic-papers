@@ -76,6 +76,13 @@ export interface WhipCountStatement {
   /** A quote or a close paraphrase. */
   statement: string
   source?: WhipCountSource
+  /**
+   * The stance the member held on it, and the candidate it named, when the count knows them:
+   * a statement a newer one replaced keeps the stance it stood behind (`memberStatement`).
+   * `backedSince` reads them to find when a member's backing began.
+   */
+  stance?: Stance
+  candidate?: string
 }
 
 export interface WhipCountUpdates {
@@ -271,7 +278,23 @@ export function parseWhipCount(input: unknown): Result<WhipCountData, string> {
       if (source === null) {
         return failure(`${at} (${name}) needs a "source" "url" that starts with https://.`)
       }
-      statements.push({ name, state, saidOn, statement, source })
+      let stance: Stance | undefined
+      if (raw.stance !== undefined && raw.stance !== null) {
+        stance = STANCES.find((s) => s === raw.stance)
+        if (!stance) {
+          return failure(`${at} (${name}) has a "stance" that isn't one of: ${STANCES.join(", ")}.`)
+        }
+      }
+      const candidate = stance ? text(raw.candidate) : undefined
+      statements.push({
+        name,
+        state,
+        saidOn,
+        statement,
+        source,
+        ...(stance ? { stance } : {}),
+        ...(candidate ? { candidate } : {}),
+      })
     }
     if (statements.length === 0) statements = undefined
   }
@@ -295,7 +318,31 @@ export function memberStatement(member: WhipCountMember): WhipCountStatement | n
     saidOn: member.basisDate,
     statement: member.basis,
     source: member.source,
+    stance: member.stance,
+    ...(member.candidate ? { candidate: member.candidate } : {}),
   }
+}
+
+/**
+ * The day a member's current stance began: their latest statement's, or the earliest of the
+ * unbroken run of earlier statements that held the same stance on the same candidate. A
+ * statement whose stance the count doesn't know is skipped, not taken as a break. Undefined
+ * when the latest statement isn't dated.
+ */
+export function backedSince(
+  member: WhipCountMember,
+  statements: WhipCountStatement[] | undefined,
+): string | undefined {
+  let since = member.basisDate
+  if (!since) return undefined
+  const earlier = (statements ?? [])
+    .filter((s) => s.name === member.name && s.stance && s.saidOn <= since!)
+    .sort((a, b) => b.saidOn.localeCompare(a.saidOn))
+  for (const s of earlier) {
+    if (s.stance !== member.stance || s.candidate !== member.candidate) break
+    since = s.saidOn
+  }
+  return since
 }
 
 /**
@@ -473,7 +520,8 @@ function pinOf(member: WhipCountMember, data: WhipCountData): "left" | "right" |
 }
 
 /**
- * The groups as the bar draws them. Each candidate's backers and leaners hold their end. The
+ * The groups as the bar draws them. Each candidate's backers and leaners hold their end, the
+ * oldest backing at the very edge and the newest toward the middle (`inBackingOrder`). The
  * undecided sit in the middle, with the undeclared split around them, so many on the left that
  * the line to win falls between those refusing the second candidate and those refusing the
  * first: a refusal always sits on the far side of the line from the candidate it rules out,
@@ -502,11 +550,37 @@ export function barGroups(groups: PublicGroup[]): PublicGroup[] {
     ...(undeclared
       ? [{ ...undeclared, key: `${undeclared.key}:after`, members: pending.slice(before) }]
       : []),
-    ...right,
+    // Each side runs from its outer edge inward: the second candidate's oldest backing on the right.
+    ...right.map((g) => ({ ...g, members: [...g.members].reverse() })),
   ].filter((g) => g.members.length > 0)
 }
 
-/** The voting members grouped by what they have said, ordered from the first candidate's side. */
+/**
+ * A side's members in the order they came to it: the candidate first, then each by the day
+ * their backing began (`backedSince`), oldest first, and anyone without a date last, in the
+ * order of the list.
+ */
+function inBackingOrder(group: PublicGroup, data: WhipCountData): WhipCountMember[] {
+  const since = new Map(group.members.map((m) => [m.name, backedSince(m, data.statements)]))
+  const rank = (m: WhipCountMember): number => (m.name === group.candidate?.name ? 0 : 1)
+  return group.members
+    .map((member, at) => ({ member, at }))
+    .sort((a, b) => {
+      const first = rank(a.member) - rank(b.member)
+      if (first) return first
+      const x = since.get(a.member.name)
+      const y = since.get(b.member.name)
+      if (x && y && x !== y) return x.localeCompare(y)
+      if (!x !== !y) return x ? -1 : 1
+      return a.at - b.at
+    })
+    .map(({ member }) => member)
+}
+
+/**
+ * The voting members grouped by what they have said, ordered from the first candidate's side.
+ * Within a candidate's groups, members are in the order they came to it (`inBackingOrder`).
+ */
 export function publicGroups(data: WhipCountData): PublicGroup[] {
   const groups = new Map<string, PublicGroup & { at: number }>()
   for (const member of votingMembers(data)) {
@@ -528,7 +602,11 @@ export function publicGroups(data: WhipCountData): PublicGroup[] {
     }
     group.members.push(member)
   }
-  return [...groups.values()].sort((a, b) => a.at - b.at).map(({ at: _at, ...group }) => group)
+  return [...groups.values()]
+    .sort((a, b) => a.at - b.at)
+    .map(({ at: _at, ...group }) =>
+      group.side === 0 ? group : { ...group, members: inBackingOrder(group, data) },
+    )
 }
 
 /** What a candidate would have if those who refused their rival hold to it. */

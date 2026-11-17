@@ -24,7 +24,9 @@ export const resolveReadingConfig = (
  * and on each account the days visited and the current and longest streak. It records only
  * while achievements are switched on. Adds the reads collection, the visits on each user, the
  * hooks that delete reads with their account or article, and the endpoints the page reports to
- * (`POST /api/reading`) and the account page reads (`GET /api/reading/mine`).
+ * (`POST /api/reading`) and the account page reads (`GET /api/reading/mine`). Disabled, it keeps
+ * the table and the delete hooks (a read's user and article can't be null, so a delete would
+ * fail on any reads left behind), and drops the endpoints.
  */
 export function withReading(config: Config, reading: ResolvedReadingConfig): Config {
   const collections = (config.collections ?? []).map((existing): CollectionConfig => {
@@ -32,15 +34,13 @@ export function withReading(config: Config, reading: ResolvedReadingConfig): Con
       return {
         ...existing,
         fields: [...existing.fields, visitsField(reading)],
-        hooks: reading.disabled
-          ? existing.hooks
-          : {
-              ...existing.hooks,
-              beforeDelete: [...(existing.hooks?.beforeDelete ?? []), deleteUsersReads],
-            },
+        hooks: {
+          ...existing.hooks,
+          beforeDelete: [...(existing.hooks?.beforeDelete ?? []), deleteUsersReads],
+        },
       }
     }
-    if (existing.slug === reading.articlesSlug && !reading.disabled) {
+    if (existing.slug === reading.articlesSlug) {
       return {
         ...existing,
         hooks: {

@@ -5,6 +5,7 @@ import { whipCountData } from "@/stories/fixtures/whipCount"
 
 import {
   assignGroup,
+  barGroups,
   cleanDraft,
   groupsOf,
   hasOutgoing,
@@ -13,12 +14,19 @@ import {
   nextUpdate,
   parseWhipCount,
   publicGroups,
+  refusalForecast,
+  refusalForecastLine,
+  refusalForecastMethod,
   stanceLabel,
   startingDraft,
   tallyDraft,
   votingMembers,
   withOutgoing,
+  withoutBlocs,
+  type WhipCountCandidate,
 } from "../model"
+import { candidateColor, groupPaint } from "../paint"
+import { describeWhipCount } from "../snapshot"
 
 const raw = (): Record<string, unknown> =>
   JSON.parse(JSON.stringify(whipCountData)) as Record<string, unknown>
@@ -150,6 +158,7 @@ describe("stanceLabel", () => {
     expect(stanceLabel("opposes")).toBe("Won’t back a candidate")
     expect(stanceLabel("backs")).toBe("Backs a candidate")
     expect(stanceLabel("open", hale)).toBe("Open to a change")
+    expect(stanceLabel("declined")).toBe("Declined to comment")
     expect(stanceLabel("undeclared")).toBe("Undeclared")
   })
 })
@@ -172,7 +181,140 @@ describe("the public count", () => {
     ])
   })
 
-  it("puts those who ruled the last candidate out, or lean their way, on the right side", () => {
+  it("keeps those who declined to comment apart from the undeclared, between them and the open", () => {
+    const data = {
+      ...whipCountData,
+      members: whipCountData.members.map((m) =>
+        m.name === "Sam Okafor" ? { ...m, stance: "declined" as const } : m,
+      ),
+    }
+    expect(parseWhipCount(data).success).toBe(true)
+    expect(publicGroups(data).map((g) => g.label)).toEqual([
+      "Backs Hale",
+      "Leaning Hale",
+      "Declined to comment",
+      "Open to a change",
+      "Won’t back Hale",
+      "Backs Ortiz",
+    ])
+    expect(groupPaint(data, publicGroups(data)[2]!)).toEqual({
+      color: "var(--muted-foreground)",
+      opacity: 0.25,
+    })
+    expect(describeWhipCount(data)).toBe(
+      `${data.members.length} voters · ${data.members.length - 3} on the record · as of ${data.asOf}`,
+    )
+  })
+
+  it("draws those who declined in the middle of the bar, with the undeclared around them", () => {
+    const names = ["Sam Okafor", "Grace Lindqvist", "Ana Whitfield", "Tom Becker"]
+    const data = {
+      ...whipCountData,
+      members: whipCountData.members.map((m) =>
+        m.name === names[0]
+          ? { ...m, stance: "declined" as const, candidate: undefined }
+          : names.slice(1).includes(m.name)
+            ? { ...m, stance: "undeclared" as const, candidate: undefined }
+            : m,
+      ),
+    }
+    const groups = publicGroups(data)
+    const bar = barGroups(groups)
+    // The undecided (here one who declined and one who ruled Hale out) between the undeclared.
+    expect(bar.map((g) => `${g.stance} ${g.members.length}`)).toEqual([
+      "backs 2",
+      "undeclared 2",
+      "declined 1",
+      "opposes 1",
+      "undeclared 1",
+      "backs 2",
+    ])
+    expect(bar.flatMap((g) => g.members)).toHaveLength(votingMembers(data).length)
+    expect(new Set(bar.map((g) => g.key)).size).toBe(bar.length)
+  })
+
+  it("keeps those refusing the first candidate just past the line to win, on the far side", () => {
+    // Nine voters, five to win: Hale's four, the one open to a change, then the line, then the
+    // one who won't back Hale, the undeclared, and Ortiz's.
+    const bar = barGroups(publicGroups(whipCountData))
+    expect(bar.map((g) => `${g.label} ${g.members.length}`)).toEqual([
+      "Backs Hale 3",
+      "Leaning Hale 1",
+      "Open to a change 1",
+      "Won’t back Hale 1",
+      "Undeclared 1",
+      "Backs Ortiz 2",
+    ])
+    // With more undeclared, they fill the left up to the line, so the refusal starts after it.
+    const data = {
+      ...whipCountData,
+      members: whipCountData.members.map((m) =>
+        m.name === "Priya Raman" || m.name === "Ana Whitfield"
+          ? { ...m, stance: "undeclared" as const, candidate: undefined }
+          : m,
+      ),
+    }
+    const places = barGroups(publicGroups(data)).flatMap((g) => g.members.map(() => g.stance))
+    expect(places.indexOf("opposes")).toBe(majorityOf(places.length))
+  })
+
+  it("forecasts a candidate's count if those who refused their rival hold to it", () => {
+    const [hale, ortiz] = whipCountData.candidates as [WhipCountCandidate, WhipCountCandidate]
+    const forecast = refusalForecast(whipCountData, ortiz)
+    expect(forecast).toEqual({ candidate: ortiz, refused: hale, refusals: 1, total: 3 })
+    expect(refusalForecastMethod(forecast!)).toBe(
+      "A forecast, not a count: Ortiz’s 2 public backers plus the 1 who have said they won’t back Hale. With two candidates, anyone who holds to that and votes can only vote for Ortiz. The ballot is secret, so nobody can check that they do.",
+    )
+    expect(refusalForecastLine(forecast!)).toBe("3 if the 1 who won’t back Hale hold to it")
+    // Nobody refused Ortiz.
+    expect(refusalForecast(whipCountData, hale)).toBeNull()
+    // With a third candidate, refusing Hale says nothing about who they'd pick.
+    const three = {
+      ...whipCountData,
+      candidates: [
+        ...whipCountData.candidates,
+        { id: "reyes", name: "Lena Reyes", short: "Reyes" },
+      ],
+    }
+    expect(refusalForecast(three, ortiz)).toBeNull()
+  })
+
+  it("puts a third candidate's groups in the middle with the undecided, not on a side", () => {
+    const third = { id: "reyes", name: "Lena Reyes", short: "Reyes" }
+    const data = {
+      ...whipCountData,
+      candidates: [...whipCountData.candidates, third],
+      members: whipCountData.members.map((m) =>
+        m.name === "Ana Whitfield"
+          ? { ...m, stance: "backs" as const, candidate: "reyes" }
+          : m.name === "Tom Becker"
+            ? { ...m, stance: "undeclared" as const, candidate: undefined }
+            : m,
+      ),
+    }
+    const groups = publicGroups(data)
+    expect(groups.map((g) => [g.label, g.side])).toEqual([
+      ["Backs Hale", -1],
+      ["Undeclared", 0],
+      ["Open to a change", 0],
+      ["Won’t back Hale", 0],
+      ["Backs Reyes", 0],
+      ["Backs Ortiz", 1],
+    ])
+    expect(barGroups(groups).map((g) => `${g.label} ${g.members.length}`)).toEqual([
+      "Backs Hale 2",
+      "Undeclared 1",
+      "Open to a change 1",
+      "Backs Reyes 1",
+      "Won’t back Hale 1",
+      "Undeclared 1",
+      "Backs Ortiz 2",
+    ])
+    expect(candidateColor(data, third)).toBe("var(--foreground)")
+    expect(candidateColor(data, whipCountData.candidates[1])).toBe("var(--map-positive-4)")
+  })
+
+  it("puts those who ruled a candidate out in the middle, as undecided, and leaners by their candidate", () => {
     const data = {
       ...whipCountData,
       members: whipCountData.members.map((m) =>
@@ -186,11 +328,12 @@ describe("the public count", () => {
     expect(publicGroups(data).map((g) => g.label)).toEqual([
       "Backs Hale",
       "Leaning Hale",
-      "Won’t back Ortiz",
       "Won’t back Hale",
+      "Won’t back Ortiz",
       "Leaning Ortiz",
       "Backs Ortiz",
     ])
+    expect(publicGroups(data).map((g) => g.side)).toEqual([-1, -1, 0, 0, 1, 1])
     expect(hasOutgoing(data)).toBe(true)
     expect(hasOutgoing({ ...data, members: data.members.slice(0, 3) })).toBe(false)
   })
@@ -238,6 +381,14 @@ describe("a reader's draft", () => {
     ])
     const counted = groupsOf(withOutgoing(whipCountData, true))
     expect(counted.at(-1)).toMatchObject({ kind: "seat", name: "Outgoing senators" })
+  })
+
+  it("drops the blocs, keeping the tags as groups", () => {
+    const plain = withoutBlocs(whipCountData)
+    expect(plain.members.some((m) => "bloc" in m)).toBe(false)
+    expect(plain.members.map((m) => m.tags)).toEqual(whipCountData.members.map((m) => m.tags))
+    expect(groupsOf(plain).map((g) => g.kind)).not.toContain("bloc")
+    expect(groupsOf(plain).map((g) => g.name)).toContain("Anti-establishment")
   })
 
   it("assigns a group's uncommitted members and leaves public backers alone", () => {

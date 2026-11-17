@@ -11,10 +11,11 @@ import { failure, success, type Result } from "@/utilities/result"
 
 export const WHIP_COUNT_SCHEMA = "pragmatic-papers/whip-count@1"
 
-export const STANCES = ["backs", "leans", "opposes", "open", "undeclared"] as const
+export const STANCES = ["backs", "leans", "opposes", "open", "declined", "undeclared"] as const
 /**
  * What a voter has said. `backs`, `leans` and `opposes` name a candidate (for `opposes`, the
- * one they ruled out); `open` is on the record as wanting a change without ruling anyone out.
+ * one they ruled out); `open` is on the record as wanting a change without ruling anyone out;
+ * `declined` was asked and declined to say, where `undeclared` has said nothing we know of.
  */
 export type Stance = (typeof STANCES)[number]
 
@@ -47,7 +48,7 @@ export interface WhipCountMember {
    */
   tags?: string[]
   stance: Stance
-  /** The candidate `stance` is about; absent for `open` and `undeclared`. */
+  /** The candidate `stance` is about; absent for `open`, `declined` and `undeclared`. */
   candidate?: string
   /** The statement behind the stance: a quote or a close paraphrase. */
   basis?: string
@@ -240,6 +241,14 @@ export function withOutgoing(data: WhipCountData, counted: boolean): WhipCountDa
   }
 }
 
+/**
+ * The same count without its blocs, for a page that doesn't show them: each member keeps
+ * their tags, so a reader can still assign those groups at once.
+ */
+export function withoutBlocs(data: WhipCountData): WhipCountData {
+  return { ...data, members: data.members.map(({ bloc: _bloc, ...member }) => member) }
+}
+
 export const hasOutgoing = (data: WhipCountData): boolean =>
   data.members.some((m) => m.seat === "outgoing")
 
@@ -256,6 +265,13 @@ export interface PublicGroup {
   candidate?: WhipCountCandidate
   label: string
   members: WhipCountMember[]
+  /** Toward the first candidate (-1), the second (1), or the middle (0): see `sideOf`. */
+  side: -1 | 0 | 1
+  /**
+   * For those ruling out one of the first two candidates: the side of the line to win they
+   * keep to, away from the one they refuse (`right` for those refusing the first).
+   */
+  pin?: "left" | "right"
 }
 
 export function stanceLabel(stance: Stance, candidate?: WhipCountCandidate): string {
@@ -268,34 +284,84 @@ export function stanceLabel(stance: Stance, candidate?: WhipCountCandidate): str
       return `Won’t back ${candidate?.short ?? "a candidate"}`
     case "open":
       return "Open to a change"
+    case "declined":
+      return "Declined to comment"
     default:
       return "Undeclared"
   }
 }
 
 /**
- * Where a stance sits between the first candidate (0) and the last (1): their backers at the
- * ends, leaners next, then those who ruled the other side out, with the undeclared in the
- * middle. Works for two candidates; any others sort between them by their place in the list.
+ * Which way a stance pulls on the bar: toward the first candidate (-1), toward the second (1),
+ * or neither (0). Only backing or leaning to one of the first two candidates has a side.
+ * Everything else is undecided and sits in the middle: the undeclared, those who declined to
+ * comment (who may still be negotiating, so the bar doesn't read them as leaning), those open
+ * to a change, those who ruled a candidate out without naming who they would back, and anyone
+ * backing or leaning to a third candidate.
+ */
+function sideOf(member: WhipCountMember, data: WhipCountData): -1 | 0 | 1 {
+  if (member.stance !== "backs" && member.stance !== "leans") return 0
+  const at = data.candidates.slice(0, 2).findIndex((c) => c.id === member.candidate)
+  return at < 0 ? 0 : at === 0 ? -1 : 1
+}
+
+const MIDDLE_ORDER: Stance[] = ["undeclared", "declined", "open", "opposes"]
+
+/**
+ * Where a group sits between the first candidate (0) and the second (1): their backers at the
+ * ends and leaners next, and the middle (`sideOf`) at 0.5, in `MIDDLE_ORDER`, then any other
+ * candidate's groups in the order of the list.
  */
 function lean(member: WhipCountMember, data: WhipCountData): number {
-  const last = data.candidates.length - 1
-  const at = data.candidates.findIndex((c) => c.id === member.candidate)
-  const side = at < 0 ? 0.5 : at / last
-  const toward = side <= 0.5 ? -1 : 1
-  switch (member.stance) {
-    case "backs":
-      return side
-    case "leans":
-      return side - toward * 0.1
-    case "opposes":
-      // Ruling a candidate out moves a voter away from that candidate's end.
-      return 0.5 - toward * 0.25
-    case "open":
-      return 0.52
-    default:
-      return 0.5
+  const side = sideOf(member, data)
+  if (side === 0) {
+    const at = data.candidates.findIndex((c) => c.id === member.candidate)
+    const order = MIDDLE_ORDER.indexOf(member.stance)
+    return 0.5 + (member.stance === "opposes" || order < 0 ? 4 + at : order) * 0.001
   }
+  const end = side === -1 ? 0 : 1
+  return member.stance === "backs" ? end : end - side * 0.1
+}
+
+/** Which side of the line to win a refusal of one of the first two candidates keeps to. */
+function pinOf(member: WhipCountMember, data: WhipCountData): "left" | "right" | undefined {
+  if (member.stance !== "opposes") return undefined
+  const at = data.candidates.slice(0, 2).findIndex((c) => c.id === member.candidate)
+  return at === 0 ? "right" : at === 1 ? "left" : undefined
+}
+
+/**
+ * The groups as the bar draws them. Each candidate's backers and leaners hold their end. The
+ * undecided sit in the middle, with the undeclared split around them, so many on the left that
+ * the line to win falls between those refusing the second candidate and those refusing the
+ * first: a refusal always sits on the far side of the line from the candidate it rules out,
+ * however the rest of the count moves.
+ */
+export function barGroups(groups: PublicGroup[]): PublicGroup[] {
+  const undeclared = groups.find((g) => g.stance === "undeclared")
+  const left = groups.filter((g) => g.side === -1)
+  const right = groups.filter((g) => g.side === 1)
+  const middle = groups.filter((g) => g.side === 0 && g !== undeclared && !g.pin)
+  const pinnedLeft = groups.filter((g) => g.pin === "left")
+  const pinnedRight = groups.filter((g) => g.pin === "right")
+  const size = (list: PublicGroup[]): number => list.reduce((n, g) => n + g.members.length, 0)
+  const line = majorityOf(size(groups))
+  const pending = undeclared?.members ?? []
+  const before = Math.max(
+    0,
+    Math.min(pending.length, line - size(left) - size(middle) - size(pinnedLeft)),
+  )
+  return [
+    ...left,
+    ...(undeclared ? [{ ...undeclared, members: pending.slice(0, before) }] : []),
+    ...middle,
+    ...pinnedLeft,
+    ...pinnedRight,
+    ...(undeclared
+      ? [{ ...undeclared, key: `${undeclared.key}:after`, members: pending.slice(before) }]
+      : []),
+    ...right,
+  ].filter((g) => g.members.length > 0)
 }
 
 /** The voting members grouped by what they have said, ordered from the first candidate's side. */
@@ -312,6 +378,8 @@ export function publicGroups(data: WhipCountData): PublicGroup[] {
         candidate,
         label: stanceLabel(member.stance, candidate),
         members: [],
+        side: sideOf(member, data),
+        pin: pinOf(member, data),
         at: lean(member, data),
       }
       groups.set(key, group)
@@ -320,6 +388,54 @@ export function publicGroups(data: WhipCountData): PublicGroup[] {
   }
   return [...groups.values()].sort((a, b) => a.at - b.at).map(({ at: _at, ...group }) => group)
 }
+
+/** What a candidate would have if those who refused their rival hold to it. */
+export interface RefusalForecast {
+  /** The candidate forecast. */
+  candidate: WhipCountCandidate
+  /** The candidate they refused. */
+  refused: WhipCountCandidate
+  /** How many refused them. */
+  refusals: number
+  /** The candidate's public backers plus those refusals. */
+  total: number
+}
+
+/**
+ * A candidate's forecast if everyone who ruled out their rival follows through. Only with two
+ * candidates: with three, refusing one says nothing about which of the others they'd pick.
+ * Null when nobody has refused the rival.
+ */
+export function refusalForecast(
+  data: WhipCountData,
+  candidate: WhipCountCandidate,
+): RefusalForecast | null {
+  if (data.candidates.length !== 2) return null
+  const refused = data.candidates.find((c) => c.id !== candidate.id)
+  if (!refused) return null
+  const groups = publicGroups(data)
+  const size = (stance: Stance, of: WhipCountCandidate): number =>
+    groups.find((g) => g.stance === stance && g.candidate?.id === of.id)?.members.length ?? 0
+  const refusals = size("opposes", refused)
+  if (refusals === 0) return null
+  return { candidate, refused, refusals, total: size("backs", candidate) + refusals }
+}
+
+/** How the forecast is made, for a reader who asks. */
+export const refusalForecastMethod = ({
+  candidate,
+  refused,
+  refusals,
+  total,
+}: RefusalForecast): string =>
+  `A forecast, not a count: ${candidate.short}’s ${total - refusals} public backers plus the ` +
+  `${refusals} who have said they won’t back ${refused.short}. With two candidates, anyone who ` +
+  `holds to that and votes can only vote for ${candidate.short}. The ballot is secret, so ` +
+  `nobody can check that they do.`
+
+/** The forecast in words: "10 if the 5 who won't back Schumer hold to it". */
+export const refusalForecastLine = (forecast: RefusalForecast): string =>
+  `${forecast.total} if the ${forecast.refusals} who won’t back ${forecast.refused.short} hold to it`
 
 /** A reader's own guess: a candidate id for each member they have assigned, by member name. */
 export type Draft = Record<string, string>

@@ -25,7 +25,7 @@ vi.mock("../WhipCount", () => ({
   },
 }))
 
-import { loadWhipCount } from "../load"
+import { loadWhipCount, whipCountUpdatedAt } from "../load"
 import { WhipCountPage } from "../WhipCountPage"
 
 const interactive = {
@@ -62,6 +62,19 @@ describe("loadWhipCount", () => {
     draft.isEnabled = true
     await loadWhipCount({ id: 4 })
     expect(find.mock.calls[1]).toMatchObject([{ draft: true, overrideAccess: true }])
+  })
+
+  it("says when the count last changed: its stamp, else when the snapshot was saved", async () => {
+    find.mockResolvedValue({
+      docs: [{ id: 7, data: whipCountData, syncedAt: "2026-11-14T19:37:00Z", updatedAt: "x" }],
+    })
+    await expect(whipCountUpdatedAt({ id: 8 })).resolves.toBe("2026-11-14T19:37:00Z")
+    find.mockResolvedValue({
+      docs: [{ id: 7, data: whipCountData, updatedAt: "2026-11-14T20:00:00Z" }],
+    })
+    await expect(whipCountUpdatedAt({ id: 9 })).resolves.toBe("2026-11-14T20:00:00Z")
+    find.mockResolvedValue({ docs: [] })
+    await expect(whipCountUpdatedAt({ id: 10 })).resolves.toBeUndefined()
   })
 
   it("says why there is no count", async () => {

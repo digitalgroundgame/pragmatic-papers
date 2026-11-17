@@ -16,7 +16,8 @@ export const WIDEST_HERO = 4
 /**
  * The aspect ratio (width / height) the article hero shows `media` at: its own, between
  * {@link TALLEST_HERO} and {@link WIDEST_HERO}, so any image in that range is shown whole.
- * Media without dimensions (a video, an unresolved id) gets 16:9.
+ * An image stored without dimensions gets 16:9. (A video hero ignores this: `VideoMedia`
+ * takes no `style`, so it plays in its own shape.)
  */
 export function heroAspectRatio(media: Media | number | null | undefined): number {
   if (typeof media !== "object" || !media?.width || !media.height) return TALLEST_HERO

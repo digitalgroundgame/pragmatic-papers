@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, userEvent, within } from "storybook/test"
 
-import { whipCountData } from "@/stories/fixtures/whipCount"
+import { whipCountData, whipCountWithStatements } from "@/stories/fixtures/whipCount"
 
 import { WhipCount } from "./WhipCount"
 
@@ -71,5 +71,14 @@ export const ForecastExplained: Story = {
     // Ortiz's total is the right-hand one, with the forecast inward of the count.
     const totals = canvasElement.querySelector<HTMLElement>("[data-whip-count-totals]")!
     await expect(within(totals).getByText("Daniel Ortiz")).toBeInTheDocument()
+  },
+}
+
+/** With earlier statements, the "Latest statements" feed sits under the public count. */
+export const WithStatements: Story = {
+  args: { data: whipCountWithStatements },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole("region", { name: "Latest statements" })).toBeInTheDocument()
   },
 }

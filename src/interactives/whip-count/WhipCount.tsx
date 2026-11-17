@@ -24,6 +24,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/utilities/utils"
 
 import { Countdown, NextUpdate } from "./Countdown"
+import { LatestStatements } from "./LatestStatements"
 import { DownloadWhipCountButton } from "./WhipCountDownload"
 import { candidateColor, groupPaint, UNASSIGNED, type Paint } from "./paint"
 
@@ -620,6 +621,8 @@ export function WhipCount({
           </Accordion>
         )}
       </section>
+
+      <LatestStatements data={published} />
 
       {drafting ? (
         <section

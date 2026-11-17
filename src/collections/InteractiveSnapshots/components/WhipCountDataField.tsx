@@ -14,6 +14,7 @@ import {
   type Stance,
   type WhipCountData,
   type WhipCountMember,
+  type WhipCountStatement,
 } from "@/interactives/whip-count/model"
 
 const cellInput: React.CSSProperties = {
@@ -58,10 +59,15 @@ const WhipCountTable: JSONFieldClientComponent = (props) => {
   // through `parseWhipCount` on every keystroke would trim a name's trailing space before the
   // next word, and refuse a row whose name is still empty.
   const [typed, setTyped] = useState<WhipCountData | null>(null)
+  // The value changed from outside, as when a save brings back the server's count with the
+  // statements it moved into the history: show that, and write on top of it, not the rows as
+  // typed before.
+  const editing = typed && JSON.stringify(value) === JSON.stringify(typed) ? typed : null
+  if (typed && !editing) setTyped(null)
 
   const parsed = parseWhipCount(value)
   const empty = value === undefined || value === null
-  const data = typed ?? (parsed.success ? parsed.value : EMPTY)
+  const data = editing ?? (parsed.success ? parsed.value : EMPTY)
   const fieldLabel = typeof field.label === "string" ? field.label : "Data"
   const write = (next: WhipCountData): void => {
     setTyped(next)
@@ -73,6 +79,14 @@ const WhipCountTable: JSONFieldClientComponent = (props) => {
       ...data,
       members: data.members.map((m, i) => (i === index ? { ...m, ...change } : m)),
     })
+  }
+  const statements = data.statements ?? []
+  const setStatements = (next: WhipCountStatement[]): void => {
+    const { statements: _statements, ...rest } = data
+    write(next.length > 0 ? { ...rest, statements: next } : rest)
+  }
+  const setStatement = (index: number, change: Partial<WhipCountStatement>): void => {
+    setStatements(statements.map((s, i) => (i === index ? { ...s, ...change } : s)))
   }
   const setPosition = (index: number, key: string): void => {
     const [stance, candidate] = key.split(":") as [Stance, string | undefined]
@@ -90,7 +104,7 @@ const WhipCountTable: JSONFieldClientComponent = (props) => {
     { key: "undeclared", label: stanceLabel("undeclared") },
   ]
 
-  if (asJson || (!typed && !parsed.success && !empty) || data.candidates.length === 0) {
+  if (asJson || (!editing && !parsed.success && !empty) || data.candidates.length === 0) {
     return (
       <div>
         {!asJson && !empty && !parsed.success && (
@@ -336,6 +350,140 @@ const WhipCountTable: JSONFieldClientComponent = (props) => {
           }}
         >
           Edit as JSON
+        </button>
+      </p>
+      <h4 style={{ margin: "24px 0 4px" }}>Earlier statements</h4>
+      <p style={{ margin: "0 0 8px", color: "var(--theme-elevation-500)" }}>
+        The page’s “Latest statements” lists each person’s statement above and these, newest first.
+        When a push gives someone a newer statement, or your save does under another day and another
+        link, the old one is added here. Fixing a date, a link or a typo adds nothing, but a quote
+        moved off the wrong person’s row onto a newer one stays here under their name: remove it.
+      </p>
+      {statements.length > 0 && (
+        <div style={{ overflowX: "auto" }}>
+          <table
+            style={{ borderCollapse: "collapse", width: "100%" }}
+            data-whip-count-statements=""
+          >
+            <thead>
+              <tr>
+                {["Name", "State", "Said on", "What they said", "Source link", ""].map(
+                  (heading) => (
+                    <th key={heading} style={cell}>
+                      {heading}
+                    </th>
+                  ),
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {statements.map((statement, index) => {
+                const which = `statement ${index + 1}`
+                return (
+                  <tr key={index}>
+                    <td style={cell}>
+                      <input
+                        aria-label={`Name for ${which}`}
+                        list="whip-count-member-names"
+                        style={{ ...cellInput, minWidth: "10rem" }}
+                        value={statement.name}
+                        disabled={readOnly}
+                        onChange={(event) => {
+                          const name = event.target.value
+                          const member = data.members.find((m) => m.name === name)
+                          setStatement(index, { name, ...(member ? { state: member.state } : {}) })
+                        }}
+                      />
+                    </td>
+                    <td style={cell}>
+                      <input
+                        aria-label={`State for ${which}`}
+                        style={{ ...cellInput, minWidth: "3.5rem" }}
+                        value={statement.state}
+                        disabled={readOnly}
+                        onChange={(event) => setStatement(index, { state: event.target.value })}
+                      />
+                    </td>
+                    <td style={cell}>
+                      <input
+                        type="date"
+                        aria-label={`Date of ${which}`}
+                        style={cellInput}
+                        value={statement.saidOn}
+                        disabled={readOnly}
+                        onChange={(event) => setStatement(index, { saidOn: event.target.value })}
+                      />
+                    </td>
+                    <td style={cell}>
+                      <textarea
+                        aria-label={`Words of ${which}`}
+                        rows={2}
+                        style={{ ...cellInput, minWidth: "18rem" }}
+                        value={statement.statement}
+                        disabled={readOnly}
+                        onChange={(event) => setStatement(index, { statement: event.target.value })}
+                      />
+                    </td>
+                    <td style={cell}>
+                      <input
+                        type="url"
+                        aria-label={`Source link for ${which}`}
+                        placeholder="https://"
+                        style={{ ...cellInput, minWidth: "12rem" }}
+                        value={statement.source?.url ?? ""}
+                        disabled={readOnly}
+                        onChange={(event) =>
+                          setStatement(index, {
+                            source: event.target.value
+                              ? { url: event.target.value, label: "" }
+                              : undefined,
+                          })
+                        }
+                      />
+                    </td>
+                    <td style={cell}>
+                      <button
+                        type="button"
+                        className="btn btn--style-secondary btn--size-small"
+                        style={{ margin: 0 }}
+                        aria-label={`Remove ${which}`}
+                        disabled={readOnly}
+                        onClick={() => setStatements(statements.filter((_, i) => i !== index))}
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <datalist id="whip-count-member-names">
+        {data.members.map((m) => (
+          <option key={m.name} value={m.name} />
+        ))}
+      </datalist>
+      <p style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <button
+          type="button"
+          className="btn btn--style-secondary btn--size-small"
+          style={{ margin: 0 }}
+          disabled={readOnly}
+          onClick={() =>
+            setStatements([
+              {
+                name: "",
+                state: "",
+                saidOn: new Date().toISOString().slice(0, 10),
+                statement: "",
+              },
+              ...statements,
+            ])
+          }
+        >
+          Add a statement
         </button>
       </p>
       {typeof field.admin?.description === "string" && (

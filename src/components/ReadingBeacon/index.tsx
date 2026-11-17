@@ -66,8 +66,9 @@ export const ReadingBeacon: React.FC<ReadingBeaconProps> = ({
         keepalive: true,
       })
         .then((response) => {
-          // Only a visit the server took counts for the day: a failed one is tried on the next page.
-          if (response.ok) storeDay(day)
+          // A visit the server took, or turned away for good (switched off, a bad day), counts
+          // for the day: a failed one (offline, 5xx) is tried again on the next page.
+          if (response.status < 500) storeDay(day)
           if (response.status === 401) {
             document.cookie = `${signedInCookie}=; Path=/; Max-Age=0; SameSite=Lax`
           }

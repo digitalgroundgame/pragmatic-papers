@@ -70,6 +70,15 @@ describe("ReadingBeacon", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it("doesn't ask again that day when the server turns it away", async () => {
+    signIn()
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 404 }))
+    render(<ReadingBeacon />)
+    await vi.waitFor(() => expect(localStorage.length).toBe(1))
+    render(<ReadingBeacon />)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it("reports an article read once the reader reaches its end", () => {
     signIn()
     const { container } = render(<ReadingBeacon articleId={10} />)

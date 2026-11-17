@@ -116,7 +116,7 @@ describe("keepReplacedStatements", () => {
       basisDate: "2026-11-14",
       source: { label: "example.com", url: "https://example.com/okafor-2" },
     })
-    const kept = keepReplacedStatements(before.members, after)
+    const kept = keepReplacedStatements(before.members, after, "editor")
     expect(kept.statements).toEqual<WhipCountStatement[]>([
       {
         name: "Sam Okafor",
@@ -133,6 +133,7 @@ describe("keepReplacedStatements", () => {
     const kept = keepReplacedStatements(
       okafor(said).members,
       okafor({ ...said, basis: "“I will back Hale.”" }),
+      "editor",
     )
     expect(kept.statements).toBeUndefined()
   })
@@ -145,8 +146,31 @@ describe("keepReplacedStatements", () => {
     ],
     ["a cleared statement", { basis: undefined, basisDate: undefined, source: undefined }],
   ])("keeps nothing for %s", (_name, change) => {
-    const kept = keepReplacedStatements(okafor(said).members, okafor({ ...said, ...change }))
+    const kept = keepReplacedStatements(
+      okafor(said).members,
+      okafor({ ...said, ...change }),
+      "editor",
+    )
     expect(kept.statements).toBeUndefined()
+  })
+
+  it.each([
+    [
+      "a second statement the same day",
+      { source: { label: "example.com", url: "https://example.com/okafor-pm" } },
+    ],
+    ["a live page updated the next day", { basisDate: "2026-11-11" }],
+  ])("keeps the earlier one when a push brings %s", (_name, change) => {
+    const after = okafor({ ...said, basis: "“Later.”", ...change })
+    const kept = keepReplacedStatements(okafor(said).members, after, "push")
+    expect(kept.statements).toEqual([expect.objectContaining({ statement: "“I’ll back Hale.”" })])
+    // An editor making the same change is taken to be correcting it.
+    expect(keepReplacedStatements(okafor(said).members, after, "editor").statements).toBeUndefined()
+  })
+
+  it("keeps nothing when a push rewords a statement under the same link and day", () => {
+    const after = okafor({ ...said, basis: "“I will back Hale.”" })
+    expect(keepReplacedStatements(okafor(said).members, after, "push").statements).toBeUndefined()
   })
 
   it("keeps nothing for a member the count no longer has", () => {
@@ -155,13 +179,13 @@ describe("keepReplacedStatements", () => {
       ...whipCountData,
       members: whipCountData.members.filter((m) => m.name !== "Sam Okafor"),
     }
-    expect(keepReplacedStatements(before.members, after).statements).toBeUndefined()
+    expect(keepReplacedStatements(before.members, after, "editor").statements).toBeUndefined()
   })
 
   it("leaves out an earlier statement the editor removed", () => {
     const before = { ...whipCountWithStatements }
     const after = { ...whipCountWithStatements, statements: before.statements!.slice(1) }
-    expect(keepReplacedStatements(before.members, after).statements).toEqual(
+    expect(keepReplacedStatements(before.members, after, "editor").statements).toEqual(
       before.statements!.slice(1),
     )
   })

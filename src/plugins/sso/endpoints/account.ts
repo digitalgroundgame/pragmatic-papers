@@ -108,6 +108,10 @@ export function accountEndpoints(config: ResolvedSsoConfig): Endpoint[] {
         `${name}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secure ? "; Secure" : ""}`,
       )
     }
+    headers.append(
+      "Set-Cookie",
+      `${config.signedInCookie}=; Path=/; Max-Age=0; SameSite=Lax${secure ? "; Secure" : ""}`,
+    )
     return Response.json({ ok: true }, { headers })
   }
 

@@ -20,6 +20,7 @@ const config = (overrides: Partial<ResolvedSsoConfig> = {}): ResolvedSsoConfig =
   usersSlug: "users",
   cookieName: "pp-session",
   payloadUserCookie: "payload-token-sso",
+  signedInCookie: "pp-signed-in",
   isPayloadUser: () => true,
   accountPath: "/account",
   sessionSeconds: 3600,

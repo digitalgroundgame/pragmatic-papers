@@ -150,6 +150,7 @@ describe("ssoPlugin", () => {
       usersSlug: "users",
       cookieName: "pp-session",
       payloadUserCookie: "payload-token-sso",
+      signedInCookie: "pp-signed-in",
       accountPath: "/account",
       sessionSeconds: 60 * 60 * 24 * 7,
       requiredUserColumns: [],

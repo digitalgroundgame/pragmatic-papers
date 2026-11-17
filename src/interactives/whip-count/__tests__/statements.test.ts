@@ -124,6 +124,7 @@ describe("keepReplacedStatements", () => {
         saidOn: "2026-11-10",
         statement: "“I’ll back Hale.”",
         source: { label: "example.com", url: "https://example.com/okafor-1" },
+        stance: "undeclared",
       },
     ])
     expect(latestStatements(kept).filter((s) => s.name === "Sam Okafor")).toHaveLength(2)

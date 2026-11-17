@@ -141,6 +141,9 @@ describe("whip count snapshots", () => {
       saidOn: "2026-11-10",
       statement: "“An older statement.”",
       source: { label: "example.com", url: "https://example.com/older" },
+      // The stance it stood behind stays with it, so the bar can date a backing.
+      stance: count.members[0]!.stance,
+      ...(count.members[0]!.candidate ? { candidate: count.members[0]!.candidate } : {}),
     })
     expect(saved.statements?.some((s) => s.saidOn === "2026-11-20")).toBe(false)
   })

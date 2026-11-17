@@ -388,13 +388,24 @@ function historyOf(
   return history.length > 0 ? history : undefined
 }
 
+/** Who replaced a member's statement: a push, which brings what it found, or an editor. */
+export type StatementChange = "push" | "editor"
+
 /**
- * Whether `after` is a new statement that replaces `before`, rather than a correction of it:
- * said on another day, under another link (or, without one, in other words). Fixing a date,
- * a link or a typo, or clearing a statement, replaces nothing.
+ * Whether `after` is a new statement that replaces `before`, rather than a correction of it.
+ * A push reports what members said, so anything it brings under another day or another link
+ * (or, without one, in other words) is new: a second statement the same day, or a live page
+ * updated the next. An editor more often corrects, so theirs is new only under another day
+ * and another link: fixing a date, a link or a typo replaces nothing. Clearing a statement
+ * replaces nothing either way.
  */
-function replaces(after: WhipCountStatement | null, before: WhipCountStatement): boolean {
+function replaces(
+  after: WhipCountStatement | null,
+  before: WhipCountStatement,
+  by: StatementChange,
+): boolean {
   if (!after) return false
+  if (by === "push") return statementKey(after) !== statementKey(before)
   const ref = (s: WhipCountStatement): string => s.source?.url ?? s.statement
   return after.saidOn !== before.saidOn && ref(after) !== ref(before)
 }
@@ -408,11 +419,12 @@ function replaces(after: WhipCountStatement | null, before: WhipCountStatement):
 export function keepReplacedStatements(
   previous: WhipCountMember[],
   next: WhipCountData,
+  by: StatementChange,
 ): WhipCountData {
   const now = new Map(next.members.map((m) => [m.name, memberStatement(m)]))
   const replaced = previous.flatMap((m) => {
     const before = memberStatement(m)
-    return before && replaces(now.get(m.name) ?? null, before) ? [before] : []
+    return before && replaces(now.get(m.name) ?? null, before, by) ? [before] : []
   })
   const statements = historyOf(next.members, [...(next.statements ?? []), ...replaced])
   const { statements: _statements, ...rest } = next
@@ -780,13 +792,17 @@ export function mergePushedCount(
   })
   const pushedNames = new Set(pushed.members.map((m) => m.name))
   // The push adds to the history and never takes from it: it sends only what's new.
-  return keepReplacedStatements(current.members, {
-    ...pushed,
-    // A schedule is the document's to keep when the push says nothing of one.
-    updates: pushed.updates ?? current.updates,
-    members: [...members, ...current.members.filter((m) => !pushedNames.has(m.name))],
-    statements: [...(pushed.statements ?? []), ...(current.statements ?? [])],
-  })
+  return keepReplacedStatements(
+    current.members,
+    {
+      ...pushed,
+      // A schedule is the document's to keep when the push says nothing of one.
+      updates: pushed.updates ?? current.updates,
+      members: [...members, ...current.members.filter((m) => !pushedNames.has(m.name))],
+      statements: [...(pushed.statements ?? []), ...(current.statements ?? [])],
+    },
+    "push",
+  )
 }
 
 /**

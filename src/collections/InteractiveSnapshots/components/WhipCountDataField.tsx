@@ -355,9 +355,9 @@ const WhipCountTable: JSONFieldClientComponent = (props) => {
       <h4 style={{ margin: "24px 0 4px" }}>Earlier statements</h4>
       <p style={{ margin: "0 0 8px", color: "var(--theme-elevation-500)" }}>
         The page’s “Latest statements” lists each person’s statement above and these, newest first.
-        When a push or a save gives someone a newer statement (another day and another link), the
-        old one is added here. Fixing a date, a link or a typo adds nothing, but a quote moved off
-        the wrong person’s row onto a newer one stays here under their name: remove it.
+        When a push gives someone a newer statement, or your save does under another day and another
+        link, the old one is added here. Fixing a date, a link or a typo adds nothing, but a quote
+        moved off the wrong person’s row onto a newer one stays here under their name: remove it.
       </p>
       {statements.length > 0 && (
         <div style={{ overflowX: "auto" }}>

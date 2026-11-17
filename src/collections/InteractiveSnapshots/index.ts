@@ -63,7 +63,7 @@ const stampWhipCount: CollectionBeforeChangeHook = ({ data, originalDoc }) => {
   if (!parsed?.success) return data
   const before = isWhipCountData(originalDoc?.data) ? parseWhipCount(originalDoc?.data) : null
   const count = before?.success
-    ? keepReplacedStatements(before.value.members, parsed.value)
+    ? keepReplacedStatements(before.value.members, parsed.value, "editor")
     : parsed.value
   const { statements: _statements, ...rest } = data.data as Record<string, unknown>
   return {

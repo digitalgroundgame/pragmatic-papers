@@ -182,7 +182,7 @@ describe("the stance a statement stood behind", () => {
       backer("Marion Hale", "hale", "2026-11-01"),
       { ...backer("A", "hale", "2026-11-10"), source: { label: "x", url: "https://x.test/a" } },
     ])
-    const kept = keepReplacedStatements(before.members, after)
+    const kept = keepReplacedStatements(before.members, after, "editor")
     expect(kept.statements).toEqual([
       expect.objectContaining({ name: "A", stance: "backs", candidate: "hale" }),
     ])

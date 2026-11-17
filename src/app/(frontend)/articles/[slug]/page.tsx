@@ -15,6 +15,7 @@ import { JsonLd } from "@/components/JsonLd"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
 import { RecommendedArticles } from "@/components/RecommendedArticles"
+import { ReadingBeacon } from "@/components/ReadingBeacon"
 import RichText from "@/components/RichText"
 import { TableOfContents, TableOfContentsProvider } from "@/components/TableOfContents"
 import { TopicsList } from "@/components/Topics/TopicsList"
@@ -133,6 +134,8 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
                   <RichText data={content} enableGutter={false} className="drop-cap" />
                 </MathJaxProvider>
                 <EndRule content={content} />
+                {/* Reaching here, signed in, counts the article as read. */}
+                {!draft && <ReadingBeacon articleId={article.id} />}
                 <ArticleFooter>
                   <FootnoteList footnotes={footnotes} />
                   <div className="space-y-4">

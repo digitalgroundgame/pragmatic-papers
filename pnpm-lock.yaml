@@ -126,8 +126,8 @@ importers:
         specifier: ^3.1.2
         version: 3.1.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       lucide:
-        specifier: 1.70.0
-        version: 1.70.0
+        specifier: 1.72.0
+        version: 1.72.0
       lucide-react:
         specifier: ^1.70.0
         version: 1.70.0(@types/react@19.3.0)(react@19.3.1)
@@ -6815,8 +6815,8 @@ packages:
       '@types/react':
         optional: true
 
-  lucide@1.70.0:
-    resolution: {integrity: sha512-LxPqUjt8e5PT7JuvmnKc8ECAqgkbnLG3hIi/FV2JpqWdPWLbLCoI5P3jje/Lq84uNU2kCpe2webgyFFJJ9zPAA==}
+  lucide@1.72.0:
+    resolution: {integrity: sha512-075vCJzyx+LU3xBzfaHjsvrtbiIvVUjbfsdJCG5rPeXs0O/07aH5cDz1zoWn0acupuffXsN/iG6OkvVqYTGunw==}
 
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
@@ -16221,7 +16221,7 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.3.0
 
-  lucide@1.70.0: {}
+  lucide@1.72.0: {}
 
   lz-string@1.5.0: {}
 

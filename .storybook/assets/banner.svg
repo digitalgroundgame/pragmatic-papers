@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="560" viewBox="0 0 1400 560">
+  <rect width="1400" height="560" fill="#f4f1ea"/>
+  <!-- Marks at the very edges: the hero shows them only while it keeps the banner's shape. -->
+  <rect x="0" y="0" width="40" height="560" fill="#2f5d8a"/>
+  <rect x="1360" y="0" width="40" height="560" fill="#2f5d8a"/>
+  <path d="M120 360 Q700 120 1280 360" stroke="#3a3a3a" stroke-width="10" fill="none"/>
+</svg>

@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, fn, userEvent, within } from "storybook/test"
 
+import { isolatedDocs } from "@/stories/isolatedDocs"
+
 import { ProviderSignInButton } from "."
 
 const meta = {
@@ -39,6 +41,7 @@ export const DigitalGroundGame: Story = {
 export const DigitalGroundGameDark: Story = {
   args: { provider: "digitalgroundgame", label: "Digital Ground Game" },
   globals: { theme: "dark" },
+  parameters: isolatedDocs("80px"),
 }
 
 /** A provider without its own look gets the plain outline button. */

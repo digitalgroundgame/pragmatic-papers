@@ -210,8 +210,8 @@ const VerifyEmailNudge: React.FC = () => (
         </h2>
       </CardTitle>
       <CardDescription>
-        Your account has no email address yet. Connect Google or Discord to add the one they&apos;ve
-        verified, and earn the Email verified achievement.
+        Your account has no email address yet. Connect Google, Discord or Digital Ground Game to add
+        the address it has verified, and earn the Email verified achievement.
       </CardDescription>
     </CardHeader>
     <CardContent>

@@ -4,9 +4,10 @@ import type { PluginEnabled } from "@/utilities/registerPlugin"
 
 /**
  * A sign-in provider: Google and Discord are built in to Better Auth, Destiny.gg is ours
- * (`destiny.ts`).
+ * (`destiny.ts`), and Digital Ground Game is its Authentik, through Better Auth's generic
+ * OAuth (`digitalGroundGame.ts`).
  */
-export type SsoProviderId = "google" | "discord" | "destiny"
+export type SsoProviderId = "google" | "discord" | "destiny" | "digitalgroundgame"
 
 /** A row of the Connections panel: a configured provider, and whether it's linked. */
 export interface LinkedProvider {
@@ -19,6 +20,8 @@ export interface LinkedProvider {
 export interface SsoProviderCredentials {
   clientId: string
   clientSecret: string
+  /** The identity provider's origin, for one we host ourselves (DGG's Authentik). */
+  baseUrl?: string
 }
 
 export interface SsoPluginConfig {

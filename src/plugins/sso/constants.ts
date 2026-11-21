@@ -32,6 +32,7 @@ export const PROVIDER_LABELS: Record<SsoProviderId, string> = {
   google: "Google",
   discord: "Discord",
   destiny: "Destiny.gg",
+  digitalgroundgame: "Digital Ground Game",
 }
 
 /**

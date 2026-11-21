@@ -123,14 +123,16 @@ function withConnections(fields: Field[], sso: ResolvedSsoConfig): Field[] {
 }
 
 /**
- * Sign in to Payload with Google, Discord or Destiny.gg, through Better Auth.
+ * Sign in to Payload with Google, Discord, Destiny.gg or Digital Ground Game (its Authentik),
+ * through Better Auth.
  *
  * Better Auth runs the OAuth exchange and keeps its own sessions and linked accounts in
  * three tables (`ssoAfterSchemaInit`, which goes in the database adapter's
  * `afterSchemaInit`). Payload keeps everything else: its users, their roles, and its own
  * email and password login, which stays as the way in when a provider is down. A provider
  * login attaches to the user whose address it has verified, or to the one who linked it from
- * their account page (the only way for Destiny.gg, which shares no address). It creates a
+ * their account page (the only way for Destiny.gg, which shares no address, and for Digital
+ * Ground Game to reach someone who already has an account here). It creates a
  * user only when `signUp` is configured and the sign-in asks for one.
  *
  * Only users `isPayloadUser` accepts become Payload's `req.user`. Everyone else signed in
@@ -143,11 +145,11 @@ export const ssoPlugin = registerPlugin<SsoPluginConfig>({
     name: "SSO",
     source: "src/plugins/sso",
     description:
-      "Sign-in with Google, Discord or Destiny.gg, through Better Auth: staff to the admin, with a Connections tab on their account, and members to the site, when sign-ups are open. Email and password login stays on.",
+      "Sign-in with Google, Discord, Destiny.gg or Digital Ground Game, through Better Auth: staff to the admin, with a Connections tab on their account, and members to the site, when sign-ups are open. Email and password login stays on.",
     switch: {
       label: "Single sign-on",
       description:
-        "“Sign in with Google”, “Sign in with Discord” and “Sign in with Destiny.gg” on the admin's login page, for people who already have an account here, the Connections tab that links them, and members' sign-ins on the site. Each provider also needs its credentials (System → Integrations).",
+        "“Sign in with Google”, “Discord”, “Destiny.gg” and “Digital Ground Game” on the admin's login page, for people who already have an account here, the Connections tab that links them, and members' sign-ins on the site. Each provider also needs its credentials (System → Integrations).",
       defaultValue: false,
     },
   },

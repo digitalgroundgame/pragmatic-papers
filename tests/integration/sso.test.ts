@@ -145,6 +145,65 @@ async function signInWithDestiny(
   })
 }
 
+interface AuthentikClaims {
+  sub: string
+  email: string
+  email_verified: boolean
+  name?: string
+}
+
+/** Answers DGG's Authentik (`AUTHENTIK_URL`) as the account `claims` describe. */
+function stubAuthentik(claims: AuthentikClaims) {
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input)
+    if (url.startsWith("https://auth.example.org/application/o/token/")) {
+      return Promise.resolve(
+        Response.json({ access_token: "access", token_type: "Bearer", expires_in: 300 }),
+      )
+    }
+    if (url === "https://auth.example.org/application/o/userinfo/") {
+      const headers = new Headers(init?.headers)
+      if (headers.get("Authorization") !== "Bearer access") {
+        return Promise.resolve(new Response(null, { status: 401 }))
+      }
+      return Promise.resolve(Response.json({ preferred_username: "volunteer", ...claims }))
+    }
+    return Promise.reject(new Error(`unexpected request to ${url}`))
+  })
+}
+
+/** Starts a sign-in and comes back from DGG's Authentik as `claims`. */
+async function signInWithAuthentik(
+  claims: AuthentikClaims,
+  { requestSignUp = false } = {},
+): Promise<Response> {
+  stubAuthentik(claims)
+  const start = await api("/auth/sign-in/social", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      provider: "digitalgroundgame",
+      callbackURL: "/admin",
+      errorCallbackURL: "/admin/login",
+      ...(requestSignUp && { requestSignUp: true }),
+    }),
+  })
+  expect(start.status).toBe(200)
+  const { url } = (await start.json()) as { url: string }
+  const authorize = new URL(url)
+  expect(authorize.origin + authorize.pathname).toBe(
+    "https://auth.example.org/application/o/authorize/",
+  )
+  expect(authorize.searchParams.get("code_challenge_method")).toBe("S256")
+  expect(authorize.searchParams.get("redirect_uri")).toBe(
+    `${site}/api/auth/callback/digitalgroundgame`,
+  )
+  const state = authorize.searchParams.get("state")
+  return api(`/auth/callback/digitalgroundgame?code=test-code&state=${state}`, {
+    headers: { Cookie: cookiesFrom(start) },
+  })
+}
+
 /** Payload's own cookie for `user`, from a password login. */
 async function passwordLogin(user: User): Promise<string> {
   const response = await api("/users/login", {
@@ -201,6 +260,9 @@ beforeEach(async () => {
   vi.stubEnv("DISCORD_CLIENT_SECRET", "discord-secret")
   vi.stubEnv("DESTINY_CLIENT_ID", "dgg-client")
   vi.stubEnv("DESTINY_CLIENT_SECRET", "dgg-secret")
+  vi.stubEnv("AUTHENTIK_CLIENT_ID", "pp-client")
+  vi.stubEnv("AUTHENTIK_CLIENT_SECRET", "pp-secret")
+  vi.stubEnv("AUTHENTIK_URL", "https://auth.example.org")
   await setSwitch(true)
 })
 
@@ -390,7 +452,11 @@ describe("linking an account from the account page", () => {
     const cookie = await passwordLogin(editor)
     await link(cookie, "destiny", () => stubDestiny(destiny()))
 
-    expect(await linkedProviders(cookie)).toEqual({ discord: false, destiny: true })
+    expect(await linkedProviders(cookie)).toEqual({
+      discord: false,
+      destiny: true,
+      digitalgroundgame: false,
+    })
   })
 
   it("disconnects an account, ending the sessions it signed in", async () => {
@@ -407,7 +473,11 @@ describe("linking an account from the account page", () => {
     })
 
     expect(response.status).toBe(200)
-    expect(await linkedProviders(cookie)).toEqual({ discord: false, destiny: false })
+    expect(await linkedProviders(cookie)).toEqual({
+      discord: false,
+      destiny: false,
+      digitalgroundgame: false,
+    })
     expect(await me(ssoCookie)).toBeNull()
     expect(await me(cookie)).toMatchObject({ id: editor.id })
     const again = await signInWithDestiny(profile)
@@ -666,5 +736,95 @@ describe("members", () => {
 
     expect(((await (await account(cookie)).json()) as AccountSummary).managedInAdmin).toBe(true)
     expect((await account(cookie, { method: "DELETE" })).status).toBe(403)
+  })
+})
+
+describe("Digital Ground Game", () => {
+  let nextSub = 9000
+  const volunteer = (overrides: Partial<AuthentikClaims> = {}): AuthentikClaims => ({
+    sub: `ak-${nextSub++}`,
+    email: `volunteer-${crypto.randomUUID().slice(0, 8)}@example.com`,
+    email_verified: true,
+    name: "Vol Unteer",
+    ...overrides,
+  })
+
+  beforeEach(async () => {
+    // Sign-ups open with comments.
+    await setSwitch(true, true)
+  })
+
+  it("signs a DGG volunteer up as a member, and finds them again by their account", async () => {
+    const claims = volunteer()
+
+    const callback = await signInWithAuthentik(claims, { requestSignUp: true })
+
+    expect(callback.headers.get("location")).toBe("/admin")
+    const { docs } = await payload.find({
+      collection: "users",
+      where: { email: { equals: claims.email } },
+    })
+    expect(docs[0]).toMatchObject({ name: "Vol Unteer", roles: ["member"] })
+    expect(await me(cookiesFrom(callback))).toBeNull()
+
+    // A changed address on DGG's side still signs in the same member.
+    const again = await signInWithAuthentik({ ...claims, email: "moved@example.com" })
+    expect(cookiesFrom(again)).toContain(`${SSO_COOKIE_NAME}=`)
+    expect(
+      (await payload.count({ collection: "users", where: { email: { equals: claims.email } } }))
+        .totalDocs,
+    ).toBe(1)
+  })
+
+  it("makes nobody from an address Authentik hasn't verified", async () => {
+    const claims = volunteer({ email_verified: false })
+
+    const callback = await signInWithAuthentik(claims, { requestSignUp: true })
+
+    expect(callback.headers.get("location")).toContain("error=")
+    expect(
+      (await payload.count({ collection: "users", where: { email: { equals: claims.email } } }))
+        .totalDocs,
+    ).toBe(0)
+  })
+
+  it("never signs in as an existing user just because the address matches", async () => {
+    const editor = await createUser("editor")
+
+    const callback = await signInWithAuthentik(volunteer({ email: editor.email }))
+
+    expect(callback.headers.get("location")).toContain("error=")
+    expect(cookiesFrom(callback)).not.toContain(`${SSO_COOKIE_NAME}=`)
+    expect(await linkedProviders(await passwordLogin(editor))).toMatchObject({
+      digitalgroundgame: false,
+    })
+
+    // Nor does asking to sign up make a second account with it.
+    const signUp = await signInWithAuthentik(volunteer({ email: editor.email }), {
+      requestSignUp: true,
+    })
+    expect(signUp.headers.get("location")).toContain("error=")
+    expect(
+      (
+        await payload.count({
+          collection: "users",
+          where: { email: { like: "digitalgroundgame-" } },
+        })
+      ).totalDocs,
+    ).toBe(0)
+  })
+
+  it("links from the account page, then signs staff in to the admin", async () => {
+    const editor = await createUser("editor")
+    const claims = volunteer({ email: editor.email })
+
+    const linked = await link(await passwordLogin(editor), "digitalgroundgame", () =>
+      stubAuthentik(claims),
+    )
+
+    expect(linked.headers.get("location")).toBe("/admin/account?linked=digitalgroundgame")
+    const callback = await signInWithAuthentik(claims)
+    expect(callback.headers.get("location")).toBe("/admin")
+    expect(await me(cookiesFrom(callback))).toMatchObject({ id: editor.id, roles: ["editor"] })
   })
 })

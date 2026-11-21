@@ -10,7 +10,7 @@ const meta = {
   component: SignInButtons,
   decorators: [withPayloadAdminTheme],
   args: {
-    providers: ["google", "discord", "destiny"],
+    providers: ["google", "discord", "destiny", "digitalgroundgame"],
     authPath: "/api/auth",
     adminPath: "/admin",
   },
@@ -25,6 +25,9 @@ export const Default: Story = {
     await expect(canvas.getByRole("button", { name: "Sign in with Google" })).toBeEnabled()
     await expect(canvas.getByRole("button", { name: "Sign in with Discord" })).toBeEnabled()
     await expect(canvas.getByRole("button", { name: "Sign in with Destiny.gg" })).toBeEnabled()
+    await expect(
+      canvas.getByRole("button", { name: "Sign in with Digital Ground Game" }),
+    ).toBeEnabled()
     await expect(canvas.queryByRole("alert")).not.toBeInTheDocument()
   },
 }

@@ -68,6 +68,32 @@ jobs:
           ref: ${{ env.HEAD_SHA }}
           fetch-depth: 0
 
+      # The review's effort follows the PR: medium for a small one, high for
+      # most, xhigh for a large one, and a level higher where a mistake is
+      # costly (CI, migrations, access, sign-in). Without it every review ran
+      # at Opus's default, medium. See scripts/review-effort.ts.
+      #
+      # It runs dev's copy of the script, never the PR's: this job can mint the
+      # OIDC token the action trades for a Claude GitHub App token, and the
+      # action only checks that this workflow file matches dev's, not the
+      # scripts it runs. So a change to the script takes effect once merged,
+      # and until dev has one the review runs at the default.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      - name: Pick the review's effort
+        id: effort
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          script="$RUNNER_TEMP/review-effort.ts"
+          if git show "$BASE_SHA:scripts/review-effort.ts" > "$script" 2>/dev/null; then
+            node "$script" "$BASE_SHA" "$HEAD_SHA"
+          else
+            echo "dev has no scripts/review-effort.ts yet; reviewing at the default effort."
+          fi
+
       # Under the job's limit: a job timeout cancels the run, which skips the
       # steps below and leaves the label on. A step timeout only stops this
       # step, so the verdict is still reported.
@@ -95,6 +121,7 @@ jobs:
             post no other top-level comment. Return the same verdict as your structured output.
           claude_args: |
             --model opus
+            ${{ steps.effort.outputs.effort && format('--effort {0}', steps.effort.outputs.effort) || '' }}
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Bash(git blame:*)"
             --json-schema '{"type":"object","properties":{"verdict":{"type":"string","enum":["pass","blocker"]}},"required":["verdict"]}'
 

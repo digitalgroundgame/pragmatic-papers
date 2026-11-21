@@ -22,7 +22,8 @@ async function tokenFor(user: User): Promise<string> {
 
 /**
  * Publishes an article through the REST API, the path the admin and `pnpm showcase`
- * take. Drafts skip field validation, so only a publish exercises the authors filter.
+ * take. Drafts skip field validation, so only a publish exercises the authors filter, and
+ * only editors publish.
  */
 async function createArticleOverREST(as: User, authors: number[]) {
   const response = await handleEndpoints({
@@ -47,7 +48,7 @@ beforeAll(async () => {
 })
 
 describe("article authors (REST)", () => {
-  it.each<Role>(["writer", "editor", "chief-editor"])(
+  it.each<Role>(["editor", "chief-editor"])(
     "lets a %s credit another staff member as author",
     async (role) => {
       const [user, colleague] = await Promise.all([createUser(role), createUser("narrator")])

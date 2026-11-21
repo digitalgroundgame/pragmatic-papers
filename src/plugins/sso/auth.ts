@@ -6,6 +6,7 @@ import { AUTH_ENDPOINT_PATH, DISABLED_PATHS, TABLES } from "./constants"
 import { destinyPlugin, type DestinyProfile } from "./destiny"
 import { linkingPlugin } from "./linking"
 import { payloadUserCookiePlugin } from "./payloadUserCookie"
+import { pictureURL, rememberPicture, savePicture } from "./pictures"
 import { isPlaceholderEmail, PLACEHOLDER_EMAIL_DOMAIN, placeholderEmail } from "./placeholderEmail"
 import type { ResolvedSsoConfig, SsoProviderId } from "./types"
 
@@ -104,6 +105,10 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
       // A member who signed up with Destiny.gg and links Google or Discord takes the address
       // that provider verified in place of their placeholder.
       validateUserInfo: async ({ user, source }) => {
+        // The picture waits for the account to be written (`savePicture`, below).
+        if (source.action === "link-account" && source.oauth && user.id !== undefined) {
+          rememberPicture(String(user.id), source.oauth.providerId, user.image)
+        }
         if (
           source.action === "link-account" &&
           user.emailVerified === true &&
@@ -115,6 +120,7 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
       },
       fields: {
         emailVerified: "email_verified",
+        // Written for a sign-up by Better Auth, and on linking by `savePicture`.
         image: "avatar_url",
         createdAt: "created_at",
         updatedAt: "updated_at",
@@ -127,6 +133,19 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
       ),
     },
     databaseHooks: {
+      account: {
+        create: {
+          // A newly linked account's picture becomes the user's, if they have none. The
+          // account is linked by now, so a failure here is logged rather than shown.
+          after: async (account) => {
+            await savePicture(pool, config.usersSlug, account, (userId) =>
+              config.hasPicture({ payload, userId }),
+            ).catch((err: unknown) =>
+              payload.logger.warn({ err }, "sso: couldn't save the linked account's picture"),
+            )
+          },
+        },
+      },
       user: {
         create: {
           // Checked again here, so no path to an insert gets past it: sign-up must be
@@ -143,7 +162,8 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
             ) {
               return false
             }
-            return { data: { ...user, ...signUp.columns?.() } }
+            // The provider's picture is kept as the new user's (`avatar_url`), when it's https.
+            return { data: { ...user, image: pictureURL(user.image), ...signUp.columns?.() } }
           },
           after: async (user) => {
             await signUp?.afterCreate?.({ payload, userId: String(user.id) })

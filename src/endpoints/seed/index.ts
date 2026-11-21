@@ -19,6 +19,7 @@ import { createRichTextShowcaseArticle } from "./features/rich-text-showcase"
 import { createLegacySocialEmbedArticle, createSocialEmbedArticle } from "./features/social-embeds"
 import { createTableOfContentsArticle } from "./features/table-of-contents"
 import { createTimelineArticle } from "./features/timeline"
+import { createWhipCountArticle } from "./features/whip-count"
 import { createStockMedia } from "./media"
 import { createMenus } from "./menus"
 import { createPages } from "./pages"
@@ -339,6 +340,16 @@ export const seed = async (
             context,
           ),
         )
+        // Creates the whip count it links to as well.
+        ctx.featureArticles.push(
+          await createWhipCountArticle(
+            payload,
+            [ctx.writers[0]!],
+            ctx.media,
+            [ctx.topics[3]!],
+            context,
+          ),
+        )
       },
     },
     {
@@ -496,7 +507,8 @@ export const seed = async (
     {
       name: "Creating achievements...",
       fn: async () => {
-        // The ones a deploy creates once per site: Verified, and Early member.
+        // The ones a deploy creates once per site: Verified (given by hand), Early member and
+        // Email verified.
         await readerAchievements.seed(payload)
       },
     },

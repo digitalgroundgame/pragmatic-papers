@@ -203,8 +203,13 @@ export interface MapDrawing {
 
 const FOOTER = { size: serif(11), line: 16, logo: 10, family: SERIF }
 
-/** A logo's viewBox, its width at the footer's height, and the markup inside its `<svg>`. */
-function logoBox(logo: string): { viewBox: string; width: number; inner: string } | null {
+/**
+ * A logo's viewBox, its width at the footer's height, the fill its parts inherit, and the
+ * markup inside its `<svg>`.
+ */
+function logoBox(
+  logo: string,
+): { viewBox: string; width: number; fill: string | undefined; inner: string } | null {
   const open = /^\s*<svg\b([^>]*)>/i.exec(logo)
   const close = logo.lastIndexOf("</svg>")
   if (!open || close < 0) return null
@@ -214,6 +219,7 @@ function logoBox(logo: string): { viewBox: string; width: number; inner: string 
   return {
     viewBox,
     width: (FOOTER.logo * size.width) / size.height,
+    fill: /\bfill="([^"]+)"/.exec(open[1] ?? "")?.[1],
     inner: logo.slice(open[0].length, close),
   }
 }
@@ -283,7 +289,7 @@ export const drawInteractiveMapSVG = (fields: MapDrawing): string => {
     if (logo && logoSize) {
       const top = y - GAP - FOOTER.line + (FOOTER.line - FOOTER.logo) / 2
       parts.push(
-        `<svg x="${round(WIDTH - PADDING - logoSize.width)}" y="${round(top)}" width="${round(logoSize.width)}" height="${FOOTER.logo}" viewBox="${escapeHTML(logoSize.viewBox)}">${logoSize.inner}</svg>`,
+        `<svg x="${round(WIDTH - PADDING - logoSize.width)}" y="${round(top)}" width="${round(logoSize.width)}" height="${FOOTER.logo}" viewBox="${escapeHTML(logoSize.viewBox)}"${logoSize.fill ? ` fill="${escapeHTML(logoSize.fill)}"` : ""}>${logoSize.inner}</svg>`,
       )
     }
   }

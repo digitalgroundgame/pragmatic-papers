@@ -85,4 +85,26 @@ describe("SocialEmbedBlock", () => {
       expect(fetchSpy).not.toHaveBeenCalled()
     },
   )
+
+  /** What a save through the API could have stored: nothing checks the snapshot it sends. */
+  const INJECTED =
+    '<blockquote><p>post</p></blockquote><img src="x" onerror="alert(1)"><script>alert(1)</script><iframe src="https://example.com"></iframe>'
+
+  it.each(cases)(
+    "renders none of the script a stored $platform snapshot carries",
+    async ({ props, Embed }) => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch")
+      const element = await (Embed as (p: SocialEmbedBlockProps) => Promise<React.ReactNode>)({
+        ...props,
+        // TikTok renders its snapshot's HTML only once the post is gone.
+        snapshot: { ...stale, html: INJECTED, status: "not_found" },
+      })
+
+      const rendered = JSON.stringify(element)
+      expect(rendered).not.toContain("onerror")
+      expect(rendered).not.toContain("<script")
+      expect(rendered).not.toContain("example.com")
+      expect(fetchSpy).not.toHaveBeenCalled()
+    },
+  )
 })

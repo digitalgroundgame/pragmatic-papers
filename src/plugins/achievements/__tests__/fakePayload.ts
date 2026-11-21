@@ -23,7 +23,15 @@ function matches(doc: Record<string, unknown>, where: Where | undefined): boolea
 
 /** Verified and Early member (first two members), as a site starts with them. */
 export const starter = (): Row[] => [
-  { id: 1, name: "Early member", rule: "firstMembers", limit: 2, badge: true, _order: "a1" },
+  {
+    id: 1,
+    key: "early-member",
+    name: "Early member",
+    rule: "firstMembers",
+    limit: 2,
+    badge: true,
+    _order: "a1",
+  },
   { id: 2, name: "Verified", rule: "verified", badge: true, _order: "a2" },
 ]
 
@@ -82,9 +90,21 @@ function makeFake({ users = [] as Row[], rows = [] as Row[], achievements = star
       store[collection] = (store[collection] ?? []).filter((doc) => !matches(doc, where))
     }),
     update: vi.fn(
-      async ({ collection, where, data }: { collection: string; where?: Where; data: Row }) => {
+      async ({
+        collection,
+        id,
+        where,
+        data,
+      }: {
+        collection: string
+        id?: unknown
+        where?: Where
+        data: Row
+      }) => {
         store[collection] = (store[collection] ?? []).map((doc) =>
-          matches(doc, where) ? { ...doc, ...data } : doc,
+          (id === undefined ? matches(doc, where) : String(doc.id) === String(id))
+            ? { ...doc, ...data }
+            : doc,
         )
       },
     ),

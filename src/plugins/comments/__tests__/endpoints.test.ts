@@ -1,19 +1,31 @@
 import type { PayloadRequest } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { COMMENTS_SLUG, DEFAULT_SETTINGS, SETTINGS_SLUG, VIOLATIONS_SLUG } from "../constants"
+import {
+  COMMENTS_SLUG,
+  DEFAULT_SETTINGS,
+  FIRST_COMMENTED_FIELD,
+  SETTINGS_SLUG,
+  VIOLATIONS_SLUG,
+} from "../constants"
 import { THREAD_LIMIT, threadEndpoints } from "../endpoints/thread"
+import { isCakeDay } from "../markers"
 import { SKIP_MODERATION } from "../hooks/recordModeration"
-import type { ResolvedCommentsConfig } from "../types"
+import type { BadgeInfo, ResolvedCommentsConfig } from "../types"
 
 const site = "https://example.com"
+const DAY_MS = 24 * 60 * 60 * 1000
 const ada = { id: 7, name: "Ada" }
+const STAFF: BadgeInfo = { key: "staff", label: "Staff" }
+const EARLY: BadgeInfo = { key: "early-member", label: "Early member" }
+const VERIFIED: BadgeInfo = { key: "vouched", label: "Verified" }
 
 const enabled = vi.fn()
 const currentUser = vi.fn()
 const isVerified = vi.fn()
 const extraCheck = vi.fn()
 const authorBadges = vi.fn()
+const targetWriters = vi.fn()
 
 const config = {
   enabled,
@@ -25,14 +37,17 @@ const config = {
   describeAuthor: (author: Record<string, unknown>) => ({
     name: String(author.name),
     image: null,
-    badge: author.staff ? "Staff" : null,
+    badge: author.staff ? STAFF : null,
   }),
   authorBadges,
+  targetWriters,
   signInProviders: () => [{ id: "discord", label: "Discord" }],
   baseURL: () => site,
   checks: [extraCheck],
   maxLength: 2000,
   cooldownSeconds: 10,
+  newCommenterDays: 7,
+  newMemberDays: 30,
 } as unknown as ResolvedCommentsConfig
 
 const [get, post] = threadEndpoints(config)
@@ -56,10 +71,11 @@ const payload = {
   findByID: vi.fn(async ({ collection }: { collection: string }) =>
     collection === COMMENTS_SLUG ? db.parent : db.target,
   ),
+  // The cooldown counts recent comments.
   count: vi.fn(async () => ({ totalDocs: db.recent })),
   create: vi.fn(async ({ collection, data }: { collection: string; data: object }) => ({
     id: collection === COMMENTS_SLUG ? 99 : 1,
-    createdAt: "2026-10-13T12:00:00.000Z",
+    createdAt: new Date().toISOString(),
     ...data,
   })),
 }
@@ -86,6 +102,7 @@ beforeEach(() => {
   isVerified.mockReturnValue(true)
   extraCheck.mockResolvedValue({ ok: true })
   authorBadges.mockResolvedValue(new Map())
+  targetWriters.mockResolvedValue([])
   db = {
     settings: {},
     comments: [],
@@ -137,7 +154,7 @@ describe("GET /thread/:id", () => {
         where: { target: { equals: 5 } },
         sort: "-createdAt",
         limit: THREAD_LIMIT,
-        populate: { users: { name: true } },
+        populate: { users: { name: true, createdAt: true, [FIRST_COMMENTED_FIELD]: true } },
       }),
     )
   })
@@ -159,6 +176,18 @@ describe("GET /thread/:id", () => {
     expect(body.providers).toEqual([])
     expect(body.maxDepth).toBe(2)
   })
+  it("marks a locked document's thread closed, and shows nothing on one with comments off", async () => {
+    db.target = { id: 5, commenting: "locked" }
+    const locked = await call(get)
+    expect(locked.status).toBe(200)
+    expect(await json(locked)).toMatchObject({ closed: true })
+
+    db.target = { id: 5, commenting: "off" }
+    expect((await call(get)).status).toBe(404)
+
+    db.target = { id: 5, commenting: "open" }
+    expect(await json(await call(get))).not.toHaveProperty("closed")
+  })
 })
 
 describe("badges from outside the plugin", () => {
@@ -177,8 +206,8 @@ describe("badges from outside the plugin", () => {
     db.comments = [comment(2, grace), comment(1, ada)]
     authorBadges.mockResolvedValue(
       new Map([
-        ["7", "Early member"],
-        ["8", "Verified"],
+        ["7", EARLY],
+        ["8", VERIFIED],
       ]),
     )
 
@@ -186,20 +215,269 @@ describe("badges from outside the plugin", () => {
 
     expect(authorBadges).toHaveBeenCalledOnce()
     expect(authorBadges.mock.calls[0]![0]).toEqual([ada, grace, ada])
-    const comments = body.comments as { author: { badge: string | null } }[]
+    const comments = body.comments as { author: { badge: unknown } }[]
     // Staff wins over a badge from outside.
-    expect(comments.map((c) => c.author.badge)).toEqual(["Early member", "Staff"])
-    expect(body.viewer).toMatchObject({ badge: "Early member" })
+    expect(comments.map((c) => c.author.badge)).toEqual([EARLY, STAFF])
+    expect(body.viewer).toMatchObject({ badge: EARLY })
+  })
+
+  it("marks the comments of the document's writers", async () => {
+    db.comments = [comment(2, grace), comment(1, ada)]
+    targetWriters.mockResolvedValue([8])
+
+    const body = await json(await call(get))
+
+    expect(targetWriters).toHaveBeenCalledOnce()
+    expect(targetWriters.mock.calls[0]![0]).toBe(5)
+    const comments = body.comments as { author: { writer?: true } }[]
+    expect(comments.map((c) => c.author.writer)).toEqual([undefined, true])
+  })
+
+  it("marks a writer's comment as theirs as soon as they post it", async () => {
+    targetWriters.mockResolvedValue([7])
+
+    const response = await call(post, { body: { body: "Thanks for reading." } })
+
+    expect(((await json(response)).comment as { author: object }).author).toMatchObject({
+      writer: true,
+    })
   })
 
   it("shows the author's badge on the comment they just posted", async () => {
-    authorBadges.mockResolvedValue(new Map([["7", "Verified"]]))
+    authorBadges.mockResolvedValue(new Map([["7", VERIFIED]]))
 
     const response = await call(post, { body: { body: "Hello" } })
 
     expect(((await json(response)).comment as { author: object }).author).toMatchObject({
-      badge: "Verified",
+      badge: VERIFIED,
     })
+  })
+})
+
+describe("new commenters", () => {
+  const ago = (days: number) => new Date(Date.now() - days * DAY_MS).toISOString()
+  const comment = (id: number, author: object, status = "published") => ({
+    id,
+    body: "Hi",
+    status,
+    depth: 0,
+    parent: null,
+    createdAt: ago(id),
+    author,
+  })
+  const marks = (body: Record<string, unknown>) =>
+    (body.comments as { id: number; author: { newcomer?: true } | null }[]).map((c) => [
+      c.id,
+      c.author?.newcomer,
+    ])
+
+  it("marks every comment of an author whose first comment is within the window", async () => {
+    const newAda = { ...ada, [FIRST_COMMENTED_FIELD]: ago(3) }
+    const grace = { id: 8, name: "Grace", [FIRST_COMMENTED_FIELD]: ago(40) }
+    // Newest first, as the database answers.
+    db.comments = [comment(1, newAda), comment(2, grace), comment(3, newAda)]
+    currentUser.mockResolvedValue(newAda)
+
+    const body = await json(await call(get))
+
+    expect(marks(body)).toEqual([
+      [3, true],
+      [2, undefined],
+      [1, true],
+    ])
+    expect(body.viewer).toMatchObject({ newcomer: true })
+    // Read from the authors' records, with nothing more asked of the database.
+    expect(payload.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        populate: { users: { name: true, createdAt: true, [FIRST_COMMENTED_FIELD]: true } },
+      }),
+    )
+    expect(payload.count).not.toHaveBeenCalled()
+  })
+
+  it("doesn't mark an author who has never had a comment published", async () => {
+    const grace = { id: 8, name: "Grace", [FIRST_COMMENTED_FIELD]: null }
+    db.comments = [comment(1, grace, "auto-hidden")]
+    currentUser.mockResolvedValue(grace)
+
+    const body = await json(await call(get))
+
+    expect(marks(body)).toEqual([[1, undefined]])
+    expect(body.viewer).not.toHaveProperty("newcomer")
+  })
+
+  it("marks a reader's comment as soon as they post their first, and not once it's held", async () => {
+    const first = await json(await call(post, { body: { body: "Hello" } }))
+    expect((first.comment as { author: object }).author).toMatchObject({ newcomer: true })
+
+    currentUser.mockResolvedValue({ ...ada, [FIRST_COMMENTED_FIELD]: ago(30) })
+    const later = await json(await call(post, { body: { body: "Back again" } }))
+    expect((later.comment as { author: object }).author).not.toHaveProperty("newcomer")
+
+    currentUser.mockResolvedValue(ada)
+    extraCheck.mockResolvedValue({ ok: false, reason: "Spam" })
+    const held = await json(await call(post, { body: { body: "Buy now" } }))
+    expect((held.comment as { author: object }).author).not.toHaveProperty("newcomer")
+  })
+
+  it("marks nobody when the window is 0 days", async () => {
+    const [off] = threadEndpoints({ ...config, newCommenterDays: 0 })
+    db.comments = [comment(1, { ...ada, [FIRST_COMMENTED_FIELD]: ago(1) })]
+
+    const response = await off!.handler({
+      payload,
+      headers: new Headers({ origin: site }),
+      routeParams: { id: "5" },
+    } as unknown as PayloadRequest)
+
+    expect(marks(await json(response))).toEqual([[1, undefined]])
+  })
+})
+
+describe("first comments", () => {
+  const at = (hour: number) => `2026-10-13T1${hour}:00:00.000Z`
+  const comment = (id: number, author: object, status = "published") => ({
+    id,
+    body: "Hi",
+    status,
+    depth: 0,
+    parent: null,
+    createdAt: at(id),
+    author,
+  })
+  const firsts = (body: Record<string, unknown>) =>
+    (body.comments as { id: number; firstComment?: true }[]).map((c) => [c.id, c.firstComment])
+
+  it("marks the comment posted when its author's first-commented time says", async () => {
+    const first = { ...ada, [FIRST_COMMENTED_FIELD]: at(1) }
+    const grace = { id: 8, name: "Grace", [FIRST_COMMENTED_FIELD]: "2026-09-01T00:00:00.000Z" }
+    db.comments = [comment(3, first), comment(2, grace), comment(1, first)]
+
+    const body = await json(await call(get))
+
+    expect(firsts(body)).toEqual([
+      [1, true],
+      [2, undefined],
+      [3, undefined],
+    ])
+  })
+
+  it("doesn't count a held comment as anyone's first", async () => {
+    const first = { ...ada, [FIRST_COMMENTED_FIELD]: at(1) }
+    db.comments = [comment(1, first, "auto-hidden")]
+
+    const body = await json(await call(get))
+
+    expect(firsts(body)).toEqual([[1, undefined]])
+  })
+
+  it("marks a reader's first comment as soon as they post it, and not a later one", async () => {
+    const first = await json(await call(post, { body: { body: "Hello" } }))
+    expect(first.comment).toMatchObject({ firstComment: true })
+
+    currentUser.mockResolvedValue({ ...ada, [FIRST_COMMENTED_FIELD]: at(0) })
+    const later = await json(await call(post, { body: { body: "Hello again" } }))
+    expect(later.comment).not.toHaveProperty("firstComment")
+  })
+})
+
+describe("new members", () => {
+  const joined = (daysAgo: number) => new Date(Date.now() - daysAgo * DAY_MS).toISOString()
+  const comment = (id: number, author: object) => ({
+    id,
+    body: "Hi",
+    status: "published",
+    depth: 0,
+    parent: null,
+    createdAt: `2026-10-13T1${id}:00:00.000Z`,
+    author,
+  })
+
+  it("marks authors whose account is under 30 days old, and reads when each joined", async () => {
+    currentUser.mockResolvedValue(null)
+    db.comments = [
+      comment(3, { id: 9, name: "Old", createdAt: joined(400) }),
+      comment(2, { id: 8, name: "Recent", createdAt: joined(29) }),
+      comment(1, { id: 7, name: "Unknown" }),
+    ]
+
+    const body = await json(await call(get))
+
+    const comments = body.comments as { author: { name: string; newMember?: true } }[]
+    expect(comments.map((c) => [c.author.name, c.author.newMember])).toEqual([
+      ["Unknown", undefined],
+      ["Recent", true],
+      ["Old", undefined],
+    ])
+    const populate = payload.find.mock.calls[0]![0] as unknown as {
+      populate: Record<string, Record<string, true>>
+    }
+    expect(populate.populate.users).toMatchObject({ name: true, createdAt: true })
+  })
+
+  it("marks nobody when the window is 0 days", async () => {
+    const [off] = threadEndpoints({ ...config, newMemberDays: 0 })
+    currentUser.mockResolvedValue(null)
+    db.comments = [comment(1, { id: 8, name: "Recent", createdAt: joined(1) })]
+
+    const response = await off!.handler({
+      payload,
+      headers: new Headers({ origin: site }),
+      routeParams: { id: "5" },
+    } as unknown as PayloadRequest)
+
+    const comments = (await json(response)).comments as { author: object }[]
+    expect(comments[0]!.author).not.toHaveProperty("newMember")
+  })
+})
+
+describe("cake day", () => {
+  const on = (iso: string) => new Date(iso)
+
+  it("falls on each anniversary of the account, from its first year on", () => {
+    expect(isCakeDay("2025-11-09T23:00:00.000Z", on("2026-11-09T01:00:00.000Z"))).toBe(true)
+    expect(isCakeDay(new Date("2020-03-15T00:00:00.000Z"), on("2026-03-15T12:00:00.000Z"))).toBe(
+      true,
+    )
+  })
+
+  it("isn't the day the account was made, or any other day", () => {
+    expect(isCakeDay("2026-11-09T01:00:00.000Z", on("2026-11-09T12:00:00.000Z"))).toBe(false)
+    expect(isCakeDay("2025-11-09T00:00:00.000Z", on("2026-11-10T00:00:00.000Z"))).toBe(false)
+    expect(isCakeDay("2025-12-09T00:00:00.000Z", on("2026-11-09T00:00:00.000Z"))).toBe(false)
+  })
+
+  it("moves a 29 February account to the 28th outside leap years", () => {
+    expect(isCakeDay("2024-02-29T00:00:00.000Z", on("2025-02-28T00:00:00.000Z"))).toBe(true)
+    expect(isCakeDay("2024-02-29T00:00:00.000Z", on("2028-02-28T00:00:00.000Z"))).toBe(false)
+    expect(isCakeDay("2024-02-29T00:00:00.000Z", on("2028-02-29T00:00:00.000Z"))).toBe(true)
+  })
+
+  it("isn't anyone's without a readable date", () => {
+    expect(isCakeDay(undefined)).toBe(false)
+    expect(isCakeDay("soon")).toBe(false)
+  })
+
+  it("marks an author on their cake day in the thread", async () => {
+    currentUser.mockResolvedValue(null)
+    const now = new Date()
+    const yearAgo = new Date(now)
+    yearAgo.setUTCFullYear(now.getUTCFullYear() - 1)
+    db.comments = [
+      {
+        id: 1,
+        body: "Hi",
+        status: "published",
+        depth: 0,
+        parent: null,
+        createdAt: "2026-10-13T10:00:00.000Z",
+        author: { id: 8, name: "Grace", createdAt: yearAgo.toISOString() },
+      },
+    ]
+
+    const body = await json(await call(get))
+
+    expect((body.comments as { author: object }[])[0]!.author).toMatchObject({ cakeDay: true })
   })
 })
 
@@ -277,6 +555,17 @@ describe("POST /thread/:id", () => {
     const refused = await send({ body: "Hi" })
     expect(refused.status).toBe(403)
     expect((await json(refused)).message).toMatch(/verified email/)
+  })
+
+  it("takes no comments or replies on a locked document, and none on one with comments off", async () => {
+    db.target = { id: 5, commenting: "locked" }
+    const locked = await send({ body: "Hi" })
+    expect(locked.status).toBe(403)
+    expect((await json(locked)).message).toBe("Comments are closed on this article.")
+
+    db.target = { id: 5, commenting: "off" }
+    expect((await send({ body: "Hi" })).status).toBe(404)
+    expect(payload.create).not.toHaveBeenCalled()
   })
 
   it("refuses an empty body, or one that isn't JSON", async () => {

@@ -18,11 +18,13 @@ const idOf = (value: StoredComment["parent"] | StoredComment["author"]) =>
  * The comments one viewer sees on a document, oldest first: every published comment, the
  * viewer's own held ones, and a placeholder for each comment that's gone but still has
  * replies showing, so they keep their place. The page builds the tree from `parentId`.
+ * `firstComments` names the comments that are their author's first on the site.
  */
 export function buildThread(
   stored: StoredComment[],
   viewerId: number | string | null,
   describeAuthor: (author: CommentAuthor) => AuthorDisplay,
+  firstComments: ReadonlySet<string> = new Set(),
 ): PublicComment[] {
   const byId = new Map(stored.map((comment) => [String(comment.id), comment]))
   const isOwnHeld = (comment: StoredComment) =>
@@ -60,6 +62,8 @@ export function buildThread(
         body: comment.body ?? "",
         author: describeAuthor(comment.author as CommentAuthor),
         ...(comment.status !== "published" && { held: true as const }),
+        ...(comment.status === "published" &&
+          firstComments.has(String(comment.id)) && { firstComment: true as const }),
       }
     })
 }

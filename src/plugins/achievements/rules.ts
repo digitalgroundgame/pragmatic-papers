@@ -41,6 +41,13 @@ export const findRule = (key: unknown): AchievementRule | undefined =>
  */
 export const starterAchievements = (config: ResolvedAchievementsConfig): AchievementSeed[] => [
   {
+    key: "vouched",
+    name: "Verified",
+    description: "The editors confirmed you are who you say you are.",
+    rule: "manual",
+    badge: true,
+  },
+  {
     key: "early-member",
     name: "Early member",
     description: "One of the first people to make an account.",
@@ -49,10 +56,11 @@ export const starterAchievements = (config: ResolvedAchievementsConfig): Achieve
     badge: true,
   },
   {
+    // Nearly every reader has it, so it's listed on their account page but shows no badge.
     key: "verified",
-    name: "Verified",
+    name: "Email verified",
     description: "Your sign-in provider verified your email address.",
     rule: "verified",
-    badge: true,
+    badge: false,
   },
 ]

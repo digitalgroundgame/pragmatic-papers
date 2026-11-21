@@ -24,15 +24,17 @@ async function isLive(req: PayloadRequest, id: number | string | null): Promise<
  * it, and with no `_status` it changes it in place. Access can't tell either from a draft
  * save, because only the operation knows `draft`. Restoring an older draft version over
  * the live article unpublishes it too. Deleting a live article is refused to writers by
- * `canDeleteArticle`.
+ * `canDeleteArticle`. A copy takes its source's `_status`, which `canCreateArticle` can't
+ * see (it's handed the request's data, not the source), so a writer's copy is saved as a draft.
  */
 export const keepWritersOffLiveArticles: CollectionBeforeOperationHook = async ({
   args,
   operation,
   req,
 }) => {
-  const { draft, id, overrideAccess } = args as {
+  const { draft, duplicateFromID, id, overrideAccess } = args as {
     draft?: boolean
+    duplicateFromID?: number | string | null
     id?: number | string
     overrideAccess?: boolean
   }
@@ -53,6 +55,10 @@ export const keepWritersOffLiveArticles: CollectionBeforeOperationHook = async (
     if (await isLive(req, relationshipId(version.parent as Article | number)))
       throw new Forbidden(req.t)
     return args
+  }
+
+  if (operation === "create" && duplicateFromID !== undefined && duplicateFromID !== null) {
+    return { ...args, draft: true }
   }
 
   if (operation !== "update") return args

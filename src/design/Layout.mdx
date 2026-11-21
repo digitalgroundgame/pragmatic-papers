@@ -1,0 +1,62 @@
+import { Meta, Unstyled } from "@storybook/addon-docs/blocks"
+import { Breakpoints, Widths } from "./DesignGuide"
+
+<Meta title="Design guide/Layout" />
+
+# Layout
+
+## The frame
+
+Every public page is the root layout (`src/app/(frontend)/layout.tsx`): the admin bar when
+staff are signed in, the header, `<main>`, and the footer, in a full-height column.
+
+- **Header**: sticky at the top, `container`, a three-column grid (menu · logo · actions)
+  with a bottom border. `--header-height` is 57px, which is its height below `lg`; from `lg`
+  up it's 59px (the logo link is 34px tall there), so what sticks under it sits 2px too high. Routes can ask for the
+  minimal header instead (the docs do).
+- **Mega menu**: under the header from `md` up, `my-2`.
+- **Ticker**: under that. It sticks below the header while it scrolls (tablets and up, or
+  any screen while a broadcast is live). `--sticky-top` is the header's height, plus the
+  ticker's while it sticks: sticky sidebars and anchor links stop there.
+- **Footer**: `container`, the footer's blocks (the newsletter signup), then the logo,
+  social links and links, each set off by a `border-t`.
+
+## The container and the column
+
+`container` is the site's own utility: centered, `px-4`, at most 80rem wide (1280px), at every
+breakpoint. Most pages don't fill it; they center a narrower column.
+
+<Unstyled>
+  <Widths />
+</Unstyled>
+
+The **common column** is `mx-auto max-w-3xl space-y-6 px-4` (or `container max-w-3xl`,
+which comes to the same): text from 272px to 1008px in a 1280px window, 16px from each edge
+on a phone. Breadcrumbs default to the same column, so a page in it lines up under them.
+
+The article page is the exception that has a reason: its hero spans `max-w-5xl`, and the
+body is a `max-w-2xl` reading column, with the table of contents beside it from `lg` up.
+The hero's width is its own on purpose, so an article can take other hero templates later
+without the body moving.
+
+## Breakpoints
+
+Tailwind's defaults. Container queries (`@container`) are used where a component sits in
+columns of different widths: the article page and the docs place the table of contents by
+their own width, not the window's.
+
+<Unstyled>
+  <Breakpoints />
+</Unstyled>
+
+## Page anatomy
+
+The common pattern, which most index and detail pages follow:
+
+1. Breadcrumbs (`<Breadcrumbs items={trail} />`), in the column.
+2. A header: the `h1`, then a `text-muted-foreground text-sm` description.
+3. Sections, each with an `h2` and its content, `space-y-6` apart, or split by a Separator.
+4. Pagination centered under a list.
+
+The [page audit](?path=/docs/design-guide-page-audit--docs) shows which pages follow it and how
+the others differ.

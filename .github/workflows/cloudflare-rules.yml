@@ -8,7 +8,7 @@ name: Cloudflare rules
 # against Cloudflare and fails when a rule was changed in the dashboard.
 #
 # Two tokens keep a PR from writing the zone. `plan` and `check` read with the
-# repo secret CLOUDFLARE_RULES_READ_TOKEN (Cache Rules: Read). Only `apply` gets
+# repo secret CLOUDFLARE_RULES_READ_TOKEN (Read on each phase's rules). Only `apply` gets
 # the Edit token, an environment secret of `cloudflare`, whose deployment
 # branches are just `main`: a PR's run (`refs/pull/<n>/merge`) can't reach it,
 # even from a workflow file the PR edits. Setup: cloudflare/README.md.

@@ -13,10 +13,14 @@
  *   resolve the files that import from it, such as tests of its routes. CI's Static checks
  *   type-check the whole tree on every PR, as for the CI image's build.
  * - The static assets' headers (`src/cloudflare/_headers`) go into `.open-next/assets`.
+ * - So do the TTFs the whip count's link preview card draws with (`CARD_FONTS`), which the
+ *   Worker has no files to read them from.
  */
 import { spawnSync } from "node:child_process"
 import { copyFileSync, existsSync, mkdirSync, renameSync } from "node:fs"
 import path from "node:path"
+
+import { CARD_FONTS } from "../src/interactives/whip-count/cardFonts.ts"
 
 const ADMIN = path.resolve("src/app/(payload)")
 // Inside the repo (gitignored), so the move is a rename on the same filesystem.
@@ -50,6 +54,11 @@ try {
   })
   run("pnpm", ["exec", "opennextjs-cloudflare", "build", "--skipNextBuild"])
   copyFileSync("src/cloudflare/_headers", ".open-next/assets/_headers")
+  for (const font of CARD_FONTS) {
+    const dest = path.join(".open-next/assets", font.asset)
+    mkdirSync(path.dirname(dest), { recursive: true })
+    copyFileSync(font.file, dest)
+  }
 } finally {
   restore()
 }

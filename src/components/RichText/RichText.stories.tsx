@@ -1,12 +1,15 @@
 import type { DefaultTypedEditorState } from "@payloadcms/richtext-lexical"
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, screen, userEvent, within } from "storybook/test"
+import { expect, screen, userEvent, waitFor, within } from "storybook/test"
 
+import { stampTableOfContentsAnchors } from "@/components/TableOfContents"
+import { MULTI_CLICK_WAIT_MS } from "@/components/TableOfContents/AnchoredHeading"
 import { MathJaxProviderRoot } from "@/providers/MathJaxProvider"
 import { landscapeImage, mediaFixture, portraitImage } from "@/stories/fixtures/media"
 import {
   articleBody,
   createLinkNode,
+  createHeadingNode,
   createParagraph,
   createTextNode,
   richText,
@@ -166,6 +169,53 @@ export const SelectionDark: Story = {
 }
 
 /**
+ * Headings an article's table of contents links to. The icon beside each is the link,
+ * so the heading's own text selects like any other text; a click on it still jumps to it.
+ */
+export const AnchoredHeadings: Story = {
+  args: {
+    data: stampTableOfContentsAnchors(
+      richText(
+        createHeadingNode("Why the small races matter", "h2"),
+        createParagraph(SENTENCES[0]!),
+      ) as DefaultTypedEditorState,
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const heading = canvas.getByRole("heading", { level: 2, name: "Why the small races matter" })
+    const link = within(heading).getByRole("link", { name: "Why the small races matter" })
+    const text = within(heading).getByText("Why the small races matter")
+    await expect(link).toHaveAttribute("href", `#${heading.id}`)
+    // Dragging across a link drags the link, so the text must not be inside one.
+    await expect(text.closest("a")).toBeNull()
+
+    // Drag across the first word: it's selected, and the page doesn't jump.
+    const node = text.firstChild!
+    await userEvent.pointer([
+      { keys: "[MouseLeft>]", target: text, node, offset: 0 },
+      { target: text, node, offset: 3 },
+      { keys: "[/MouseLeft]" },
+    ])
+    await expect(window.getSelection()?.toString()).toBe("Why")
+    await expect(window.location.hash).not.toBe(`#${heading.id}`)
+
+    // A double click selects a word and stays put.
+    window.getSelection()?.removeAllRanges()
+    await userEvent.dblClick(text)
+    await new Promise((resolve) => setTimeout(resolve, MULTI_CLICK_WAIT_MS + 50))
+    await expect(window.getSelection()?.toString()).not.toBe("")
+    await expect(window.location.hash).not.toBe(`#${heading.id}`)
+
+    // A plain click links to the heading.
+    window.getSelection()?.removeAllRanges()
+    await userEvent.click(text)
+    await waitFor(() => expect(window.location.hash).toBe(`#${heading.id}`))
+    history.replaceState(null, "", window.location.pathname + window.location.search)
+  },
+}
+
+/**
  * An article's opening paragraph as the article and volume pages set it: Libertinus Serif
  * (the design spec's serif, served to every reader so the page and the map pictures match)
  * at 112%, Georgia's x-height, with the first letter dropped two lines. Chrome sets the drop
@@ -203,5 +253,39 @@ export const DropCap: Story = {
     for (const face of faces) {
       await expect((face as FontFace & { sizeAdjust?: string }).sizeAdjust).toBe("112%")
     }
+  },
+}
+
+// A writer can paste a bare URL as a link's text. On a phone it has to break where it
+// meets the edge, or the article column and the page grow to fit it. The decorators copy
+// the article page's column: `mx-auto` in a flex column sizes it to its content.
+export const LongLinkOnMobile: Story = {
+  args: {
+    data: richText(
+      createParagraph([
+        createTextNode("For further reading: "),
+        createLinkNode(
+          "https://jspp.psychopen.eu/index.php/jspp/article/view/12989/12989.html",
+          "https://jspp.psychopen.eu/index.php/jspp/article/view/12989/12989.html",
+        ),
+      ]),
+    ) as DefaultTypedEditorState,
+  },
+  decorators: [
+    (Story) => (
+      <div data-testid="page" className="flex w-[320px] flex-col">
+        <div data-testid="column" className="mx-auto max-w-2xl space-y-3">
+          <Story />
+        </div>
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement).getByTestId("page")
+    const column = within(canvasElement).getByTestId("column")
+    await expect(column.getBoundingClientRect().width).toBeLessThanOrEqual(
+      page.getBoundingClientRect().width,
+    )
+    await expect(page.scrollWidth).toBeLessThanOrEqual(page.clientWidth)
   },
 }

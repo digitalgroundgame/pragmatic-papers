@@ -30,7 +30,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
   showTableOfContents = false,
   showComments = false,
 }) => {
-  const { publishedAt, updatedAt, title, heroImage, authors, narration, content } = article
+  const { publishedAt, contentUpdatedAt, title, heroImage, authors, narration, content } = article
 
   const bylineAuthors = (authors || []).filter(isResolved<User>).map(toBylineAuthor)
 
@@ -47,7 +47,7 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
       <Byline authors={bylineAuthors} />
       <div data-slot="article-meta" className="flex flex-wrap items-center gap-3">
         <div className="grow-999">
-          <PublicationDates publishedAt={publishedAt} updatedAt={updatedAt} />
+          <PublicationDates publishedAt={publishedAt} updatedAt={contentUpdatedAt} />
         </div>
         {/* The buttons sit edge to edge, so each icon's own padding spaces the row: 16px
             between every pair of glyphs. The collapsed player's "Listen" label carries the

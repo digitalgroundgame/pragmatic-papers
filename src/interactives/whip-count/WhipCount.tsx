@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useState, useSyncExternalStore } from "react"
+import React, { useState, useSyncExternalStore } from "react"
 
 import {
   Accordion,
@@ -377,17 +377,13 @@ export function WhipCount({
   const outgoing = hasOutgoing(published)
   // Outgoing members start uncounted; the reader ticks the box to count them.
   const [countOutgoing, setCountOutgoing] = useState(false)
-  const data = useMemo(
-    () => withOutgoing(showBlocs ? published : withoutBlocs(published), countOutgoing),
-    [published, countOutgoing, showBlocs],
-  )
-  const voters = useMemo(() => votingMembers(data), [data])
-  const groups = useMemo(() => publicGroups(data), [data])
+  const data = withOutgoing(showBlocs ? published : withoutBlocs(published), countOutgoing)
+  const voters = votingMembers(data)
+  const groups = publicGroups(data)
   // Only groups with someone left to assign: one whose members have all publicly backed a
   // candidate has nothing for a reader to move.
-  const memberGroups = useMemo(
-    () => groupsOf(data).filter((group) => group.members.some((m) => m.stance !== "backs")),
-    [data],
+  const memberGroups = groupsOf(data).filter((group) =>
+    group.members.some((m) => m.stance !== "backs"),
   )
   // The groups column, when anyone is in a group to show.
   const grouped = voters.some((m) => m.bloc || m.tags?.length)
@@ -401,12 +397,9 @@ export function WhipCount({
     () => readStored(storageKey),
     () => null,
   )
-  const { picks, cleared } = useMemo(() => parseStored(stored, published), [stored, published])
-  const draft = useMemo(() => {
-    const merged = { ...startingDraft(data), ...cleanDraft(picks, data) }
-    for (const name of cleared) if (!picks[name]) delete merged[name]
-    return merged
-  }, [data, picks, cleared])
+  const { picks, cleared } = parseStored(stored, published)
+  const draft = { ...startingDraft(data), ...cleanDraft(picks, data) }
+  for (const name of cleared) if (!picks[name]) delete draft[name]
 
   /** Takes the draft as it should now read, and keeps what differs from the starting one. */
   const update = (next: Draft): void => {

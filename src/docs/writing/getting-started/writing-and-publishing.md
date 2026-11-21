@@ -1,8 +1,9 @@
 ---
 title: Who can write, publish and schedule an article
 navTitle: Publishing and roles
-summary: Writers draft their own articles and editors publish them. Your work saves itself as you go, and Live Preview shows it as readers will see it.
+summary: Writers draft the articles they write and editors publish them. Your work saves itself as you go, and Live Preview shows it as readers will see it.
 publishedAt: 2025-07-01
+revisedAt: 2026-11-10
 heroImage: writing-and-publishing-hero.webp
 heroAlt: An article title with its published and updated dates
 audience: [writer, editor]
@@ -12,16 +13,19 @@ Every article starts as a draft. Readers only see it once it's published, and on
 
 ## Writers
 
-- Create articles and edit the ones **you created**, whether they're drafts or already published.
-- You can't publish, and you can't change a published article's live version. When a draft is ready, tell an editor.
-- You can delete articles you created.
+- Create articles, and edit the drafts of any article **you created or are credited on** as an author, even one that's already published.
+- You can't publish, and your edits to a published article stay in its draft until an editor publishes them. When a draft is ready, tell an editor.
+- You can delete an article you created while it isn't published. Once it's live, only an editor can unpublish it, delete it, or restore an older draft version over it. Restoring a version **as a draft** still works.
 
 ## Editors
 
-Editors, chief editors and admins can edit, publish, schedule and delete any article. They also have two sidebar fields writers can't change:
+Editors, chief editors and admins can edit, publish, schedule and delete any article. They also have three sidebar fields writers can't change:
 
 - **Published At**: the date shown on the article. Left empty, it's set to the moment the article is first published.
 - **Syndicate to Substack**: adds the article to the feed Substack imports from, once it's published.
+- **Substack post URL**: appears once Syndicate to Substack is ticked. After Substack has imported the article, paste the post's address here. The sidebar then shows the article as imported, the bulk import feed leaves it out, and the article gets a Read on Substack link.
+
+The sidebar also shows **Content updated**, which nobody edits. It starts at the publish date and moves only when you publish a change to the title, text, hero image, authors or narration. Readers see it as the "Updated" time beside the date, so publishing a sidebar change like Syndicate to Substack or a topic doesn't mark the article as updated.
 
 ## Saving and versions
 

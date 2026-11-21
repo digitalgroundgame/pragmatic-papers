@@ -1,4 +1,5 @@
-import type { Access, PayloadRequest, TextField } from "payload"
+import { nestedDocsPlugin } from "@payloadcms/plugin-nested-docs"
+import type { Access, Config, Field, PayloadRequest, TextField } from "payload"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { Docs } from "../collection"
@@ -69,5 +70,58 @@ describe("Docs admin: preview", () => {
       expect(String(url)).toContain("slug=experiments")
       expect(String(url)).toContain(encodeURIComponent("/docs/experiments"))
     }
+  })
+})
+
+describe("Docs admin: layout", () => {
+  // The collection as the docs plugin installs it, with the nested docs plugin's fields.
+  const { collections } = nestedDocsPlugin({ collections: ["docs"] })({
+    collections: [Docs],
+  } as Config) as Config
+  const installed = collections!.find((collection) => collection.slug === "docs")!
+
+  // The visible fields in the sidebar, in order. A row (the slug's) goes there whole.
+  const sidebar = (fields: Field[], inSidebar = false): string[] =>
+    fields.flatMap((field) => {
+      const here = inSidebar || field.admin?.position === "sidebar"
+      if (field.type === "row") return sidebar(field.fields, here)
+      return "name" in field &&
+        here &&
+        !(field.admin && "hidden" in field.admin && field.admin.hidden)
+        ? [field.name]
+        : []
+    })
+
+  it("orders the sidebar from the hero down to the tour", () => {
+    expect(sidebar(installed.fields)).toEqual([
+      "heroImage",
+      "publishedAt",
+      "revisedAt",
+      "slug",
+      "parent",
+      "audience",
+      "showTableOfContents",
+      "tour",
+      "sourceHash",
+    ])
+  })
+
+  it("keeps one parent field, with the nested docs plugin's filter", () => {
+    const parents = installed.fields.filter(
+      (field: Field) => "name" in field && field.name === "parent",
+    )
+    expect(parents).toHaveLength(1)
+    expect(parents[0]).toHaveProperty("filterOptions")
+  })
+
+  it("lists docs by title, sidebar title, parent, audience, update and status", () => {
+    expect(Docs.admin!.defaultColumns).toEqual([
+      "title",
+      "navTitle",
+      "parent",
+      "audience",
+      "updatedAt",
+      "_status",
+    ])
   })
 })

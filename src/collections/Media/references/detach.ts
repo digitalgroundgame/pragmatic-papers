@@ -1,3 +1,5 @@
+import { blockDescriptor } from "@/blocks/registry"
+
 import { isMediaId } from "./findMediaInBlocks"
 import { SOURCES, type Source } from "./collectMediaReferences"
 
@@ -27,20 +29,16 @@ export function resolveDetachTarget(collection: string, field: string): DetachTa
   return undefined
 }
 
-const blockOf = (node: Record<string, unknown>): Record<string, unknown> | undefined => {
-  if (typeof node.blockType === "string") return node
-  const fields = node.fields as Record<string, unknown> | undefined
-  return fields && typeof fields.blockType === "string" ? fields : undefined
-}
-
 /**
  * Removes `mediaId` from the blocks under `value`, which is rich text or a `blocks`
- * field: a media block that shows it is removed, a collage drops the image (and goes
- * too if it was the last one, since a collage needs an image), and a timeline event
- * loses its avatar. Returns the new value, or `undefined` if nothing used the media.
+ * field, as each block's descriptor says (`media.detach` in `src/blocks/<Name>/index.ts`):
+ * a media block that shows it is removed, a collage drops the image (and goes too if it
+ * was the last one, since a collage needs an image), and a timeline event loses its
+ * avatar. Returns the new value, or `undefined` if nothing used the media.
  */
 export function detachFromBlocks(value: Json, mediaId: number | string): Json | undefined {
   let changed = false
+  const uses = (media: unknown) => isMediaId(media, mediaId)
 
   const walk = (node: Json): Json => {
     if (Array.isArray(node)) {
@@ -53,40 +51,23 @@ export function detachFromBlocks(value: Json, mediaId: number | string): Json | 
     }
     if (!node || typeof node !== "object") return node
 
-    const record = node as Record<string, unknown>
-    const block = blockOf(record)
-
-    if (block?.blockType === "mediaBlock" && isMediaId(block.media, mediaId)) {
-      changed = true
-      return REMOVE
-    }
-
     const copy: Record<string, unknown> = {}
-    for (const [key, child] of Object.entries(record)) {
+    for (const [key, child] of Object.entries(node)) {
       const next = walk(child)
       // A Lexical block node keeps its block in `fields`; if that goes, the node goes.
       if (next === REMOVE) return REMOVE
       copy[key] = next
     }
 
-    const copiedBlock = blockOf(copy)
-    if (copiedBlock?.blockType === "mediaCollage" && Array.isArray(copiedBlock.images)) {
-      const images = copiedBlock.images as Array<{ media?: unknown } | undefined>
-      const remaining = images.filter((image) => !isMediaId(image?.media, mediaId))
-      if (remaining.length !== images.length) {
-        changed = true
-        if (remaining.length === 0) return REMOVE
-        copiedBlock.images = remaining
-      }
-    }
-    if (copiedBlock?.blockType === "timeline" && Array.isArray(copiedBlock.events)) {
-      copiedBlock.events = (copiedBlock.events as Array<Record<string, unknown>>).map((event) => {
-        if (!event || !isMediaId(event.avatar, mediaId)) return event
-        changed = true
-        return { ...event, avatar: null }
-      })
-    }
-    return copy
+    const detach =
+      typeof copy.blockType === "string"
+        ? blockDescriptor(copy.blockType)?.media?.detach
+        : undefined
+    if (!detach) return copy
+    const detached = detach(copy, uses)
+    if (detached === copy) return copy
+    changed = true
+    return detached ?? REMOVE
   }
 
   const next = walk(value)

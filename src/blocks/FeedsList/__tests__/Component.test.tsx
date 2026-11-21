@@ -1,8 +1,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITEMAPS } from "@/app/(frontend)/(sitemaps)/sitemaps"
-import { FEEDS } from "@/app/(frontend)/feeds/feeds"
+import { FEEDS, SITEMAPS } from "@/data/feeds"
 
 import { FeedsListBlock } from "../Component"
 

@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, spyOn, within } from "storybook/test"
 
 import type { HeldAchievement } from "@/plugins/achievements"
+import { isolatedDocs } from "@/stories/isolatedDocs"
 
 import { Achievements } from "./Achievements"
 
@@ -9,14 +10,14 @@ const earlyMember: HeldAchievement = {
   key: "early-member",
   label: "Early member",
   description: "One of the first readers to make an account.",
-  badge: "Early member",
+  badge: { key: "early-member", label: "Early member" },
   earnedAt: "2026-10-18T12:00:00.000Z",
 }
 const verified: HeldAchievement = {
   key: "verified",
-  label: "Verified",
+  label: "Email verified",
   description: "Your sign-in provider verified your email address.",
-  badge: "Verified",
+  badge: null,
   earnedAt: null,
 }
 
@@ -33,6 +34,7 @@ function serve(held: HeldAchievement[] | null) {
 const meta = {
   title: "Components/Account/Achievements",
   component: Achievements,
+  parameters: isolatedDocs("360px"),
   decorators: [
     (Story) => (
       <div className="mx-auto max-w-xl p-4">
@@ -53,7 +55,7 @@ export const Several: Story = {
     const items = canvas.getAllByRole("listitem")
     await expect(items).toHaveLength(2)
     await expect(items[0]).toHaveTextContent("Early member")
-    await expect(items[1]).toHaveTextContent("Verified")
+    await expect(items[1]).toHaveTextContent("Email verified")
   },
 }
 
@@ -67,6 +69,8 @@ export const NoneYet: Story = {
 }
 
 export const SwitchedOff: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   beforeEach: serve(null),
   play: async ({ canvasElement }) => {
     // Nothing to wait for: give the request a moment, then check nothing rendered.

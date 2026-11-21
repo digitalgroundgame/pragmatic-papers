@@ -45,6 +45,8 @@ export const Reference: Story = {
 }
 
 export const Unresolvable: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   args: { link: { type: "reference", label: "Nowhere", reference: null } },
   play: async ({ canvasElement }) => {
     await expect(canvasElement).toBeEmptyDOMElement()

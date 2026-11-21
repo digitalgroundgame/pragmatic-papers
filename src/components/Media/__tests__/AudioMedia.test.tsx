@@ -107,6 +107,19 @@ describe("AudioMedia", () => {
       expect(isCollapsed(container)).toBe(false)
     })
 
+    it("plays when the Listen label is clicked, since the label is part of the play button", async () => {
+      const play = vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue()
+      const { container } = render(<AudioMedia media={media} variant="collapsible" />)
+
+      const label = screen.getByText("Listen \u00b7 2:00")
+      expect(label.closest("button")).toBe(screen.getByRole("button", { name: "Play" }))
+
+      fireEvent.click(label)
+      expect(play).toHaveBeenCalled()
+      expect(await screen.findByRole("button", { name: "Pause" })).toBeInTheDocument()
+      expect(isCollapsed(container)).toBe(false)
+    })
+
     it("stays expanded while paused", async () => {
       const { container } = render(<AudioMedia media={media} variant="collapsible" />)
       fireEvent.click(screen.getByLabelText("Play"))

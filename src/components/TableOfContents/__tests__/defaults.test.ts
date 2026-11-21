@@ -46,6 +46,31 @@ describe("defaultResolvers", () => {
       })
       expect(defaultResolvers.heading!(node)?.depth).toBe(1)
     })
+
+    it("lists a heading by its table of contents label when it has one", () => {
+      const node = heading({
+        tag: "h2",
+        anchor: "michigan-senate",
+        children: [{ type: "text", text: "Michigan Senate – Smith vs Jones" }],
+        $: { tocLabel: "  Michigan Senate " },
+      })
+      expect(defaultResolvers.heading!(node)?.label).toBe("Michigan Senate")
+    })
+
+    it("uses the heading's text when its label is blank", () => {
+      const node = heading({
+        tag: "h2",
+        anchor: "turnout",
+        children: [{ type: "text", text: "Turnout" }],
+        $: { tocLabel: "   " },
+      })
+      expect(defaultResolvers.heading!(node)?.label).toBe("Turnout")
+    })
+
+    it("leaves out a heading with a label but no text", () => {
+      const node = heading({ tag: "h2", anchor: "x", children: [], $: { tocLabel: "Label" } })
+      expect(defaultResolvers.heading!(node)).toBeNull()
+    })
   })
 
   describe("table", () => {

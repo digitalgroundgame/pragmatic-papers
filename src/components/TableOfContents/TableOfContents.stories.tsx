@@ -32,7 +32,8 @@ const text = (i: number) => createParagraph(SENTENCES[i % SENTENCES.length]!)
 // so the entries come from the same resolvers the site uses. It opens with a
 // paragraph (an Intro entry), nests h2–h4, repeats a heading (deduped anchor),
 // puts a table right under a heading (folded into it) and another after a
-// paragraph (listed on its own), and nests each iconed block under a heading.
+// paragraph (listed on its own), nests each iconed block under a heading, and
+// gives a long heading a shorter table of contents label.
 const content = stampTableOfContentsAnchors(
   richText(
     text(0),
@@ -54,7 +55,10 @@ const content = stampTableOfContentsAnchors(
     block({ blockType: "socialEmbed", platform: "youtube" }),
     createHeadingNode("Turnout", "h3"),
     text(0),
-    createHeadingNode("What to watch", "h2"),
+    {
+      ...createHeadingNode("What to watch on election night, race by race", "h2"),
+      $: { tocLabel: "What to watch" },
+    },
     text(1),
     createTableNode([
       createTableRowNode([createTableHeaderNode("Race"), createTableHeaderNode("Seats")]),
@@ -120,6 +124,13 @@ export const Default: Story = {
     }
     const nested = toc.getByRole("link", { name: "Image grid" }).closest('[data-slot="toc-list"]')
     await expect(nested).toHaveClass("pl-4")
+
+    // A heading with a label is listed, and linked, by the label.
+    await expect(toc.getByRole("link", { name: "What to watch" })).toHaveAttribute(
+      "href",
+      "#what-to-watch",
+    )
+    await expect(toc.queryByText(/race by race/)).not.toBeInTheDocument()
   },
 }
 
@@ -137,11 +148,43 @@ export const Collapsed: Story = {
 }
 
 export const WithoutHeadings: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   args: { content: richText(text(0), text(1)) as DefaultTypedEditorState },
   play: async ({ canvasElement }) => {
     // An article with nothing to list renders neither the list nor its button.
     const canvas = within(canvasElement)
     await expect(canvas.queryByRole("navigation")).not.toBeInTheDocument()
     await expect(canvas.queryByRole("button")).not.toBeInTheDocument()
+  },
+}
+
+const scrollPadding = () => parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop)
+
+export const UnderTicker: Story = {
+  // A live ticker sticks under the header on every screen until it's paused. Its
+  // pause switch is what globals.css reads to move the page's scroll padding.
+  render: (args) => (
+    <TableOfContentsProvider>
+      <div className="ticker" data-live="">
+        <input type="checkbox" className="ticker-pause" aria-label="Pause the ticker" />
+      </div>
+      <div data-testid="ticker-height" style={{ height: "var(--ticker-height)" }} />
+      <div className="max-w-xs px-8 py-4">
+        <TableOfContents {...args} />
+      </div>
+    </TableOfContentsProvider>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const ticker = canvas.getByTestId("ticker-height").getBoundingClientRect().height
+    const sticking = scrollPadding()
+    // Anchor links stop below the header and the ticker, with room above the heading.
+    await expect(ticker).toBeGreaterThan(40)
+    await expect(sticking).toBeGreaterThan(ticker + 56)
+
+    // Paused, the ticker scrolls away, and links stop below the header alone.
+    await userEvent.click(canvas.getByRole("checkbox", { name: "Pause the ticker" }))
+    await expect(scrollPadding()).toBeCloseTo(sticking - ticker, 0)
   },
 }

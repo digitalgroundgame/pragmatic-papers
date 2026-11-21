@@ -20,6 +20,7 @@ import { draftMode } from "next/headers"
 import React from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { getPayloadClient } from "@/data/payload"
+import { PRERENDER_LIMIT } from "@/utilities/prerender"
 
 // Prerendered from generateStaticParams; a slug published since the build is rendered on its
 // first request and cached the same way. Saving the volume, one of its articles or an author
@@ -31,9 +32,10 @@ export async function generateStaticParams(): Promise<{ slug: string | null | un
   const volumes = await payload.find({
     collection: "volumes",
     draft: false,
-    limit: 1000,
+    limit: PRERENDER_LIMIT,
     overrideAccess: false,
     pagination: false,
+    sort: "-publishedAt",
     select: {
       slug: true,
     },

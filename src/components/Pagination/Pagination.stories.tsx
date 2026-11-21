@@ -65,6 +65,8 @@ export const Volumes: Story = {
 
 /** One page of results has nowhere to go, so the component renders nothing. */
 export const SinglePage: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   args: { page: 1, totalPages: 1 },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).queryByRole("navigation")).not.toBeInTheDocument()
@@ -73,6 +75,8 @@ export const SinglePage: Story = {
 
 /** Payload leaves `page` undefined for an empty result. */
 export const NoResults: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   args: { page: undefined, totalPages: 0 },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).queryByRole("navigation")).not.toBeInTheDocument()
@@ -80,6 +84,8 @@ export const NoResults: Story = {
 }
 
 export const VolumesSinglePage: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   args: { page: 1, totalPages: 1 },
   render: (args) => <PaginationVolumes page={args.page} totalPages={args.totalPages} />,
   play: async ({ canvasElement }) => {

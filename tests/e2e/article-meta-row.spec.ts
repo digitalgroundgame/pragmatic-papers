@@ -31,7 +31,7 @@ test.describe("article hero meta row — dateline and controls on one line", () 
     const metaRow = page.locator(row)
     const metaControls = page.locator(controls)
     const dateline = page.locator("#article-dateline")
-    const share = page.getByRole("button", { name: "Share" })
+    const share = page.locator(controls).getByRole("button", { name: "Share" })
     const player = page.locator(audioPlayer)
 
     await expect(dateline).toBeVisible()
@@ -75,7 +75,7 @@ test.describe("article hero meta row — controls wrapped onto their own line", 
     const metaRow = page.locator(row)
     const metaControls = page.locator(controls)
     const dateline = page.locator("#article-dateline")
-    const share = page.getByRole("button", { name: "Share" })
+    const share = page.locator(controls).getByRole("button", { name: "Share" })
     const player = page.locator(audioPlayer)
 
     await expect(dateline).toBeVisible()
@@ -111,7 +111,7 @@ test.describe("article hero meta row — controls wrapped onto their own line", 
     await expect(page.locator(audioPlayer)).toHaveCount(0)
 
     const metaRow = page.locator(row)
-    const share = page.getByRole("button", { name: "Share" })
+    const share = page.locator(controls).getByRole("button", { name: "Share" })
     await expect(share).toBeVisible()
 
     await waitForStableRender(page)

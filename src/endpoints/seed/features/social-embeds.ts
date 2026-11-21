@@ -15,11 +15,9 @@ export const SOCIAL_MEDIA_URLS: Pick<SocialEmbedBlock, "platform" | "url" | "sna
   {
     platform: "bluesky",
     url: "https://bsky.app/profile/destiny.gg/post/3lbjlth3tnc2k",
-    // Set explicit, stable IDs so runtime revalidation can persist by `fields.id` reliably.
     id: "seed-socialEmbed-bluesky",
     snapshot: {
       status: "ok",
-      // Intentionally old so revalidation runs on first article load (TTL is 30 days).
       fetchedAt: new Date().toISOString(),
       providerName: "Bluesky Social",
       providerURL: "https://bsky.app",

@@ -10,17 +10,17 @@ export { DOCS_CACHE_TAG }
 
 /**
  * Help docs at /docs: the Docs collection, nested into areas, their sections and the sections'
- * docs, each read at the address its place gives it (`/docs/writing/articles/footnotes`). Once
- * per deploy, `/next/revalidate-all` seeds each site with the docs in src/docs/ it doesn't have
- * yet, as drafts (see `syncRepoDocs`), so a release that ships a doc has it waiting for an
- * editor to publish. `pnpm docs:export <slug>` writes one from the admin into the repo.
+ * docs, each read at the address its place gives it (`/docs/writing/articles/footnotes`). Each
+ * site's editors write its docs in the admin. The Markdown in src/docs/ is reference for them,
+ * and what the local seed loads (`loadRepoDocs`); `pnpm docs:export <slug>` writes one from the
+ * admin into the repo.
  */
 export const docsPlugin = registerPlugin<SitePluginOptions>({
   slug: "docs",
   manifest: {
     name: "Help docs",
     source: "src/plugins/docs",
-    description: "Help docs at /docs, written in the admin or shipped in src/docs/ with a release.",
+    description: "Help docs at /docs, written by editors in the admin.",
     switch: {
       label: "Help docs",
       description:

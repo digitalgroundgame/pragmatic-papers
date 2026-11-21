@@ -1,7 +1,7 @@
 import { Pause, Play } from "lucide-react"
 import type { CSSProperties, FC, SVGProps } from "react"
 
-import { BlueskyIcon, XIcon, YoutubeIcon } from "@/components/SocialLinks/icons"
+import { BlueskyIcon, SubstackIcon, XIcon, YoutubeIcon } from "@/components/SocialLinks/icons"
 import { formatFullTimestamp } from "@/heros/ArticleHero/dates"
 import { cn } from "@/utilities/utils"
 
@@ -24,6 +24,7 @@ import {
 const SOURCES: Record<TickerPostSource, { name: string; Icon: FC<SVGProps<SVGSVGElement>> }> = {
   bluesky: { name: "Bluesky", Icon: BlueskyIcon },
   x: { name: "X", Icon: XIcon },
+  substack: { name: "Substack", Icon: SubstackIcon },
 }
 
 function PostList({

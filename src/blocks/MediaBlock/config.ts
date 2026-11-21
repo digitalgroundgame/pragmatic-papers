@@ -1,7 +1,10 @@
 import type { Block } from "payload"
 
+import { blockImages } from "@/blocks/blockImages"
+
 export const MediaBlock: Block = {
   slug: "mediaBlock",
+  admin: { images: blockImages("mediaBlock") },
   interfaceName: "MediaBlock",
   fields: [
     {

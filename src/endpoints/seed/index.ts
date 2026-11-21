@@ -1,7 +1,7 @@
 import { DELETE_MEDIA_IN_USE } from "@/collections/Media/hooks/protectPublishedMedia"
 import { seedRandomRankings } from "@/jobs/updateRecommendations/logic"
 import type { Media, User } from "@/payload-types"
-import { syncDocs } from "@/plugins/docs/syncDocs"
+import { loadRepoDocs } from "@/plugins/docs/loadRepoDocs"
 import { readerAchievements } from "@/plugins/readerAchievements"
 import { revalidatePath } from "next/cache"
 import type { Payload } from "payload"
@@ -19,6 +19,7 @@ import { createRichTextShowcaseArticle } from "./features/rich-text-showcase"
 import { createLegacySocialEmbedArticle, createSocialEmbedArticle } from "./features/social-embeds"
 import { createTableOfContentsArticle } from "./features/table-of-contents"
 import { createTimelineArticle } from "./features/timeline"
+import { createWhipCountArticle } from "./features/whip-count"
 import { createStockMedia } from "./media"
 import { createMenus } from "./menus"
 import { createPages } from "./pages"
@@ -339,6 +340,16 @@ export const seed = async (
             context,
           ),
         )
+        // Creates the whip count it links to as well.
+        ctx.featureArticles.push(
+          await createWhipCountArticle(
+            payload,
+            [ctx.writers[0]!],
+            ctx.media,
+            [ctx.topics[3]!],
+            context,
+          ),
+        )
       },
     },
     {
@@ -496,16 +507,17 @@ export const seed = async (
     {
       name: "Creating achievements...",
       fn: async () => {
-        // The ones a deploy creates once per site: Verified, and Early member.
+        // The ones a deploy creates once per site: Verified (given by hand), Early member and
+        // Email verified.
         await readerAchievements.seed(payload)
       },
     },
     {
-      name: "Syncing help docs...",
+      name: "Loading help docs...",
       fn: async () => {
-        // The ones a deploy seeds, back after the wipe above. Published here, so local dev
-        // shows them; a deployed site gets them as drafts for an editor to publish, once.
-        await syncDocs(payload, undefined, { localSeed: true })
+        // The Markdown in src/docs/, published, so local dev has docs. Deployed sites' docs
+        // are written by their editors.
+        await loadRepoDocs(payload)
       },
     },
     {

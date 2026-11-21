@@ -1,0 +1,33 @@
+import { Meta, Unstyled } from "@storybook/addon-docs/blocks"
+import { Controls, PrimitiveComponents, SiteComponents } from "./DesignGuide"
+
+<Meta title="Design guide/Components" />
+
+# Components
+
+The site builds on shadcn/ui (base-ui flavor) in `src/components/ui/`, themed by the tokens
+in [Color](?path=/docs/design-guide-color--docs). Reach for these before hand-styling an
+element. Every component has stories; follow the links.
+
+<Unstyled>
+  <Controls />
+</Unstyled>
+
+## Primitives (`src/components/ui/`)
+
+<Unstyled>
+  <PrimitiveComponents />
+</Unstyled>
+
+## Site components (`src/components/`)
+
+<Unstyled>
+  <SiteComponents />
+</Unstyled>
+
+## Where it's inconsistent today
+
+- The search page's field and button are hand-styled (`h-10`, `rounded-md`) instead of Input
+  and Button (`h-8`, `rounded-sm`).
+- The contributors list's loading skeleton draws its cards by hand, where the loaded list uses
+  AuthorCard.

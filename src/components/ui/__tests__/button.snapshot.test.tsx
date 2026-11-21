@@ -20,4 +20,17 @@ describe("Button", () => {
     const { container } = render(<Button size="icon" aria-label="icon button" />)
     expect(container.firstChild).toMatchSnapshot()
   })
+
+  it("sizes the icon in a large icon button", () => {
+    // icon-lg sizes its icon (20px), so callers pass a bare icon.
+    const { getByRole } = render(
+      <Button size="icon-lg" aria-label="Share">
+        <svg aria-hidden="true" />
+      </Button>,
+    )
+    expect(getByRole("button", { name: "Share" })).toHaveClass(
+      "size-9",
+      "[&_svg:not([class*='size-'])]:size-5",
+    )
+  })
 })

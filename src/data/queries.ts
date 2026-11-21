@@ -93,7 +93,8 @@ const queryVolumesForArticleKey = cache(async (key: string): Promise<Volume[]> =
   const { docs } = await payload.find({
     collection: "volumes",
     draft,
-    limit: 1000,
+    // Every volume holding one of the articles (0 lifts Payload's limit).
+    limit: 0,
     overrideAccess: draft,
     pagination: false,
     where: {

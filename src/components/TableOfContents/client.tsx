@@ -121,7 +121,7 @@ function TableOfContentsButton({
   return (
     <Button
       variant={isOpen ? "outline" : "ghost"}
-      size="icon-sm"
+      size="icon-lg"
       aria-controls={navId}
       aria-expanded={isOpen}
       aria-label={isOpen ? "Collapse table of contents" : "Expand table of contents"}
@@ -146,7 +146,7 @@ function TableOfContents({
   title = "Table of Contents",
 }: TableOfContentsProps): React.ReactNode {
   const { isOpen, navId } = useTableOfContents()
-  const activeAnchor = useActiveAnchor(entries, 120, isOpen)
+  const activeAnchor = useActiveAnchor(entries, isOpen)
   if (!entries.length) return null
   return (
     <nav

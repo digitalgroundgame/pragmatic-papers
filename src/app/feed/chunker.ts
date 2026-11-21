@@ -79,7 +79,7 @@ export function chunkArticle(article: FeedArticle): ArticlePageItem[] {
 
     // Split: one page per synthetic node returned from the sidecar.
     // The pending heading attaches to only the first emitted page.
-    if (behavior?.placement === "split" && behavior.split) {
+    if (behavior?.placement === "split") {
       flushBuffer()
       const syntheticNodes = behavior.split(node)
       let first = true

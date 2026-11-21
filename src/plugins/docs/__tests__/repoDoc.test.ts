@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import {
-  hashRepoDoc,
-  mediaFilename,
-  mediaRefsIn,
-  packMedia,
-  repoFilename,
-  unpackMedia,
-} from "../repoDoc"
+import { mediaFilename, mediaRefsIn, packMedia, repoFilename, unpackMedia } from "../repoDoc"
 
 const media = {
   id: 7,
@@ -75,15 +68,5 @@ describe("media filenames", () => {
     expect(repoFilename("unsplash-photos", "docs-unsplash-photos-0123abcd-hero.webp")).toBe(
       "unsplash-photos-hero.webp",
     )
-  })
-})
-
-describe("hashRepoDoc", () => {
-  // Where the doc sits isn't hashed: once a site has it, its place is the site's.
-  it("changes with the doc's file or any picture", () => {
-    const base = hashRepoDoc("---", [Buffer.from("a")])
-    expect(hashRepoDoc("---", [Buffer.from("a")])).toBe(base)
-    expect(hashRepoDoc("--- ", [Buffer.from("a")])).not.toBe(base)
-    expect(hashRepoDoc("---", [Buffer.from("b")])).not.toBe(base)
   })
 })

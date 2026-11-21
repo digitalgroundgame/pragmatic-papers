@@ -4,6 +4,7 @@ import type {
 } from "@payloadcms/richtext-lexical/lexical"
 
 import { defaultResolvers } from "./defaults"
+import { headingTocLabel } from "./label"
 import { slugifyHeading } from "./slug"
 import type {
   AnchoredNode,
@@ -69,9 +70,10 @@ function dedupe(base: string, { counts, taken }: AnchorIds): string {
   return id
 }
 
+/** A heading links by its table of contents label when it has one. */
 function headingAnchorGenerator(slugify: SlugifyFn): AnchorGenerator {
   return (node, ids) => {
-    const text = extractText((node as WithChildren).children)
+    const text = headingTocLabel(node) ?? extractText((node as WithChildren).children)
     return dedupe(slugify(text) || "heading", ids)
   }
 }

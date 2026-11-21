@@ -148,7 +148,7 @@ describe("editor and writer access", () => {
       expect(updated.title).toBe("Updated Draft by Writer")
     })
 
-    it("allows writer to update their own published article", async () => {
+    it("allows writer to save a draft of their own published article", async () => {
       const writer = await createUser("writer")
 
       const published = await payload.create({
@@ -169,11 +169,14 @@ describe("editor and writer access", () => {
         id: published.id,
         overrideAccess: false,
         user: writer,
+        draft: true,
         context: { disableRevalidate: true },
         data: { title: "Updated Published by Writer" },
       })
 
       expect(updated.title).toBe("Updated Published by Writer")
+      const live = await payload.findByID({ collection: "articles", id: published.id, depth: 0 })
+      expect(live.title).toBe("Published Article Writer Rwtd - eos")
     })
 
     it("denies writer from updating another user's draft article", async () => {
@@ -201,6 +204,46 @@ describe("editor and writer access", () => {
           user: writerB,
           context: { disableRevalidate: true },
           data: { title: "Should Not Update Others Draft" },
+        }),
+      ).rejects.toThrow()
+    })
+
+    it("allows a writer credited as an author to update a draft someone else created", async () => {
+      const [editor, writer] = await Promise.all([createUser("editor"), createUser("writer")])
+
+      const draft = await payload.create({
+        collection: "articles",
+        overrideAccess: false,
+        user: editor,
+        draft: true,
+        context: { disableRevalidate: true },
+        data: {
+          title: "Draft Credited Writer Rwtd - eos",
+          content: ARTICLE_CONTENT,
+          authors: [writer.id],
+          _status: "draft",
+        } as unknown as Article,
+      })
+
+      const updated = await payload.update({
+        collection: "articles",
+        id: draft.id,
+        overrideAccess: false,
+        user: writer,
+        draft: true,
+        context: { disableRevalidate: true },
+        data: { title: "Updated by Credited Writer", _status: "draft" },
+      })
+      expect(updated.title).toBe("Updated by Credited Writer")
+
+      await expect(
+        payload.update({
+          collection: "articles",
+          id: draft.id,
+          overrideAccess: false,
+          user: writer,
+          context: { disableRevalidate: true },
+          data: { _status: "published" },
         }),
       ).rejects.toThrow()
     })

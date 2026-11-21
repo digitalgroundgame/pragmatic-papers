@@ -3,6 +3,7 @@ import { expect, screen, spyOn, userEvent, waitFor, within } from "storybook/tes
 
 import type { Form } from "@/payload-types"
 import { createHeadingNode, createParagraph, richText } from "@/stories/fixtures/richText"
+import { isolatedDocs } from "@/stories/isolatedDocs"
 
 import { FormBlock } from "./Component"
 
@@ -39,7 +40,7 @@ const form = {
 const meta = {
   title: "Blocks/Form",
   component: FormBlock,
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: "fullscreen", ...isolatedDocs("960px") },
   args: {
     blockType: "formBlock",
     form,

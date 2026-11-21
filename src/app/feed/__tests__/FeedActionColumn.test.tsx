@@ -32,6 +32,16 @@ describe("FeedActionColumn", () => {
     expect(screen.getByText("SO")).toBeInTheDocument()
   })
 
+  it("names each avatar link with the author's name, not the initials it shows", () => {
+    render(<FeedActionColumn article={makeSummary({ authors: people })} />)
+
+    // The name is the link's text, so it isn't an aria-label hiding the initials
+    // (axe's label-content-name-mismatch), and the avatar itself stays silent.
+    const link = screen.getByRole("link", { name: "Sam Okafor" })
+    expect(link).not.toHaveAttribute("aria-label")
+    expect(screen.getByText("SO").closest("[aria-hidden]")).toBeInTheDocument()
+  })
+
   it("skips authors without a profile to link to", () => {
     render(
       <FeedActionColumn

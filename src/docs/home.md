@@ -29,7 +29,7 @@ Staff also get new docs in the bell beside their avatar in the admin. See [Find 
 
 ## Where docs come from
 
-Each release that changes what you can do ships a doc with it, written beside the code in the repository. Every doc here is public. Spot something wrong or missing? Tell an editor, or open an issue on [GitHub](https://github.com/digitalgroundgame/pragmatic-papers/issues).
+Our editors write these docs, and every doc here is public. Spot something wrong or missing? Tell an editor, or open an issue on [GitHub](https://github.com/digitalgroundgame/pragmatic-papers/issues).
 
 ## Start here
 

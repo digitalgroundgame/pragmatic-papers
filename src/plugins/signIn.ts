@@ -61,6 +61,17 @@ export const ssoOptions: SsoPluginConfig = {
   },
   // The Users collection's slug field (`src/fields/slug`), set by Payload on create.
   requiredUserColumns: ["slug"],
+  // A linked account's picture is saved only for someone with no profile image.
+  hasPicture: async ({ payload, userId }) => {
+    const user = await payload.findByID({
+      collection: "users",
+      id: Number(userId),
+      depth: 0,
+      select: { profileImage: true },
+      overrideAccess: true,
+    })
+    return user.profileImage != null
+  },
   // A provider sign-in lasts a month.
   sessionSeconds: 60 * 60 * 24 * 30,
 }
@@ -75,7 +86,8 @@ export function signUpProviders(): Array<{ id: SsoProviderId; label: string }> {
     discord: discordSignIn.credentials(),
     destiny: destinySignIn.credentials(),
   }
-  return (["google", "discord", "destiny"] as const)
+  // Destiny.gg first: most of our readers come from its community.
+  return (["destiny", "google", "discord"] as const)
     .filter((id) => credentials[id])
     .map((id) => ({ id, label: SSO_PROVIDER_LABELS[id] }))
 }

@@ -3,7 +3,7 @@ import type { CommentThread, CommentViewer, PublicComment } from "@/plugins/comm
 const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString()
 
 const ada = { name: "Ada Reader", image: null, badge: null }
-const grace = { name: "Grace Hopper", image: null, badge: "Staff" }
+const grace = { name: "Grace Hopper", image: null, badge: { key: "editor", label: "Editor" } }
 
 /** A short thread: a comment, a reply under it, a reply to a removed comment, and another. */
 export const threadComments: PublicComment[] = [
@@ -42,12 +42,28 @@ export const threadComments: PublicComment[] = [
   },
 ]
 
+/** A credited writer of the article, joining in under it. */
+export const writerComment: PublicComment = {
+  id: 5,
+  parentId: 1,
+  depth: 1,
+  body: "Glad it helped. The longer version is in the appendix.",
+  createdAt: hoursAgo(1),
+  author: {
+    name: "Lin Writer",
+    image: null,
+    badge: { key: "writer", label: "Staff writer" },
+    writer: true,
+  },
+}
+
 export const commentViewer: CommentViewer = { ...ada, locked: null, needsVerifiedEmail: false }
 
 export const commentThread = (overrides: Partial<CommentThread> = {}): CommentThread => ({
   comments: threadComments,
   viewer: null,
   providers: [
+    { id: "destiny", label: "Destiny.gg" },
     { id: "google", label: "Google" },
     { id: "discord", label: "Discord" },
   ],

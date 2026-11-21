@@ -24,6 +24,25 @@ interface LoadOnInteractionProps<P extends object> {
 }
 
 /**
+ * Clicks `target` the way the reader clicked the placeholder. `element.click()` would send a
+ * click with no pointer and a `detail` of 0, which menus (base-ui's, through floating-ui's
+ * `isVirtualClick`) take for a keyboard press: they open with the first item focused, and that
+ * focus scrolls the page. A mouse click replays as a mouse click; Enter or Space still replays
+ * as a keyboard one.
+ */
+function replay(
+  target: HTMLElement,
+  { detail, pointerType }: { detail: number; pointerType: string },
+): void {
+  const init = { bubbles: true, cancelable: true, composed: true, button: 0, detail }
+  target.dispatchEvent(
+    typeof PointerEvent === "function"
+      ? new PointerEvent("click", { ...init, pointerType })
+      : new MouseEvent("click", init),
+  )
+}
+
+/**
  * Renders `children` until the reader points at, touches, focuses or clicks them, then swaps in
  * the component `load` imports. Menus, sheets and toggles a reader may never open don't have to
  * be downloaded and hydrated before the page is interactive.
@@ -52,6 +71,8 @@ export function LoadOnInteraction<P extends object>({
     // The placeholder control that had focus, and the one clicked, as an index into CONTROLS.
     focused: -1,
     clicked: -1,
+    // How that click was made, so the replay reads the same to the component (see `replay`).
+    click: { detail: 0, pointerType: "" },
   })
 
   const indexOf = (element: Element | null): number => {
@@ -100,7 +121,9 @@ export function LoadOnInteraction<P extends object>({
     if (!Loaded) return
     const { focused } = state.current
     if (focused < 0 || !container.current) return
-    container.current.querySelectorAll<HTMLElement>(CONTROLS)[focused]?.focus()
+    container.current
+      .querySelectorAll<HTMLElement>(CONTROLS)
+      [focused]?.focus({ preventScroll: true })
   }, [Loaded])
 
   // The click replays once the component's own effects have run and it can respond to it.
@@ -109,7 +132,8 @@ export function LoadOnInteraction<P extends object>({
     const { clicked } = state.current
     state.current.clicked = -1
     if (clicked < 0 || !container.current) return
-    container.current.querySelectorAll<HTMLElement>(CONTROLS)[clicked]?.click()
+    const target = container.current.querySelectorAll<HTMLElement>(CONTROLS)[clicked]
+    if (target) replay(target, state.current.click)
   }, [Loaded])
 
   if (Loaded) {
@@ -137,7 +161,13 @@ export function LoadOnInteraction<P extends object>({
         const target = (event.target as Element).closest(CONTROLS)
         // A placeholder link works as it is; a placeholder button does nothing until the real
         // one is in, so its click is kept for that.
-        if (target?.tagName === "BUTTON") state.current.clicked = indexOf(target)
+        if (target?.tagName === "BUTTON") {
+          state.current.clicked = indexOf(target)
+          state.current.click = {
+            detail: event.detail,
+            pointerType: (event.nativeEvent as Partial<PointerEvent>).pointerType ?? "",
+          }
+        }
       }}
     >
       {children}

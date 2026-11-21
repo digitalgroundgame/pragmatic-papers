@@ -41,6 +41,27 @@ const preview: Preview = {
   ],
   parameters: {
     layout: "padded",
+    options: {
+      // The design guide (src/design) first, its pages in reading order; the rest A–Z. The
+      // reading feed is an early mockup, so its section goes below the rest.
+      storySort: {
+        order: [
+          "Design guide",
+          [
+            "Introduction",
+            "Color",
+            "Typography",
+            "Spacing and shape",
+            "Layout",
+            "Components",
+            "Page audit",
+            "Specimens",
+          ],
+          "*",
+          "Feed",
+        ],
+      },
+    },
     nextjs: { appDirectory: true },
     controls: {
       matchers: {

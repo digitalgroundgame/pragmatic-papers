@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next"
 
 import { AUTHOR_ROLES } from "@/access/roles"
+import { MAX_SITEMAP_ENTRIES } from "@/app/(frontend)/(sitemaps)/sitemaps"
 import { getPayloadClient } from "@/data/payload"
 import { getSiteURL } from "@/utilities/getURL"
 
@@ -17,7 +18,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { docs } = await payload.find({
     collection: "users",
     depth: 0,
-    limit: 5000,
+    // One entry is the index page.
+    limit: MAX_SITEMAP_ENTRIES - 1,
     pagination: false,
     sort: "name",
     where: {

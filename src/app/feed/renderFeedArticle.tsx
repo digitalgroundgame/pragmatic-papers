@@ -22,15 +22,7 @@ export function renderFeedArticle(article: FeedArticle): RenderedFeedArticle {
     bodies: pages.map((page, i) => {
       const isLast = i === pages.length - 1
       if (page.kind === "content") {
-        return (
-          <ArticleContentPage
-            key={i}
-            article={article}
-            page={page}
-            topInset={FEED_TOP_INSET}
-            isLast={isLast}
-          />
-        )
+        return <ArticleContentPage key={i} page={page} topInset={FEED_TOP_INSET} isLast={isLast} />
       }
       if (page.kind === "block") {
         return (

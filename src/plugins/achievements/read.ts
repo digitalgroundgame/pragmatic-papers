@@ -3,6 +3,7 @@ import type { CollectionSlug, Payload, PayloadRequest } from "payload"
 import { ACHIEVEMENTS_SLUG, AWARDS_SLUG } from "./constants"
 import { heldAchievements, rowUserId, topBadge } from "./evaluate"
 import type {
+  AchievementBadge,
   AchievementDoc,
   AchievementRow,
   AchievementUser,
@@ -80,16 +81,16 @@ export async function achievementsFor(
 }
 
 /** The one badge to show beside each user's name, for those who hold any. */
-export async function badgeLabelsFor(
+export async function badgesFor(
   payload: Payload,
   users: AchievementUser[],
   config: ResolvedAchievementsConfig,
   req?: PayloadRequest,
-): Promise<Map<string, string>> {
-  const labels = new Map<string, string>()
+): Promise<Map<string, AchievementBadge>> {
+  const badges = new Map<string, AchievementBadge>()
   for (const [id, held] of await achievementsFor(payload, users, config, req)) {
-    const label = topBadge(held)
-    if (label) labels.set(id, label)
+    const badge = topBadge(held)
+    if (badge) badges.set(id, badge)
   }
-  return labels
+  return badges
 }

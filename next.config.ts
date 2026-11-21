@@ -5,6 +5,7 @@ import path from "path"
 import { fileURLToPath } from "url"
 
 import { withCloudflare } from "./src/cloudflare/withCloudflare"
+import { CARD_FONTS } from "./src/interactives/whip-count/cardFonts"
 
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
@@ -34,6 +35,8 @@ const NOT_EDGE_CACHED = [
   "articles/(?:[^/]+/)?substack\\.xml$",
   // - recommendations: no-store.
   "recommended-articles\\.json$",
+  // - a whip count's link preview: a day at the edge, its URL naming the count and the day.
+  "next/whip-counts/[^/]+/image$",
   // - the deploy's switchover check (`/next/purge-edge`): no-store, so the edge never keeps
   //   an answer naming the old container.
   "next/purge-edge$",
@@ -57,9 +60,12 @@ const NOT_EDGE_CACHED = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  // Each deploy reads src/docs/ to sync the help docs (syncDocs), which no import traces.
+  // The seed reads src/docs/ to load the help docs (loadRepoDocs), which no import traces.
   outputFileTracingIncludes: {
     "/**": ["./src/docs/**/*"],
+    // A whip count's link preview reads its fonts' TTFs (next/og can't read woff2).
+    // Keys are picomatch globs, so the route's brackets are escaped.
+    "/next/whip-counts/\\[slug\\]/image": CARD_FONTS.map((font) => `./${font.file}`),
   },
   // The CI image's build sets this (dockerfiles/PragmaticPapers.ci.Dockerfile): CI's Static
   // checks run `next typegen` and `tsc` on the same commit, which cover what next build's
@@ -109,8 +115,7 @@ const nextConfig: NextConfig = {
       //
       // There is no per-action override for this in Next — `bodySizeLimit` is one number
       // for every Server Action in the app, so this also covers the feed's `loadFeedBatch`
-      // (`src/app/feed/actions.ts`), which anyone can call, and
-      // `SocialEmbed/hooks/revalidateSnapshot.ts`, which only server code calls.
+      // (`src/app/feed/actions.ts`), which anyone can call.
       // `loadFeedBatch` takes a single number, yet a caller can now make Next read and parse up
       // to 8 MB per request instead of 1 MB: low exposure, but wider than the one flow this was
       // raised for.
@@ -147,6 +152,12 @@ const nextConfig: NextConfig = {
     // Contributor pages were /authors, which didn't fit narrators. `/authors/:path*` also
     // covers the index, its `?p=` pages and the old id URLs the profile page resolves.
     { source: "/authors/:path*", destination: "/contributors/:path*", permanent: true },
+    // Whip counts are interactives now, at /interactives/<slug>.
+    {
+      source: "/interactives/whip-counts/:slug",
+      destination: "/interactives/:slug",
+      permanent: true,
+    },
     {
       source: "/iceout/:state*",
       destination: "https://iceout.org/en/location/report",
@@ -195,6 +206,15 @@ const nextConfig: NextConfig = {
             key: "CDN-Cache-Control",
             value: "no-store",
           },
+        ],
+      },
+      {
+        // The block picker's images: the same for everyone and fixed for a build, so the
+        // browser keeps them rather than fetching every block's again on each admin page.
+        // After the `/admin` rule, so its Cache-Control wins; the edge still skips `/admin`.
+        source: "/admin/block-images/:file",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=3600, stale-while-revalidate=86400" },
         ],
       },
       {

@@ -3,8 +3,9 @@ import type {
   SerializedLexicalNode,
 } from "@payloadcms/richtext-lexical/lexical"
 
-import { describeTimeline } from "@/blocks/Timeline/narration"
-import { describeVisual } from "@/utilities/describeVisual"
+import { describeBlockAs } from "@/blocks/narration"
+import { blockDescriptor } from "@/blocks/registry"
+import type { NarrationContext } from "@/blocks/types"
 import { formatLongDate } from "@/utilities/formatDate"
 import { isRecord } from "@/utilities/isRecord"
 
@@ -19,113 +20,6 @@ export interface ExtractNarrationTextOptions {
   publishedAt?: string | Date | null
   content?: SerializedEditorState | Record<string, unknown> | null
   mediaMap?: MediaMap | null
-}
-
-// Human-readable, lower-cased nouns for blocks that fall through to the generic
-// descriptor. Proper-noun blocks (embeds, media, math) are handled explicitly
-// below so their branding/casing survives.
-const BLOCK_TYPE_NAMES: Record<string, string> = {
-  cta: "call to action",
-  collectionGrid: "collection grid",
-  content: "content block",
-  contributors: "contributors block",
-  formBlock: "form",
-  newsletterSignup: "newsletter signup",
-  volumeView: "volume view",
-}
-
-// Provider-aware descriptions for social/media embeds. We never read the raw
-// URL aloud — a spoken URL is unintelligible — so each embed collapses to a
-// short "an embedded X" noun phrase.
-const EMBED_DESCRIPTIONS: Record<string, string> = {
-  youtubeEmbed: "an embedded YouTube video",
-  tiktokEmbed: "an embedded TikTok video",
-  twitterEmbed: "an embedded Twitter post",
-  redditEmbed: "an embedded Reddit post",
-  blueSkyEmbed: "an embedded Bluesky post",
-}
-
-function indefiniteArticle(noun: string): "a" | "an" {
-  return /^[aeiou]/i.test(noun) ? "an" : "a"
-}
-
-/**
- * The oEmbed title captured when a social embed was last saved, usable as
- * spoken detail — but only on a successful fetch. `buildSnapshot` leaves
- * sentinel titles like "No adapter found" behind when it can't resolve a
- * platform, and carries a stale title forward on network failures, so a title
- * paired with any status other than `ok` is not safe to read aloud.
- */
-function snapshotTitle(snapshot: unknown): string {
-  if (!snapshot || typeof snapshot !== "object") return ""
-  const { status, title } = snapshot as Record<string, unknown>
-  if (status !== "ok" || typeof title !== "string") return ""
-  return title.trim()
-}
-
-/**
- * Build a spoken-friendly description for a visual/non-text block. Visual
- * elements can't be narrated directly, so each becomes a parenthetical narrator
- * aside the ElevenLabs voice can read verbatim.
- */
-function describeBlock(blockType: string, fields: Record<string, unknown>): string {
-  if (blockType === "mediaBlock") {
-    return describeVisual("an image")
-  }
-
-  if (blockType === "mediaCollage") {
-    return describeVisual("a gallery of images")
-  }
-
-  // A timeline is readable text, not an image — the block renders its own
-  // events as a spoken list rather than collapsing to a stand-in phrase.
-  if (blockType === "timeline") {
-    return describeTimeline(fields)
-  }
-
-  if (blockType === "interactiveMap") {
-    const title = typeof fields.widgetTitle === "string" ? fields.widgetTitle.trim() : ""
-    return describeVisual(title ? `an interactive map titled "${title}"` : "an interactive map")
-  }
-
-  if (blockType === "code") {
-    const language = typeof fields.language === "string" ? fields.language.trim() : ""
-    return describeVisual(language ? `a code sample in ${language}` : "a code sample")
-  }
-
-  // Never read raw LaTeX aloud — collapse any math block to a spoken
-  // description, naming the formula from the block's `description` when the
-  // author supplied one.
-  if (blockType === "displayMathBlock" || blockType === "inlineMathBlock") {
-    const description = typeof fields.description === "string" ? fields.description.trim() : ""
-    return describeVisual("a mathematical formula", description)
-  }
-
-  const embedDescription = EMBED_DESCRIPTIONS[blockType]
-  if (embedDescription) {
-    return describeVisual(embedDescription)
-  }
-
-  if (blockType === "socialEmbed") {
-    const platform = typeof fields.platform === "string" ? fields.platform.trim() : ""
-    return describeVisual(
-      platform ? `an embedded ${platform} post` : "an embedded social media post",
-      snapshotTitle(fields.snapshot),
-    )
-  }
-
-  // Generic fallback for any remaining block type. Only human-readable title/
-  // name/label strings become a "titled" clause — slugs, ids, and numbers read
-  // terribly aloud and are dropped.
-  const noun = BLOCK_TYPE_NAMES[blockType] || blockType
-  let titled = ""
-  for (const key of ["title", "name", "label"]) {
-    if (typeof fields[key] === "string" && (fields[key] as string).trim()) {
-      titled = ` titled "${(fields[key] as string).trim()}"`
-      break
-    }
-  }
-  return describeVisual(`${indefiniteArticle(noun)} ${noun}${titled}`)
 }
 
 function formatBlockContent(text: string): string {
@@ -192,6 +86,34 @@ function resolveMediaInfo(
 }
 
 /**
+ * What a block's `narrate` can ask of the article: a media value's caption
+ * (preferred) or alt text, and nested rich text's plain text. Filenames and
+ * ids are left out: they read terribly aloud and add nothing.
+ */
+function narrationContext(
+  mediaMap: MediaMap | null | undefined,
+  extractText: (node: SerializedLexicalNode, mediaMap?: MediaMap | null) => string,
+): NarrationContext {
+  return {
+    describeMedia: (media) => {
+      const mediaInfo = resolveMediaInfo(media, mediaMap)
+      if (!mediaInfo) return ""
+
+      if (mediaInfo.caption && typeof mediaInfo.caption === "object") {
+        const caption = extractText(mediaInfo.caption as SerializedLexicalNode, mediaMap).trim()
+        if (caption) return caption
+      }
+
+      return typeof mediaInfo.alt === "string" ? mediaInfo.alt.trim() : ""
+    },
+    textOf: (richText) =>
+      richText && typeof richText === "object"
+        ? extractText(richText as SerializedLexicalNode, mediaMap)
+        : "",
+  }
+}
+
+/**
   Recursively extract plain text from a Lexical node structure or editor state.
  */
 function extractLexicalNodeText(
@@ -218,81 +140,19 @@ function extractLexicalNodeText(
     return "\n"
   }
 
-  // Handle inline blocks (e.g. footnotes, inline math)
-  if (type === "inlineBlock") {
+  // Blocks and inline blocks narrate as their descriptor's `narrate` says
+  // (`src/blocks/<Name>/index.ts`).
+  if (type === "block" || type === "inlineBlock") {
     const fields = (nodeObj.fields as Record<string, unknown> | undefined) ?? {}
-    const blockType = fields.blockType as string | undefined
+    const blockType = typeof fields.blockType === "string" ? fields.blockType : undefined
+    if (!blockType) return ""
+    const narrate = blockDescriptor(blockType)?.narrate
+    const context = narrationContext(mediaMap, extractLexicalNodeText)
 
-    if (blockType === "footnote") {
-      // Footnotes omitted entirely per requirements
-      return ""
-    }
+    // An inline block reads as part of its sentence, so it's used bare.
+    if (type === "inlineBlock") return narrate ? narrate(fields, context) : ""
 
-    if (blockType === "inlineMathBlock") {
-      // Inline within a sentence — the author's description reads as part of the
-      // surrounding clause, so it is used bare rather than as a parenthetical
-      // aside. Raw LaTeX is never read aloud.
-      const description = typeof fields.description === "string" ? fields.description.trim() : ""
-      return description || "a mathematical formula"
-    }
-
-    return ""
-  }
-
-  // Handle block nodes (e.g. custom blocks like Banner, MediaBlock, Code, etc.)
-  if (type === "block") {
-    const fields = (nodeObj.fields as Record<string, unknown> | undefined) ?? {}
-    const blockType = fields.blockType as string | undefined
-
-    // Resolve a spoken description for a media reference: the caption (preferred)
-    // or the alt text. Filenames and numeric ids are intentionally omitted —
-    // they read terribly aloud and add no narration value, so a media block with
-    // neither caption nor alt simply narrates as "(An image.)"
-    const resolveMediaDescription = (mediaVal: unknown): string => {
-      const mediaInfo = resolveMediaInfo(mediaVal, mediaMap)
-      if (!mediaInfo) return ""
-
-      if (mediaInfo.caption && typeof mediaInfo.caption === "object") {
-        const caption = extractLexicalNodeText(
-          mediaInfo.caption as SerializedLexicalNode,
-          mediaMap,
-        ).trim()
-        if (caption) return caption
-      }
-
-      if (typeof mediaInfo.alt === "string" && mediaInfo.alt.trim()) {
-        return mediaInfo.alt.trim()
-      }
-
-      return ""
-    }
-
-    let blockText = ""
-    if (blockType === "mediaBlock" && fields.media) {
-      const description = resolveMediaDescription(fields.media)
-      blockText = describeVisual("an image", description)
-    } else if (blockType === "mediaCollage" && Array.isArray(fields.images)) {
-      const descriptions: string[] = []
-      for (const img of fields.images as Record<string, unknown>[]) {
-        if (img && typeof img === "object" && img.media) {
-          const description = resolveMediaDescription(img.media)
-          if (description) descriptions.push(description)
-        }
-      }
-      if (Array.isArray(fields.images) && fields.images.length > 0) {
-        blockText = describeVisual("a gallery of images", descriptions.join("; "))
-      }
-    } else if (blockType === "banner" && fields.content && typeof fields.content === "object") {
-      // A banner carries real, readable prose — narrate it as a set-apart note
-      // rather than describing it as a visual.
-      const text = extractLexicalNodeText(fields.content as SerializedLexicalNode, mediaMap).trim()
-      blockText = text ? `Note: ${text}` : ""
-    }
-
-    if (!blockText && blockType) {
-      blockText = describeBlock(blockType, fields)
-    }
-
+    const blockText = narrate ? narrate(fields, context) : describeBlockAs(blockType, fields)
     return formatBlockContent(blockText)
   }
 

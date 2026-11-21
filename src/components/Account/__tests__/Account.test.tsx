@@ -49,6 +49,30 @@ describe("Account", () => {
     })
   })
 
+  it("asks a member with no email address to verify one, and nobody else", async () => {
+    route({
+      "GET /api/account": () => Response.json({ ...member, email: null }),
+      "GET /api/auth-links": () => Response.json({ providers: [] }),
+    })
+
+    const { unmount } = render(<Account providers={providers} />)
+    const nudge = await screen.findByRole("region", { name: "Verify your email" })
+    expect(nudge).toHaveTextContent("earn the Email verified achievement")
+    expect(screen.getByRole("link", { name: "Connect an account" })).toHaveAttribute(
+      "href",
+      "#sign-ins",
+    )
+    unmount()
+
+    route({
+      "GET /api/account": () => Response.json(member),
+      "GET /api/auth-links": () => Response.json({ providers: [] }),
+    })
+    render(<Account providers={providers} />)
+    await screen.findByRole("textbox", { name: "Display name" })
+    expect(screen.queryByRole("region", { name: "Verify your email" })).not.toBeInTheDocument()
+  })
+
   it("renames a member", async () => {
     route({
       "GET /api/account": () => Response.json(member),
@@ -186,10 +210,11 @@ describe("Account", () => {
 
     render(<Account providers={providers} />)
     expect(await screen.findByRole("button", { name: "Delete account" })).toBeInTheDocument()
-    // The account, then its achievements and sign-ins.
-    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    // The account, then its achievements, reading and sign-ins.
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4))
     expect(screen.queryByRole("heading", { name: "Sign-ins" })).not.toBeInTheDocument()
     expect(screen.queryByRole("heading", { name: "Achievements" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: "Your reading" })).not.toBeInTheDocument()
   })
 
   it("lists a member's achievements, the one on their comments first", async () => {
@@ -233,7 +258,48 @@ describe("Account", () => {
 
     render(<Account providers={providers} />)
     expect(await screen.findByRole("button", { name: "Delete account" })).toBeInTheDocument()
-    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4))
     expect(screen.queryByRole("heading", { name: "Achievements" })).not.toBeInTheDocument()
+  })
+
+  it("shows a member what's kept about their reading", async () => {
+    route({
+      "GET /api/account": () => Response.json(member),
+      "GET /api/auth-links": () => Response.json({ providers: [] }),
+      "GET /api/reading/mine": () =>
+        Response.json({
+          articlesRead: 12,
+          volumesRead: 1,
+          daysVisited: 30,
+          currentStreak: 0,
+          longestStreak: 1,
+        }),
+    })
+
+    render(<Account providers={providers} />)
+    expect(await screen.findByRole("heading", { name: "Your reading" })).toBeInTheDocument()
+    expect(screen.getByText("Articles read").nextElementSibling).toHaveTextContent("12 articles")
+    expect(screen.getByText("Volumes read").nextElementSibling).toHaveTextContent("1 volume")
+    expect(screen.getByText("Current streak").nextElementSibling).toHaveTextContent("0 days")
+    expect(screen.getByText("Longest streak").nextElementSibling).toHaveTextContent("1 day")
+  })
+
+  it("leaves volumes out when the site has none to finish", async () => {
+    route({
+      "GET /api/account": () => Response.json(member),
+      "GET /api/auth-links": () => Response.json({ providers: [] }),
+      "GET /api/reading/mine": () =>
+        Response.json({
+          articlesRead: 1,
+          volumesRead: null,
+          daysVisited: 1,
+          currentStreak: 1,
+          longestStreak: 1,
+        }),
+    })
+
+    render(<Account providers={providers} />)
+    expect(await screen.findByText("1 article")).toBeInTheDocument()
+    expect(screen.queryByText("Volumes read")).not.toBeInTheDocument()
   })
 })

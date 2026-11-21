@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next"
 import { unstable_cache } from "next/cache"
 
 import { isExperimentEnabled } from "@/globals/SiteSettings/isExperimentEnabled"
+import { MAX_SITEMAP_ENTRIES } from "@/app/(frontend)/(sitemaps)/sitemaps"
 import { getPayloadClient } from "@/data/payload"
 import { getSiteURL } from "@/utilities/getURL"
 
@@ -20,8 +21,9 @@ const getInteractivesSitemap = unstable_cache(
       overrideAccess: false,
       draft: false,
       depth: 0,
-      limit: 1000,
+      limit: MAX_SITEMAP_ENTRIES,
       pagination: false,
+      sort: "-updatedAt",
       where: { _status: { equals: "published" } },
       select: { slug: true, updatedAt: true },
     })

@@ -16,12 +16,7 @@ import {
 } from "payload"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
 
-import {
-  clientIp,
-  restorePayloadErrorNames,
-  sentryPayloadPlugin,
-  skipPluginErrorsInPino,
-} from "../sentryPayload"
+import { clientIp, sentryPayloadPlugin, skipPluginErrorsInPino } from "../sentryPayload"
 
 // Payload's own pino, which isn't a dependency of ours.
 const pino = createRequire(import.meta.resolve("payload"))("pino") as (
@@ -160,7 +155,7 @@ describe("Payload errors in Sentry", () => {
   })
 })
 
-describe("restorePayloadErrorNames", () => {
+describe("minified Payload errors", () => {
   // What the production build makes of Payload's classes: same code, one-letter names.
   function minified() {
     const y = class extends ValidationError {}
@@ -170,30 +165,19 @@ describe("restorePayloadErrorNames", () => {
     return { y, z }
   }
 
-  it("reports a minified ValidationError, which Payload can't tell apart", async () => {
-    const { y } = minified()
-
-    await routeError(new y({ errors: [{ message: "Invalid", path: "slug" }] }))
-
-    expect(events.map((event) => event.exception?.values?.[0]?.type)).toEqual(["y"])
-  })
-
-  it("gives minified classes their names back, so routine errors are logged at info", async () => {
+  it("keep their names, so routine errors are logged at info", async () => {
     const { y, z } = minified()
 
-    restorePayloadErrorNames({ ValidationError: y, Forbidden: z })
     const error = new y({ errors: [{ message: "Invalid", path: "slug" }] })
     await routeError(error)
     await routeError(new z())
 
     expect(error.name).toBe("ValidationError")
-    expect(error).toBeInstanceOf(ValidationError)
+    expect(new z().name).toBe("Forbidden")
     expect(events).toHaveLength(0)
   })
 
-  it("leaves Payload's own classes as they are", () => {
-    restorePayloadErrorNames()
-
+  it("are named for their class", () => {
     expect(new ValidationError({ errors: [] }).name).toBe("ValidationError")
     expect(new NotFound().name).toBe("NotFound")
     expect(new QueryError([]).name).toBe("QueryError")

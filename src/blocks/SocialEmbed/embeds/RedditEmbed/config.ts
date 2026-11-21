@@ -1,5 +1,7 @@
 import type { Block } from "payload"
 
+import { blockImages } from "@/blocks/blockImages"
+
 /**
  * Legacy config for Reddit embeds.
  * @deprecated Use the SocialEmbed block instead.
@@ -13,6 +15,7 @@ export const LegacyRedditEmbed: Block = {
     plural: "Reddit Embeds (Legacy)",
   },
   admin: {
+    images: blockImages("redditEmbed"),
     group: "Legacy",
   },
   fields: [

@@ -92,6 +92,10 @@ Public pages are cached at Cloudflare's edge for 10 minutes, then served stale f
 - Unset (or with `SERVER_URL` on localhost), each save logs `Skipping Cloudflare purge (…) — … set CLOUDFLARE_ZONE_ID, CLOUDFLARE_PURGE_TOKEN` and carries on. A purge Cloudflare refuses is logged as a warning, never thrown at the save.
 - Purges within a second of each other go out as one request. Hostname purges are rate-limited per account (5 a minute on the Free plan, more on paid plans); a refused one just leaves the edge to expire on its own.
 
+**Whip count pushes (optional; only where a job keeps a whip count up to date):**
+
+- `WHIP_COUNT_PUSH_TOKEN` — a long random value (`openssl rand -hex 32`), a **Runtime Variable**. A job sending `Authorization: Bearer <it>` to `POST /next/whip-counts/<slug>` updates that whip count interactive's snapshot, as a draft unless the interactive's "Auto-publish new snapshots" is ticked. Unset, the route answers 401 to everyone. Give each environment its own value, and only the ones that should take pushes.
+
 #### Ticker
 
 The strip under the header on every page (`src/components/Ticker`, rendered by the header), shown when **Ticker** is switched on in **Site → Header → Ticker**. Each source is skipped with a `[ticker] skipping …` log line until it's configured; all are **Runtime Variables**, set in the production, staging **and** preview apps (`dockerfiles/.env.example` lists them).
@@ -151,7 +155,7 @@ Use managed PostgreSQL service (AWS RDS, Supabase, Neon, etc.) for all deploymen
 - **Two servers run them:** `dev-worker` runs staging and the previews, and hosts the `docker-registry` service staging's images are pulled from; `prod-worker` runs production, apparently pulling from the same registry.
 - **Staging and production build on one Coolify build server, one build at a time**, so a `dev` deploy can delay a `main` deploy behind it. The build caches below (`/pnpm`, `/nextjs`) are shared by both. The build server has 8 GB of RAM and a build peaks at ~4.6 GB, so two concurrent builds wouldn't fit. Keep that headroom in mind before adding build steps or dependencies that raise build memory. Previews never use it: they build on GitHub runners.
 - **Production's database is Supabase (Micro compute), reached through its session-mode pooler** (`*.pooler.supabase.com:5432`). Every client holds a real Postgres connection, and the pooler refuses clients past its **Connection pool size** (Supabase: Database → Settings; Micro defaults to 15 of its 60 connections, raised to 40). A production build connects while the live container keeps its own: `next build` prerenders every article and volume in 3 workers, each with its own pool, which `src/payload.config.ts` caps at 3 connections during the build. A build that runs out fails on its first page with `EMAXCONNSESSION max clients reached in session mode`, after `payload migrate` has already run, so the old container keeps serving against the migrated database.
-- **Previews only deploy PRs from people with access to the repo**: same-repo PRs from owners, members and collaborators (the "Detect E2E changes" job in `playwright.yml` plans previews). Keep it that way: a preview runs on dev-worker beside staging, with staging's media mounted read-write.
+- **Previews only deploy PRs from people with access to the repo**: same-repo PRs not opened by a bot, whose branch only someone with write access could have pushed (the "Detect E2E changes" job in `playwright.yml` plans previews). The author's `author_association` isn't checked: it says CONTRIBUTOR for an org member whose membership is private. Keep it that way: a preview runs on dev-worker beside staging, with staging's media mounted read-write.
 
 What Coolify's docs say about behaviour that matters to this setup (read them with the `upstream-docs` skill, `coolify` source; paths are under `content/docs/`):
 

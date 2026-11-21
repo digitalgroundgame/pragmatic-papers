@@ -1,17 +1,21 @@
-import type { CollectionConfig } from "payload"
+import type { CollectionBeforeDeleteHook, CollectionConfig } from "payload"
 
 import { isPluginOn, registerPlugin } from "@/utilities/registerPlugin"
 
+import { commentingField } from "./commenting"
 import { commentsCollection } from "./collections/Comments"
 import { violationsCollection } from "./collections/Violations"
 import { deleteAuthorsComments, deleteCommentsOnTarget } from "./hooks/deleteCommentsOn"
+import { firstCommentedField } from "./hooks/firstCommented"
 import { settingsGlobal } from "./settings"
 import type { CommentAuthor, CommentsPluginConfig, ResolvedCommentsConfig } from "./types"
 
 export { countLinks } from "./checks"
+export { commentingOf, COMMENTING, COMMENTING_FIELD, type Commenting } from "./commenting"
 export { lockFor } from "./lock"
 export type {
   AuthorDisplay,
+  BadgeInfo,
   CommentAuthor,
   CommentCheck,
   CommentSettings,
@@ -58,11 +62,15 @@ export const commentsPlugin = registerPlugin<CommentsPluginConfig>({
       authorFields: ["name"],
       describeAuthor: defaultDescribeAuthor,
       authorBadges: async () => new Map(),
+      targetWriters: async () => [],
+      commentingEditors: () => false,
       checks: [],
       isVerified: (author) => author.emailVerified === true,
       signInProviders: () => [],
       maxLength: 2000,
       cooldownSeconds: 20,
+      newCommenterDays: 7,
+      newMemberDays: 30,
       ...options,
       adminGroups: {
         comments: "Content",
@@ -74,17 +82,19 @@ export const commentsPlugin = registerPlugin<CommentsPluginConfig>({
     }
 
     const collection = commentsCollection(comments)
-    const withHook = (target: CollectionConfig, hook: typeof deleteCommentsOnTarget) => ({
+    const withHook = (target: CollectionConfig, hook: CollectionBeforeDeleteHook) => ({
       ...target,
       hooks: { ...target.hooks, beforeDelete: [...(target.hooks?.beforeDelete ?? []), hook] },
     })
     const collections = [
       ...(config.collections ?? []).map((existing): CollectionConfig => {
         if (existing.slug === comments.targetSlug) {
-          return withHook(existing, deleteCommentsOnTarget)
+          const target = withHook(existing, deleteCommentsOnTarget(comments))
+          return { ...target, fields: [...target.fields, commentingField(comments)] }
         }
         if (existing.slug === comments.authorsSlug) {
-          return withHook(existing, deleteAuthorsComments)
+          const authors = withHook(existing, deleteAuthorsComments)
+          return { ...authors, fields: [...authors.fields, firstCommentedField()] }
         }
         return existing
       }),

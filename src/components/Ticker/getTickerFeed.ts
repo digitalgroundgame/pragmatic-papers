@@ -3,17 +3,14 @@ import { cache } from "react"
 
 import {
   mergePosts,
-  OWN_HOSTS,
   TICKER_SETTINGS_TAG,
   withoutHidden,
-  withoutOwnLinks,
   type TickerFeed,
   type TickerPost,
 } from "./items"
 import { getGlobal } from "@/data/globals"
 import { getPayloadClient } from "@/data/payload"
 import type { Header } from "@/payload-types"
-import { getSiteURL } from "@/utilities/getURL"
 
 import {
   broadcastSource,
@@ -70,7 +67,7 @@ const posts = postSources.map((source) => cached(source.integration.id, source, 
  * the admin never costs a source an extra read.
  */
 const getTickerSources = cache(async () => {
-  const [{ youtube, bluesky, x }, ticker] = await Promise.all([
+  const [{ youtube, bluesky, substack, x }, ticker] = await Promise.all([
     getGlobal("integrations"),
     getTickerSettings(),
   ])
@@ -78,17 +75,17 @@ const getTickerSources = cache(async () => {
     youtubeChannelIds: youtube?.channels?.map((channel) => channel.channelId),
     youtubeUpcomingHours: ticker?.upcomingHours,
     blueskyHandles: bluesky?.handles?.map((account) => account.handle),
+    substackPublications: substack?.publications?.map((entry) => entry.publication),
+    substackTypes: substack?.types,
     xUsernames: x?.usernames?.map((account) => account.username),
   }
   const [current, ...lists] = await Promise.all([
     broadcast(settings),
     ...posts.map((load) => load(settings)),
   ])
-  // Posts linking to our own site never show, so they're left out of the admin's list too.
-  const own = [...OWN_HOSTS, new URL(getSiteURL()).hostname]
   return {
     broadcast: current,
-    lists: lists.map((list) => withoutOwnLinks(list, own)),
+    lists,
     hidden: ticker?.hidden?.map((post) => post.url) ?? [],
   }
 })

@@ -9,7 +9,7 @@ const { generateBlurDataUrl } = await import("../generateBlurDataUrl")
 
 const logger = { info: vi.fn(), error: vi.fn() }
 
-const run = (file?: { name: string; mimetype?: string; data: Buffer }) =>
+const run = (file?: { name: string; mimetype?: string; data: Buffer; tempFilePath?: string }) =>
   generateBlurDataUrl({
     data: { alt: "x" },
     req: { file, payload: { logger } },
@@ -42,9 +42,32 @@ describe("generateBlurDataUrl", () => {
   it("logs and still saves when the placeholder can't be generated", async () => {
     vi.mocked(blurDataUrl).mockRejectedValue(new Error("corrupt image"))
 
-    const result = await run({ name: "bad.jpg", mimetype: "image/jpeg", data: Buffer.from("") })
+    const result = await run({ name: "bad.jpg", mimetype: "image/jpeg", data: Buffer.from("x") })
 
     expect(result).toEqual({ alt: "x" })
     expect(logger.error).toHaveBeenCalledWith("Failed to generate blur data URL: corrupt image")
+  })
+
+  it("reads a browser upload from the temp file Payload downloaded it to", async () => {
+    vi.mocked(blurDataUrl).mockResolvedValue("data:image/png;base64,abc")
+
+    const result = await run({
+      name: "photo.jpg",
+      mimetype: "image/jpeg",
+      data: Buffer.alloc(0),
+      tempFilePath: "/tmp/payload-client-upload-1",
+    })
+
+    expect(blurDataUrl).toHaveBeenCalledWith("/tmp/payload-client-upload-1")
+    expect(result).toEqual({ alt: "x", blurDataURL: "data:image/png;base64,abc" })
+    expect(logger.error).not.toHaveBeenCalled()
+  })
+
+  it("skips quietly when the upload carries no bytes and no temp file", async () => {
+    const result = await run({ name: "photo.jpg", mimetype: "image/jpeg", data: Buffer.alloc(0) })
+
+    expect(result).toEqual({ alt: "x" })
+    expect(blurDataUrl).not.toHaveBeenCalled()
+    expect(logger.error).not.toHaveBeenCalled()
   })
 })

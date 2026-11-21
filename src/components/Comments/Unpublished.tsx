@@ -6,9 +6,7 @@ import React from "react"
  */
 export const CommentsUnpublished: React.FC = () => (
   <section id="comments" aria-labelledby="comments-heading" className="scroll-mt-24 space-y-6">
-    <h2 id="comments-heading" className="font-display text-2xl">
-      Comments
-    </h2>
+    <h2 id="comments-heading">Comments</h2>
     <p className="text-muted-foreground text-sm">Comments open once this article is published.</p>
   </section>
 )

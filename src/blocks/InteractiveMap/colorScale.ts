@@ -17,6 +17,22 @@ export function inferValueFormat(dataAttribute: string | null | undefined): Valu
 
 export const DEFAULT_NEUTRAL = "var(--map-neutral, oklch(0.9528 0.0086 84.57))"
 
+/** The neutral fill as a plain color, for a renderer that can't read `oklch()`. */
+export const STATIC_NEUTRAL = "#f2efe9"
+
+const VAR_WITH_FALLBACK = /^var\(\s*--[\w-]+\s*,\s*(.+)\)$/
+
+/**
+ * A color for a rendering with no stylesheet (the map's image): the fallback of a
+ * `var(--token, fallback)`, which is the light theme's value. Anything else is returned
+ * as it is.
+ */
+export function staticColor(color: string): string {
+  if (color === DEFAULT_NEUTRAL) return STATIC_NEUTRAL
+  const fallback = VAR_WITH_FALLBACK.exec(color.trim())?.[1]
+  return fallback ? staticColor(fallback) : color
+}
+
 const DOMAIN_MAX = 100
 
 const DIVERGING_RED_BLUE = {

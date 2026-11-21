@@ -7,9 +7,11 @@ import { Code } from "@/blocks/Code/config"
 import { MediaBlock } from "@/blocks/MediaBlock/config"
 import { MediaCollageBlock } from "@/blocks/MediaCollageBlock/config"
 import { populateTableOfContentsAnchors, tableOfContentsField } from "@/components/TableOfContents"
+import { TableOfContentsLabelsFeature } from "@/components/TableOfContents/feature"
 import { slugField } from "@/fields/slug"
 import { TOURS } from "@/plugins/tours"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
+import { createParentField } from "@payloadcms/plugin-nested-docs"
 import {
   BlocksFeature,
   FixedToolbarFeature,
@@ -40,11 +42,9 @@ const ROLE_LABELS: Record<Role, string> = {
  * Help articles at /docs, about how the site works. They nest (the nested docs plugin adds each
  * one's `parent` and `breadcrumbs`): an area like Writing has no parent, its sections sit under
  * it, and their docs under them, so a doc is read at `/docs/<area>/<section>/<slug>`. Editors
- * drag docs into order among their siblings, and move one by picking its parent. Most arrive
- * with a release: each deploy adds the ones in src/docs/ its site doesn't have yet, as drafts
- * for an editor to publish (see `syncRepoDocs`). From then on the doc is the site's: editors
- * change it here, and the repo only ever offers its changes as a new draft version. Editors can
- * also write one from scratch.
+ * drag docs into order among their siblings, and move one by picking its parent. Each site's
+ * editors write its docs here; deploys never add, change or delete one. The local seed loads
+ * the Markdown in src/docs/ (`loadRepoDocs`).
  */
 export const Docs: CollectionConfig<"docs"> = {
   slug: DOCS_SLUG,
@@ -64,7 +64,7 @@ export const Docs: CollectionConfig<"docs"> = {
   admin: {
     group: "Help",
     useAsTitle: "title",
-    defaultColumns: ["title", "parent", "audience", "publishedAt", "updatedAt"],
+    defaultColumns: ["title", "navTitle", "parent", "audience", "updatedAt", "_status"],
     livePreview: {
       url: ({ data, req }) => generatePreviewPath({ slug: data?.slug, collection: DOCS_SLUG, req }),
     },
@@ -96,16 +96,6 @@ export const Docs: CollectionConfig<"docs"> = {
       },
     },
     {
-      name: "heroImage",
-      type: "upload",
-      relationTo: "media",
-      admin: {
-        position: "sidebar",
-        description:
-          "Shown above the doc's title, beside it in the help bell, and in link previews. Optional.",
-      },
-    },
-    {
       name: "content",
       type: "richText",
       required: true,
@@ -124,8 +114,20 @@ export const Docs: CollectionConfig<"docs"> = {
           InlineCodeFeature(),
           UnorderedListFeature(),
           OrderedListFeature(),
+          TableOfContentsLabelsFeature(),
         ],
       }),
+    },
+    // The sidebar shows these in this order.
+    {
+      name: "heroImage",
+      type: "upload",
+      relationTo: "media",
+      admin: {
+        position: "sidebar",
+        description:
+          "Shown above the doc's title, beside it in the help bell, and in link previews. Optional.",
+      },
     },
     {
       name: "publishedAt",
@@ -148,6 +150,10 @@ export const Docs: CollectionConfig<"docs"> = {
           "The day the doc last changed in a way readers should know about, shown beside its date. The bell still lists it under the published date.",
       },
     },
+    slugField(),
+    // The nested docs plugin adds `parent` at the end; declaring it here puts it under the slug
+    // in the sidebar. The plugin finds it by name and adds its own filter.
+    createParentField(DOCS_SLUG),
     {
       name: "audience",
       type: "select",
@@ -158,6 +164,8 @@ export const Docs: CollectionConfig<"docs"> = {
         description: "Who the help bell tells. Empty means all staff; admins see every doc.",
       },
     },
+    // On by default: a doc is reference reading, skimmed for the one section a reader needs.
+    tableOfContentsField({ defaultValue: true }),
     {
       name: "tour",
       type: "text",
@@ -168,11 +176,9 @@ export const Docs: CollectionConfig<"docs"> = {
       validate: (value: string | null | undefined) =>
         !value || Object.hasOwn(TOURS, value) || `No tour is called "${value}".`,
     },
-    // On by default: a doc is reference reading, skimmed for the one section a reader needs.
-    tableOfContentsField({ defaultValue: true }),
     {
-      // Set by `syncDocs` on a doc it seeded from src/docs/, or a draft it offered: the hash
-      // of the files it came from. Empty on docs written here.
+      // The hash of the files in src/docs/ a deploy seeded the doc from, when deploys still
+      // seeded docs. Empty on docs written here.
       name: "sourceHash",
       type: "text",
       label: "From the repo",
@@ -181,10 +187,9 @@ export const Docs: CollectionConfig<"docs"> = {
         readOnly: true,
         condition: (data) => Boolean(data?.sourceHash),
         description:
-          "Seeded from src/docs/ by a deploy. Edits here are kept: when the repo's copy changes, a deploy saves it as a new draft for you to publish, edit or discard, and never changes the published doc.",
+          "Seeded from src/docs/ by an earlier deploy. The doc is yours: deploys never change it.",
       },
     },
-    slugField(),
   ],
   hooks: {
     beforeChange: [rememberReadersCopy],

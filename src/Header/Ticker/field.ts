@@ -64,7 +64,7 @@ export const tickerField: GroupField = {
       admin: {
         condition: whileOn,
         description:
-          "Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky or X. It's gone from the ticker as soon as you save.",
+          "Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky, X or Substack. It's gone from the ticker as soon as you save.",
         initCollapsed: false,
       },
       fields: [
@@ -76,7 +76,7 @@ export const tickerField: GroupField = {
           admin: { placeholder: "https://bsky.app/profile/…/post/…" },
           validate: (value: string | null | undefined) =>
             postKey(value ?? "") !== null ||
-            "Paste a post's link from bsky.app or x.com, as its Share button copies it.",
+            "Paste a post's link from bsky.app, x.com or a Substack post (…/p/…), as its Share button copies it.",
         },
       ],
     },

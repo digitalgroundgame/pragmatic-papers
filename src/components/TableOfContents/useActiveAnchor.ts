@@ -7,6 +7,11 @@ interface AnchorEntry {
   children?: AnchorEntry[]
 }
 
+/** Used when the page sets no scroll padding */
+const FALLBACK_LINE = 80
+/** A heading scrolled to the line can land a fraction of a pixel below it */
+const TOLERANCE = 2
+
 function flattenAnchors(entries: AnchorEntry[]): string[] {
   const result: string[] = []
   function traverse(items: AnchorEntry[]) {
@@ -19,11 +24,25 @@ function flattenAnchors(entries: AnchorEntry[]): string[] {
   return result
 }
 
-export function useActiveAnchor(
-  entries: AnchorEntry[],
-  offset = 120,
-  enabled = true,
-): string | null {
+/**
+ * Where an anchor link puts its heading: the html element's scroll padding, which
+ * follows `--sticky-top`, so it grows while the ticker sticks under the header.
+ */
+export function activeLine(): number {
+  const padding = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop)
+  return (Number.isFinite(padding) ? padding : FALLBACK_LINE) + TOLERANCE
+}
+
+/** The last heading whose top has reached the line, or null above the first */
+export function findActiveAnchor(elements: HTMLElement[], line: number): string | null {
+  let active: string | null = null
+  for (const el of elements) {
+    if (el.getBoundingClientRect().top <= line) active = el.id
+  }
+  return active
+}
+
+export function useActiveAnchor(entries: AnchorEntry[], enabled = true): string | null {
   const [activeAnchor, setActiveAnchor] = useState<string | null>(null)
 
   useEffect(() => {
@@ -37,32 +56,29 @@ export function useActiveAnchor(
 
     if (!elements.length) return
 
-    function computeFromPositions() {
-      let active: string | null = null
-      for (const el of elements) {
-        if (el.getBoundingClientRect().top <= offset) active = el.id
-      }
+    // The line moves when the ticker starts or stops sticking, so it's read on each
+    // update rather than fixed in an IntersectionObserver's rootMargin.
+    let frame = 0
+    function update() {
+      frame = 0
+      const active = findActiveAnchor(elements, activeLine())
       setActiveAnchor((prev) => (prev === active ? prev : active))
     }
-
-    // threshold [0, 1] fires at both the top and bottom of the heading crossing
-    // the detection zone, so the active anchor updates as soon as the heading's
-    // top reaches the offset line rather than waiting for its bottom.
-    const observer = new IntersectionObserver(computeFromPositions, {
-      rootMargin: `-${offset}px 0px 0px 0px`,
-      threshold: [0, 1],
-    })
-
-    elements.forEach((el) => observer.observe(el))
-    // hashchange handles anchor-link navigation where the heading jumps from
-    // below the viewport to above the detection zone in a single frame,
-    // which IntersectionObserver won't detect as a threshold crossing.
-    window.addEventListener("hashchange", computeFromPositions)
-    return () => {
-      observer.disconnect()
-      window.removeEventListener("hashchange", computeFromPositions)
+    function schedule() {
+      if (!frame) frame = requestAnimationFrame(update)
     }
-  }, [entries, offset, enabled])
+
+    update()
+    window.addEventListener("scroll", schedule, { passive: true })
+    window.addEventListener("resize", schedule)
+    window.addEventListener("hashchange", schedule)
+    return () => {
+      if (frame) cancelAnimationFrame(frame)
+      window.removeEventListener("scroll", schedule)
+      window.removeEventListener("resize", schedule)
+      window.removeEventListener("hashchange", schedule)
+    }
+  }, [entries, enabled])
 
   return activeAnchor
 }

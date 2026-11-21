@@ -23,6 +23,17 @@ updates:
           - "next"
           - "@next/*"
           - "eslint-config-next"
+          # Each Next minor has needed a matching OpenNext release (16.4 needed
+          # 1.20.12) for the Worker build, so the adapter moves with Next.
+          - "@opennextjs/*"
+      # React refuses to render when react and react-dom differ, and the types
+      # follow the same version, so all four move together.
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
     ignore:
       # Majors follow the Node runtime (Dockerfile NODE_VERSION, CI node-version).
       - dependency-name: "@types/node"

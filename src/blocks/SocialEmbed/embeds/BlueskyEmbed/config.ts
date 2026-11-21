@@ -1,5 +1,7 @@
 import type { Block } from "payload"
 
+import { blockImages } from "@/blocks/blockImages"
+
 /**
  * Legacy config for Bluesky embeds.
  * @deprecated Use the SocialEmbed block instead.
@@ -13,6 +15,7 @@ export const LegacyBlueskyEmbed: Block = {
     plural: "Bluesky Embeds (Legacy)",
   },
   admin: {
+    images: blockImages("blueSkyEmbed"),
     group: "Legacy",
   },
   fields: [

@@ -11,6 +11,7 @@ const { default: pagesSitemap } = await import("../../sitemap")
 const { default: articlesSitemap } = await import("../../articles/sitemap")
 const { GET: newsSitemap } = await import("../../articles/news-sitemap.xml/route")
 const { default: volumesSitemap } = await import("../../volumes/sitemap")
+const { MAX_SITEMAP_ENTRIES } = await import("../sitemaps")
 
 const SITE_URL = "https://pragmaticpapers.com"
 const UPDATED_AT = "2026-09-01T12:00:00.000Z"
@@ -30,16 +31,23 @@ const routes = [
   {
     name: "pages",
     collection: "pages",
+    modified: "updatedAt",
+    whenMissing: "2026-10-03T00:00:00.000Z",
     list: async () => (await pagesSitemap()).map((e) => [e.url, e.lastModified]),
   },
   {
     name: "articles",
     collection: "articles",
+    // Only a change readers see dates an article; every published one has it.
+    modified: "contentUpdatedAt",
+    whenMissing: undefined,
     list: async () => (await articlesSitemap()).map((e) => [e.url, e.lastModified]),
   },
   {
     name: "volumes",
     collection: "volumes",
+    modified: "updatedAt",
+    whenMissing: "2026-10-03T00:00:00.000Z",
     list: async () => (await volumesSitemap()).map((e) => [e.url, e.lastModified]),
   },
 ] as const
@@ -127,6 +135,15 @@ describe("/articles/news-sitemap.xml", () => {
     )
   })
 
+  // Google News reads no more than 1,000 entries from one news sitemap.
+  it("asks for at most 1,000 articles", async () => {
+    withDocs([])
+
+    await renderXml(newsSitemap)
+
+    expect(find).toHaveBeenCalledWith(expect.objectContaining({ limit: 1000, pagination: false }))
+  })
+
   it("skips articles without a slug or a publish date", async () => {
     withDocs([
       { slug: "", title: "No slug", publishedAt: PUBLISHED_AT },
@@ -152,7 +169,7 @@ describe("/volumes/sitemap.xml", () => {
   })
 })
 
-describe.each(routes)("the $name sitemap", ({ collection, list }) => {
+describe.each(routes)("the $name sitemap", ({ collection, list, modified, whenMissing }) => {
   it("asks only for published documents, as an anonymous reader", async () => {
     withDocs([])
 
@@ -165,6 +182,22 @@ describe.each(routes)("the $name sitemap", ({ collection, list }) => {
         overrideAccess: false,
         draft: false,
         where: { _status: { equals: "published" } },
+      }),
+    )
+  })
+
+  // Payload applies `limit` even with `pagination: false`: a cap below the protocol's would
+  // drop documents silently.
+  it("asks for as many documents as a sitemap may hold, freshest first", async () => {
+    withDocs([])
+
+    await list()
+
+    expect(find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        limit: MAX_SITEMAP_ENTRIES,
+        pagination: false,
+        sort: "-updatedAt",
       }),
     )
   })
@@ -182,18 +215,22 @@ describe.each(routes)("the $name sitemap", ({ collection, list }) => {
     expect(entries[0]?.[0]).toMatch(/\/kept$/)
   })
 
-  it("uses updatedAt for the last-modified date, and the current time when it's missing", async () => {
+  it(`uses ${modified} for the last-modified date`, async () => {
     vi.useFakeTimers({ now: new Date("2026-10-03T00:00:00.000Z"), toFake: ["Date"] })
     try {
       withDocs([
-        { slug: "dated", title: "Dated", updatedAt: UPDATED_AT, publishedAt: PUBLISHED_AT },
+        {
+          slug: "dated",
+          title: "Dated",
+          // A save that changed nothing readers see, after the content last changed.
+          updatedAt: "2026-09-02T12:00:00.000Z",
+          [modified]: UPDATED_AT,
+          publishedAt: PUBLISHED_AT,
+        },
         { slug: "undated", title: "Undated", publishedAt: PUBLISHED_AT },
       ])
 
-      expect((await list()).map(([, date]) => date)).toEqual([
-        UPDATED_AT,
-        "2026-10-03T00:00:00.000Z",
-      ])
+      expect((await list()).map(([, date]) => date)).toEqual([UPDATED_AT, whenMissing])
     } finally {
       vi.useRealTimers()
     }

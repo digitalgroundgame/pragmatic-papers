@@ -46,6 +46,7 @@ describe("resolveSsoConfig", () => {
       usersSlug: "users",
       cookieName: "pp-session",
       payloadUserCookie: "payload-token-sso",
+      signedInCookie: "pp-signed-in",
       accountPath: "/account",
     })
     expect(resolved).not.toHaveProperty("disabled")
@@ -111,12 +112,26 @@ describe("payloadUserCookiePlugin", () => {
     )
   })
 
-  it("clears it on sign-out, and leaves other requests alone", async () => {
-    expect(await run("/sign-out")).toHaveBeenCalledWith(
-      "payload-token-sso",
-      "",
-      expect.objectContaining({ maxAge: 0 }),
-    )
+  it("tells the page's scripts that anyone, staff or member, is signed in", async () => {
+    for (const [user, id] of [
+      [editor, "7"],
+      [member, "8"],
+    ] as const) {
+      findByID.mockResolvedValue(user)
+      const setCookie = await run("/callback/:id", { user: { id } })
+      expect(setCookie).toHaveBeenCalledWith(
+        "pp-signed-in",
+        "1",
+        expect.objectContaining({ httpOnly: false, maxAge: config.sessionSeconds }),
+      )
+    }
+  })
+
+  it("clears both on sign-out, and leaves other requests alone", async () => {
+    const setCookie = await run("/sign-out")
+    for (const name of ["payload-token-sso", "pp-signed-in"]) {
+      expect(setCookie).toHaveBeenCalledWith(name, "", expect.objectContaining({ maxAge: 0 }))
+    }
     expect(await run("/get-session")).not.toHaveBeenCalled()
   })
 })

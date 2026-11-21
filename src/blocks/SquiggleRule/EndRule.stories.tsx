@@ -35,6 +35,8 @@ export const Default: Story = {
 
 /** A piece that already ends with a Squiggle Rule block gets no second one. */
 export const AlreadyEndsWithOne: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   args: {
     content: content(paragraph, { type: "block", version: 2, fields: squiggleRuleBlock }),
   },

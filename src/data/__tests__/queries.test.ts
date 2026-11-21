@@ -67,6 +67,7 @@ describe("queryVolumesForArticles", () => {
       collection: "volumes",
       where: { articles: { in: [1, 2, 3] } },
       depth: 0,
+      limit: 0,
     })
     expect(volumes).toEqual([{ id: 1, title: "Volume I" }])
   })

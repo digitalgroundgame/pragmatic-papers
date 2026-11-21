@@ -20,6 +20,8 @@ export interface DocFileEntry {
   /** The folder its file is in, where the files it shows are too. */
   folder: string
   file: string
+  /** The doc's address under the docs path, from its folders and slug, with forward slashes on every OS. */
+  urlPath: string
 }
 
 const orderOf = async (file: string, name: string): Promise<number> =>
@@ -32,7 +34,7 @@ const orderOf = async (file: string, name: string): Promise<number> =>
  */
 export async function listDocFiles(dir = DOCS_DIR): Promise<DocFileEntry[]> {
   const found: DocFileEntry[] = []
-  const walk = async (folder: string, parent: string | null): Promise<void> => {
+  const walk = async (folder: string, parent: string | null, parentUrl: string): Promise<void> => {
     const entries = await readdir(folder, { withFileTypes: true })
     const docs = entries.filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
     const slugs = new Set(docs.map((entry) => entry.name.slice(0, -".md".length)))
@@ -59,15 +61,17 @@ export async function listDocFiles(dir = DOCS_DIR): Promise<DocFileEntry[]> {
           `Two docs are called "${slug}": src/docs/${path.relative(dir, twin.file)} and src/docs/${path.relative(dir, file)}`,
         )
       }
-      found.push({ slug, parent, folder, file })
+      // Built from slugs with "/", so it's the same on every OS.
+      const urlPath = parentUrl ? `${parentUrl}/${slug}` : slug
+      found.push({ slug, parent, folder, file, urlPath })
       const below = path.join(folder, slug)
       if (existsSync(below)) {
         if (slug === HOME_DOC_SLUG)
           throw new Error("src/docs/home/: no docs sit under the home doc")
-        await walk(below, slug)
+        await walk(below, slug, urlPath)
       }
     }
   }
-  await walk(dir, null)
+  await walk(dir, null, "")
   return found
 }

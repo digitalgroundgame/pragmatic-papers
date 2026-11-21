@@ -41,6 +41,14 @@ export const tickerPosts: TickerPost[] = [
     createdAt: "2026-10-07T14:00:00Z",
   },
   {
+    id: "substack:https://thepragmaticpapers.substack.com/p/the-senate-math",
+    source: "substack",
+    text: "The Senate math nobody wants to do out loud",
+    links: [],
+    url: "https://thepragmaticpapers.substack.com/p/the-senate-math",
+    createdAt: "2026-10-07T12:00:00Z",
+  },
+  {
     id: "bluesky:3",
     source: "bluesky",
     text: "We're live on YouTube at 7 p.m. ET tonight with the editors. Bring your questions about the budget, the courts, and anything else on your mind this week.",

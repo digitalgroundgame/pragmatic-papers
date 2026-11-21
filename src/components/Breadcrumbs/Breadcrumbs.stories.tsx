@@ -66,6 +66,8 @@ export const FullWidth: Story = {
 }
 
 export const Empty: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   args: { items: [] },
   play: async ({ canvasElement }) => {
     await expect(canvasElement).toBeEmptyDOMElement()

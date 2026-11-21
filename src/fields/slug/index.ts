@@ -23,15 +23,35 @@ type SlugFieldArgs = NonNullable<Parameters<typeof payloadSlugField>[0]>
  * generating the slug in a hook on `slug` makes it present in time on any
  * Payload version. It can't move earlier to `beforeValidate`: defaults resolve
  * concurrently in that pass, and the Volumes slug comes from `volumeNumber`'s
- * async default. Payload's hook computes the same value, so the checkbox and
- * update behavior stay Payload's.
+ * async default.
+ *
+ * The same race loses the slug on update: Payload's hook assigns it after the
+ * `slug` field has already been written, so a draft whose first save had no
+ * title kept an empty slug through every later autosave, and with it no
+ * Preview button. So while the checkbox is ticked, the hook here also fills an
+ * empty slug on update. It never replaces one: a published article can still
+ * have the checkbox ticked, and a new slug would move it to a new URL.
  */
 export const slugField = (args: SlugFieldArgs = {}): RowField => {
-  const { fieldToUse, name = "slug", overrides, slugify, useAsSlug = "title" } = args
+  const {
+    checkboxName = "generateSlug",
+    fieldToUse,
+    name = "slug",
+    overrides,
+    slugify,
+    useAsSlug = "title",
+  } = args
   const sourceField = fieldToUse || useAsSlug
 
-  const generateOnCreate: FieldHook = async ({ data, operation, req, value }) => {
-    if (operation !== "create" || value || !data?.[sourceField]) return value
+  const generate: FieldHook = async ({ data, operation, originalDoc, req, siblingData, value }) => {
+    if (value || !data?.[sourceField]) return value
+    if (operation === "update") {
+      // Read before Payload's hook on the checkbox replaces it with its verdict for this save.
+      const checked = siblingData?.[checkboxName] ?? originalDoc?.[checkboxName]
+      if (!checked) return value
+    } else if (operation !== "create") {
+      return value
+    }
 
     const valueToSlugify = data[sourceField]
     return slugify ? slugify({ data, req, valueToSlugify }) : defaultSlugify(valueToSlugify)
@@ -46,7 +66,7 @@ export const slugField = (args: SlugFieldArgs = {}): RowField => {
       if (slug) {
         slug.hooks = {
           ...slug.hooks,
-          beforeChange: [generateOnCreate, ...(slug.hooks?.beforeChange ?? [])],
+          beforeChange: [generate, ...(slug.hooks?.beforeChange ?? [])],
         }
       }
       return overrides ? overrides(row) : row

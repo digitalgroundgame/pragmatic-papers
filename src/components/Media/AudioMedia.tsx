@@ -2,7 +2,7 @@
 
 import { cva, type VariantProps } from "class-variance-authority"
 import { Pause, Play, Settings, Volume1, Volume2, VolumeX } from "lucide-react"
-import React, { useCallback, useEffect, useId, useRef, useState } from "react"
+import React, { useEffect, useId, useRef, useState } from "react"
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
@@ -125,13 +125,10 @@ interface ScrubberProps {
 }
 
 function Scrubber({ currentTime, duration, onSeek }: ScrubberProps) {
-  const handleValueChange = useCallback(
-    (value: number | readonly number[]) => {
-      const seconds = singleValue(value)
-      if (seconds !== undefined) onSeek(seconds)
-    },
-    [onSeek],
-  )
+  const handleValueChange = (value: number | readonly number[]) => {
+    const seconds = singleValue(value)
+    if (seconds !== undefined) onSeek(seconds)
+  }
 
   return (
     <>
@@ -169,14 +166,11 @@ function SettingsHeading({ id, children }: { id?: string; children: React.ReactN
 function SpeedSetting({ value, onChange }: { value: number; onChange: (rate: number) => void }) {
   const labelId = useId()
 
-  const handleValueChange = useCallback(
-    (next: readonly string[]) => {
-      // A toggle group lets its pressed button be pressed again to clear it;
-      // there is always a speed, so that press changes nothing.
-      if (next[0] !== undefined) onChange(Number(next[0]))
-    },
-    [onChange],
-  )
+  const handleValueChange = (next: readonly string[]) => {
+    // A toggle group lets its pressed button be pressed again to clear it;
+    // there is always a speed, so that press changes nothing.
+    if (next[0] !== undefined) onChange(Number(next[0]))
+  }
 
   return (
     <div>
@@ -199,13 +193,10 @@ function SpeedSetting({ value, onChange }: { value: number; onChange: (rate: num
 }
 
 function VolumeSetting({ value, onChange }: { value: number; onChange: (volume: number) => void }) {
-  const handleValueChange = useCallback(
-    (next: number | readonly number[]) => {
-      const volume = singleValue(next)
-      if (volume !== undefined) onChange(volume)
-    },
-    [onChange],
-  )
+  const handleValueChange = (next: number | readonly number[]) => {
+    const volume = singleValue(next)
+    if (volume !== undefined) onChange(volume)
+  }
 
   return (
     <div>
@@ -370,7 +361,7 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
     if (duration > 0) onDurationChange?.(duration)
   }, [duration, onDurationChange])
 
-  const togglePlay = useCallback(() => {
+  const togglePlay = () => {
     const audio = audioRef.current
     if (!audio) return
     if (isPlaying) {
@@ -386,27 +377,24 @@ export const AudioMedia: React.FC<AudioMediaProps> = ({
         .then(() => setIsPlaying(true))
         .catch(() => setIsPlaying(false))
     }
-  }, [isPlaying, connect])
+  }
 
-  const handleSeek = useCallback((seconds: number) => {
+  const handleSeek = (seconds: number) => {
     const audio = audioRef.current
     if (!audio) return
     audio.currentTime = seconds
     setCurrentTime(seconds)
-  }, [])
+  }
 
-  const handlePlaybackRateChange = useCallback((rate: number) => {
+  const handlePlaybackRateChange = (rate: number) => {
     setPlaybackRate(rate)
     if (audioRef.current) audioRef.current.playbackRate = rate
-  }, [])
+  }
 
-  const handleVolumeChange = useCallback(
-    (next: number) => {
-      setVolume(next)
-      setGain(next)
-    },
-    [setGain],
-  )
+  const handleVolumeChange = (next: number) => {
+    setVolume(next)
+    setGain(next)
+  }
 
   if (!media.url) return null
 

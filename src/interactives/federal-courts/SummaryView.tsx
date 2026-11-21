@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useState } from "react"
+import React, { useState } from "react"
 
 import { RecordAvatar } from "@/interactives/engine/RecordAvatar"
 import { fieldString } from "@/interactives/engine/recordFormat"
@@ -89,12 +89,9 @@ function SupremeCourt({
   const width = 560
   // Tall enough for the widened dome plus the names hanging below its baseline seats.
   const height = 340
-  const layout = useMemo(
-    () => layoutArc(records.length, 0, width, height, SCOTUS_METRICS),
-    [records.length],
-  )
+  const layout = layoutArc(records.length, 0, width, height, SCOTUS_METRICS)
 
-  const totals = useMemo(() => {
+  const totals = (() => {
     const counts = new Map<SeatParty, number>()
     for (const r of records) {
       const value = fieldString(r, display.category.field)
@@ -103,7 +100,7 @@ function SupremeCourt({
       counts.set(party, (counts.get(party) ?? 0) + 1)
     }
     return [...counts.entries()].map(([party, count]) => ({ party, count }))
-  }, [records])
+  })()
 
   if (records.length === 0)
     return <p className="text-muted-foreground py-6 text-center text-sm">No Supreme Court data.</p>

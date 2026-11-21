@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useRef } from "react"
+import { useRef } from "react"
 
 export function usePageMemory(initial?: Iterable<readonly [number, number]>): {
   get: (articleId: number) => number
@@ -11,11 +11,11 @@ export function usePageMemory(initial?: Iterable<readonly [number, number]>): {
     memory.current = new Map<number, number>(initial)
   }
 
-  const get = useCallback((articleId: number) => memory.current!.get(articleId) ?? 0, [])
+  const get = (articleId: number) => memory.current!.get(articleId) ?? 0
 
-  const set = useCallback((articleId: number, pageIndex: number) => {
+  const set = (articleId: number, pageIndex: number) => {
     memory.current!.set(articleId, pageIndex)
-  }, [])
+  }
 
   return { get, set }
 }

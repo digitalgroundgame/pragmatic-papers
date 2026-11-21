@@ -1,20 +1,15 @@
 import type { CollectionSlug, Endpoint, PayloadHandler, PayloadRequest } from "payload"
 
 import { normalizeCommentBody } from "../body"
+import { COMMENTING_FIELD, commentingOf } from "../commenting"
 import { duplicateCheck, linkCheck, runChecks } from "../checks"
-import { COMMENTS_SLUG, VIOLATIONS_SLUG } from "../constants"
+import { COMMENTS_SLUG, FIRST_COMMENTED_FIELD, VIOLATIONS_SLUG } from "../constants"
 import { SKIP_MODERATION } from "../hooks/recordModeration"
 import { authorLock } from "../lock"
+import { describerFor, findFirstComments } from "../markers"
 import { readSettings } from "../settings"
 import { buildThread, type StoredComment } from "../thread"
-import type {
-  AuthorDisplay,
-  CommentAuthor,
-  CommentThread,
-  CommentViewer,
-  PublicComment,
-  ResolvedCommentsConfig,
-} from "../types"
+import type { CommentThread, CommentViewer, PublicComment, ResolvedCommentsConfig } from "../types"
 
 /** The most comments one thread reads: the newest, so a new comment always shows. */
 export const THREAD_LIMIT = 500
@@ -30,22 +25,6 @@ function parseId(req: PayloadRequest, raw: unknown): number | string | null {
   if (req.payload.db.defaultIDType !== "number") return raw
   const id = Number(raw)
   return Number.isSafeInteger(id) && id > 0 ? id : null
-}
-
-/**
- * `describeAuthor`, with the badges `authorBadges` gives these authors, asked once. A badge
- * `describeAuthor` gives itself (like Staff) wins.
- */
-export async function describerFor(
-  config: ResolvedCommentsConfig,
-  authors: CommentAuthor[],
-  req: PayloadRequest,
-): Promise<(author: CommentAuthor) => AuthorDisplay> {
-  const badges = authors.length ? await config.authorBadges(authors, req) : new Map()
-  return (author) => {
-    const display = config.describeAuthor(author)
-    return display.badge ? display : { ...display, badge: badges.get(String(author.id)) ?? null }
-  }
 }
 
 /** Whether a cross-site page sent this. A browser always names the page's origin on a POST. */
@@ -83,7 +62,7 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
         draft: false,
         overrideAccess: false,
         disableErrors: true,
-        select: {},
+        select: { [COMMENTING_FIELD]: true },
       }),
       req.payload.find({
         collection: COMMENTS_SLUG as CollectionSlug,
@@ -92,7 +71,10 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
         limit: THREAD_LIMIT,
         depth: 1,
         populate: {
-          [config.authorsSlug]: Object.fromEntries(config.authorFields.map((f) => [f, true])),
+          // `createdAt` and the first-commented time too, for the marks that come and go.
+          [config.authorsSlug]: Object.fromEntries(
+            [...config.authorFields, "createdAt", FIRST_COMMENTED_FIELD].map((f) => [f, true]),
+          ),
         },
         select: {
           body: true,
@@ -109,7 +91,9 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       readSettings(req.payload),
     ])
 
-    if (!target) return notFound()
+    // Comments switched off on this document show nothing, as if there were none.
+    const commenting = commentingOf(target)
+    if (!target || commenting === "off") return notFound()
 
     const stored = (found.docs as unknown as StoredComment[]).reverse()
     const describe = await describerFor(
@@ -121,6 +105,7 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
         ...(author ? [author] : []),
       ],
       req,
+      id,
     )
 
     let viewer: CommentViewer | null = null
@@ -134,12 +119,13 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
 
     const thread: CommentThread = {
       // Oldest first, as readers read them.
-      comments: buildThread(stored, author?.id ?? null, describe),
+      comments: buildThread(stored, author?.id ?? null, describe, findFirstComments(stored)),
       viewer,
       providers: viewer ? [] : config.signInProviders(),
       maxDepth: settings.maxDepth,
       maxLength: config.maxLength,
       truncated: found.totalDocs > found.docs.length,
+      ...(commenting === "locked" && { closed: true as const }),
     }
     return Response.json(thread, { headers: noStore })
   }
@@ -186,9 +172,15 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       draft: false,
       overrideAccess: false,
       disableErrors: true,
-      select: {},
+      select: { [COMMENTING_FIELD]: true },
     })
-    if (!target) return notFound()
+    if (!target || commentingOf(target) === "off") return notFound()
+    if (commentingOf(target) === "locked") {
+      return Response.json(
+        { message: "Comments are closed on this article." },
+        { status: 403, headers: noStore },
+      )
+    }
 
     // A reply goes under a published comment on the same document, within the reply depth
     // the settings allow now. Replies already deeper than that stay where they are.
@@ -279,8 +271,20 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       })
     }
 
-    const describe = await describerFor(config, [author], req)
-    const [comment] = buildThread([{ ...created, author }], author.id, describe) as [PublicComment]
+    // The comment's hook has just kept the author's first-commented time; `author` was read
+    // before it, so a first comment brings its own.
+    const posted = {
+      ...created,
+      author: {
+        ...author,
+        [FIRST_COMMENTED_FIELD]:
+          author[FIRST_COMMENTED_FIELD] ?? (check.ok ? created.createdAt : null),
+      },
+    }
+    const describe = await describerFor(config, [posted.author], req, id)
+    const [comment] = buildThread([posted], author.id, describe, findFirstComments([posted])) as [
+      PublicComment,
+    ]
     return Response.json(
       { comment, ...(!check.ok && { held: check.reason }) },
       { status: 201, headers: noStore },

@@ -1,9 +1,25 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+vi.mock("@next/third-parties/google", () => ({ sendGAEvent: vi.fn() }))
+
+// The real menu is Base UI's select; a native one is enough to pick an order here.
+vi.mock("../SortMenu.lazy", () => ({
+  SortMenu: ({ value, onChange }: { value: string; onChange: (sort: string) => void }) => (
+    <select aria-label="Sort comments" value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="random">Random</option>
+      <option value="new">New</option>
+      <option value="old">Old</option>
+    </select>
+  ),
+}))
+
+import { sendGAEvent } from "@next/third-parties/google"
+
 import { commentThread, commentViewer } from "@/stories/fixtures/comments"
 
 import { Comments } from ".."
+import { SEED_KEY, SORT_KEY } from "../useCommentOrder"
 
 /** An observer that reports the element in view at once. */
 class InViewObserver {
@@ -19,6 +35,12 @@ class InViewObserver {
 }
 
 const fetchMock = vi.fn<typeof fetch>()
+
+/** Opens the one-line top box into the form, once the thread is in, and returns its box. */
+async function openComposer(): Promise<HTMLElement> {
+  fireEvent.click(await screen.findByRole("button", { name: "Add a comment" }))
+  return screen.getByRole("textbox", { name: /Commenting as Ada Reader/ })
+}
 const signedIn = commentThread({ viewer: commentViewer, providers: [] })
 
 const posted = (body: string, overrides: Record<string, unknown> = {}) =>
@@ -41,11 +63,16 @@ beforeEach(() => {
   vi.stubGlobal("IntersectionObserver", InViewObserver)
   vi.stubGlobal("fetch", fetchMock)
   fetchMock.mockReset()
+  vi.mocked(sendGAEvent).mockClear()
+  // Oldest first, so tests can count on where each comment is.
+  window.localStorage.setItem(SORT_KEY, "old")
 })
 
 afterEach(() => {
   vi.unstubAllGlobals()
   window.history.replaceState(null, "", "/")
+  window.localStorage.removeItem(SORT_KEY)
+  window.localStorage.removeItem(SEED_KEY)
 })
 
 describe("Comments", () => {
@@ -61,7 +88,7 @@ describe("Comments", () => {
     // The reply sits in the list under its parent's item.
     const reply = screen.getByText(/second chart's source/)
     expect(reply.closest("ol")?.closest("li")).toHaveTextContent("zoning reform")
-    expect(screen.getByText("Staff")).toBeInTheDocument()
+    expect(screen.getByRole("img", { name: "Editor" })).toBeInTheDocument()
     expect(screen.getByText("This comment was removed.")).toBeInTheDocument()
     // Placeholders don't count.
     expect(screen.getByRole("heading", { name: "Comments (3)" })).toBeInTheDocument()
@@ -72,7 +99,7 @@ describe("Comments", () => {
     fetchMock.mockResolvedValueOnce(Response.json(signedIn)).mockResolvedValueOnce(posted("Hi"))
 
     render(<Comments articleId={7} />)
-    const box = await screen.findByRole("textbox", { name: /Commenting as Ada Reader/ })
+    const box = await openComposer()
     fireEvent.change(box, { target: { value: "Hi" } })
     fireEvent.click(screen.getByRole("button", { name: "Post comment" }))
 
@@ -114,7 +141,7 @@ describe("Comments", () => {
 
     render(<Comments articleId={7} />)
 
-    await screen.findByRole("textbox", { name: /Commenting as/ })
+    await openComposer()
     expect(screen.getAllByText("Replies are limited to 1 levels here.")).toHaveLength(2)
     // The two top-level comments still take replies; the removed one doesn't.
     expect(screen.getAllByRole("button", { name: "Reply" })).toHaveLength(1)
@@ -132,7 +159,7 @@ describe("Comments", () => {
     )
 
     render(<Comments articleId={7} />)
-    const box = await screen.findByRole("textbox", { name: /Commenting as/ })
+    const box = await openComposer()
     fireEvent.change(box, { target: { value: "Spam?" } })
     fireEvent.click(screen.getByRole("button", { name: "Post comment" }))
 
@@ -162,7 +189,7 @@ describe("Comments", () => {
       .mockResolvedValueOnce(Response.json({ message: "Give it a few seconds." }, { status: 429 }))
 
     render(<Comments articleId={7} />)
-    const box = await screen.findByRole("textbox", { name: /Commenting as/ })
+    const box = await openComposer()
     fireEvent.change(box, { target: { value: "Again" } })
     fireEvent.click(screen.getByRole("button", { name: "Post comment" }))
 
@@ -194,7 +221,7 @@ describe("Comments", () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       provider: "discord",
       requestSignUp: true,
-      callbackURL: "/articles/x#comments",
+      callbackURL: "/articles/x?signed_in=discord#comments",
       errorCallbackURL: "/articles/x",
     })
   })
@@ -208,5 +235,340 @@ describe("Comments", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Try again" }))
 
     expect(await screen.findByText(/zoning reform/)).toBeInTheDocument()
+  })
+
+  it("folds a comment and its replies into one row, and opens it again", async () => {
+    fetchMock.mockResolvedValue(Response.json(commentThread()))
+
+    render(<Comments articleId={7} />)
+    const [collapse] = await screen.findAllByRole("button", {
+      name: "Collapse Ada Reader's comment",
+    })
+    expect(collapse).toHaveAttribute("aria-expanded", "true")
+    fireEvent.click(collapse!)
+
+    const expand = screen.getByRole("button", { name: "Expand Ada Reader's comment" })
+    expect(expand).toHaveAttribute("aria-expanded", "false")
+    expect(expand).toHaveFocus()
+    expect(screen.getByText("(1 reply)")).toBeInTheDocument()
+    expect(screen.getByText(/zoning reform/)).not.toBeVisible()
+    expect(screen.getByText(/second chart's source/)).not.toBeVisible()
+
+    fireEvent.click(expand)
+    expect(screen.getByText(/second chart's source/)).toBeVisible()
+    expect(
+      screen.getAllByRole("button", { name: "Collapse Ada Reader's comment" })[0],
+    ).toHaveFocus()
+  })
+
+  it("shows the first replies at each level, and the rest on request", async () => {
+    const [first, reply] = commentThread().comments
+    const replies = Array.from({ length: 5 }, (_, i) => ({
+      ...reply!,
+      id: 10 + i,
+      body: `Reply number ${i + 1}`,
+    }))
+    fetchMock.mockResolvedValue(Response.json(commentThread({ comments: [first!, ...replies] })))
+
+    render(<Comments articleId={7} />)
+
+    expect(await screen.findByText("Reply number 3")).toBeInTheDocument()
+    expect(screen.queryByText("Reply number 4")).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "2 more replies" }))
+    expect(screen.getByText("Reply number 5")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /more repl/ })).not.toBeInTheDocument()
+  })
+
+  it("copies a comment's link", async () => {
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue()
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } })
+    fetchMock.mockResolvedValue(Response.json(commentThread()))
+    window.history.replaceState(null, "", "/articles/x")
+
+    render(<Comments articleId={7} />)
+    const [share] = await screen.findAllByRole("button", { name: "Share" })
+    fireEvent.click(share!)
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Link copied")
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/articles/x#comment-1`)
+    expect(document.getElementById("comment-1")).toHaveTextContent(/zoning reform/)
+  })
+
+  it("keeps the reader's order, and puts what they just posted first", async () => {
+    window.localStorage.setItem(SORT_KEY, "new")
+    fetchMock.mockResolvedValueOnce(Response.json(signedIn)).mockResolvedValueOnce(posted("First!"))
+
+    render(<Comments articleId={7} />)
+    await screen.findByText(/zoning reform/)
+    const topLevel = () =>
+      within(screen.getAllByRole("list")[0]!)
+        .getAllByRole("listitem")
+        .filter((item) => item.parentElement === screen.getAllByRole("list")[0])
+    // Newest first: the removed comment from 10 hours ago, then the one from 30.
+    expect(topLevel()[0]).toHaveTextContent("This comment was removed.")
+
+    fireEvent.change(await openComposer(), {
+      target: { value: "First!" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Post comment" }))
+    await screen.findByText("First!")
+    expect(topLevel()[0]).toHaveTextContent("First!")
+  })
+
+  it("counts down the characters left near the limit", async () => {
+    fetchMock.mockResolvedValue(Response.json({ ...signedIn, maxLength: 20 }))
+
+    render(<Comments articleId={7} />)
+    const box = await openComposer()
+    fireEvent.change(box, { target: { value: "Short" } })
+    expect(screen.queryByText(/characters? left/)).not.toBeInTheDocument()
+    fireEvent.change(box, { target: { value: "Nearly at the end!" } })
+    expect(screen.getByText("2 characters left")).toBeInTheDocument()
+    expect(box).toHaveAccessibleDescription("2 characters left")
+  })
+
+  it("leaves the countdown to the last 500 characters of a long limit", async () => {
+    fetchMock.mockResolvedValue(Response.json({ ...signedIn, maxLength: 10_000 }))
+
+    render(<Comments articleId={7} />)
+    const box = await openComposer()
+    fireEvent.change(box, { target: { value: "x".repeat(9_000) } })
+    expect(screen.queryByText(/characters? left/)).not.toBeInTheDocument()
+    fireEvent.change(box, { target: { value: "x".repeat(9_600) } })
+    expect(screen.getByText("400 characters left")).toBeInTheDocument()
+  })
+
+  it("tells analytics a comment was posted, with nothing about who wrote it", async () => {
+    fetchMock
+      .mockResolvedValueOnce(Response.json(signedIn))
+      .mockResolvedValueOnce(Response.json({ message: "nope" }, { status: 500 }))
+      .mockResolvedValueOnce(posted("Hi"))
+
+    render(<Comments articleId={7} slug="zoning" />)
+    const box = await openComposer()
+    fireEvent.change(box, { target: { value: "Hi" } })
+    fireEvent.click(screen.getByRole("button", { name: "Post comment" }))
+    await screen.findByRole("alert")
+    expect(sendGAEvent).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole("button", { name: "Post comment" }))
+    await screen.findByText("Hi")
+    expect(sendGAEvent).toHaveBeenCalledOnce()
+    expect(sendGAEvent).toHaveBeenCalledWith("event", "comment", {
+      content_type: "article",
+      item_id: "zoning",
+      is_reply: false,
+      held: false,
+    })
+  })
+
+  it("tells analytics a reply was posted, and that a check held it", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json(signedIn)).mockResolvedValueOnce(
+      Response.json(
+        {
+          comment: { ...(await posted("x").json()).comment, parentId: 1, depth: 1, held: true },
+          held: "Links",
+        },
+        { status: 201 },
+      ),
+    )
+
+    render(<Comments articleId={7} slug="zoning" />)
+    fireEvent.click((await screen.findAllByRole("button", { name: "Reply" }))[0]!)
+    fireEvent.change(screen.getByRole("textbox", { name: "Reply to Ada Reader" }), {
+      target: { value: "x" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Post reply" }))
+
+    await waitFor(() =>
+      expect(sendGAEvent).toHaveBeenCalledWith("event", "comment", {
+        content_type: "article",
+        item_id: "zoning",
+        is_reply: true,
+        held: true,
+      }),
+    )
+  })
+
+  it("tells analytics a comment's link was copied", async () => {
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
+    })
+    fetchMock.mockResolvedValue(Response.json(commentThread()))
+
+    render(<Comments articleId={7} slug="zoning" />)
+    fireEvent.click((await screen.findAllByRole("button", { name: "Share" }))[0]!)
+
+    await screen.findByRole("status")
+    expect(sendGAEvent).toHaveBeenCalledWith("event", "share", {
+      method: "copy_link",
+      content_type: "comment",
+      item_id: "zoning",
+    })
+  })
+
+  it("tells analytics the reader is back signed in, once, and tidies the address", async () => {
+    window.history.replaceState(null, "", "/articles/x?signed_in=google&ref=feed#comments")
+    fetchMock.mockResolvedValue(Response.json(signedIn))
+
+    render(<Comments articleId={7} slug="zoning" />)
+
+    await openComposer()
+    expect(sendGAEvent).toHaveBeenCalledWith("event", "login", {
+      method: "google",
+      content_type: "comment",
+      item_id: "zoning",
+    })
+    expect(`${window.location.pathname}${window.location.search}${window.location.hash}`).toBe(
+      "/articles/x?ref=feed#comments",
+    )
+  })
+
+  it("sends no sign-in event when the reader came back without a session", async () => {
+    window.history.replaceState(null, "", "/articles/x?signed_in=google")
+    fetchMock.mockResolvedValue(Response.json(commentThread()))
+
+    render(<Comments articleId={7} />)
+
+    await screen.findByText(/zoning reform/)
+    expect(sendGAEvent).not.toHaveBeenCalled()
+    expect(window.location.search).toBe("")
+  })
+
+  it("re-orders when the reader picks a sort, remembers it, and tells analytics", async () => {
+    fetchMock.mockResolvedValue(Response.json(commentThread()))
+
+    render(<Comments articleId={7} slug="zoning" />)
+    fireEvent.change(await screen.findByRole("combobox", { name: "Sort comments" }), {
+      target: { value: "new" },
+    })
+
+    expect(window.localStorage.getItem(SORT_KEY)).toBe("new")
+    expect(sendGAEvent).toHaveBeenCalledWith("event", "comment_sort", {
+      sort: "new",
+      item_id: "zoning",
+    })
+    const list = screen.getAllByRole("list")[0]!
+    expect(list.firstElementChild).toHaveTextContent("This comment was removed.")
+  })
+
+  describe("links into the thread", () => {
+    const [first, reply] = commentThread().comments
+    /** A chain of replies, each under the one before: ids 100 (top level) to 100 + depth. */
+    const chain = (depth: number) =>
+      Array.from({ length: depth + 1 }, (_, i) => ({
+        ...reply!,
+        id: 100 + i,
+        parentId: i === 0 ? null : 100 + i - 1,
+        depth: i,
+        body: `Level ${i}`,
+      }))
+
+    beforeEach(() => {
+      Element.prototype.scrollIntoView = vi.fn()
+    })
+
+    it("scrolls to the linked comment, focuses it and highlights it for a moment", async () => {
+      window.history.replaceState(null, "", "/articles/x#comment-2")
+      fetchMock.mockResolvedValue(Response.json(commentThread()))
+
+      render(<Comments articleId={7} />)
+
+      const article = await screen.findByRole("article", { name: "Comment by Grace Hopper" })
+      await waitFor(() => expect(article).toHaveFocus())
+      expect(document.getElementById("comment-2")).toHaveAttribute("data-highlighted")
+      expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
+    })
+
+    it("opens what hides the linked comment: more replies, or a folded branch", async () => {
+      const replies = Array.from({ length: 5 }, (_, i) => ({
+        ...reply!,
+        id: 10 + i,
+        body: `Reply number ${i + 1}`,
+      }))
+      window.history.replaceState(null, "", "/articles/x#comment-14")
+      fetchMock.mockResolvedValue(Response.json(commentThread({ comments: [first!, ...replies] })))
+
+      render(<Comments articleId={7} />)
+      expect(await screen.findByText("Reply number 5")).toBeVisible()
+
+      // Fold the branch, then follow a link into it again.
+      fireEvent.click(screen.getAllByRole("button", { name: "Collapse Ada Reader's comment" })[0]!)
+      expect(screen.getByText("Reply number 5")).not.toBeVisible()
+      window.history.replaceState(null, "", "/articles/x#comment-13")
+      fireEvent(window, new HashChangeEvent("hashchange"))
+      await waitFor(() => expect(screen.getByText("Reply number 4")).toBeVisible())
+    })
+
+    it("continues a deep branch on its own, with a way back", async () => {
+      fetchMock.mockResolvedValue(Response.json(commentThread({ comments: chain(7) })))
+
+      render(<Comments articleId={7} />)
+
+      expect(await screen.findByText("Level 5")).toBeInTheDocument()
+      expect(screen.queryByText("Level 6")).not.toBeInTheDocument()
+      const more = screen.getByRole("link", { name: /Continue this thread \(2 replies\)/ })
+      expect(more).toHaveAttribute("href", "#thread-105")
+
+      window.history.replaceState(null, "", "/articles/x#thread-105")
+      fireEvent(window, new HashChangeEvent("hashchange"))
+
+      expect(await screen.findByText("Level 7")).toBeInTheDocument()
+      expect(screen.queryByText("Level 0")).not.toBeInTheDocument()
+      expect(screen.getByRole("link", { name: "Back to all comments" })).toHaveAttribute(
+        "href",
+        "#comments",
+      )
+    })
+
+    it("shows a link to a comment deeper than the thread goes in its branch's view", async () => {
+      window.history.replaceState(null, "", "/articles/x#comment-107")
+      fetchMock.mockResolvedValue(Response.json(commentThread({ comments: chain(7) })))
+
+      render(<Comments articleId={7} />)
+
+      expect(await screen.findByText("Level 7")).toBeInTheDocument()
+      // Rooted five levels above it, at level 2.
+      expect(screen.getByText("Level 2")).toBeInTheDocument()
+      expect(screen.queryByText("Level 1")).not.toBeInTheDocument()
+      expect(screen.getByRole("link", { name: "Back to all comments" })).toBeInTheDocument()
+    })
+
+    it("ignores a link to a comment that isn't in the thread", async () => {
+      window.history.replaceState(null, "", "/articles/x#comment-999")
+      fetchMock.mockResolvedValue(Response.json(commentThread()))
+
+      render(<Comments articleId={7} />)
+
+      await screen.findByText(/zoning reform/)
+      expect(screen.queryByRole("link", { name: "Back to all comments" })).not.toBeInTheDocument()
+      expect(document.querySelector("[data-highlighted]")).not.toBeInTheDocument()
+    })
+  })
+
+  it("opens the top box into the form, focused, and folds it back keeping the draft", async () => {
+    fetchMock.mockResolvedValue(Response.json(signedIn))
+
+    render(<Comments articleId={7} />)
+    const box = await openComposer()
+    await waitFor(() => expect(box).toHaveFocus())
+    expect(screen.queryByRole("button", { name: "Add a comment" })).not.toBeInTheDocument()
+    fireEvent.change(box, { target: { value: "Half a thought" } })
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    expect(box).not.toBeVisible()
+    expect(await openComposer()).toHaveValue("Half a thought")
+  })
+
+  it("puts the reader's account and sign-out behind their avatar", async () => {
+    fetchMock.mockResolvedValue(Response.json(signedIn))
+
+    render(<Comments articleId={7} />)
+
+    expect(
+      await screen.findByRole("button", { name: "Account menu for Ada Reader" }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Your account" })).not.toBeInTheDocument()
   })
 })

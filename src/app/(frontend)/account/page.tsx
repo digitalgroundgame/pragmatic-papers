@@ -27,7 +27,8 @@ export default async function AccountPage(): Promise<React.ReactNode> {
           <BetaBadge feature="sso" />
         </h1>
         <p className="text-muted-foreground text-sm">
-          The name you comment under, the accounts you sign in with, and deleting your account.
+          The name you comment under, what you&apos;ve read, the accounts you sign in with, and
+          deleting your account.
         </p>
       </header>
       <Account providers={signUpProviders()} />

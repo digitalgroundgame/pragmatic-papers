@@ -12,6 +12,8 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
+import { CARD_FONTS } from "@/interactives/whip-count/cardFonts"
+
 const ROOT = resolve(__dirname, "../..")
 const SCRIPT = join(ROOT, "scripts/build-worker.mjs")
 
@@ -37,6 +39,10 @@ beforeEach(() => {
   writeFileSync(join(dir, "src/app/(payload)/admin/page.tsx"), "")
   mkdirSync(join(dir, "src/cloudflare"), { recursive: true })
   writeFileSync(join(dir, "src/cloudflare/_headers"), "/_next/static/*\n")
+  for (const font of CARD_FONTS) {
+    mkdirSync(join(dir, font.file, ".."), { recursive: true })
+    writeFileSync(join(dir, font.file), font.asset)
+  }
 })
 
 afterEach(() => {
@@ -67,6 +73,10 @@ describe("build-worker.mjs", () => {
     ])
     expect(result.adminBack).toBe(true)
     expect(readFileSync(join(dir, ".open-next/assets/_headers"), "utf-8")).toBe("/_next/static/*\n")
+    // The link preview card's fonts, which the Worker fetches from its static assets.
+    for (const font of CARD_FONTS) {
+      expect(readFileSync(join(dir, ".open-next/assets", font.asset), "utf-8")).toBe(font.asset)
+    }
   })
 
   it("puts the admin folder back when the build fails", () => {
@@ -90,6 +100,7 @@ describe("worker-build.yml", () => {
     "wrangler.jsonc",
     "scripts/build-worker.mjs",
     "src/cloudflare",
+    "src/interactives/whip-count/cardFonts.ts",
   ])("builds when a change touches %s", (path) => {
     expect(workerPaths).toContain(path)
   })

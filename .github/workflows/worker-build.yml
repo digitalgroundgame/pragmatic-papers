@@ -38,6 +38,7 @@ env:
     gateway.wrangler.jsonc
     scripts/build-worker.mjs
     src/cloudflare
+    src/interactives/whip-count/cardFonts.ts
     .github/workflows/worker-build.yml
 
 jobs:
@@ -147,8 +148,9 @@ jobs:
             sleep 2
           done
           failed=0
-          # The seeded article and volume come from R2; the rest render in the Worker.
-          for path in / /articles/rich-text-showcase /volumes/1 /contributors /search /articles/feed.xml /sitemap_index.xml; do
+          # The seeded article and volume come from R2; the rest render in the Worker. The font
+          # is one of those the whip count's link preview card reads from the static assets.
+          for path in / /articles/rich-text-showcase /volumes/1 /contributors /search /articles/feed.xml /sitemap_index.xml /og-fonts/Geist-Bold.ttf; do
             status=$(curl --silent --output /dev/null --max-time 60 --write-out '%{http_code}' "$SERVER_URL$path" || echo 000)
             echo "GET $path → $status"
             echo "- \`GET $path\` → $status" >> "$GITHUB_STEP_SUMMARY"

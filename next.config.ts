@@ -5,6 +5,7 @@ import path from "path"
 import { fileURLToPath } from "url"
 
 import { withCloudflare } from "./src/cloudflare/withCloudflare"
+import { CARD_FONTS } from "./src/interactives/whip-count/cardFonts"
 
 const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
@@ -34,6 +35,8 @@ const NOT_EDGE_CACHED = [
   "articles/(?:[^/]+/)?substack\\.xml$",
   // - recommendations: no-store.
   "recommended-articles\\.json$",
+  // - a whip count's link preview: a day at the edge, its URL naming the count and the day.
+  "next/whip-counts/[^/]+/image$",
   // - the deploy's switchover check (`/next/purge-edge`): no-store, so the edge never keeps
   //   an answer naming the old container.
   "next/purge-edge$",
@@ -60,6 +63,9 @@ const nextConfig: NextConfig = {
   // The seed reads src/docs/ to load the help docs (loadRepoDocs), which no import traces.
   outputFileTracingIncludes: {
     "/**": ["./src/docs/**/*"],
+    // A whip count's link preview reads its fonts' TTFs (next/og can't read woff2).
+    // Keys are picomatch globs, so the route's brackets are escaped.
+    "/next/whip-counts/\\[slug\\]/image": CARD_FONTS.map((font) => `./${font.file}`),
   },
   // The CI image's build sets this (dockerfiles/PragmaticPapers.ci.Dockerfile): CI's Static
   // checks run `next typegen` and `tsc` on the same commit, which cover what next build's
@@ -146,6 +152,12 @@ const nextConfig: NextConfig = {
     // Contributor pages were /authors, which didn't fit narrators. `/authors/:path*` also
     // covers the index, its `?p=` pages and the old id URLs the profile page resolves.
     { source: "/authors/:path*", destination: "/contributors/:path*", permanent: true },
+    // Whip counts are interactives now, at /interactives/<slug>.
+    {
+      source: "/interactives/whip-counts/:slug",
+      destination: "/interactives/:slug",
+      permanent: true,
+    },
     {
       source: "/iceout/:state*",
       destination: "https://iceout.org/en/location/report",

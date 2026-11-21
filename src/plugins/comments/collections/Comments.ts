@@ -3,6 +3,7 @@ import type { CollectionConfig } from "payload"
 import { COMMENTS_SLUG } from "../constants"
 import { threadEndpoints } from "../endpoints/thread"
 import { deleteReplies } from "../hooks/deleteReplies"
+import { syncFirstCommentedOnChange, syncFirstCommentedOnDelete } from "../hooks/firstCommented"
 import { recordModeration } from "../hooks/recordModeration"
 import type { ResolvedCommentsConfig } from "../types"
 
@@ -30,8 +31,9 @@ export function commentsCollection(config: ResolvedCommentsConfig): CollectionCo
     },
     endpoints: threadEndpoints(config),
     hooks: {
-      afterChange: [recordModeration],
+      afterChange: [recordModeration, syncFirstCommentedOnChange(config)],
       beforeDelete: [deleteReplies],
+      afterDelete: [syncFirstCommentedOnDelete(config)],
     },
     fields: [
       {

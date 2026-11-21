@@ -6,8 +6,10 @@ import { seedAchievements } from "./award"
 import { achievementsCollection, awardsCollection, awardsJoinField } from "./collection"
 import { DEFAULT_EARLY_MEMBER_LIMIT } from "./constants"
 import { awardOnMembership, deleteUsersAwards } from "./hooks/users"
-import { achievementsFor, badgeLabelsFor } from "./read"
+import { achievementsFor, badgesFor } from "./read"
+import { resolveReadingConfig, withReading } from "./reading"
 import type {
+  AchievementBadge,
   AchievementUser,
   AchievementsPluginConfig,
   HeldAchievement,
@@ -15,8 +17,10 @@ import type {
 } from "./types"
 
 export { RULES } from "./rules"
+export type { MyReading, ReadingGroups, ReadingOptions } from "./reading/types"
 export type { MyAchievements } from "./endpoints/mine"
 export type {
+  AchievementBadge,
   AchievementDoc,
   AchievementRule,
   AchievementUser,
@@ -33,6 +37,7 @@ export const resolveAchievementsConfig = (
   userFields: ["emailVerified", "roles"],
   earlyMemberLimit: DEFAULT_EARLY_MEMBER_LIMIT,
   adminGroup: "Content",
+  reading: {},
   ...options,
   disabled: options.disabled === true,
   enabled: async (payload) => !options.disabled && (await isPluginOn(options.enabled, payload)),
@@ -44,13 +49,16 @@ export const resolveAchievementsConfig = (
  * pages), and the achievements a site starts with, which a deploy creates once.
  */
 export function achievementsReader(options: AchievementsPluginConfig): {
-  badgesFor: (users: AchievementUser[], req: PayloadRequest) => Promise<Map<string, string>>
+  badgesFor: (
+    users: AchievementUser[],
+    req: PayloadRequest,
+  ) => Promise<Map<string, AchievementBadge>>
   heldBy: (payload: Payload, user: AchievementUser) => Promise<HeldAchievement[]>
   seed: (payload: Payload) => Promise<string[]>
 } {
   const config = resolveAchievementsConfig(options)
   return {
-    badgesFor: (users, req) => badgeLabelsFor(req.payload, users, config, req),
+    badgesFor: (users, req) => badgesFor(req.payload, users, config, req),
     heldBy: async (payload, user) =>
       (await achievementsFor(payload, [user], config)).get(String(user.id)) ?? [],
     seed: (payload) => seedAchievements(payload, config),
@@ -61,9 +69,10 @@ export function achievementsReader(options: AchievementsPluginConfig): {
  * Readers' achievements, defined by editors in the admin, each earned by a rule in code: a fact
  * about the account (Verified), being one of the first members (Early member), or given by
  * hand. Each can show a badge beside the holder's name on comments. Moderators give and revoke
- * them from a user's record, with a reason, and the row stays as a record. Switched off, no
- * achievement shows anywhere, but first-members achievements are still awarded, so the order
- * holds when it's switched on.
+ * them from a user's record, with a reason, and the row stays as a record. While it's on, it
+ * also keeps what signed-in readers read and the days they visit (`reading/`), for reading
+ * achievements to count. Switched off, no achievement shows anywhere and nothing is recorded,
+ * but first-members achievements are still awarded, so the order holds when it's switched on.
  */
 export const achievementsPlugin = registerPlugin<AchievementsPluginConfig>({
   slug: "achievements",
@@ -71,12 +80,12 @@ export const achievementsPlugin = registerPlugin<AchievementsPluginConfig>({
     name: "Achievements",
     source: "src/plugins/achievements",
     description:
-      "Readers' achievements, defined by editors in Content → Achievements and earned by rules in code (Verified, Early member, or given by hand), with a badge beside their name on comments. Moderators give and revoke them from a user's record.",
+      "Readers' achievements, defined by editors in Content → Achievements and earned by rules in code (Verified, Early member, or given by hand), with a badge beside their name on comments. Moderators give and revoke them from a user's record. Keeps the articles signed-in readers read to the end and the days they visit, for reading achievements.",
     beta: { info: "Achievements are in beta: we're still trying them out, so they may change." },
     switch: {
       label: "Achievements",
       description:
-        "Badges beside readers' names on comments, and achievements on their account page. First-members achievements are still awarded while it's off.",
+        "Badges beside readers' names on comments, achievements and reading totals on their account page, and recording what signed-in readers read. First-members achievements are still awarded while it's off.",
       defaultValue: false,
     },
   },
@@ -94,13 +103,16 @@ export const achievementsPlugin = registerPlugin<AchievementsPluginConfig>({
         },
       }
     })
-    return {
-      ...config,
-      collections: [
-        ...collections,
-        achievementsCollection(achievements),
-        awardsCollection(achievements),
-      ],
-    }
+    return withReading(
+      {
+        ...config,
+        collections: [
+          ...collections,
+          achievementsCollection(achievements),
+          awardsCollection(achievements),
+        ],
+      },
+      resolveReadingConfig(achievements),
+    )
   },
 })

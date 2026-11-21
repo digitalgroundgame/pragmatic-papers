@@ -41,10 +41,24 @@ function storeDay(day: string): void {
 }
 
 /**
- * Tells the site a signed-in reader visited today, and, on an article, that they read it. Pages
- * are one cached copy for everyone, so this is the browser's job. It does nothing unless the
- * sign-in cookie is there: readers who aren't signed in send nothing at all. A 401 means the
- * session ended, so it drops the cookie and stops asking.
+ * Counts one view of an article in the site's own view count, for every reader: one request
+ * to our own API, with no cookie and nothing about the reader. Ad blockers stop the trackers
+ * they know, like Google Analytics, but not a site's own endpoints, so this counts readers GA
+ * can't. `sendBeacon` survives the reader leaving at once and never holds the page up.
+ */
+function sendView(apiPath: string, articleId: number): void {
+  const url = `${apiPath}/articles/${articleId}/view`
+  if (typeof navigator.sendBeacon === "function" && navigator.sendBeacon(url)) return
+  // A count that doesn't arrive isn't worth troubling the reader about.
+  void fetch(url, { method: "POST", keepalive: true, credentials: "omit" }).catch(() => null)
+}
+
+/**
+ * The site's one reading tracker. On an article it counts the view for everyone (`sendView`).
+ * For a signed-in reader it also tells the site they visited today, and, on an article, that
+ * they read it. Pages are one cached copy for everyone, so this is the browser's job. Readers
+ * who aren't signed in send the view and nothing else, with no cookie. A 401 means the session
+ * ended, so it drops the sign-in cookie and stops asking.
  */
 export const ReadingBeacon: React.FC<ReadingBeaconProps> = ({
   articleId,
@@ -52,6 +66,13 @@ export const ReadingBeacon: React.FC<ReadingBeaconProps> = ({
   signedInCookie = DEFAULT_SIGNED_IN_COOKIE,
 }) => {
   const end = useRef<HTMLSpanElement>(null)
+  const viewed = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (articleId === undefined || viewed.current === articleId) return
+    viewed.current = articleId
+    sendView(apiPath, articleId)
+  }, [articleId, apiPath])
 
   useEffect(() => {
     if (!signedIn(signedInCookie)) return

@@ -541,11 +541,18 @@ join field, on each user's record. Only admins delete either.
   - Pages are one cached copy for everyone, so the browser reports: `ReadingBeacon`
     (`src/components/ReadingBeacon`) in the frontend layout sends the day's visit, and after an
     article's text it sends the read once the reader reaches the end or stays two minutes in
-    view. It sends nothing unless the `pp-signed-in` cookie is there: sign-in sets it beside the
+    view. Besides the article's view count (below), it sends nothing unless the `pp-signed-in` cookie is there: sign-in sets it beside the
     session for the page's scripts to read (the session cookie is httpOnly), and it carries no
     identity or authority. `POST /api/reading` takes `{ day, article? }`; `GET
 /api/reading/mine` is the account page's totals.
   - Deleting an account, or an article, deletes its reads. Only admins see them in the admin.
+  - **Views** are counted for every reader, signed in or not, by the same beacon: on an article
+    it sends `POST /api/articles/:id/view` once, with `sendBeacon` (no cookie). The host keeps a
+    daily total per article in the plain `article_views` table
+    (`src/collections/Articles/stats/views/`), with nothing about the reader; bots that say so
+    are left out, and one address adds at most 20 views an hour to an article (kept in memory).
+    It isn't behind the achievements switch. The article's Stats tab shows it as Views, beside
+    Google Analytics' figures.
   - `tests/integration/reading.test.ts` signs a reader up with Discord stubbed, and reads.
 - The host's options (roles, access, the starter limit, what's read) are `achievementsOptions` in
   `src/plugins/readerAchievements.ts`. `tests/integration/achievements.test.ts` covers defining,

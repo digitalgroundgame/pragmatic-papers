@@ -1,4 +1,4 @@
-import type { Access, Where } from "payload"
+import type { Access, FieldAccess, Where } from "payload"
 import { relationshipId } from "@/utilities/relationships"
 import { hasRoleOrAdmin, isAdmin, isEditor, isStaff, STAFF_ROLES } from "./roles"
 
@@ -158,6 +158,16 @@ export const isDraftOrEditor: Access = async ({ id, req, data }) => {
   return [latest.createdBy, ...(latest.authors ?? [])].some(
     (person) => relationshipId(person) === user.id,
   )
+}
+
+/**
+ * Who chooses an article's comments (open, locked or off) besides moderators: editors, and a
+ * writer on an article of their own, in a draft (`isDraftOrEditor`). A writer creating one is
+ * creating their own. Once it's live, an editor publishes the writer's choice with the draft.
+ */
+export const canChooseArticleCommenting: FieldAccess = async ({ id, req, data }) => {
+  if (id === undefined) return hasRoleOrAdmin(req.user, "writer") || isEditor(req.user)
+  return (await isDraftOrEditor({ id: id as number, req, data })) === true
 }
 
 /** Allows staff to view all statuses, while restricting others to published items only. */

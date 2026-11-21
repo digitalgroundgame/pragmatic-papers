@@ -67,7 +67,7 @@ describe("lazy wrappers", () => {
     ["InteractiveMapClient", InteractiveMapClient, { layout: "single", maps: [] }],
     ["MediaCollageBlock", MediaCollageBlock, { id: "collage" }],
     ["MerchCarouselControls", MerchCarouselControls, {}],
-    ["MerchCarouselDots", MerchCarouselDots, {}],
+    ["MerchCarouselDots", MerchCarouselDots, { count: 3 }],
     ["CarouselContent", CarouselContent, { className: "track" }],
     ["CarouselItem", CarouselItem, { className: "slide" }],
     ["AudioMedia", AudioMedia, { className: "audio" }],
@@ -81,7 +81,7 @@ describe("lazy wrappers", () => {
   it("passes children through, as the merch block nests its controls in the carousel", async () => {
     render(
       <MerchCarousel autoplay={false}>
-        <MerchCarouselDots />
+        <MerchCarouselDots count={3} />
       </MerchCarousel>,
     )
     const carousel = await screen.findByTestId("MerchCarousel")

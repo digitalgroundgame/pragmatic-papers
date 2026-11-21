@@ -1,9 +1,12 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react"
+import { sendGAEvent } from "@next/third-parties/google"
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { AudioMediaType } from "@/components/Media"
 import type { User } from "@/payload-types"
 import { NarrationPlayer } from "../index"
+
+vi.mock("@next/third-parties/google", () => ({ sendGAEvent: vi.fn() }))
 
 // The credit only exists inside the player's settings panel, so these open the
 // real panel rather than stubbing Media.
@@ -97,5 +100,35 @@ describe("NarrationPlayer", () => {
     render(<NarrationPlayer narration={{ ...narration, narrator: { ...narrator, name: null } }} />)
     openSettings()
     expect(screen.queryByText("Narrated by")).toBeNull()
+  })
+
+  describe("reports plays", () => {
+    beforeEach(() => vi.mocked(sendGAEvent).mockClear())
+
+    it("sends one narration_play event per page, on the first play", async () => {
+      render(<NarrationPlayer narration={narration} articleSlug="a-slug" />)
+
+      fireEvent.click(screen.getByLabelText("Play"))
+      await waitFor(() => expect(sendGAEvent).toHaveBeenCalledTimes(1))
+      expect(sendGAEvent).toHaveBeenCalledWith("event", "narration_play", {
+        content_type: "article",
+        item_id: "a-slug",
+      })
+
+      fireEvent.click(await screen.findByLabelText("Pause"))
+      fireEvent.click(await screen.findByLabelText("Play"))
+      await waitFor(() => expect(screen.getByLabelText("Pause")).toBeInTheDocument())
+      expect(sendGAEvent).toHaveBeenCalledTimes(1)
+    })
+
+    it("sends nothing when playback is blocked", async () => {
+      vi.spyOn(HTMLMediaElement.prototype, "play").mockRejectedValue(new Error("blocked"))
+      render(<NarrationPlayer narration={narration} articleSlug="a-slug" />)
+
+      fireEvent.click(screen.getByLabelText("Play"))
+      await waitFor(() => expect(HTMLMediaElement.prototype.play).toHaveBeenCalled())
+      await Promise.resolve()
+      expect(sendGAEvent).not.toHaveBeenCalled()
+    })
   })
 })

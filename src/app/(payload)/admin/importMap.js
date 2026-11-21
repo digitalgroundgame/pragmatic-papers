@@ -36,6 +36,7 @@ import { MetaImageComponent as MetaImageComponent_a8a977ebc872c5d5ea7ee689724c08
 import { MetaDescriptionComponent as MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { PreviewComponent as PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { ExtractNarrationButton as ExtractNarrationButton_100e898a8737273f0d647b5ef7ea8c8c } from '@/collections/Articles/components/ExtractNarrationButton'
+import { ArticleStats as ArticleStats_69534125f0e71f5767ae2d1bf6803aca } from '@/collections/Articles/components/ArticleStats'
 import { SlugField as SlugField_2b8867833a34864a02ddf429b0728a40 } from '@payloadcms/next/client'
 import { TableOfContentsCheckbox as TableOfContentsCheckbox_679ff03e93c2593eb9331b15a9a3e34d } from '@/components/TableOfContents/admin'
 import { SubstackImportUrl as SubstackImportUrl_1c3253008a5f10553f86efb4b10e0c79 } from '@/collections/Articles/components/SubstackImportUrl'
@@ -52,6 +53,7 @@ import { LayoutSelectField as LayoutSelectField_14784263a4d9b195e846d9cbfd0ab010
 import { SlotsField as SlotsField_35f5a6ee20cc4f48b51d355856e648f8 } from '@/blocks/CollectionGrid/components/SlotsField'
 import { SlotRowLabel as SlotRowLabel_5acbd006b7abec438595e7d3bb0b4bb1 } from '@/blocks/CollectionGrid/components/SlotRowLabel'
 import { MerchBlockLabel as MerchBlockLabel_6daaa2c7f385f87544e240d2f03ffa20 } from '@/blocks/Merch/BlockLabel'
+import { WhipCountDataField as WhipCountDataField_fc6873a2a8b43699e30641124a9496a0 } from '@/collections/InteractiveSnapshots/components/WhipCountDataField'
 import { SyncNowButton as SyncNowButton_5c40eb2c313f4a5f050c97644b650016 } from '@/collections/InteractiveSnapshots/components/SyncNowButton'
 import { ProductTitleCell as ProductTitleCell_8dff8d8bb04003b09cb89f916f5bb9bc } from '@/collections/Merch/components/ProductTitleCell'
 import { ProductThumbnailCell as ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264d44732 } from '@/collections/Merch/components/ProductThumbnailCell'
@@ -67,6 +69,7 @@ import { NewsletterView as NewsletterView_bb918406547ab798cea1ede5dc83eb82 } fro
 import { PluginsField as PluginsField_db2d2f585e60eb9bedffbd7fa7993815 } from '@/globals/Plugins/components/PluginsField'
 import { NoField as NoField_6b183700acd4c34045544bc38d059ef4 } from '@/globals/Plugins/components/NoField'
 import { RunNowField as RunNowField_a9d86fb0496ebd76a3dd880c805864b5 } from '@/globals/ArticleRecommendations/components/RunNowField'
+import { AdminAvatar as AdminAvatar_7be6553aa96e662e742b516022263c1c } from '@/collections/Users/components/AdminAvatar'
 import { PaperIconAdmin as PaperIconAdmin_de5f3b464da8d97ce80441fdb9ee9751 } from '@/components/Logo/icons/PaperIcon'
 import { LogomarkIcon as LogomarkIcon_715cf00332be8c15b8f2b121ec0215b0 } from '@/components/Logo/icons/LogomarkIcon'
 import { NotificationsBell as NotificationsBell_f3c70f24075a4653f65298cbdfcfc38f } from '@/plugins/notifications/NotificationsBell'
@@ -120,6 +123,7 @@ export const importMap = {
   "@payloadcms/plugin-seo/client#MetaDescriptionComponent": MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@payloadcms/plugin-seo/client#PreviewComponent": PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@/collections/Articles/components/ExtractNarrationButton#ExtractNarrationButton": ExtractNarrationButton_100e898a8737273f0d647b5ef7ea8c8c,
+  "@/collections/Articles/components/ArticleStats#ArticleStats": ArticleStats_69534125f0e71f5767ae2d1bf6803aca,
   "@payloadcms/next/client#SlugField": SlugField_2b8867833a34864a02ddf429b0728a40,
   "@/components/TableOfContents/admin#TableOfContentsCheckbox": TableOfContentsCheckbox_679ff03e93c2593eb9331b15a9a3e34d,
   "@/collections/Articles/components/SubstackImportUrl#SubstackImportUrl": SubstackImportUrl_1c3253008a5f10553f86efb4b10e0c79,
@@ -136,6 +140,7 @@ export const importMap = {
   "@/blocks/CollectionGrid/components/SlotsField#SlotsField": SlotsField_35f5a6ee20cc4f48b51d355856e648f8,
   "@/blocks/CollectionGrid/components/SlotRowLabel#SlotRowLabel": SlotRowLabel_5acbd006b7abec438595e7d3bb0b4bb1,
   "@/blocks/Merch/BlockLabel#MerchBlockLabel": MerchBlockLabel_6daaa2c7f385f87544e240d2f03ffa20,
+  "@/collections/InteractiveSnapshots/components/WhipCountDataField#WhipCountDataField": WhipCountDataField_fc6873a2a8b43699e30641124a9496a0,
   "@/collections/InteractiveSnapshots/components/SyncNowButton#SyncNowButton": SyncNowButton_5c40eb2c313f4a5f050c97644b650016,
   "@/collections/Merch/components/ProductTitleCell#ProductTitleCell": ProductTitleCell_8dff8d8bb04003b09cb89f916f5bb9bc,
   "@/collections/Merch/components/ProductThumbnailCell#ProductThumbnailCell": ProductThumbnailCell_c79e04f7b9e53b2f3afaedb264d44732,
@@ -151,6 +156,7 @@ export const importMap = {
   "@/globals/Plugins/components/PluginsField#PluginsField": PluginsField_db2d2f585e60eb9bedffbd7fa7993815,
   "@/globals/Plugins/components/NoField#NoField": NoField_6b183700acd4c34045544bc38d059ef4,
   "@/globals/ArticleRecommendations/components/RunNowField#RunNowField": RunNowField_a9d86fb0496ebd76a3dd880c805864b5,
+  "@/collections/Users/components/AdminAvatar#AdminAvatar": AdminAvatar_7be6553aa96e662e742b516022263c1c,
   "@/components/Logo/icons/PaperIcon#PaperIconAdmin": PaperIconAdmin_de5f3b464da8d97ce80441fdb9ee9751,
   "@/components/Logo/icons/LogomarkIcon#LogomarkIcon": LogomarkIcon_715cf00332be8c15b8f2b121ec0215b0,
   "@/plugins/notifications/NotificationsBell#NotificationsBell": NotificationsBell_f3c70f24075a4653f65298cbdfcfc38f,

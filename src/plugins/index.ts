@@ -1,6 +1,7 @@
 import type { PluginSwitchName } from "@/globals/Plugins/isPluginEnabled"
 import { admin, editor } from "@/access/collections"
 import { isAdmin, isStaff } from "@/access/roles"
+import { canChooseArticleCommenting } from "@/access/policies"
 import { revalidateRedirects, revalidateRedirectsDelete } from "@/hooks/revalidateRedirects"
 import { docsPlugin } from "@/plugins/docs"
 import { docsNotifications } from "@/plugins/docs/notifications"
@@ -8,6 +9,7 @@ import { notificationsPlugin } from "@/plugins/notifications"
 import { toursPlugin } from "@/plugins/tours"
 import type { Article, Interactive, Page, Topic, User, Volume } from "@/payload-types"
 import { getSiteURL } from "@/utilities/getURL"
+import { relationshipId } from "@/utilities/relationships"
 import { DEFAULT_DESCRIPTION } from "@/utilities/mergeOpenGraph"
 import { docPath } from "@/utilities/routes"
 import { describePlugin } from "@/utilities/registerPlugin"
@@ -35,6 +37,7 @@ import { commentsPlugin } from "./comments"
 import { achievementsOptions, readerAchievements } from "./readerAchievements"
 import { commentsOn, signUpProviders, ssoOptions } from "./signIn"
 import { getSignedInUser, ssoPlugin } from "./sso"
+import { staffBadge } from "./staffBadge"
 import { staffByDefault } from "./staffByDefault"
 
 // Reads the plugin's switch on System → Plugins when called. Imported then, not here: the
@@ -425,13 +428,32 @@ export const plugins: Plugin[] = [
     describeAuthor: (author) => ({
       name: typeof author.name === "string" && author.name ? author.name : "Anonymous",
       image: typeof author.avatarUrl === "string" ? author.avatarUrl : null,
-      badge: isStaff(author as unknown as User) ? "Staff" : null,
+      // Staff show their role; readers show an achievement's badge, if any.
+      badge: staffBadge(author.roles),
     }),
     // A reader's highest achievement badge, when Staff doesn't apply. None while achievements are off.
     authorBadges: (authors, req) => readerAchievements.badgesFor(authors, req),
+    // An article's credited writers, whose comments under it are marked as theirs.
+    targetWriters: async (id, req) => {
+      const article = await req.payload.findByID({
+        collection: "articles",
+        id,
+        depth: 0,
+        draft: false,
+        select: { authors: true },
+        overrideAccess: true,
+        disableErrors: true,
+        req,
+      })
+      return (article?.authors ?? []).map(relationshipId).filter((author) => author !== null)
+    },
     signInProviders: signUpProviders,
+    // Room for an effort post: about 1,500 words, as much as Reddit allows.
+    maxLength: 10_000,
     baseURL: getSiteURL,
     moderators: editor,
+    // Writers choose for their own articles, in a draft; an editor publishes it.
+    commentingEditors: canChooseArticleCommenting,
     admins: admin,
   }),
   achievementsPlugin(achievementsOptions),

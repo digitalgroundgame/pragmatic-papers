@@ -1,0 +1,33 @@
+import { Meta, Unstyled } from "@storybook/addon-docs/blocks"
+import { PageAudit, PageColumns, SiteWideFindings } from "./DesignGuide"
+
+<Meta title="Design guide/Page audit" />
+
+# Page audit
+
+Every public page, measured on a seeded local site at 390px and 1280px wide, against the
+common pattern: breadcrumbs, then a `mx-auto max-w-3xl space-y-6 px-4` column with a
+36 / 48px `h1`. The data is `src/design/pageLayouts.ts`; when you fix a page, update its
+entry there (the test checks each page's wrapper against its source).
+
+## Across the site
+
+<Unstyled>
+  <SiteWideFindings />
+</Unstyled>
+
+## Where each page's column sits
+
+At 1280px. The dashed outline is the common column; an orange bar is a page whose column
+differs from it. Some differ on purpose (the home page, the article, the interactive map, the
+docs); the audit below says which.
+
+<Unstyled>
+  <PageColumns />
+</Unstyled>
+
+## Page by page
+
+<Unstyled>
+  <PageAudit />
+</Unstyled>

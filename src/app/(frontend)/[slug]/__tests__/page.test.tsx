@@ -84,7 +84,7 @@ describe("/feeds", () => {
   })
 
   it("renders the layout of a page slugged feeds", async () => {
-    const layout = [{ blockType: "feedsList", list: "sitemaps", title: "Just sitemaps" }]
+    const layout = [{ blockType: "content", columns: [] }]
     queryPageBySlug.mockResolvedValue({
       slug: "feeds",
       title: "Our feeds",

@@ -1,7 +1,7 @@
 import type { Payload } from "payload"
 
 /**
- * Content a deploy seeds (a help doc, a starter page) is the site's once it arrives: editors
+ * Content a deploy seeds (a help doc, a starter achievement) is the site's once it arrives: editors
  * change it or delete it. These record, in Payload's key-value store, that a document was
  * seeded on this site, so a deploy that finds it gone knows an editor deleted it and leaves it
  * deleted rather than seeding it again.

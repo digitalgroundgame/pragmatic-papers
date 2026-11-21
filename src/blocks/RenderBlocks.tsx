@@ -6,7 +6,6 @@ import { CallToActionBlock } from "@/blocks/CallToAction/Component"
 import { CollectionGridBlock } from "@/blocks/CollectionGrid/Component"
 import { ContentBlock } from "@/blocks/Content/Component"
 import { ContributorsBlock } from "@/blocks/Contributors/Component"
-import { FeedsListBlock } from "@/blocks/FeedsList/Component"
 import { FormBlock } from "@/blocks/Form/Component"
 import { MediaBlock } from "@/blocks/MediaBlock/Component"
 import { NewsletterSignupBlock } from "@/blocks/NewsletterSignup/Component"
@@ -42,7 +41,6 @@ const LAYOUT_RENDERERS: {
   content: (block) => <ContentBlock {...block} />,
   contributors: (block) => <ContributorsBlock {...block} />,
   cta: (block) => <CallToActionBlock {...block} />,
-  feedsList: (block) => <FeedsListBlock {...block} />,
   formBlock: (block) => (isResolved(block.form) ? <FormBlock {...block} /> : null),
   mediaBlock: (block) => <MediaBlock {...block} />,
   merch: (block) => <MerchBlock {...block} />,

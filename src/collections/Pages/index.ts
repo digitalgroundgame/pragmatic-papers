@@ -5,7 +5,6 @@ import { CollectionGrid } from "@/blocks/CollectionGrid/config"
 import { CallToAction } from "@/blocks/CallToAction/config"
 import { Content } from "@/blocks/Content/config"
 import { Contributors } from "@/blocks/Contributors/config"
-import { FeedsList } from "@/blocks/FeedsList/config"
 import { FormBlock } from "@/blocks/Form/config"
 import { MediaBlock } from "@/blocks/MediaBlock/config"
 import { Merch } from "@/blocks/Merch/config"
@@ -94,7 +93,6 @@ export const Pages: CollectionConfig<"pages"> = {
                 Timeline,
                 VolumeView,
                 FormBlock,
-                FeedsList,
               ],
               required: true,
               admin: {

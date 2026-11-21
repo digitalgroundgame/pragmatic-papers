@@ -20,8 +20,7 @@ pnpm test:e2e:all                      # chromium, firefox, webkit, mobile and t
 pnpm test:e2e -- tests/e2e/foo.spec.ts # any Playwright arguments after --
 ```
 
-`scripts/test-e2e.mjs` starts a throwaway Postgres (see "Test databases" in
-`AGENTS.md`), seeds it with `scripts/seed-e2e.ts`, starts a Next.js server on
+`scripts/test-e2e.mjs` starts a throwaway Postgres (see `tests/AGENTS.md`), seeds it with `scripts/seed-e2e.ts`, starts a Next.js server on
 it (the dev server locally; `E2E_PROD_SERVER=true` builds and runs
 `next start`), then runs Playwright against it. The HTML report lands in
 `playwright-report/`.

@@ -444,7 +444,7 @@ The repository, its token and the three ways it hands over files belong to an
 `githubRepo()`. The feed adapter owns the _shape_ of what court-tracker
 publishes and nothing about how it is reached, and the sync asks the
 integration whether it is configured rather than knowing any variable's name
-(see the Integrations section in AGENTS.md).
+(see `src/integrations/AGENTS.md`).
 
 Private upstream: set `COURT_TRACKER_GITHUB_TOKEN` (fine-grained, contents:
 read); `COURT_TRACKER_REPO` overrides the default repository. Without the

@@ -117,7 +117,14 @@ describe("MerchCarousel", () => {
 })
 
 describe("MerchCarouselControls", () => {
+  const measured = (prev: boolean, next: boolean) => ({
+    canScrollPrev: () => prev,
+    canScrollNext: () => next,
+  })
+
   it("hides the arrows when every product already fits", () => {
+    carousel.state = { api: measured(false, false) }
+
     render(
       <Carousel>
         <MerchCarouselControls />
@@ -129,16 +136,35 @@ describe("MerchCarouselControls", () => {
   })
 
   it("shows the arrows once there is something to scroll to", () => {
-    carousel.state = { canScrollPrev: false, canScrollNext: true }
+    carousel.state = { api: measured(false, true) }
 
     render(
       <Carousel>
-        <MerchCarouselControls />
+        <MerchCarouselControls hiddenWhenFits="lg:hidden" />
       </Carousel>,
     )
 
     expect(screen.getByRole("button", { name: "Previous slide" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Next slide" })).toBeInTheDocument()
+    // Measured, so the guess about which widths fit no longer applies.
+    expect(screen.getByRole("button", { name: "Next slide" }).parentElement).not.toHaveClass(
+      "lg:hidden",
+    )
+  })
+
+  it("renders the arrows before embla has measured, hidden where everything fits", () => {
+    // The server render and first paint: arriving later would push "Shop all"
+    // aside, a layout shift.
+    carousel.state = { api: undefined }
+
+    render(
+      <Carousel>
+        <MerchCarouselControls hiddenWhenFits="lg:hidden" />
+      </Carousel>,
+    )
+
+    expect(screen.getByRole("button", { name: "Next slide" }).parentElement).toHaveClass(
+      "lg:hidden",
+    )
   })
 })
 
@@ -155,7 +181,7 @@ describe("MerchCarouselDots", () => {
 
     render(
       <Carousel>
-        <MerchCarouselDots />
+        <MerchCarouselDots count={5} />
       </Carousel>,
     )
 
@@ -167,10 +193,22 @@ describe("MerchCarouselDots", () => {
 
     render(
       <Carousel>
-        <MerchCarouselDots />
+        <MerchCarouselDots count={5} />
       </Carousel>,
     )
 
     expect(screen.queryByRole("button", { name: /Go to slide/ })).not.toBeInTheDocument()
+  })
+
+  it("draws a dot per product before embla has measured, so they don't push content down", () => {
+    carousel.state = { api: undefined }
+
+    render(
+      <Carousel>
+        <MerchCarouselDots count={4} />
+      </Carousel>,
+    )
+
+    expect(screen.getAllByRole("button", { name: /Go to slide/ })).toHaveLength(4)
   })
 })

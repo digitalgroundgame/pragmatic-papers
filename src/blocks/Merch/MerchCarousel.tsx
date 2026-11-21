@@ -3,6 +3,7 @@
 import Autoplay from "embla-carousel-autoplay"
 import React from "react"
 
+import { cn } from "@/utilities/utils"
 import {
   Carousel,
   CarouselContent,
@@ -94,18 +95,32 @@ export const MerchCarousel: React.FC<MerchCarouselProps> = ({ autoplay, classNam
   )
 }
 
+interface MerchCarouselControlsProps {
+  /**
+   * Hides the arrows at the widths where every product already fits, for the
+   * server render and the first paint, before embla has measured anything.
+   * Without it the arrows would arrive only after hydration and push the
+   * "Shop all" button aside: a layout shift on every page with the block.
+   */
+  hiddenWhenFits?: string
+}
+
 /**
  * Prev/next arrows that disappear when there's nothing to scroll — with four
  * products in a four-up layout, permanently disabled arrows imply content that
  * isn't there.
  */
-export const MerchCarouselControls: React.FC = () => {
-  const { canScrollPrev, canScrollNext } = useCarousel()
-
-  if (!canScrollPrev && !canScrollNext) return null
+export const MerchCarouselControls: React.FC<MerchCarouselControlsProps> = ({ hiddenWhenFits }) => {
+  const { api } = useCarousel()
+  // Read embla directly rather than the context's `canScroll*`, which only
+  // catch up in a transition after `api` arrives: going through them would
+  // hide the server-rendered arrows for a frame and bring them straight back.
+  // Embla re-measures on resize, which updates those flags and re-renders us.
+  const measured = Boolean(api)
+  if (measured && !api?.canScrollPrev() && !api?.canScrollNext()) return null
 
   return (
-    <div className="flex gap-2">
+    <div className={cn("flex gap-2", !measured && hiddenWhenFits)}>
       {/* Pull the arrows out of their default overlay position and into the
           header. The `active:` override matches the button's own variant chain
           so tailwind-merge replaces it rather than stacking (otherwise pressing
@@ -116,15 +131,24 @@ export const MerchCarouselControls: React.FC = () => {
   )
 }
 
+interface MerchCarouselDotsProps {
+  /**
+   * How many dots to draw before embla has measured: the one-up layouts have
+   * a snap point per product, so the server can draw them and they don't
+   * push the content below down when the carousel hydrates.
+   */
+  count: number
+}
+
 /**
  * Position dots for the one-up layouts, where nothing else tells the reader how
  * many products there are. Counts embla's snap points rather than the slides,
  * so a dot is one press of the arrow — which, with `slidesToScroll: "auto"`,
  * is a whole page of products at widths that show several at once.
  */
-export const MerchCarouselDots: React.FC = () => {
+export const MerchCarouselDots: React.FC<MerchCarouselDotsProps> = ({ count }) => {
   const { api } = useCarousel()
-  const [snapCount, setSnapCount] = React.useState(0)
+  const [snapCount, setSnapCount] = React.useState<number | null>(null)
   const [current, setCurrent] = React.useState(0)
 
   React.useEffect(() => {
@@ -145,8 +169,10 @@ export const MerchCarouselDots: React.FC = () => {
     }
   }, [api])
 
-  // A single snap point means everything already fits.
-  if (snapCount < 2) return null
+  const dots = snapCount ?? count
 
-  return <CarouselIndicators count={snapCount} current={current} className="static" />
+  // A single snap point means everything already fits.
+  if (dots < 2) return null
+
+  return <CarouselIndicators count={dots} current={current} className="static" />
 }

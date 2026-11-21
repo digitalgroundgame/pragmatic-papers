@@ -123,3 +123,22 @@ describe("keepWritersOffLiveArticles on restoreVersion", () => {
     }
   })
 })
+
+describe("keepWritersOffLiveArticles on a copy", () => {
+  const copyArgs = { duplicateFromID: 1, data: {} }
+
+  it("saves a writer's copy as a draft", async () => {
+    const { req } = fakeReq()
+    await expect(run("create", copyArgs, req)).resolves.toEqual({ ...copyArgs, draft: true })
+    await expect(run("create", { ...copyArgs, draft: false }, req)).resolves.toEqual({
+      ...copyArgs,
+      draft: true,
+    })
+  })
+
+  it("leaves an editor's copy, and a plain create, as asked", async () => {
+    await expect(run("create", copyArgs, fakeReq({ user: editor }).req)).resolves.toBe(copyArgs)
+    const plain = { data: {}, duplicateFromID: null }
+    await expect(run("create", plain, fakeReq().req)).resolves.toBe(plain)
+  })
+})

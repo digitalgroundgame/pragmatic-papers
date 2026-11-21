@@ -114,6 +114,20 @@ export function achievementsCollection(config: ResolvedAchievementsConfig): Coll
         type: "checkbox",
         defaultValue: true,
       },
+      {
+        // Set by the deploy that creates a starter achievement; the site gives its badge a look
+        // by it, so renaming the achievement keeps its icon and color.
+        name: "key",
+        type: "text",
+        unique: true,
+        access: { create: () => false, update: () => false },
+        admin: {
+          position: "sidebar",
+          readOnly: true,
+          condition: (data) => Boolean(data?.key),
+          description: "The site knows this achievement by this, so it can be renamed.",
+        },
+      },
     ],
     timestamps: true,
   }

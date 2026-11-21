@@ -65,6 +65,7 @@ describe("next.config.ts Cache-Control", () => {
       "/articles/substack.xml",
       "/articles/some-article/substack.xml",
       "/recommended-articles.json",
+      "/next/whip-counts/senate-leader/image",
       "/api/ticker",
       "/next/purge-edge",
       "/next/version",

@@ -4,7 +4,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 
 ## Project Overview
 
-**Pragmatic Papers** is a Next.js 15 website with Payload CMS 3 as the headless CMS. PostgreSQL database via Docker, Drizzle ORM (managed by Payload).
+**Pragmatic Papers** is a Next.js 16 website with Payload CMS 3 as the headless CMS. PostgreSQL database via Docker, Drizzle ORM (managed by Payload).
 
 ## Commands
 
@@ -14,7 +14,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm dev:db-nuke` — stop Postgres and delete its volume (`docker compose down -v`), wiping the entire data directory. Use this after a Postgres major-version bump or whenever the local data is corrupt; the next `pnpm dev` recreates a fresh cluster and Drizzle push re-syncs the schema
 - `pnpm dev:db-fresh` — bring Postgres up and rebuild the schema by re-running all migrations from scratch (`payload migrate:fresh`). Unlike `dev:db-nuke`, this keeps the volume and exercises the committed migration files (the same path prod uses), so it surfaces migration drift that Drizzle push masks in dev
 - `pnpm dev:db-seed` — bring Postgres up, seed it from the terminal, and stop it again. Runs the same `seed()` as the admin dashboard's "Seed your database" button, so it first deletes **every** article, volume, page, media file, topic, map asset, interactive, form and form submission (not just seeded ones), the seed users, and the recommendation rankings, then loads the help docs in `src/docs/`, published. Drizzle push builds the schema on an empty database, so it works straight after `dev:db-nuke`. It refuses to run unless `DATABASE_URI` points at localhost and `USE_LOCAL_STORAGE=true` (override with `SEED_ALLOW_REMOTE=true`), and exits 1 if you decline Drizzle's data-loss prompt. Stop `pnpm dev` first: this command stops the Postgres container it shares.
-- `pnpm showcase <pr-number | staging | url> (<slug...> | --all) [--draft]` — push feature articles from the catalog in `src/endpoints/seed/showcase.ts` to a live site through its REST API, as `SHOWCASE_EMAIL` / `SHOWCASE_PASSWORD` (an account with an author role). A PR number means its `pr-<n>.pragmaticpapers.com` preview; `staging` means `SHOWCASE_STAGING_URL`, and pushes drafts. Only adds articles whose slug is missing; deletes nothing. A PR with the `showcase` label or a `Showcase: <slug...>` line in its description (the workflow keeps the two in sync; the label alone inserts a line naming the articles the PR adds to the catalog) gets them pushed to its preview after every deploy by `.github/workflows/showcase.yml`, which then turns that line into links to them, titled, at the top of the description, and can also be run by hand for a PR (the articles join that line, which opts the PR in) or staging. Nothing is pushed by default: when a PR adds a seeded article to that catalog, opt it in by adding the `showcase` label or putting `Showcase: <slug>` in its description
+- `pnpm showcase <pr-number | staging | url> (<slug...> | --all) [--draft]` — push feature articles from the catalog in `src/endpoints/seed/showcase.ts` to a live site through its REST API, as `SHOWCASE_EMAIL` / `SHOWCASE_PASSWORD` (an account with an author role). A PR number means its `pr-<n>.pragmaticpapers.com` preview; `staging` means `SHOWCASE_STAGING_URL`, and pushes drafts. Only adds articles whose slug is missing (for one that's there, an entry's `ensure` recreates what it links to if that's gone); deletes nothing. A PR with the `showcase` label or a `Showcase: <slug...>` line in its description (the workflow keeps the two in sync; the label alone inserts a line naming the articles the PR adds to the catalog) gets them pushed to its preview after every deploy by `.github/workflows/showcase.yml`, which then turns that line into links to them, titled, at the top of the description, and can also be run by hand for a PR (the articles join that line, which opts the PR in) or staging. Nothing is pushed by default: when a PR adds a seeded article to that catalog, opt it in by adding the `showcase` label or putting `Showcase: <slug>` in its description
 
 ### Quality Checks
 
@@ -361,7 +361,7 @@ ESLint enforces the import rules for every folder under `src/plugins/` (`eslint.
 - Use `unstable_cache` with cache tags for long-lived caching (globals, redirects, sitemaps)
 - Sitemaps: each is a `sitemap.ts` in the folder of the section it lists (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`), added to `SITEMAPS` in `src/data/feeds.ts`, which `/sitemap_index.xml` and robots.txt read. Pages live at the root, so theirs is the root `sitemap.ts` (`/sitemap.xml`), and the index of them all is `/sitemap_index.xml` (`(sitemaps)/sitemap_index.xml`), which robots.txt and Search Console point at; Google News reads `articles/news-sitemap.xml/route.ts`, a route handler (`sitemap.ts` can't write `news:` tags) listing only the last two days' articles, as Google asks. The old `/pages-sitemap.xml`, `/articles-sitemap.xml` and `/volumes-sitemap.xml` redirect permanently in `next.config.ts`
 - Always respect `draftMode()` — pass `draft` and `overrideAccess: draft` into Payload queries
-- Next.js 15: `params` and `searchParams` are `Promise`s (must be `await`ed)
+- Next.js 16: `params` and `searchParams` are `Promise`s (must be `await`ed)
 - Metadata: use `generateMeta({ doc, canonicalPath })` from `@/utilities/generateMeta`
 - Static generation: implement `generateStaticParams()` with `overrideAccess: false` and `draft: false`
 
@@ -430,11 +430,20 @@ plugin and the account page read too.
 - Better Auth's endpoints are Payload endpoints under `/api/auth/*`. The ones that would
   write to the users table (`DISABLED_PATHS`) answer 404.
 - The session cookie is `pp-session`, with no `payload-token` in its name, so members get
-  cached pages. Staff also get `payload-token-sso` (`payloadUserCookie.ts`), which carries no
+  cached pages. Every session also gets `pp-signed-in`, readable by the page's scripts, which
+  tells `ReadingBeacon` someone is signed in and grants nothing. Staff also get `payload-token-sso` (`payloadUserCookie.ts`), which carries no
   authority: the cache rules that keep signed-in editors off the edge look for it,
   `next.config.ts` and the Worker's cache (`PERSONAL_COOKIES` in `src/cloudflare/edgeCache.ts`)
   by name, and Cloudflare's rule because the name contains `payload-token`. Rename either
   everywhere or not at all.
+- Payload's `csrf` list is this deployment's `SERVER_URL` (`payload.config.ts`), so its login
+  cookie, and the SSO session's (`isAllowedOrigin` in `ssoStrategy`), sign nobody in on a
+  request from another origin. Staging and PR previews are subdomains of the production site,
+  which SameSite=Lax doesn't keep apart. The admin only works on `SERVER_URL`'s hostname.
+  A page opened from another site (a link in Slack or email, a provider's redirect back after
+  a sign-in) is a cross-site request too: the SSO session is still taken on a top-level page
+  load, and for Payload's cookie, which isn't, `ResumeSession` (`src/components/BeforeLogin`)
+  sends someone the login page finds signed in on to where they were headed.
 - `staffByDefault` (`src/plugins/staffByDefault.ts`, the last plugin) gives every access rule a
   collection or plugin leaves out to staff, where Payload's default is any logged-in user, so a
   forgotten rule can't reach members if one ever becomes `req.user`.
@@ -461,11 +470,25 @@ or member, and staff get a badge.
   option). A failure saves the comment as `auto-hidden`, shown only to its author, and adds a
   violation. A moderator hiding a published comment adds one too; publishing a held or hidden
   one reverses it (`recordModeration`).
+- **Per article**, the plugin adds a `commenting` choice to the target collection's sidebar
+  (moderators, and whoever the `commentingEditors` option names: here a writer on their own
+  article, `canChooseArticleCommenting`): `open`, `locked` (the thread stays readable, marked
+  `closed`, and posts get 403) or `off` (the section is hidden and the thread answers 404). It's
+  read from the published version, so a change reaches readers once the article is published
+  (`commentingOf`): a writer's choice on a live article waits in their draft for an editor.
 - **Require a verified email address** (off by default) in Comment settings limits posting
   to authors `isVerified` accepts: staff, or a provider-verified `emailVerified`.
 - **Violations** (`comment-violations`) lock commenting once the settings' threshold is active
   within its window, until enough age out or are reversed (`lockFor`); a `block` locks until
   it's reversed.
+- **Markers that come and go** sit beside the badge (`markers.ts`): First comment on an
+  author's first published comment (`PublicComment.firstComment`), New commenter for
+  `newCommenterDays` (7) after it (`AuthorDisplay.newcomer`), New member for `newMemberDays`
+  (30) after the account's `createdAt` (`newMember`), and Cake day on its anniversary
+  (`cakeDay`, UTC). All four read the author's record, so a thread read asks nothing more: the
+  first two read `firstCommentedAt`, a read-only field the plugin adds to users and keeps at
+  their earliest published comment's time (`hooks/firstCommented.ts`, run whenever a comment
+  is posted, published, hidden or deleted).
 - Deleting an article deletes its comments. Deleting a comment deletes its replies. Deleting a
   user empties their comments (status `deleted`, no author) so others' replies keep their place.
 - `tests/integration/comments.test.ts` signs readers up with Discord stubbed, and posts.
@@ -493,15 +516,38 @@ join field, on each user's record. Only admins delete either.
   (`markFilled`), so an award an admin deletes stays deleted. Revoked rows, and rows whose account
   was deleted (kept with no user), still count, so nobody moves up. They're awarded even while
   the switch is off.
-- **Starter achievements**: Early member (`earlyMemberLimit`, 1000) and Verified
-  (`starterAchievements`) are created once per site by `/next/revalidate-all` and the seed
+- **Starter achievements** (`starterAchievements`): Verified (given by hand to someone the
+  editors vouch for, first so its badge wins), Early member (`earlyMemberLimit`, 1000) and Email
+  verified (the `verified` rule, no badge: nearly everyone has it) are created once per site by `/next/revalidate-all` and the seed
   (`readerAchievements.seed`, recorded with `markSeeded`), so one an editor deletes stays deleted.
+  Each carries its starter `key` (read-only in the admin), so editors can rename it.
 - **Badges on comments**: the comments plugin's `authorBadges` option asks
   `readerAchievements.badgesFor` once per thread; the first achievement in the editors' order
-  with a badge shows, and a badge `describeAuthor` gives (Staff) wins.
+  with a badge shows, and a badge `describeAuthor` gives (a staff role's, `staffBadge`) wins.
+  A badge is a `BadgeInfo`, its label and a `key` (the role's slug, or the starter's key; null
+  for one an editor made), and `AuthorBadges` picks its icon and color by the key.
   `/api/achievements/mine` lists the signed-in reader's for `/account`. Switched off, no
   achievement shows anywhere.
-- The host's options (roles, access, the starter limit) are `achievementsOptions` in
+- **Reading** (`reading/`): while the switch is on, the plugin also keeps what signed-in readers
+  read, for reading achievements to count. Nothing is kept for readers who aren't signed in, or
+  while it's off.
+  - **Articles read** are rows (`articles-read`, one per reader per published article, unique on
+    the pair), so a rule can ask which articles someone read: a volume counts as read once every
+    article in it is (the `reading.groups` option).
+  - **Visits** are fields on the user (the `reading` group: days visited, last visit day, current
+    and longest streak), written at most once a day with `payload.db.updateOne`, past the users
+    collection's revalidation hooks. A day is the reader's own calendar day, which the browser
+    sends; the server accepts any day some time zone is on (`isCurrentDay`).
+  - Pages are one cached copy for everyone, so the browser reports: `ReadingBeacon`
+    (`src/components/ReadingBeacon`) in the frontend layout sends the day's visit, and after an
+    article's text it sends the read once the reader reaches the end or stays two minutes in
+    view. It sends nothing unless the `pp-signed-in` cookie is there: sign-in sets it beside the
+    session for the page's scripts to read (the session cookie is httpOnly), and it carries no
+    identity or authority. `POST /api/reading` takes `{ day, article? }`; `GET
+/api/reading/mine` is the account page's totals.
+  - Deleting an account, or an article, deletes its reads. Only admins see them in the admin.
+  - `tests/integration/reading.test.ts` signs a reader up with Discord stubbed, and reads.
+- The host's options (roles, access, the starter limit, what's read) are `achievementsOptions` in
   `src/plugins/readerAchievements.ts`. `tests/integration/achievements.test.ts` covers defining,
   giving and revoking, access, and filling a first-members achievement.
 
@@ -597,6 +643,11 @@ function, and fails on any axe violation.
   `src/stories/a11y.ts` and cite the issue tracking the fix; `knownContrastIssue` covers the
   brand colors (#998). Never turn a story's a11y test off wholesale.
 - **Third-party embeds** that load a platform's script get `tags: ["!test"]`.
+- **Design guide**: `src/design/` holds Storybook's "Design guide" pages (MDX): the site's
+  tokens, type, spacing, layout and components as they are, and an audit of where each public
+  page departs from the common layout (`pageLayouts.ts`). Its tests fail when globals.css gains
+  a token the guide doesn't list, or a page's wrapper changes without its audit entry: when you
+  fix a page's layout, update its entry in the same PR.
 - **Published**: CI's "Deploy Storybook" job uploads the tested build to the
   `pragmatic-papers-storybook` Cloudflare Worker (`.storybook/wrangler.jsonc`):
   `dev` at `pragmatic-papers-storybook.digital-ground-game.workers.dev`, and each PR at a
@@ -681,6 +732,42 @@ reader's browser, with the sources and the logo in a footer and the font embedde
 page shows (`themePalette`), and saves it as a PNG for sharing. The text in the picture needs a font in the image
 (both Dockerfiles install fontconfig and the site's own fonts as TTFs from their packages, Geist and Libertinus Serif, since fontconfig can't read woff2; a download embeds the site's woff2). Like the page, the titles and sources are in Libertinus Serif, scaled 112% as `fonts.ts` scales it, and the legend in Geist.
 
+A **whip count** (`src/interactives/whip-count/`) is a third kind of interactive page, with no
+map: a leadership vote tracked voter by voter. It is an `interactives` document with the
+`whip-count` profile (`profileKind` in `src/interactives/profiles.ts`; `getProfile` returns
+drilldown profiles only), at `/interactives/<slug>` like the others (the old
+`/interactives/whip-counts/<slug>` redirects there), and the document adds a methodology note.
+The count is one JSON document in its snapshot's `data` field, which `parseWhipCount`
+(`model.ts`) checks on save. The daily sync skips whip counts; their snapshot is written by
+pushes, the seed, and editors, who may create a snapshot or change its `data` only when it
+holds a whip count (a map's feed stays the sync's), and saving restamps its hash and summary
+(`whipCountSnapshotStamp`). An editor changes it row by row in a table
+(`WhipCountDataField`: position, statement, source, bloc and tags), or pastes a whole count
+with "Edit as JSON". The page shows the public count and lets a reader draft their own guess
+of how the vote breaks, one voter at a time or a group at a time (a tag, the incoming or the
+outgoing, and a bloc when `WhipCount` is given `showBlocs`; the page leaves blocs hidden for now),
+kept in their browser only and hidden until they ask for it. Outgoing
+members aren't counted until the reader ticks the box to count them. With a `voteAt` time in the data the page counts down to the vote. With an `updates`
+schedule (times of day in a time zone) it names the next check for new statements, in the
+reader's own time. The bars draw one
+rectangle a voter, each opening a card with their source, and a button saves the public count
+as a PNG with the logo (`picture.ts`, on the map block's `saveSVGAsPNG`). Its title puts the two leading
+candidates' public backers ahead of the page's own (`whipCountTitle`, `seo.ts`), and its link
+preview is drawn per count at `/next/whip-counts/<slug>/image` (`WhipCountCard`, with
+`next/og`): the two head to head with any refusal forecast, one tick a voter, the countdown, the wordmark, and the time the count last changed (the snapshot's `syncedAt`) in the eyebrow. The brand orange stays on the frame, away from the candidates' colors. Its fonts are TTFs from their packages (`CARD_FONTS`, `cardFonts.ts`): Coolify reads the files, and the Worker, which has none, fetches the copies `pnpm build:worker` puts in its static assets.
+The card replaces any meta image an editor picks on the SEO tab. The page's metadata names it with a query that changes with the count and the countdown's days
+(`whipCountImagePath`), so the route keeps its own `Cache-Control` (a day at the edge). A job outside the
+site can keep a count current with `POST /next/whip-counts/<slug>` (`Authorization: Bearer
+<WHIP_COUNT_PUSH_TOKEN>`, closed while unset): the count is checked like a save and merged
+into the snapshot's (`mergePushedCount` keeps the editors' blocs and tags; the first push
+creates the snapshot), as a draft unless the interactive's "Auto-publish new snapshots" is
+ticked (and even then while the snapshot has unpublished edits, which publishing would carry
+live), and refused (409) while an editor holds the snapshot's lock, whose form would autosave
+its older count over the push. Readers read the published count at
+`/api/interactive-snapshots?where[interactive.slug][equals]=<slug>`. The seed and the showcase entry
+`whip-counts-draft-your-own-leadership-vote` create one (a dated snapshot, without
+quotations) and an article that links to it; creating it takes an editor's account.
+
 An SVG never carries records. A drilldown's SVG is checked in, parsed once at
 snapshot time into `geometry/*.json`, and never parsed again;
 `scripts/snapshot-federal-courts.ts` regenerates the Federal Courts geometry
@@ -714,7 +801,7 @@ the same database and sets `DEPLOY_SEED=false` (`wrangler.jsonc`), so its deploy
 pages away. Two seeders could each create the same content at once. Deploy-seeded content
 added later goes through that route, so it follows the same switch.
 
-The zone's Cloudflare rules (Cache Rules today) are version-controlled in
+The zone's Cloudflare rules (Cache Rules, and the Single Redirect from www to the apex) are version-controlled in
 `cloudflare/rulesets/` and applied on release by `.github/workflows/cloudflare-rules.yml`;
 change them there, not in the dashboard (`cloudflare/README.md`).
 

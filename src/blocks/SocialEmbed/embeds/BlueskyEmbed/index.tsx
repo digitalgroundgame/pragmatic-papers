@@ -18,10 +18,12 @@ export async function BlueskyEmbedBlock(props: SocialEmbedBlock): Promise<React.
     )
   }
 
-  let html = snapshot?.html
+  // Sanitized again here: the snapshot is a stored field the API accepts from any writer,
+  // so only what the sanitizer lets through is ever rendered as HTML.
+  let html = snapshot?.html ? await sanitizeBlueskyHtml(snapshot.html) : null
 
   // Legacy behavior for backwards compatibility with blocks containing no snapshot
-  if (!html) {
+  if (html === null) {
     const result = await fetchBlueskyOEmbed({ url })
     if (isFailure(result)) {
       return (

@@ -2,6 +2,7 @@ import {
   TIKTOK_DISPLAY_NAME,
   buildTikTokSrc,
   parseTikTokPostId,
+  sanitizeTikTokHtml,
 } from "@/blocks/SocialEmbed/adapters/tiktok.adapter"
 import type { SocialEmbedBlock } from "@/payload-types"
 import { EmbedError } from "@/blocks/SocialEmbed/embeds/EmbedError"
@@ -11,13 +12,15 @@ export async function TikTokEmbedBlock({
   snapshot,
 }: SocialEmbedBlock): Promise<React.ReactNode> {
   if (snapshot?.status && snapshot.status !== "ok") {
-    if (snapshot.html) {
+    // Sanitized again here: the snapshot is a stored field the API accepts from any writer.
+    const html = snapshot.html ? await sanitizeTikTokHtml(snapshot.html) : ""
+    if (html) {
       return (
         <div className="my-8 flex justify-center">
           <div
             className="w-full max-w-[550px] [&>div]:my-0!"
             // eslint-disable-next-line react/no-danger
-            dangerouslySetInnerHTML={{ __html: snapshot.html }}
+            dangerouslySetInnerHTML={{ __html: html }}
           />
         </div>
       )

@@ -2,11 +2,12 @@ import { cleanup, render, screen } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { load, draft, generateMeta, drilldown } = vi.hoisted(() => ({
+const { load, draft, generateMeta, drilldown, whipCountPage } = vi.hoisted(() => ({
   load: { queryInteractiveBySlug: vi.fn(), loadInteractiveOverview: vi.fn() },
   draft: { isEnabled: false },
   generateMeta: vi.fn(async () => ({ title: "meta" })),
   drilldown: vi.fn(),
+  whipCountPage: vi.fn(),
 }))
 
 vi.mock("@/interactives/load", () => load)
@@ -36,6 +37,13 @@ vi.mock("@/interactives/InteractiveDrilldown", () => ({
   InteractiveDrilldown: (props: unknown) => {
     drilldown(props)
     return <div data-testid="drilldown" />
+  },
+}))
+
+vi.mock("@/interactives/whip-count/WhipCountPage", () => ({
+  WhipCountPage: (props: unknown) => {
+    whipCountPage(props)
+    return <div data-testid="whip-count-page" />
   },
 }))
 
@@ -131,6 +139,25 @@ describe("InteractivePage", () => {
     expect(document.querySelector("[data-interactive-empty]")).toHaveTextContent(
       /Run the sync from Snapshots/,
     )
+  })
+
+  it("draws a whip count's page instead of a map, under the same trail", async () => {
+    const count = { ...interactive, slug: "leader", title: "Who will lead?", profile: "whip-count" }
+    load.queryInteractiveBySlug.mockResolvedValue(count)
+    await renderPage("leader")
+    expect(whipCountPage).toHaveBeenCalledWith({ interactive: count })
+    expect(load.loadInteractiveOverview).not.toHaveBeenCalled()
+    expect(screen.queryByTestId("drilldown")).not.toBeInTheDocument()
+    expect(screen.getByRole("navigation", { name: "breadcrumb" })).toHaveTextContent(
+      "Who will lead?",
+    )
+    expect(screen.getByTestId("redirects")).toHaveAttribute("data-disable-not-found", "true")
+    expect(screen.queryByTestId("live-preview")).not.toBeInTheDocument()
+    cleanup()
+
+    draft.isEnabled = true
+    await renderPage("leader")
+    expect(screen.getByTestId("live-preview")).toBeInTheDocument()
   })
 
   it("has no live-preview listener outside draft mode", async () => {

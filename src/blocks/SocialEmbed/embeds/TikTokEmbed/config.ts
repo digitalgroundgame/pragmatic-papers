@@ -1,5 +1,7 @@
 import type { Block } from "payload"
 
+import { blockImages } from "@/blocks/blockImages"
+
 /**
  * Legacy config for TikTok embeds.
  * @deprecated Use the SocialEmbed block instead.
@@ -13,6 +15,7 @@ export const LegacyTikTokEmbed: Block = {
     plural: "TikTok Embeds (Legacy)",
   },
   admin: {
+    images: blockImages("tiktokEmbed"),
     group: "Legacy",
   },
   fields: [

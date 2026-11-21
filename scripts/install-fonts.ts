@@ -125,6 +125,43 @@ export async function installSansFont(root: string = process.cwd()): Promise<num
   return 0
 }
 
+/** The faces of Libertinus Serif fonts.ts declares: body text, its italics, and bold. */
+export const SERIF_FONT_FACES = [
+  "400Regular",
+  "400Regular_Italic",
+  "700Bold",
+  "700Bold_Italic",
+] as const
+
+/**
+ * Installs the serif, Libertinus Serif, into `<root>/public/fonts/LibertinusSerif-<face>.woff2`
+ * and returns the exit code. It comes from the `@expo-google-fonts/libertinus-serif` package,
+ * which ships Google Fonts' complete TTFs (Fontsource's files are already cut into Google's
+ * subsets, which drops Latin Extended-A from "latin"). Each face is trimmed to the characters
+ * Geist keeps and converted to WOFF2: about 500 kB down to about 28 kB.
+ */
+export async function installSerifFont(root: string = process.cwd()): Promise<number> {
+  const pkg = dirname(
+    createRequire(import.meta.url).resolve("@expo-google-fonts/libertinus-serif/package.json"),
+  )
+  const text = charactersIn(SANS_FONT_RANGES)
+  mkdirSync(resolve(root, "public/fonts"), { recursive: true })
+  for (const face of SERIF_FONT_FACES) {
+    const original = readFileSync(resolve(pkg, face, `LibertinusSerif_${face}.ttf`))
+    const dest = resolve(root, `public/fonts/LibertinusSerif-${face}.woff2`)
+    try {
+      writeFileSync(dest, await subsetFont(original, text, { targetFormat: "woff2" }))
+    } catch (error) {
+      // Unlike Geist, there's no WOFF2 to fall back on: the package's TTF under a .woff2
+      // name would be refused by browsers, and every page would lose its serif.
+      console.error(`${red("✖")} Could not convert Libertinus Serif ${face}: ${String(error)}`)
+      return 1
+    }
+  }
+  console.warn(`${green("✔")} Installed Libertinus Serif from @expo-google-fonts/libertinus-serif`)
+  return 0
+}
+
 /**
  * Installs the display font into `<root>/public/fonts` and returns the exit code.
  *
@@ -222,5 +259,6 @@ export async function installFonts(
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const sans = await installSansFont()
-  process.exit((await installFonts()) || sans)
+  const serif = await installSerifFont()
+  process.exit((await installFonts()) || sans || serif)
 }

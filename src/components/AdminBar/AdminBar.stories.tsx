@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, spyOn, waitFor, within } from "storybook/test"
 
+import { isolatedDocs } from "@/stories/isolatedDocs"
+
 import { LazyAdminBar } from "./client.lazy"
 import { ADMIN_BAR_ATTRIBUTE, ADMIN_BAR_HINT_KEY, ADMIN_BAR_HINT_SCRIPT } from "./hint"
 
@@ -35,7 +37,7 @@ const slotHeight = (canvasElement: HTMLElement) =>
 const meta = {
   title: "Components/AdminBar",
   component: LazyAdminBar,
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: "fullscreen", ...isolatedDocs("160px") },
 } satisfies Meta<typeof LazyAdminBar>
 
 export default meta
@@ -54,6 +56,8 @@ export const LoggedIn: Story = {
 
 /** A reader: no bar, no gap, and the bar's code is never fetched. */
 export const Reader: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   beforeEach: session(null, { hinted: false }),
   play: async ({ canvasElement }) => {
     await waitFor(() => expect(window.fetch).toHaveBeenCalled())
@@ -74,6 +78,8 @@ export const FirstVisit: Story = {
 
 /** The session expired since the last page: the slot collapses, and the hint is forgotten. */
 export const SessionExpired: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   beforeEach: session(null, { hinted: true }),
   play: async ({ canvasElement }) => {
     await waitFor(() => expect(slotHeight(canvasElement)).toBe(0))

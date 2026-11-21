@@ -27,6 +27,7 @@ export function endSsoSession(config: ResolvedSsoConfig): CollectionAfterLogoutH
       for (const name of [config.cookieName, config.payloadUserCookie]) {
         store.set(name, "", { path: "/", maxAge: 0, httpOnly: true, sameSite: "lax" })
       }
+      store.set(config.signedInCookie, "", { path: "/", maxAge: 0, sameSite: "lax" })
     } catch {
       // No request scope (the Local API): there is no browser to clear a cookie in.
     }

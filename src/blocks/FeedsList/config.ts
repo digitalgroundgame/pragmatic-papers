@@ -1,11 +1,14 @@
 import type { Block } from "payload"
 
+import { blockImages } from "@/blocks/blockImages"
+
 export const FeedsList: Block = {
   slug: "feedsList",
   dbName: "feeds_list",
   interfaceName: "FeedsListBlock",
   labels: { plural: "Feed lists", singular: "Feed list" },
   admin: {
+    images: blockImages("feedsList"),
     // The links come from code, so a new feed or sitemap shows up without anyone editing this.
     disableBlockName: true,
   },

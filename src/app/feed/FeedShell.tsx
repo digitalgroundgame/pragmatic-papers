@@ -5,7 +5,6 @@ import { AdSlotView } from "./AdSlotView"
 import { ArticleView } from "./ArticleView"
 import { INTERACTIVE_SEL } from "./constants"
 import { FEED_AD_INTERVAL, FEED_ADS } from "./ads/registry"
-import { FeedShellContext, type FeedShellContextValue } from "./FeedShellContext"
 import { usePageMemory } from "./hooks/usePageMemory"
 import type { FeedBatch, FeedSlot, RenderedFeedArticle } from "./types"
 
@@ -52,7 +51,6 @@ export function FeedShell({
   // Auto-play is always on at session start. Tap-to-pause is session-only:
   // a reload returns to the playing state by design.
   const [autoPlayEnabled, setAutoPlayEnabled] = useState<boolean>(true)
-  const [interactionPauseCount, setInteractionPauseCount] = useState(0)
 
   const scrollerRef = useRef<HTMLDivElement>(null)
   const sectionRefs = useRef<Map<number, HTMLElement>>(new Map())
@@ -257,18 +255,8 @@ export function FeedShell({
     }
   }, [])
 
-  const contextValue = useMemo<FeedShellContextValue>(
-    () => ({
-      pauseAutoPlay: () => setInteractionPauseCount((c) => c + 1),
-      resumeAutoPlay: () => setInteractionPauseCount((c) => Math.max(0, c - 1)),
-    }),
-    [],
-  )
-
-  const effectiveAutoPlay = autoPlayEnabled && interactionPauseCount === 0
-
   return (
-    <FeedShellContext.Provider value={contextValue}>
+    <>
       <div className="bg-background h-dvh w-full md:flex md:items-center md:justify-center">
         <div
           ref={scrollerRef}
@@ -291,7 +279,7 @@ export function FeedShell({
                       article={slot.article}
                       active={i === activeIndex}
                       initialPage={memory.get(slot.article.article.id)}
-                      autoPlayEnabled={effectiveAutoPlay}
+                      autoPlayEnabled={autoPlayEnabled}
                       userAutoPlayEnabled={autoPlayEnabled}
                       onAutoPlayToggle={toggleAutoPlay}
                       onPageChange={(pageIndex) =>
@@ -303,7 +291,7 @@ export function FeedShell({
                     <AdSlotView
                       ad={slot.ad}
                       active={i === activeIndex}
-                      autoPlayEnabled={effectiveAutoPlay}
+                      autoPlayEnabled={autoPlayEnabled}
                       userAutoPlayEnabled={autoPlayEnabled}
                       onAutoPlayToggle={toggleAutoPlay}
                       onEndReached={scrollToNextSlot}
@@ -317,6 +305,6 @@ export function FeedShell({
           })}
         </div>
       </div>
-    </FeedShellContext.Provider>
+    </>
   )
 }

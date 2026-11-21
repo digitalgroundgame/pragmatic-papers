@@ -188,6 +188,7 @@ export interface Config {
     'comment-violations': CommentViolation;
     achievements: Achievement;
     awards: Award;
+    'articles-read': ArticlesRead;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
@@ -221,6 +222,7 @@ export interface Config {
     'comment-violations': CommentViolationsSelect<false> | CommentViolationsSelect<true>;
     achievements: AchievementsSelect<false> | AchievementsSelect<true>;
     awards: AwardsSelect<false> | AwardsSelect<true>;
+    'articles-read': ArticlesReadSelect<false> | ArticlesReadSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -330,6 +332,10 @@ export interface Article {
   slug: string;
   enableMathRendering?: boolean | null;
   publishedAt?: string | null;
+  /**
+   * When readers last saw a change to the title, text, hero image, authors or narration. The article shows it as "Updated".
+   */
+  contentUpdatedAt?: string | null;
   authors?: (number | User)[] | null;
   topics?: (number | Topic)[] | null;
   /**
@@ -340,7 +346,15 @@ export interface Article {
    * Adds the published article to the Substack import feed. Takes effect once the article is published.
    */
   syndicateToSubstack?: boolean | null;
+  /**
+   * Once Substack has imported the article, paste the post's address here. It marks the article as imported, takes it out of the bulk import feed, and adds a Read on Substack link to the article.
+   */
+  substackUrl?: string | null;
   createdBy?: (number | null) | User;
+  /**
+   * Locked keeps its comments readable but closes them to new comments and replies. Off hides them. Readers see the change once it's published.
+   */
+  commenting?: ('open' | 'locked' | 'off') | null;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -580,12 +594,25 @@ export interface User {
   avatarUrl?: string | null;
   ssoConnections?: boolean | null;
   /**
+   * When their earliest published comment was posted. Comments keep it up to date.
+   */
+  firstCommentedAt?: string | null;
+  /**
    * Give an achievement that's given by hand with Add new, or open one to revoke it. Verified isn't listed until it's revoked: add a row for it with Revoked ticked.
    */
   awards?: {
     docs?: (number | Award)[];
     hasNextPage?: boolean;
     totalDocs?: number;
+  };
+  /**
+   * Days this account visited the site while signed in, on its own calendar.
+   */
+  reading?: {
+    daysVisited?: number | null;
+    lastVisitOn?: string | null;
+    currentStreak?: number | null;
+    longestStreak?: number | null;
   };
   updatedAt: string;
   createdAt: string;
@@ -655,6 +682,10 @@ export interface Achievement {
    */
   limit?: number | null;
   badge?: boolean | null;
+  /**
+   * The site knows this achievement by this, so it can be renamed.
+   */
+  key?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1229,9 +1260,9 @@ export interface Interactive {
   id: number;
   title: string;
   /**
-   * Which code-owned profile draws this interactive: its geometry, presentation and feed adapter. Adding one is a code change under src/interactives.
+   * Which code-owned profile draws this interactive: a map with its geometry, presentation and feed adapter, or a whip count. Adding one is a code change under src/interactives.
    */
-  profile: 'federal-courts';
+  profile: 'federal-courts' | 'whip-count';
   /**
    * Standfirst shown above the interactive.
    */
@@ -1260,9 +1291,13 @@ export interface Interactive {
       }[]
     | null;
   /**
-   * How the sync job reads this interactive's data. It runs daily and can be run now from Snapshots. Each run that finds new data writes a draft snapshot for review; auto-publish skips the review.
+   * How positions are assigned and what is unconfirmed. Shown under the count.
    */
-  feed: {
+  methodology?: string | null;
+  /**
+   * How this interactive's data arrives. A map's sync job runs daily and can be run now from Snapshots; a whip count takes pushes (POST /next/whip-counts/<slug>). Each new version is a draft snapshot for review; auto-publish skips the review.
+   */
+  feed?: {
     /**
      * Uncheck to freeze the data at its current snapshot.
      */
@@ -1270,9 +1305,9 @@ export interface Interactive {
     /**
      * Which revision of the researcher's repository to read. Leave as "release" to follow their newest published data release, which is an immutable snapshot and the way they ask to be read. A branch, tag or commit is honoured verbatim, for pinning or debugging.
      */
-    ref: string;
+    ref?: string | null;
     /**
-     * Publish each new snapshot as soon as it validates, without an editor's review.
+     * Publish each new snapshot as soon as it validates, without an editor's review. For a whip count, a push is still saved as a draft while its snapshot has unpublished edits, which publishing would carry live.
      */
     autoPublish?: boolean | null;
   };
@@ -1328,6 +1363,9 @@ export interface InteractiveSnapshot {
    * When the sync last confirmed this version.
    */
   syncedAt: string;
+  /**
+   * A whip count: every voter's public position, edited row by row. To replace it whole, use "Edit as JSON" and paste a document (schema "pragmatic-papers/whip-count@1"). Saving checks it and says what is wrong.
+   */
   data:
     | {
         [k: string]: unknown;
@@ -1615,6 +1653,16 @@ export interface CommentViolation {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "articles-read".
+ */
+export interface ArticlesRead {
+  id: number;
+  user: number | User;
+  article: number | Article;
+  readAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -1823,6 +1871,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'awards';
         value: number | Award;
+      } | null)
+    | ({
+        relationTo: 'articles-read';
+        value: number | ArticlesRead;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -1887,11 +1939,14 @@ export interface ArticlesSelect<T extends boolean = true> {
   slug?: T;
   enableMathRendering?: T;
   publishedAt?: T;
+  contentUpdatedAt?: T;
   authors?: T;
   topics?: T;
   showTableOfContents?: T;
   syndicateToSubstack?: T;
+  substackUrl?: T;
   createdBy?: T;
+  commenting?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -2280,6 +2335,7 @@ export interface InteractivesSelect<T extends boolean = true> {
         link?: T | LinkFieldSelect<T>;
         id?: T;
       };
+  methodology?: T;
   feed?:
     | T
     | {
@@ -2388,7 +2444,16 @@ export interface UsersSelect<T extends boolean = true> {
   emailVerified?: T;
   avatarUrl?: T;
   ssoConnections?: T;
+  firstCommentedAt?: T;
   awards?: T;
+  reading?:
+    | T
+    | {
+        daysVisited?: T;
+        lastVisitOn?: T;
+        currentStreak?: T;
+        longestStreak?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -2698,6 +2763,7 @@ export interface AchievementsSelect<T extends boolean = true> {
   rule?: T;
   limit?: T;
   badge?: T;
+  key?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2715,6 +2781,15 @@ export interface AwardsSelect<T extends boolean = true> {
   revokedBy?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "articles-read_select".
+ */
+export interface ArticlesReadSelect<T extends boolean = true> {
+  user?: T;
+  article?: T;
+  readAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -2806,7 +2881,7 @@ export interface Header {
      */
     upcomingHours?: number | null;
     /**
-     * Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky or X. It's gone from the ticker as soon as you save.
+     * Posts the ticker leaves out: the ones hidden above, or a link pasted from Bluesky, X or Substack. It's gone from the ticker as soon as you save.
      */
     hidden?:
       | {
@@ -2915,6 +2990,27 @@ export interface IntegrationSettings {
   /**
    * Whose posts run in the ticker.
    */
+  substack?: {
+    /**
+     * Which of the publications' posts run in the ticker. Empty shows podcast episodes and videos: written posts are mostly our own articles, syndicated.
+     */
+    types?: ('podcast' | 'video' | 'post')[] | null;
+    /**
+     * Empty uses SUBSTACK_PUBLICATIONS, or thepragmaticpapers.
+     */
+    publications?:
+      | {
+          /**
+           * Its address, a custom domain, or its name. Posts are read from its RSS feed.
+           */
+          publication: string;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  /**
+   * Whose posts run in the ticker.
+   */
   x?: {
     /**
      * Empty uses X_USERNAMES, or PragPapers.
@@ -2966,7 +3062,7 @@ export interface Plugin {
      */
     comments?: boolean | null;
     /**
-     * Badges beside readers' names on comments, and achievements on their account page. First-members achievements are still awarded while it's off.
+     * Badges beside readers' names on comments, achievements and reading totals on their account page, and recording what signed-in readers read. First-members achievements are still awarded while it's off.
      */
     achievements?: boolean | null;
   };
@@ -3126,6 +3222,17 @@ export interface IntegrationsSelect<T extends boolean = true> {
           | T
           | {
               handle?: T;
+              id?: T;
+            };
+      };
+  substack?:
+    | T
+    | {
+        types?: T;
+        publications?:
+          | T
+          | {
+              publication?: T;
               id?: T;
             };
       };

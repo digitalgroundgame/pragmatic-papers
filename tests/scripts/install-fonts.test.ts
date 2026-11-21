@@ -5,7 +5,12 @@ import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { installFonts, installSansFont } from "../../scripts/install-fonts"
+import {
+  installFonts,
+  installSansFont,
+  installSerifFont,
+  SERIF_FONT_FACES,
+} from "../../scripts/install-fonts"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SCRIPT = resolve(__dirname, "../../scripts/install-fonts.ts")
@@ -322,6 +327,49 @@ describe("install-fonts.ts", () => {
         expect(warn).toHaveBeenCalledWith(expect.stringContaining("Could not subset Geist"))
         warn.mockRestore()
         expect(readFileSync(GEIST_FILE())).toEqual(GEIST)
+      } finally {
+        vi.doUnmock("subset-font")
+        vi.resetModules()
+      }
+    })
+  })
+  describe("installSerifFont", () => {
+    const quietly = async () => {
+      const lines: string[] = []
+      const collect = (...args: unknown[]): void => void lines.push(args.join(" "))
+      const warn = vi.spyOn(console, "warn").mockImplementation(collect)
+      const error = vi.spyOn(console, "error").mockImplementation(collect)
+      try {
+        return { status: await installSerifFont(tmpRoot), stderr: lines.join("\n") }
+      } finally {
+        warn.mockRestore()
+        error.mockRestore()
+      }
+    }
+
+    it("installs each Libertinus Serif face as trimmed WOFF2, without the private fonts", async () => {
+      rmSync(FONTS_DIR, { recursive: true, force: true })
+      const result = await quietly()
+      expect(result.status).toBe(0)
+      expect(result.stderr).toContain("Installed Libertinus Serif")
+      for (const face of SERIF_FONT_FACES) {
+        const font = readFileSync(resolve(FONTS_DIR, `LibertinusSerif-${face}.woff2`))
+        expect(font.subarray(0, 4).toString("latin1")).toBe("wOF2")
+        // Latin and Latin Extended-A only: each package TTF is about 500 kB.
+        expect(font.byteLength).toBeLessThan(36_000)
+      }
+    })
+
+    it("fails rather than ship a TTF under a .woff2 name", async () => {
+      vi.doMock("subset-font", () => ({ default: () => Promise.reject(new Error("boom")) }))
+      vi.resetModules()
+      try {
+        const { installSerifFont: install } = await import("../../scripts/install-fonts")
+        const error = vi.spyOn(console, "error").mockImplementation(() => undefined)
+        expect(await install(tmpRoot)).toBe(1)
+        expect(error).toHaveBeenCalledWith(expect.stringContaining("Could not convert Libertinus"))
+        error.mockRestore()
+        expect(existsSync(resolve(FONTS_DIR, "LibertinusSerif-400Regular.woff2"))).toBe(false)
       } finally {
         vi.doUnmock("subset-font")
         vi.resetModules()

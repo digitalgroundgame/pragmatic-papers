@@ -25,7 +25,11 @@ const button = {
   whiteSpace: "nowrap",
 } as const
 
-const SOURCE_LABELS: Record<TickerPost["source"], string> = { bluesky: "Bluesky", x: "X" }
+const SOURCE_LABELS: Record<TickerPost["source"], string> = {
+  bluesky: "Bluesky",
+  x: "X",
+  substack: "Substack",
+}
 
 export type TickerPostStatus = "shown" | "hidden" | "waiting"
 

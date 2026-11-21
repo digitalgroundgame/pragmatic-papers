@@ -4,7 +4,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 
 ## Project Overview
 
-**Pragmatic Papers** is a Next.js 15 website with Payload CMS 3 as the headless CMS. PostgreSQL database via Docker, Drizzle ORM (managed by Payload).
+**Pragmatic Papers** is a Next.js 16 website with Payload CMS 3 as the headless CMS. PostgreSQL database via Docker, Drizzle ORM (managed by Payload).
 
 ## Commands
 
@@ -14,7 +14,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm dev:db-nuke` — stop Postgres and delete its volume (`docker compose down -v`), wiping the entire data directory. Use this after a Postgres major-version bump or whenever the local data is corrupt; the next `pnpm dev` recreates a fresh cluster and Drizzle push re-syncs the schema
 - `pnpm dev:db-fresh` — bring Postgres up and rebuild the schema by re-running all migrations from scratch (`payload migrate:fresh`). Unlike `dev:db-nuke`, this keeps the volume and exercises the committed migration files (the same path prod uses), so it surfaces migration drift that Drizzle push masks in dev
 - `pnpm dev:db-seed` — bring Postgres up, seed it from the terminal, and stop it again. Runs the same `seed()` as the admin dashboard's "Seed your database" button, so it first deletes **every** article, volume, page, media file, topic, map asset, interactive, form and form submission (not just seeded ones), the seed users, and the recommendation rankings, then loads the help docs in `src/docs/`, published. Drizzle push builds the schema on an empty database, so it works straight after `dev:db-nuke`. It refuses to run unless `DATABASE_URI` points at localhost and `USE_LOCAL_STORAGE=true` (override with `SEED_ALLOW_REMOTE=true`), and exits 1 if you decline Drizzle's data-loss prompt. Stop `pnpm dev` first: this command stops the Postgres container it shares.
-- `pnpm showcase <pr-number | staging | url> (<slug...> | --all) [--draft]` — push feature articles from the catalog in `src/endpoints/seed/showcase.ts` to a live site through its REST API, as `SHOWCASE_EMAIL` / `SHOWCASE_PASSWORD` (an account with an author role). A PR number means its `pr-<n>.pragmaticpapers.com` preview; `staging` means `SHOWCASE_STAGING_URL`, and pushes drafts. Only adds articles whose slug is missing; deletes nothing. A PR with the `showcase` label or a `Showcase: <slug...>` line in its description (the workflow keeps the two in sync; the label alone inserts a line naming the articles the PR adds to the catalog) gets them pushed to its preview after every deploy by `.github/workflows/showcase.yml`, which then turns that line into links to them, titled, at the top of the description, and can also be run by hand for a PR (the articles join that line, which opts the PR in) or staging. Nothing is pushed by default: when a PR adds a seeded article to that catalog, opt it in by adding the `showcase` label or putting `Showcase: <slug>` in its description
+- `pnpm showcase <pr-number | staging | url> (<slug...> | --all) [--draft]` — push feature articles from the catalog in `src/endpoints/seed/showcase.ts` to a live site through its REST API, as `SHOWCASE_EMAIL` / `SHOWCASE_PASSWORD` (an account with an author role). A PR number means its `pr-<n>.pragmaticpapers.com` preview; `staging` means `SHOWCASE_STAGING_URL`, and pushes drafts. Only adds articles whose slug is missing (for one that's there, an entry's `ensure` recreates what it links to if that's gone); deletes nothing. A PR with the `showcase` label or a `Showcase: <slug...>` line in its description (the workflow keeps the two in sync; the label alone inserts a line naming the articles the PR adds to the catalog) gets them pushed to its preview after every deploy by `.github/workflows/showcase.yml`, which then turns that line into links to them, titled, at the top of the description, and can also be run by hand for a PR (the articles join that line, which opts the PR in) or staging. Nothing is pushed by default: when a PR adds a seeded article to that catalog, opt it in by adding the `showcase` label or putting `Showcase: <slug>` in its description
 
 ### Quality Checks
 
@@ -34,7 +34,7 @@ This file provides guidance to tools like Claude Code (claude.ai/code) when work
 - `pnpm test:e2e` — run Playwright E2E tests against a throwaway Postgres in Docker (see [Test databases](#test-databases)). Functional assertions only; visual changes are reviewed in Storybook and the PR's site preview (see `tests/e2e/README.md`). CI runs the suite in the merge queue, on PRs into `main`, and on a PR into `dev` only once it has the `e2e` label
 - `pnpm test:unit:coverage` — run unit tests with V8 coverage report (outputs `coverage/coverage-summary.json` and `coverage/coverage-final.json`). CI's coverage report adds the stories' coverage: the Unit tests and Storybook jobs each upload a `coverage-final.json`, and the Coverage job's `scripts/merge-coverage.ts` adds the stories' hits onto the unit run's map, matching entries by start line (the two transforms disagree on columns, so istanbul's own merge would count them twice). Integration tests aren't counted
 - `pnpm test:coverage` — run all tests with V8 coverage report (full picture for local inspection)
-- `pnpm test:unit -u` — regenerate snapshot baselines after intentional UI changes
+- `pnpm test:unit-snapshot` — regenerate snapshot baselines after intentional UI changes (`pnpm test:unit -u`). It accepts every changed snapshot as the new baseline and stays in watch mode, so review the `.snap` diff before committing
 - `pnpm coverage:report` — post the coverage section of CI's PR comment locally (requires `GITHUB_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_EVENT_PATH`)
 - `pnpm bundle-size` — measure the gzipped client JS and CSS each public page loads, from the build in `.next` (run `pnpm build` first), and compare it with dev's last measurement when `BASE_BUNDLE_SIZE_PATH` names one (see [Page speed](#page-speed))
 - `pnpm analyze` — Turbopack's bundle analyzer, in the browser (it compiles but doesn't leave a build behind): each route's client and server modules, and the import chain that brings each one in. `pnpm analyze --output` writes it to `.next/diagnostics/analyze/` instead, which the next `pnpm build` deletes
@@ -337,15 +337,18 @@ ESLint enforces the import rules for every folder under `src/plugins/` (`eslint.
 - **Versions config**: `drafts.autosave: true`, `schedulePublish: true`, `maxPerDoc: 50`
 - **Live preview**: `generatePreviewPath()` for `admin.livePreview.url` and `admin.preview`
 - **Breadcrumbs**: a page builds its trail (`Crumb[]`, the steps after Home) from the documents it loaded and passes the same list to `<Breadcrumbs items={...} />` and `buildBreadcrumbJsonLd`. Labels are titles, never derived from slugs, and nothing reads the request. A nested collection (the nested-docs plugin) builds it with `nestedDocsTrail(doc.breadcrumbs, basePath)` from `@/components/Breadcrumbs`
-- **Media references**: media used by published content can't be deleted until it's detached (the Media **References** tab). An upload field or a block that holds media must be listed in `SOURCES` (`src/collections/Media/references/collectMediaReferences.ts`), or media it uses can be deleted without warning
+- **Media references**: media used by published content can't be deleted until it's detached (the Media **References** tab). An upload field, or a rich text or `blocks` field whose blocks hold media, must be listed in `SOURCES` (`src/collections/Media/references/collectMediaReferences.ts`), and a block that holds media declares where in its descriptor's `media` (see [Block Conventions](#block-conventions)), or media it uses can be deleted without warning
 
 ### Block Conventions
 
-- **File structure**: `blocks/<Name>/config.ts` (Payload config) + `blocks/<Name>/Component.tsx` (React component)
-- **Two rendering systems**: `RenderBlocks` renders page layout blocks (Content, CTA, MediaBlock, Form, VolumeView); `RichText` renders Lexical inline/rich-text blocks (Banner, Code, Math, Footnote, SocialEmbed, SquiggleRule)
+- **File structure**: `blocks/<Name>/config.ts` (Payload config) + `blocks/<Name>/Component.tsx` (React component) + `blocks/<Name>/index.ts` (its descriptor)
+- **One descriptor per block slug**: `index.ts` exports `defineBlock({ slug, ... })` (`src/blocks/types.ts`) with whichever outputs apply: `html` (and `substack` where Substack needs another) for the feeds, `narrate` for the article's voice-over, `readingFeed` for `/feed`'s pages, `tableOfContents`, and `media` (where it keeps media, for Media's References tab and Detach). `src/blocks/registry.ts` lists every descriptor, and the feeds, the narration, the table of contents, Media's references and the reading feed build their maps from it, so a new block is its folder plus one line there. Descriptors are browser- and Node-safe (Storybook and the Payload CLI import them): no React components, no server-only code, no Payload config. `src/blocks/__tests__/registry.test.ts` reads the resolved Payload config and fails until every block an editor offers has a descriptor with each output that editor needs (the article editor: `html` and `narrate`), a block with an upload field declares `media`, and `RichText` and `RenderBlocks` render it
+- **Two rendering systems**: `RenderBlocks` renders page layout blocks (Content, CTA, MediaBlock, Form, VolumeView) from a map keyed by every layout block type, so a block added to the layout fails the type check until it's there; `RichText` renders Lexical inline/rich-text blocks (Banner, Code, Math, Footnote, SocialEmbed, SquiggleRule). They stay out of the descriptors: their components are server-only, and a page that renders rich text but no layout shouldn't load the layout blocks' client code
+- **Blocks don't import pages**: what a block shares with a page lives beside the blocks and the page imports it, like the reading feed's contract (`src/blocks/readingFeed/`: `FeedBlockBehavior`, `FeedBlockRenderer`, `LexicalNode`) and the list of feeds and sitemaps (`src/data/feeds.ts`)
+- **Picker images**: every block shows a thumbnail in the page layout's block drawer and an icon in the rich-text editor's menus. `blocks/<Name>/picker.tsx` draws both as its default export (a sketch of the block with the shapes in `src/blocks/blockImages/shapes.tsx`, and an icon from the `lucide` package), the block's descriptor loads it lazily (`picker: () => import("./picker")`, so pages that read the registry never download the drawings), and the block's `config.ts` sets `admin: { images: blockImages("<slug>") }`, whose URLs the `/admin/block-images/[file]` route serves, prerendered. The drawings are JSX on a string runtime (`/** @jsxImportSource @/blocks/blockImages/svg */` at the top of each file), not React: a route can't import `react-dom/server`, and lucide-react's icons are client components there. `registry.test.ts` fails until every block in `BLOCKS` has them
 - **Heavy client code loads lazily**: `RichText` and `RenderBlocks` import every block, so whatever a block's client component imports ships on every page that renders rich text, the footer included. A client component with a sizeable dependency (a highlighter, a carousel, a form library, a player) is imported through a sibling `*.lazy.tsx`: a `"use client"` file that wraps it in `next/dynamic` (`blocks/Code/Component.lazy.tsx`), so only pages that render it download it. The wrapper has to be a client file: `next/dynamic` in a Server Component doesn't split the code. Server rendering is unchanged. Unit tests get the real component (`vitest.setup.ts` maps each `.lazy` module to it), and stories wait for it with `findBy*`. `pnpm bundle-size` shows what a page loads up front
 - **Menus and toggles load on first use**: the header's sheets, mega menu and mode toggles are on every page, and most readers never open them. Their `*.lazy.tsx` wrappers render through `LoadOnInteraction` (`src/components/LoadOnInteraction`): markup that looks the same (the trigger button, or the menu's links) until the reader points at, touches, focuses or clicks it, then the base-ui component, with the click replayed and focus kept. Keep the layouts' server components from importing anything that imports base-ui's dialogs or menus (`ui/sheet`, `ui/dropdown-menu`, `ui/navigation-menu`): its client code would be back in every page's first-load JavaScript. `pnpm bundle-size` shows it
-- **Feed converters**: the RSS feeds (`/articles/feed.xml`, `/volumes/feed.xml`) and the Substack import feed render article content and volume editor's notes to HTML. A block's non-React renderings live in **`blocks/<Name>/converters.ts`**, one function per output **format**, named for the format rather than the feed (`timelineToHTML`, `displayMathToCode`). Each takes the block's fields plus a `FeedContext` (`src/utilities/feedHTML.ts`: `siteUrl`, `pageUrl`, `richTextToHTML` for nested rich text) and returns plain semantic HTML: absolute URLs, no inline styles, and every CMS value through `escapeHTML`. Shared logic used by several formats, or by `Component.tsx`, goes in the same file (`formatTimelineDate`). `converters.ts` must run in the browser, because Storybook imports it, so no server-only imports. The feed files only map block slugs to the format they want, through `fromBlock`: `createHtmlConverters` (`src/app/(frontend)/feeds/generateRssFeed.ts`) and, for article content, `createSubstackConverters` (`src/app/(frontend)/articles/_substack/generateSubstackFeed.ts`). A block added to those editors (or to the rich text inside their blocks) needs a converter, plus:
+- **Feed converters**: the RSS feeds (`/articles/feed.xml`, `/volumes/feed.xml`) and the Substack import feed render article content and volume editor's notes to HTML. A block's non-React renderings live in **`blocks/<Name>/converters.ts`**, one function per output **format**, named for the format rather than the feed (`timelineToHTML`, `displayMathToCode`). Each takes the block's fields plus a `FeedContext` (`src/utilities/feedHTML.ts`: `siteUrl`, `pageUrl`, `richTextToHTML` for nested rich text) and returns plain semantic HTML: absolute URLs, no inline styles, and every CMS value through `escapeHTML`. Shared logic used by several formats, or by `Component.tsx`, goes in the same file (`formatTimelineDate`). `converters.ts` must run in the browser, because Storybook imports it, so no server-only imports. The block's descriptor names them (`html`, `substack`), and the feeds take every block's through `feedBlockConverters` (`src/blocks/registry.ts`): `createHtmlConverters` (`src/app/(frontend)/feeds/generateRssFeed.ts`) and, for article content, `createSubstackConverters` (`src/app/(frontend)/articles/_substack/generateSubstackFeed.ts`). A block added to those editors (or to the rich text inside their blocks) needs a converter, plus:
   - a `__tests__/converters.test.ts` using `toMatchInlineSnapshot()`, fed from `src/stories/fixtures/blocks.ts`
   - a `Feed` story that renders the output through `src/stories/FeedHTML.tsx`, so it gets the axe check
 
@@ -356,9 +359,9 @@ ESLint enforces the import rules for every folder under `src/plugins/` (`eslint.
 - Code with a request (hooks, endpoints, access functions, validation, jobs) reads Payload from `req.payload`, inside the request's transaction. Code without one (pages, layouts, route handlers, `generateMetadata`) uses `getPayloadClient` from `@/data/payload`, never `getPayload({ config })`
 - Wrap data queries in `React.cache()` for per-request deduplication
 - Use `unstable_cache` with cache tags for long-lived caching (globals, redirects, sitemaps)
-- Sitemaps: each is a `sitemap.ts` in the folder of the section it lists (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`), added with a title to `SITEMAPS` in `(sitemaps)/sitemaps.ts`, which `/sitemap_index.xml`, robots.txt and the Feed list block read (that block, `blocks/FeedsList`, lists them and the RSS feeds in `FEEDS` from `feeds/feeds.ts` on the `/feeds` page, a Pages document editors own: a deploy creates it once per site as a draft for an editor to publish, then never touches it again, even once deleted (`STARTER_PAGES` in `collections/Pages/starterPages/`), and the seed creates it published locally). Pages live at the root, so theirs is the root `sitemap.ts` (`/sitemap.xml`), and the index of them all is `/sitemap_index.xml` (`(sitemaps)/sitemap_index.xml`), which robots.txt and Search Console point at; Google News reads `articles/news-sitemap.xml/route.ts`, a route handler (`sitemap.ts` can't write `news:` tags) listing only the last two days' articles, as Google asks. The old `/pages-sitemap.xml`, `/articles-sitemap.xml` and `/volumes-sitemap.xml` redirect permanently in `next.config.ts`
+- Sitemaps: each is a `sitemap.ts` in the folder of the section it lists (Next's metadata convention, served at `/<route>/sitemap.xml`, e.g. `docs/sitemap.ts`), added with a title to `SITEMAPS` in `src/data/feeds.ts`, which `/sitemap_index.xml`, robots.txt and the Feed list block read (that block, `blocks/FeedsList`, lists them and the RSS feeds in `FEEDS` from the same file on the `/feeds` page, a Pages document editors own: a deploy creates it once per site as a draft for an editor to publish, then never touches it again, even once deleted (`STARTER_PAGES` in `collections/Pages/starterPages/`), and the seed creates it published locally). Pages live at the root, so theirs is the root `sitemap.ts` (`/sitemap.xml`), and the index of them all is `/sitemap_index.xml` (`(sitemaps)/sitemap_index.xml`), which robots.txt and Search Console point at; Google News reads `articles/news-sitemap.xml/route.ts`, a route handler (`sitemap.ts` can't write `news:` tags) listing only the last two days' articles, as Google asks. The old `/pages-sitemap.xml`, `/articles-sitemap.xml` and `/volumes-sitemap.xml` redirect permanently in `next.config.ts`
 - Always respect `draftMode()` — pass `draft` and `overrideAccess: draft` into Payload queries
-- Next.js 15: `params` and `searchParams` are `Promise`s (must be `await`ed)
+- Next.js 16: `params` and `searchParams` are `Promise`s (must be `await`ed)
 - Metadata: use `generateMeta({ doc, canonicalPath })` from `@/utilities/generateMeta`
 - Static generation: implement `generateStaticParams()` with `overrideAccess: false` and `draft: false`
 
@@ -427,11 +430,20 @@ plugin and the account page read too.
 - Better Auth's endpoints are Payload endpoints under `/api/auth/*`. The ones that would
   write to the users table (`DISABLED_PATHS`) answer 404.
 - The session cookie is `pp-session`, with no `payload-token` in its name, so members get
-  cached pages. Staff also get `payload-token-sso` (`payloadUserCookie.ts`), which carries no
+  cached pages. Every session also gets `pp-signed-in`, readable by the page's scripts, which
+  tells `ReadingBeacon` someone is signed in and grants nothing. Staff also get `payload-token-sso` (`payloadUserCookie.ts`), which carries no
   authority: the cache rules that keep signed-in editors off the edge look for it,
   `next.config.ts` and the Worker's cache (`PERSONAL_COOKIES` in `src/cloudflare/edgeCache.ts`)
   by name, and Cloudflare's rule because the name contains `payload-token`. Rename either
   everywhere or not at all.
+- Payload's `csrf` list is this deployment's `SERVER_URL` (`payload.config.ts`), so its login
+  cookie, and the SSO session's (`isAllowedOrigin` in `ssoStrategy`), sign nobody in on a
+  request from another origin. Staging and PR previews are subdomains of the production site,
+  which SameSite=Lax doesn't keep apart. The admin only works on `SERVER_URL`'s hostname.
+  A page opened from another site (a link in Slack or email, a provider's redirect back after
+  a sign-in) is a cross-site request too: the SSO session is still taken on a top-level page
+  load, and for Payload's cookie, which isn't, `ResumeSession` (`src/components/BeforeLogin`)
+  sends someone the login page finds signed in on to where they were headed.
 - `staffByDefault` (`src/plugins/staffByDefault.ts`, the last plugin) gives every access rule a
   collection or plugin leaves out to staff, where Payload's default is any logged-in user, so a
   forgotten rule can't reach members if one ever becomes `req.user`.
@@ -458,11 +470,25 @@ or member, and staff get a badge.
   option). A failure saves the comment as `auto-hidden`, shown only to its author, and adds a
   violation. A moderator hiding a published comment adds one too; publishing a held or hidden
   one reverses it (`recordModeration`).
+- **Per article**, the plugin adds a `commenting` choice to the target collection's sidebar
+  (moderators, and whoever the `commentingEditors` option names: here a writer on their own
+  article, `canChooseArticleCommenting`): `open`, `locked` (the thread stays readable, marked
+  `closed`, and posts get 403) or `off` (the section is hidden and the thread answers 404). It's
+  read from the published version, so a change reaches readers once the article is published
+  (`commentingOf`): a writer's choice on a live article waits in their draft for an editor.
 - **Require a verified email address** (off by default) in Comment settings limits posting
   to authors `isVerified` accepts: staff, or a provider-verified `emailVerified`.
 - **Violations** (`comment-violations`) lock commenting once the settings' threshold is active
   within its window, until enough age out or are reversed (`lockFor`); a `block` locks until
   it's reversed.
+- **Markers that come and go** sit beside the badge (`markers.ts`): First comment on an
+  author's first published comment (`PublicComment.firstComment`), New commenter for
+  `newCommenterDays` (7) after it (`AuthorDisplay.newcomer`), New member for `newMemberDays`
+  (30) after the account's `createdAt` (`newMember`), and Cake day on its anniversary
+  (`cakeDay`, UTC). All four read the author's record, so a thread read asks nothing more: the
+  first two read `firstCommentedAt`, a read-only field the plugin adds to users and keeps at
+  their earliest published comment's time (`hooks/firstCommented.ts`, run whenever a comment
+  is posted, published, hidden or deleted).
 - Deleting an article deletes its comments. Deleting a comment deletes its replies. Deleting a
   user empties their comments (status `deleted`, no author) so others' replies keep their place.
 - `tests/integration/comments.test.ts` signs readers up with Discord stubbed, and posts.
@@ -490,15 +516,38 @@ join field, on each user's record. Only admins delete either.
   (`markFilled`), so an award an admin deletes stays deleted. Revoked rows, and rows whose account
   was deleted (kept with no user), still count, so nobody moves up. They're awarded even while
   the switch is off.
-- **Starter achievements**: Early member (`earlyMemberLimit`, 1000) and Verified
-  (`starterAchievements`) are created once per site by `/next/revalidate-all` and the seed
+- **Starter achievements** (`starterAchievements`): Verified (given by hand to someone the
+  editors vouch for, first so its badge wins), Early member (`earlyMemberLimit`, 1000) and Email
+  verified (the `verified` rule, no badge: nearly everyone has it) are created once per site by `/next/revalidate-all` and the seed
   (`readerAchievements.seed`, recorded with `markSeeded`), so one an editor deletes stays deleted.
+  Each carries its starter `key` (read-only in the admin), so editors can rename it.
 - **Badges on comments**: the comments plugin's `authorBadges` option asks
   `readerAchievements.badgesFor` once per thread; the first achievement in the editors' order
-  with a badge shows, and a badge `describeAuthor` gives (Staff) wins.
+  with a badge shows, and a badge `describeAuthor` gives (a staff role's, `staffBadge`) wins.
+  A badge is a `BadgeInfo`, its label and a `key` (the role's slug, or the starter's key; null
+  for one an editor made), and `AuthorBadges` picks its icon and color by the key.
   `/api/achievements/mine` lists the signed-in reader's for `/account`. Switched off, no
   achievement shows anywhere.
-- The host's options (roles, access, the starter limit) are `achievementsOptions` in
+- **Reading** (`reading/`): while the switch is on, the plugin also keeps what signed-in readers
+  read, for reading achievements to count. Nothing is kept for readers who aren't signed in, or
+  while it's off.
+  - **Articles read** are rows (`articles-read`, one per reader per published article, unique on
+    the pair), so a rule can ask which articles someone read: a volume counts as read once every
+    article in it is (the `reading.groups` option).
+  - **Visits** are fields on the user (the `reading` group: days visited, last visit day, current
+    and longest streak), written at most once a day with `payload.db.updateOne`, past the users
+    collection's revalidation hooks. A day is the reader's own calendar day, which the browser
+    sends; the server accepts any day some time zone is on (`isCurrentDay`).
+  - Pages are one cached copy for everyone, so the browser reports: `ReadingBeacon`
+    (`src/components/ReadingBeacon`) in the frontend layout sends the day's visit, and after an
+    article's text it sends the read once the reader reaches the end or stays two minutes in
+    view. It sends nothing unless the `pp-signed-in` cookie is there: sign-in sets it beside the
+    session for the page's scripts to read (the session cookie is httpOnly), and it carries no
+    identity or authority. `POST /api/reading` takes `{ day, article? }`; `GET
+/api/reading/mine` is the account page's totals.
+  - Deleting an account, or an article, deletes its reads. Only admins see them in the admin.
+  - `tests/integration/reading.test.ts` signs a reader up with Discord stubbed, and reads.
+- The host's options (roles, access, the starter limit, what's read) are `achievementsOptions` in
   `src/plugins/readerAchievements.ts`. `tests/integration/achievements.test.ts` covers defining,
   giving and revoking, access, and filling a first-members achievement.
 
@@ -594,6 +643,11 @@ function, and fails on any axe violation.
   `src/stories/a11y.ts` and cite the issue tracking the fix; `knownContrastIssue` covers the
   brand colors (#998). Never turn a story's a11y test off wholesale.
 - **Third-party embeds** that load a platform's script get `tags: ["!test"]`.
+- **Design guide**: `src/design/` holds Storybook's "Design guide" pages (MDX): the site's
+  tokens, type, spacing, layout and components as they are, and an audit of where each public
+  page departs from the common layout (`pageLayouts.ts`). Its tests fail when globals.css gains
+  a token the guide doesn't list, or a page's wrapper changes without its audit entry: when you
+  fix a page's layout, update its entry in the same PR.
 - **Published**: CI's "Deploy Storybook" job uploads the tested build to the
   `pragmatic-papers-storybook` Cloudflare Worker (`.storybook/wrangler.jsonc`):
   `dev` at `pragmatic-papers-storybook.digital-ground-game.workers.dev`, and each PR at a
@@ -663,6 +717,57 @@ Two things live there, and they are not two modes of one block:
   presentation in code; the feed owns facts and records; `syncInteractiveData`
   pulls it daily into draft snapshots an editor publishes.
 
+The Substack feed can't run a map, so it shows a picture of it
+(`interactiveMapToImage`). `generateBlockImages` (an Articles `afterChange`
+hook) draws it when the article is published, never while a feed is built:
+`interactiveMapToSVG` shades the map with the component's own resolver,
+`renderImage.ts` rasterizes it with `sharp` (on the Coolify app, where articles
+are saved; the Worker only reads the result), and it's stored as a Media upload
+named for a hash of the block's data and its maps' SVG (`feedImage.ts`). The
+feed's query looks that name up, so an unchanged map isn't drawn twice, a
+changed one gets a new picture, and the old one stays for posts Substack
+already imported. A map with no picture gets the RSS feeds' link back to the
+article. The block's download button (`download/`) draws the same picture in the
+reader's browser, with the sources and the logo in a footer and the font embedded, in the theme the
+page shows (`themePalette`), and saves it as a PNG for sharing. The text in the picture needs a font in the image
+(both Dockerfiles install fontconfig and the site's own fonts as TTFs from their packages, Geist and Libertinus Serif, since fontconfig can't read woff2; a download embeds the site's woff2). Like the page, the titles and sources are in Libertinus Serif, scaled 112% as `fonts.ts` scales it, and the legend in Geist.
+
+A **whip count** (`src/interactives/whip-count/`) is a third kind of interactive page, with no
+map: a leadership vote tracked voter by voter. It is an `interactives` document with the
+`whip-count` profile (`profileKind` in `src/interactives/profiles.ts`; `getProfile` returns
+drilldown profiles only), at `/interactives/<slug>` like the others (the old
+`/interactives/whip-counts/<slug>` redirects there), and the document adds a methodology note.
+The count is one JSON document in its snapshot's `data` field, which `parseWhipCount`
+(`model.ts`) checks on save. The daily sync skips whip counts; their snapshot is written by
+pushes, the seed, and editors, who may create a snapshot or change its `data` only when it
+holds a whip count (a map's feed stays the sync's), and saving restamps its hash and summary
+(`whipCountSnapshotStamp`). An editor changes it row by row in a table
+(`WhipCountDataField`: position, statement, source, bloc and tags), or pastes a whole count
+with "Edit as JSON". The page shows the public count and lets a reader draft their own guess
+of how the vote breaks, one voter at a time or a group at a time (a tag, the incoming or the
+outgoing, and a bloc when `WhipCount` is given `showBlocs`; the page leaves blocs hidden for now),
+kept in their browser only and hidden until they ask for it. Outgoing
+members aren't counted until the reader ticks the box to count them. With a `voteAt` time in the data the page counts down to the vote. With an `updates`
+schedule (times of day in a time zone) it names the next check for new statements, in the
+reader's own time. The bars draw one
+rectangle a voter, each opening a card with their source, and a button saves the public count
+as a PNG with the logo (`picture.ts`, on the map block's `saveSVGAsPNG`). Its title puts the two leading
+candidates' public backers ahead of the page's own (`whipCountTitle`, `seo.ts`), and its link
+preview is drawn per count at `/next/whip-counts/<slug>/image` (`WhipCountCard`, with
+`next/og`): the two head to head with any refusal forecast, one tick a voter, the countdown, the wordmark, and the time the count last changed (the snapshot's `syncedAt`) in the eyebrow. The brand orange stays on the frame, away from the candidates' colors. Its fonts are TTFs from their packages (`CARD_FONTS`, `cardFonts.ts`): Coolify reads the files, and the Worker, which has none, fetches the copies `pnpm build:worker` puts in its static assets.
+The card replaces any meta image an editor picks on the SEO tab. The page's metadata names it with a query that changes with the count and the countdown's days
+(`whipCountImagePath`), so the route keeps its own `Cache-Control` (a day at the edge). A job outside the
+site can keep a count current with `POST /next/whip-counts/<slug>` (`Authorization: Bearer
+<WHIP_COUNT_PUSH_TOKEN>`, closed while unset): the count is checked like a save and merged
+into the snapshot's (`mergePushedCount` keeps the editors' blocs and tags; the first push
+creates the snapshot), as a draft unless the interactive's "Auto-publish new snapshots" is
+ticked (and even then while the snapshot has unpublished edits, which publishing would carry
+live), and refused (409) while an editor holds the snapshot's lock, whose form would autosave
+its older count over the push. Readers read the published count at
+`/api/interactive-snapshots?where[interactive.slug][equals]=<slug>`. The seed and the showcase entry
+`whip-counts-draft-your-own-leadership-vote` create one (a dated snapshot, without
+quotations) and an article that links to it; creating it takes an editor's account.
+
 An SVG never carries records. A drilldown's SVG is checked in, parsed once at
 snapshot time into `geometry/*.json`, and never parsed again;
 `scripts/snapshot-federal-courts.ts` regenerates the Federal Courts geometry
@@ -686,8 +791,9 @@ applications are set up and what's been verified about them; read it first.
 
 Staging's public site also runs as a Cloudflare Worker at `staging-worker.pragmaticpapers.com`
 (OpenNext, reading staging's database through Hyperdrive), deployed on every push to `dev` by
-`.github/workflows/worker.yml`; setup and what's left before production are in
-`src/cloudflare/README.md`.
+`.github/workflows/worker.yml`; PRs that could break its build get it built and served by
+`.github/workflows/worker-build.yml`, which deploys nothing. Setup and what's left before
+production are in `src/cloudflare/README.md`.
 
 Each database has one seeder: the deploy of the Coolify app that runs its migrations. Its
 `/next/revalidate-all` seeds what a deploy seeds (starter pages, starter achievements); the Worker reads
@@ -695,7 +801,7 @@ the same database and sets `DEPLOY_SEED=false` (`wrangler.jsonc`), so its deploy
 pages away. Two seeders could each create the same content at once. Deploy-seeded content
 added later goes through that route, so it follows the same switch.
 
-The zone's Cloudflare rules (Cache Rules today) are version-controlled in
+The zone's Cloudflare rules (Cache Rules, and the Single Redirect from www to the apex) are version-controlled in
 `cloudflare/rulesets/` and applied on release by `.github/workflows/cloudflare-rules.yml`;
 change them there, not in the dashboard (`cloudflare/README.md`).
 
@@ -781,7 +887,7 @@ After adding a new page, update `Home.md` to add it to the Table of Contents und
 
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 

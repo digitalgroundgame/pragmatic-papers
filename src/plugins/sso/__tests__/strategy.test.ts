@@ -2,6 +2,7 @@ import type { Payload } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { getAuth } from "../auth"
+import { isAllowedOrigin } from "../session"
 import { hasSessionCookie, ssoStrategy } from "../strategy"
 import type { ResolvedSsoConfig } from "../types"
 
@@ -19,12 +20,20 @@ const config = {
   isPayloadUser: (user: Record<string, unknown>) => (user.roles as string[]).includes("editor"),
 } as unknown as ResolvedSsoConfig
 
-const payload = { findByID, logger, db: { defaultIDType: "number" } } as unknown as Payload
+const SITE = "https://pragmaticpapers.com"
 
-const authenticate = (cookie?: string) =>
+const payload = {
+  findByID,
+  logger,
+  db: { defaultIDType: "number" },
+  config: { csrf: [SITE] },
+} as unknown as Payload
+
+/** A browser's same-origin request, unless `extra` says otherwise. */
+const authenticate = (cookie?: string, extra: Record<string, string> = { origin: SITE }) =>
   ssoStrategy(config).authenticate({
     payload,
-    headers: new Headers(cookie ? { cookie } : {}),
+    headers: new Headers({ ...(cookie ? { cookie } : {}), ...extra }),
   })
 
 beforeEach(() => {
@@ -45,7 +54,75 @@ describe("hasSessionCookie", () => {
   })
 })
 
+describe("isAllowedOrigin", () => {
+  const allowed = (headers: Record<string, string>, list = [SITE]) =>
+    isAllowedOrigin(new Headers(headers), list)
+
+  it("allows the site's own origin and refuses any other", () => {
+    expect(allowed({ origin: SITE })).toBe(true)
+    expect(allowed({ origin: "https://pr-12.pragmaticpapers.com" })).toBe(false)
+    expect(allowed({ origin: "https://staging.pragmaticpapers.com" })).toBe(false)
+    expect(allowed({ origin: "null" })).toBe(false)
+  })
+
+  it("goes by the Origin when there is one, whatever Sec-Fetch-Site says", () => {
+    expect(
+      allowed({ origin: "https://pr-12.pragmaticpapers.com", "sec-fetch-site": "same-site" }),
+    ).toBe(false)
+  })
+
+  it.each([
+    ["same-origin", true],
+    ["same-site", true],
+    ["none", true],
+    ["cross-site", false],
+  ])("without an Origin, Sec-Fetch-Site %s → %s", (site, expected) => {
+    expect(allowed({ "sec-fetch-site": site })).toBe(expected)
+  })
+
+  it("allows a cross-site page load, as a provider's redirect back after a sign-in is", () => {
+    const pageLoad = {
+      "sec-fetch-site": "cross-site",
+      "sec-fetch-mode": "navigate",
+      "sec-fetch-dest": "document",
+    }
+    expect(allowed(pageLoad)).toBe(true)
+    // Framed, or fetched: not a page the reader opened.
+    expect(allowed({ ...pageLoad, "sec-fetch-dest": "iframe" })).toBe(false)
+    expect(allowed({ ...pageLoad, "sec-fetch-mode": "no-cors", "sec-fetch-dest": "image" })).toBe(
+      false,
+    )
+    // A cross-site form post is a page load too, but it names its origin.
+    expect(allowed({ ...pageLoad, origin: "https://pr-12.pragmaticpapers.com" })).toBe(false)
+  })
+
+  it("refuses a request that names neither", () => {
+    expect(allowed({})).toBe(false)
+  })
+
+  it("allows everything while the list is empty, as Payload does", () => {
+    expect(allowed({ origin: "https://example.com" }, [])).toBe(true)
+    expect(allowed({}, [])).toBe(true)
+  })
+})
+
 describe("ssoStrategy", () => {
+  it("signs nobody in from another origin, without reading the session", async () => {
+    const result = await authenticate("pp-session=abc", {
+      origin: "https://pr-12.pragmaticpapers.com",
+    })
+    expect(result).toEqual({ user: null })
+    expect(getSession).not.toHaveBeenCalled()
+  })
+
+  it("signs in a page load, which sends no Origin", async () => {
+    getSession.mockResolvedValue({ user: { id: "7" }, session: {} })
+    findByID.mockResolvedValue({ id: 7, email: "editor@example.com", roles: ["editor"] })
+
+    const result = await authenticate("pp-session=abc", { "sec-fetch-site": "none" })
+    expect(result.user).toMatchObject({ id: 7 })
+  })
+
   it("answers a request without the cookie without asking anything", async () => {
     expect(await authenticate("payload-token=abc")).toEqual({ user: null })
     expect(enabled).not.toHaveBeenCalled()

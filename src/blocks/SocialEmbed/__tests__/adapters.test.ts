@@ -164,6 +164,24 @@ describe("youtubeAdapter", () => {
   })
 })
 
+describe("youtubeAdapter iframes", () => {
+  it.each([
+    "https://example.com/embed/abc",
+    "https://www.youtube.com.example.com/embed/abc",
+    "//example.com/embed/abc",
+    "/embed/abc",
+  ])("drops the address of an iframe that isn't YouTube's player: %s", async (src) => {
+    expect(await youtubeAdapter.sanitize(`<iframe src="${src}"></iframe>`)).toBe(
+      "<iframe></iframe>",
+    )
+  })
+
+  it("keeps the privacy-enhanced player", async () => {
+    const html = '<iframe src="https://www.youtube-nocookie.com/embed/abc"></iframe>'
+    expect(await youtubeAdapter.sanitize(html)).toBe(html)
+  })
+})
+
 describe("redditAdapter", () => {
   it.each([
     "https://www.reddit.com/r/politics/comments/abc123/some_title/",

@@ -10,8 +10,11 @@ import {
   UnorderedListFeature,
 } from "@payloadcms/richtext-lexical"
 
+import { blockImages } from "@/blocks/blockImages"
+
 export const VolumeView: Block = {
   slug: "volumeView",
+  admin: { images: blockImages("volumeView") },
   interfaceName: "VolumeView",
   fields: [
     {

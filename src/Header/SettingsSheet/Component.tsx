@@ -31,7 +31,7 @@ export function SettingsSheet({ actions }: SettingsSheetProps): React.ReactNode 
         </SheetHeader>
         <div className="flex w-full flex-col gap-2 px-4">
           {actions}
-          <LinkButton variant="outline" size="lg" className="w-full" href="/admin/login">
+          <LinkButton variant="outline" className="w-full" href="/admin/login">
             Log In
           </LinkButton>
           <ModeToggleAnalytics showLabel location="header-mobile-sheet" showFresh />

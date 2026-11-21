@@ -2,14 +2,35 @@
 
 import { Button, FieldLabel, toast, useFormFields } from "@payloadcms/ui"
 import React from "react"
+import { isSubstackUrl } from "@/collections/Articles/substackUrl"
 import { getClientURL } from "@/utilities/getURL"
 
 /**
  * Shows the single-article feed URL an editor pastes into Substack's importer
- * (Settings → Import) to bring this article over as a post.
+ * (Settings → Import) to bring this article over as a post, or, once the article's
+ * Substack post URL is filled in, that it's imported and a link to the post.
  */
 export const SubstackImportUrl: React.FC = () => {
   const slug = useFormFields(([fields]) => fields.slug?.value as string | undefined)
+  const substackUrl = useFormFields(
+    ([fields]) => fields.substackUrl?.value as string | null | undefined,
+  )
+  const imported = substackUrl?.trim()
+
+  // Imported: say so, with the post, rather than the URL to import it from.
+  if (imported && isSubstackUrl(imported)) {
+    return (
+      <div className="field-type" style={{ marginBottom: "1.5rem" }}>
+        <FieldLabel label="Substack" />
+        <p style={{ margin: 0 }}>
+          Imported →{" "}
+          <a href={imported} target="_blank" rel="noopener noreferrer">
+            View the post on Substack
+          </a>
+        </p>
+      </div>
+    )
+  }
 
   if (!slug) return null
 

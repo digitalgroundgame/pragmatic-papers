@@ -46,6 +46,13 @@ describe("Articles access", () => {
     expect(condition({}, {}, as("writer"))).toBe(false)
   })
 
+  it("shows the Substack post URL to editors once the article is syndicated", () => {
+    const condition = conditionOf("substackUrl")
+    expect(condition({ syndicateToSubstack: true }, {}, as("editor"))).toBe(true)
+    expect(condition({ syndicateToSubstack: false }, {}, as("editor"))).toBe(false)
+    expect(condition({ syndicateToSubstack: true }, {}, as("writer"))).toBe(false)
+  })
+
   it("shows the Substack import URL to editors once the article is syndicated", () => {
     const condition = conditionOf("substackImportUrl")
     expect(condition({ syndicateToSubstack: true }, {}, as("editor"))).toBe(true)

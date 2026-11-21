@@ -151,10 +151,18 @@ ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME="0.0.0.0"
 
-# Install runtime dependencies and create non-root user
-RUN apk add --no-cache dumb-init libc6-compat \
+# Install runtime dependencies and create non-root user. fontconfig and fonts are for
+# the text sharp draws on a map's picture (renderImage.ts): the image has no font of
+# its own, and without one the titles and legend labels come out blank. They're the
+# site's own fonts, Geist and Libertinus Serif, as TTFs from their packages: fontconfig
+# can't read the site's woff2.
+RUN apk add --no-cache dumb-init libc6-compat fontconfig \
     && addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs
+COPY --from=builder /app/node_modules/geist/dist/fonts/geist-sans/Geist-Variable.ttf \
+    /app/node_modules/@expo-google-fonts/libertinus-serif/400Regular/LibertinusSerif_400Regular.ttf \
+    /app/node_modules/@expo-google-fonts/libertinus-serif/700Bold/LibertinusSerif_700Bold.ttf \
+    /usr/share/fonts/site/
 
 # Copy the standalone Next.js build
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

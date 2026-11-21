@@ -12,6 +12,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { docPath } from "@/utilities/routes"
 import { getPayloadClient } from "@/data/payload"
+import { firstParam } from "./firstParam"
 
 interface SearchResult {
   id: number
@@ -109,11 +110,13 @@ export const metadata: Metadata = {
 }
 
 interface Args {
-  searchParams: Promise<{ q?: string; p?: string }>
+  searchParams: Promise<{ q?: string | string[]; p?: string | string[] }>
 }
 
 export default async function SearchPage({ searchParams }: Args): Promise<React.ReactNode> {
-  const { q = "", p } = await searchParams
+  const params = await searchParams
+  const q = firstParam(params.q) ?? ""
+  const p = firstParam(params.p)
   let page = Number(p) || 1
   if (!Number.isInteger(page) || page < 1) page = 1
 

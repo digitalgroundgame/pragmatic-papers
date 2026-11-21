@@ -12,7 +12,7 @@ export interface TickerBroadcast {
   startsAt: string | null
 }
 
-export type TickerPostSource = "bluesky" | "x"
+export type TickerPostSource = "bluesky" | "x" | "substack"
 
 /**
  * A link in a post: the text the post shows for it (each service shortens its own way, and a
@@ -78,8 +78,8 @@ function normalize(post: TickerPost): string {
 }
 
 /**
- * What identifies a post across the ways its link can be written (Bluesky or X, `www.`,
- * `twitter.com`, a trailing `?s=20`), or null for a link that isn't to a post.
+ * What identifies a post across the ways its link can be written (Bluesky, X or Substack,
+ * `www.`, `twitter.com`, a trailing `?s=20`), or null for a link that isn't to a post.
  */
 export function postKey(link: string): string | null {
   let url: URL
@@ -97,38 +97,23 @@ export function postKey(link: string): string | null {
     const [, id] = url.pathname.match(/^\/[^/]+\/status\/(\d+)/) ?? []
     return id ? `x:${id}` : null
   }
-  return null
+  // Substack's Share button links through `open.substack.com/pub/<publication>/p/<slug>`, the
+  // same post as `/p/<slug>` on the publication's subdomain.
+  if (host === "open.substack.com") {
+    const [, publication, slug] = url.pathname.match(/^\/pub\/([^/]+)\/p\/([^/]+)/) ?? []
+    return publication && slug
+      ? `substack:${publication.toLowerCase()}.substack.com/${slug.toLowerCase()}`
+      : null
+  }
+  // A Substack post is `/p/<slug>` on its publication's host: a subdomain or a custom domain.
+  const [, slug] = url.pathname.match(/^\/p\/([^/]+)/) ?? []
+  return slug ? `substack:${host.toLowerCase()}/${slug.toLowerCase()}` : null
 }
 
 /** The posts, without the ones an editor hid by their link. */
 export function withoutHidden(posts: TickerPost[], hidden: readonly string[]): TickerPost[] {
   const keys = new Set(hidden.map(postKey).filter(Boolean))
   return keys.size === 0 ? posts : posts.filter((post) => !keys.has(postKey(post.url)))
-}
-
-/** Our own sites: every Pragmatic Papers host, whatever deployment is reading the feed. */
-export const OWN_HOSTS = ["pragmaticpapers.com"] as const
-
-/** Whether a link leads to one of `hosts` or a subdomain of one. */
-function isOwnLink(link: string, hosts: readonly string[]): boolean {
-  let host: string
-  try {
-    host = new URL(link).hostname.toLowerCase()
-  } catch {
-    return false
-  }
-  return hosts.some((own) => host === own || host.endsWith(`.${own}`))
-}
-
-/**
- * The posts, without the ones that link to our own site. The ticker sits on that site, so a
- * post sending readers back to an article they can already reach from the page is circular.
- */
-export function withoutOwnLinks(
-  posts: TickerPost[],
-  hosts: readonly string[] = OWN_HOSTS,
-): TickerPost[] {
-  return posts.filter((post) => !postLinks(post).some((link) => isOwnLink(link, hosts)))
 }
 
 /**

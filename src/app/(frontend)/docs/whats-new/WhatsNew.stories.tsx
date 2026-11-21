@@ -3,6 +3,7 @@ import { expect, within } from "storybook/test"
 
 import { docParentId, docTreeParents } from "@/stories/fixtures/docsTree"
 import { landscapeImage, squareImage, wideImage } from "@/stories/fixtures/media"
+import { isolatedDocs } from "@/stories/isolatedDocs"
 
 import { WhatsNew, type WhatsNewDoc } from "./WhatsNew"
 
@@ -106,4 +107,5 @@ export const Index: Story = {
 
 export const Dark: Story = {
   globals: { theme: "dark" },
+  parameters: isolatedDocs("800px"),
 }

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, fn, spyOn, userEvent, within } from "storybook/test"
+import { expect, fn, spyOn, userEvent, waitFor, within } from "storybook/test"
 
 import { authors } from "@/stories/fixtures/docs"
 import { feedSummary } from "@/stories/fixtures/feed"
@@ -23,7 +23,13 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const OneAuthor: Story = {}
+/** The photo asks for an image as wide as the 38px avatar it fills. */
+export const OneAuthor: Story = {
+  play: async ({ canvasElement }) => {
+    // The avatar shows its photo once it has loaded.
+    await waitFor(() => expect(canvasElement.querySelector("img")).toHaveAttribute("sizes", "38px"))
+  },
+}
 
 /** Several authors stack with an overlap; one without a photo shows initials. */
 export const SeveralAuthors: Story = {

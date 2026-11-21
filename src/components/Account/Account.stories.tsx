@@ -2,8 +2,10 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, spyOn, userEvent, within } from "storybook/test"
 
 import type { HeldAchievement } from "@/plugins/achievements"
+import type { MyReading } from "@/plugins/achievements"
 import type { AccountSummary } from "@/plugins/sso/endpoints/account"
 import type { LinkedProvider } from "@/plugins/sso/types"
+import { isolatedDocs } from "@/stories/isolatedDocs"
 
 import { Account } from "."
 
@@ -24,14 +26,22 @@ const achievements: HeldAchievement[] = [
     key: "early-member",
     label: "Early member",
     description: "One of the first readers to make an account.",
-    badge: "Early member",
+    badge: { key: "early-member", label: "Early member" },
     earnedAt: "2026-10-18T12:00:00.000Z",
   },
 ]
 
+const reading: MyReading = {
+  articlesRead: 14,
+  volumesRead: 2,
+  daysVisited: 23,
+  currentStreak: 4,
+  longestStreak: 9,
+}
+
 /**
  * Answers `/api/account` with `account` (401 when null), `/api/auth-links` with `links` and
- * `/api/achievements/mine` with `achievements`.
+ * `/api/achievements/mine` with `achievements` and `/api/reading/mine` with `reading`.
  */
 function serve(account: AccountSummary | null) {
   return () => {
@@ -39,6 +49,7 @@ function serve(account: AccountSummary | null) {
       const url = String(input)
       if (url.endsWith("/auth-links")) return Response.json({ providers: links })
       if (url.endsWith("/achievements/mine")) return Response.json({ achievements })
+      if (url.endsWith("/reading/mine")) return Response.json(reading)
       if (url.endsWith("/account") && init?.method === "PATCH") {
         const { name } = JSON.parse(String(init.body)) as { name: string }
         return Response.json({ ...member, name })
@@ -55,6 +66,7 @@ function serve(account: AccountSummary | null) {
 const meta = {
   title: "Components/Account",
   component: Account,
+  parameters: isolatedDocs("480px"),
   args: {
     providers: [
       { id: "google", label: "Google" },
@@ -86,6 +98,9 @@ export const Member: Story = {
     await expect(await canvas.findByRole("heading", { name: "Achievements" })).toBeInTheDocument()
     await expect(canvas.getByText("Early member")).toBeInTheDocument()
 
+    await expect(await canvas.findByRole("heading", { name: "Your reading" })).toBeInTheDocument()
+    await expect(canvas.getByText("14 articles")).toBeInTheDocument()
+
     // Their only sign-in can't be disconnected.
     await expect(await canvas.findByRole("button", { name: "Disconnect Discord" })).toBeDisabled()
     await expect(canvas.getByRole("button", { name: "Connect Destiny.gg" })).toBeEnabled()
@@ -99,7 +114,12 @@ export const NoEmailAddress: Story = {
   beforeEach: serve({ ...member, name: "DestinyFan", email: null }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByText(/no email address yet/)).toBeInTheDocument()
+    const nudge = await canvas.findByRole("region", { name: "Verify your email" })
+    await expect(within(nudge).getByText(/no email address yet/)).toBeInTheDocument()
+    await expect(within(nudge).getByRole("link", { name: "Connect an account" })).toHaveAttribute(
+      "href",
+      "#sign-ins",
+    )
     await expect(canvas.queryByText(/@/)).not.toBeInTheDocument()
   },
 }

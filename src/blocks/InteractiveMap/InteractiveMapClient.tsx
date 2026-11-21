@@ -5,13 +5,18 @@ import React, { useEffect, useId, useMemo, useState } from "react"
 
 import type { ResolvedMap, ResolvedRegion } from "@/blocks/InteractiveMap/types"
 import type { InteractiveMapBlock } from "@/payload-types"
+import { MapDownloadProvider } from "./download/MapDownload"
 import { Region } from "./Region"
 import { HoverTooltip, PinnedTooltipList, type PinnedTooltip } from "./Tooltip"
 
 interface InteractiveMapClientProps {
   layout: InteractiveMapBlock["layout"]
   maps: ResolvedMap[]
+  /** What the download button under the maps draws besides them. */
+  download?: Omit<React.ComponentProps<typeof MapDownloadProvider>["drawing"], "maps" | "layout">
   className?: string
+  /** The legend and footer, which can offer the download. */
+  children?: React.ReactNode
 }
 
 const widgetVariants = cva("", {
@@ -27,7 +32,9 @@ const widgetVariants = cva("", {
 export function InteractiveMapClient({
   layout,
   maps,
+  download,
   className,
+  children,
 }: InteractiveMapClientProps): React.ReactElement {
   const widgetId = useId()
   const [pinned, setPinned] = useState<PinnedTooltip[]>([])
@@ -102,7 +109,7 @@ export function InteractiveMapClient({
     }
   }, [hasPins])
 
-  return (
+  const widget = (
     <div
       aria-label="Interactive map widget"
       className={widgetVariants({ layout, className })}
@@ -123,5 +130,20 @@ export function InteractiveMapClient({
       <HoverTooltip hoverRegion={hoverRegion} cursor={cursor} />
       <PinnedTooltipList pinned={pinned} />
     </div>
+  )
+
+  if (!download) {
+    return (
+      <>
+        {widget}
+        {children}
+      </>
+    )
+  }
+  return (
+    <MapDownloadProvider drawing={{ ...download, layout, maps }}>
+      {widget}
+      {children}
+    </MapDownloadProvider>
   )
 }

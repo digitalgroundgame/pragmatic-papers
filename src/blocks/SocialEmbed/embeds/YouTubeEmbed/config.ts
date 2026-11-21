@@ -1,5 +1,7 @@
 import type { Block } from "payload"
 
+import { blockImages } from "@/blocks/blockImages"
+
 /**
  * Legacy config for YouTube embeds.
  * @deprecated Use the SocialEmbed block instead.
@@ -13,6 +15,7 @@ export const LegacyYouTubeEmbed: Block = {
     plural: "YouTube Embeds (Legacy)",
   },
   admin: {
+    images: blockImages("youtubeEmbed"),
     group: "Legacy",
   },
   fields: [

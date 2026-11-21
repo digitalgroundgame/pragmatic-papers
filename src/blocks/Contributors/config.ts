@@ -1,9 +1,11 @@
 import type { Block } from "payload"
 
+import { blockImages } from "@/blocks/blockImages"
 import { STAFF_ROLES } from "@/access/roles"
 
 export const Contributors: Block = {
   slug: "contributors",
+  admin: { images: blockImages("contributors") },
   interfaceName: "ContributorsBlock",
   fields: [
     {

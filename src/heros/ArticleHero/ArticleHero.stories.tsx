@@ -15,7 +15,7 @@ const meta = {
     article: articleFixture({
       authors: authors.slice(0, 2),
       publishedAt: "2026-01-12T15:00:00.000Z",
-      updatedAt: "2026-01-12T15:00:00.000Z",
+      contentUpdatedAt: "2026-01-12T15:00:00.000Z",
     }),
   },
   decorators: [
@@ -48,7 +48,7 @@ export const Updated: Story = {
     article: articleFixture({
       authors: authors.slice(0, 1),
       publishedAt: "2026-01-12T15:00:00.000Z",
-      updatedAt: "2026-01-14T09:30:00.000Z",
+      contentUpdatedAt: "2026-01-14T09:30:00.000Z",
     }),
   },
 }
@@ -88,6 +88,29 @@ export const WithTableOfContents: Story = {
   },
 }
 
+/** An article already on Substack gets a button to its post there, before Share. */
+export const OnSubstack: Story = {
+  args: {
+    showComments: true,
+    article: {
+      ...meta.args.article,
+      syndicateToSubstack: true,
+      substackUrl: "https://thepragmaticpapers.substack.com/p/an-article",
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const controls = canvasElement.querySelector<HTMLElement>("[data-slot=article-meta-controls]")!
+    const link = within(controls).getByRole("link", { name: "Read on Substack" })
+    await expect(link).toHaveAttribute(
+      "href",
+      "https://thepragmaticpapers.substack.com/p/an-article",
+    )
+    // Sized like the comment and share buttons beside it.
+    await expect(link.getBoundingClientRect().width).toBe(36)
+    await expect(link.querySelector("svg")!.getBoundingClientRect().width).toBe(20)
+  },
+}
+
 /** The page shows the button while comments are on; it jumps to the Comments heading below the article. */
 export const WithComments: Story = {
   args: { showComments: true },
@@ -98,6 +121,98 @@ export const WithComments: Story = {
     for (const button of [link, within(canvasElement).getByRole("button", { name: "Share" })]) {
       await expect(button.getBoundingClientRect().width).toBe(36)
       await expect(button.querySelector("svg")!.getBoundingClientRect().width).toBe(20)
+    }
+  },
+}
+
+/**
+ * The full action row. Every pair of neighbouring glyphs is 16px apart: Play and
+ * "Listen", "Listen" and the comment icon (or more, when the row has room to spare),
+ * and the comment and share icons. Once Play expands the player, its settings icon
+ * keeps the same distance from the comment icon.
+ */
+export const WithNarrationAndComments: Story = {
+  args: {
+    showComments: true,
+    article: articleFixture({
+      authors: authors.slice(0, 2),
+      narration: { ...narrationAudio, narrator: authors[1] },
+    }),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const rect = (el: Element) => el.getBoundingClientRect()
+    // The player loads lazily, so wait for it before measuring.
+    const playIcon = (await canvas.findByRole("button", { name: "Play" })).querySelector("svg")!
+    const label = canvasElement.querySelector("[data-slot=audio-player] span[aria-hidden]")!
+    const commentIcon = canvas.getByRole("link", { name: "Comments" }).querySelector("svg")!
+    const shareIcon = canvas.getByRole("button", { name: "Share" }).querySelector("svg")!
+
+    await expect(rect(label).left - rect(playIcon).right).toBeCloseTo(16, 0)
+    await expect(rect(shareIcon).left - rect(commentIcon).right).toBeCloseTo(16, 0)
+    await expect(rect(commentIcon).left - rect(label).right).toBeGreaterThanOrEqual(15.5)
+
+    // Expanded, the player ends with its settings button, an icon button like the rest.
+    await userEvent.click(canvas.getByRole("button", { name: "Play" }))
+    const settingsIcon = canvas
+      .getByRole("button", { name: "Player settings" })
+      .querySelector("svg")!
+    await waitFor(() => expect(rect(label).width).toBe(0))
+    await waitFor(() =>
+      expect(rect(commentIcon).left - rect(settingsIcon).right).toBeCloseTo(16, 0),
+    )
+    await userEvent.click(canvas.getByRole("button", { name: "Pause" }))
+  },
+}
+
+/**
+ * The longest stamps the tooltip can hold: a Wednesday in September at 12:59 p.m.
+ * Each one stays on a single line, so "ET" never wraps away from its time.
+ */
+const longestDates = articleFixture({
+  authors: authors.slice(0, 1),
+  publishedAt: "2026-09-23T16:59:00.000Z",
+  contentUpdatedAt: "2026-09-30T16:59:00.000Z",
+})
+
+async function openDatelineTooltip(canvasElement: HTMLElement): Promise<HTMLElement> {
+  await userEvent.hover(canvasElement.querySelector("#article-dateline")!)
+  return waitFor(() => {
+    const tooltip = document.querySelector<HTMLElement>("[data-slot=tooltip-content]")
+    expect(tooltip).toHaveTextContent("Wednesday, September 30, 2026 at 12:59 p.m. ET")
+    return tooltip!
+  })
+}
+
+const lineCount = (el: Element): number =>
+  Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight))
+
+export const LongestDates: Story = {
+  args: { article: longestDates },
+  play: async ({ canvasElement }) => {
+    const tooltip = await openDatelineTooltip(canvasElement)
+    await waitFor(() => expect(tooltip.getAnimations()).toHaveLength(0))
+    for (const stamp of tooltip.querySelectorAll("dd")) {
+      await expect(lineCount(stamp)).toBe(1)
+    }
+  },
+}
+
+/**
+ * On a phone the longest stamps can't fit on one line. The tooltip stays inside the
+ * screen and breaks before the time, which keeps "12:59 p.m. ET" together.
+ */
+export const LongestDatesMobile: Story = {
+  args: { article: longestDates },
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+  play: async ({ canvasElement }) => {
+    const tooltip = await openDatelineTooltip(canvasElement)
+    await waitFor(() => expect(tooltip.getAnimations()).toHaveLength(0))
+    const box = tooltip.getBoundingClientRect()
+    await expect(box.left).toBeGreaterThanOrEqual(0)
+    await expect(box.right).toBeLessThanOrEqual(document.documentElement.clientWidth)
+    for (const time of tooltip.querySelectorAll("dd [data-slot=time-of-day]")) {
+      await expect(lineCount(time)).toBe(1)
     }
   },
 }

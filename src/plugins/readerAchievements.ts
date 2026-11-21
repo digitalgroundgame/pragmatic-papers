@@ -28,6 +28,8 @@ export const achievementsOptions: AchievementsPluginConfig = {
   earlyMemberLimit: 1000,
   moderators: editor,
   admins: admin,
+  // A volume counts as read once every article in it is.
+  reading: { articlesSlug: "articles", groups: { slug: "volumes", field: "articles" } },
 }
 
 /** Achievements, as the comments plugin and the deploy ask for them. */

@@ -10,6 +10,7 @@ import type { FootnotesField } from "@/payload-types"
 import { authors, topics } from "@/stories/fixtures/docs"
 
 import { ArticleFooter } from "."
+import { ArticleFooterActions } from "./ArticleFooterActions"
 
 const footnotes: FootnotesField = [
   {
@@ -42,6 +43,14 @@ const meta = {
         <div className="space-y-4">
           <Separator />
           <TopicsList topics={topics} label="Topics:" />
+          <ArticleFooterActions
+            article={{
+              slug: "the-case-for-ranked-choice",
+              title: "The case for ranked choice",
+              syndicateToSubstack: true,
+              substackUrl: "https://thepragmaticpapers.substack.com/p/the-case-for-ranked-choice",
+            }}
+          />
         </div>
         <AuthorList aria-label="Article Authors" authors={authors.slice(0, 2)} />
         <CommentsUnpublished />
@@ -70,6 +79,16 @@ export const Default: Story = {
     const topicsSection = canvas.getByRole("region", { name: "Topics" })
     await expect(topicsSection).toHaveTextContent(/^Topics:/)
     await expect(within(topicsSection).queryByRole("heading")).not.toBeInTheDocument()
+
+    // Read on Substack closes the topics' section, with Share to its right at the same height.
+    const substack = within(topicsSection.parentElement!).getByRole("link", {
+      name: "Read on Substack",
+    })
+    const share = within(topicsSection.parentElement!).getByRole("button", { name: "Share" })
+    await expect(share.getBoundingClientRect().left).toBeGreaterThan(
+      substack.getBoundingClientRect().right,
+    )
+    await expect(share.getBoundingClientRect().height).toBe(substack.getBoundingClientRect().height)
 
     // Every section is the same distance from the one before it.
     const sections = [...footer.children]

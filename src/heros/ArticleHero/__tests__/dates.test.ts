@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { formatFullTimestamp, formatPublishedDate, formatTimeOfDay, revision } from "../dates"
+import {
+  formatFullDate,
+  formatFullTimestamp,
+  formatPublishedDate,
+  formatTimeOfDay,
+  revision,
+} from "../dates"
 
 // 6:56 p.m. in New York on Aug 20, 2026 (EDT, UTC-4).
 const EVENING = "2026-08-20T22:56:00.000Z"
@@ -28,6 +34,13 @@ describe("formatTimeOfDay", () => {
   it("collapses the daylight-saving abbreviation to the plain zone", () => {
     // January is EST rather than EDT; both read as ET.
     expect(formatTimeOfDay("2026-01-15T15:05:00.000Z")).toBe("10:05 a.m. ET")
+  })
+})
+
+describe("formatFullDate", () => {
+  it("spells out the day in the paper's timezone", () => {
+    // 1:30 a.m. UTC on the 21st is still the 20th in New York.
+    expect(formatFullDate("2026-08-21T01:30:00.000Z")).toBe("Thursday, August 20, 2026")
   })
 })
 

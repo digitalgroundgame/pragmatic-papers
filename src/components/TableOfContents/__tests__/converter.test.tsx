@@ -1,9 +1,10 @@
-import { render as renderDom, screen } from "@testing-library/react"
+import { fireEvent, render as renderDom, screen } from "@testing-library/react"
 import { renderToStaticMarkup } from "react-dom/server"
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { SerializedHeadingNode } from "@payloadcms/richtext-lexical"
 import type { SerializedLexicalNode } from "@payloadcms/richtext-lexical/lexical"
+import { MULTI_CLICK_WAIT_MS } from "../AnchoredHeading"
 import { createTableOfContentsConverter, withTableOfContentsAnchors } from "../converter"
 
 type ConverterFn = (args: { node: SerializedLexicalNode; nodesToJSX: unknown }) => React.ReactNode
@@ -44,9 +45,93 @@ describe("createTableOfContentsConverter", () => {
         })}
       </>,
     )
-    // An aria-label on the wrapping link would replace the heading's name too.
+    // The link sits inside the heading, so neither name may pick up the other's text.
     expect(screen.getByRole("heading", { level: 2, name: "My Section" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "My Section" })).toHaveAttribute("href", "#my-section")
+  })
+
+  describe("heading text", () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+      window.getSelection()?.removeAllRanges()
+      window.location.hash = ""
+    })
+
+    function renderHeading() {
+      const { heading: converter } = createTableOfContentsConverter()
+      renderDom(
+        <>
+          {(converter as ConverterFn)({
+            node: heading("h2", "My Section", "my-section"),
+            nodesToJSX,
+          })}
+        </>,
+      )
+      return screen.getByText("My Section")
+    }
+
+    it("isn't inside the link, so it can be selected by dragging", () => {
+      const text = renderHeading()
+      expect(text.closest("a")).toBeNull()
+      expect(screen.getByRole("link")).toHaveTextContent(/^$/)
+    })
+
+    it("labels itself without taking another heading's anchor", () => {
+      const { heading: converter } = createTableOfContentsConverter()
+      const { container } = renderDom(
+        <>
+          {(converter as ConverterFn)({
+            node: heading("h2", "Background", "background"),
+            nodesToJSX,
+          })}
+          {(converter as ConverterFn)({
+            node: heading("h2", "Background text", "background-text"),
+            nodesToJSX,
+          })}
+        </>,
+      )
+      expect(container.querySelectorAll("#background-text")).toHaveLength(1)
+      expect(screen.getByRole("heading", { name: "Background" })).toBeInTheDocument()
+      expect(screen.getByRole("heading", { name: "Background text" })).toHaveAttribute(
+        "id",
+        "background-text",
+      )
+    })
+
+    it("links to the heading when clicked", () => {
+      fireEvent.click(renderHeading(), { detail: 1 })
+      // It waits to see whether this is the first click of a double click.
+      expect(window.location.hash).toBe("")
+      vi.advanceTimersByTime(MULTI_CLICK_WAIT_MS)
+      expect(window.location.hash).toBe("#my-section")
+    })
+
+    it("stays put when a double click selects a word", () => {
+      const text = renderHeading()
+      fireEvent.click(text, { detail: 1 })
+      // The second click selects the word under it.
+      const range = document.createRange()
+      range.setStart(text.firstChild!, 0)
+      range.setEnd(text.firstChild!, 2)
+      window.getSelection()?.addRange(range)
+      fireEvent.click(text, { detail: 2 })
+      vi.advanceTimersByTime(MULTI_CLICK_WAIT_MS)
+      expect(window.location.hash).toBe("")
+    })
+
+    it("stays put when the click ends a selection", () => {
+      const text = renderHeading()
+      const range = document.createRange()
+      range.selectNodeContents(text)
+      window.getSelection()?.addRange(range)
+      fireEvent.click(text, { detail: 1 })
+      vi.advanceTimersByTime(MULTI_CLICK_WAIT_MS)
+      expect(window.location.hash).toBe("")
+    })
   })
 
   it("renders a plain heading when the node has no anchor", () => {

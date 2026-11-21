@@ -87,7 +87,7 @@ export const LinkedSignIns: React.FC<{ apiPath: string }> = ({ apiPath }) => {
   }
 
   return (
-    <section className="space-y-3" aria-labelledby="sign-ins-heading">
+    <section id="sign-ins" className="scroll-mt-24 space-y-3" aria-labelledby="sign-ins-heading">
       <h2 id="sign-ins-heading" className="text-lg font-semibold">
         Sign-ins
       </h2>

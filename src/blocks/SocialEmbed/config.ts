@@ -1,3 +1,4 @@
+import { blockImages } from "@/blocks/blockImages"
 import { derivePlatform } from "@/blocks/SocialEmbed/hooks/derivePlatform"
 import { fetchSnapshot } from "@/blocks/SocialEmbed/hooks/fetchSnapshot"
 import { validatePlatform } from "@/blocks/SocialEmbed/hooks/validatePlatform"
@@ -5,6 +6,7 @@ import type { Block } from "payload"
 
 export const SocialEmbed: Block = {
   slug: "socialEmbed",
+  admin: { images: blockImages("socialEmbed") },
   interfaceName: "SocialEmbedBlock",
   labels: {
     singular: "Social Embed",

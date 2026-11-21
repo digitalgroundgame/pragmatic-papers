@@ -3,8 +3,8 @@ import React from "react"
 
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Media } from "@/components/Media"
-import { cn } from "@/utilities/utils"
 import { docPath } from "@/utilities/routes"
+import { cn } from "@/utilities/utils"
 
 export type CardPostData = Pick<Article, "slug" | "meta" | "title">
 
@@ -27,18 +27,18 @@ export const ArticleCard: React.FC<{
   const href = docPath(relationTo, slug ?? "")
 
   return (
-    <HoverPrefetchLink href={href} className="block">
+    <HoverPrefetchLink href={href} className="group/card block">
       <div className={cn("space-y-3", className)}>
         {image && typeof image !== "string" && (
           <Media
             media={image}
             variant="square"
-            className="aspect-4/3 border object-cover"
+            className="card-hover:brightness-[1.02] card-hover:contrast-[1.16] card-hover:saturate-[1.16] aspect-4/3 border object-cover transition-[filter] duration-300 ease-out"
             sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 352px"
             preload={preload}
           />
         )}
-        {titleToUse && <h3 className="hover:text-foreground/80 md:text-2xl">{titleToUse}</h3>}
+        {titleToUse && <h3 className="card-hover:text-foreground/80 md:text-2xl">{titleToUse}</h3>}
         {description && <p className="text-foreground font-serif">{sanitizedDescription}</p>}
       </div>
     </HoverPrefetchLink>

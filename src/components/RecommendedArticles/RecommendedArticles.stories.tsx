@@ -3,6 +3,7 @@ import { expect, spyOn, waitFor, within } from "storybook/test"
 
 import type { RecommendedArticleCandidate } from "@/app/(frontend)/recommended-articles.json/route"
 import { articles } from "@/stories/fixtures/docs"
+import { isolatedDocs } from "@/stories/isolatedDocs"
 
 import { RecommendedArticles } from "."
 
@@ -25,7 +26,7 @@ function respondWith(response: () => Promise<Response>) {
 const meta = {
   title: "Components/RecommendedArticles",
   component: RecommendedArticles,
-  parameters: { layout: "fullscreen" },
+  parameters: { layout: "fullscreen", ...isolatedDocs("560px") },
   args: { currentArticleSlug: articles[0]!.slug },
 } satisfies Meta<typeof RecommendedArticles>
 
@@ -49,6 +50,8 @@ export const Loading: Story = {
 }
 
 export const Unavailable: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   beforeEach: respondWith(async () => new Response("", { status: 500 })),
   play: async ({ canvasElement }) => {
     await waitFor(() => expect(canvasElement).toBeEmptyDOMElement())

@@ -184,10 +184,17 @@ describe("chunkArticle", () => {
     expect(pages.map((p) => p.kind)).toEqual(["hero", "content"])
   })
 
-  it("routes Form block to a full-bleed page via the sidecar (slug formBlock)", () => {
-    // Verifies the slug fix: the old chunker had "form" hard-coded and missed this.
-    const pages = chunkArticle(makeArticle([paragraph(SHORT), block("formBlock")]))
+  it("gives a social embed a full-bleed page of its own", () => {
+    const pages = chunkArticle(makeArticle([paragraph(SHORT), block("socialEmbed")]))
     expect(pages.map((p) => p.kind)).toEqual(["hero", "content", "block"])
+  })
+
+  it("lets a block only pages hold ride inline", () => {
+    // The reading feed shows articles, which can't hold a form: it has no feed behavior.
+    const pages = chunkArticle(
+      makeArticle([paragraph(SHORT), block("formBlock"), paragraph(SHORT)]),
+    )
+    expect(pages.map((p) => p.kind)).toEqual(["hero", "content"])
   })
 
   it("renders displayMathBlock inline (no longer full-bleed)", () => {

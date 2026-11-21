@@ -1,9 +1,25 @@
-import { formatFullTimestamp, formatPublishedDate, revision } from "./dates"
+import { formatFullDate, formatPublishedDate, formatTimeOfDay, revision } from "./dates"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+
+/**
+ * "Wednesday, August 20, 2026 at 6:56 p.m. ET". Where the screen is too narrow
+ * for one line, it breaks before the time, never inside it, so "ET" stays put.
+ */
+function FullTimestamp({ timestamp }: { timestamp: string }): React.ReactNode {
+  return (
+    <>
+      {formatFullDate(timestamp)} at{" "}
+      <span data-slot="time-of-day" className="whitespace-nowrap">
+        {formatTimeOfDay(timestamp)}
+      </span>
+    </>
+  )
+}
 
 interface PublicationDatesProps {
   publishedAt: string | null | undefined
-  updatedAt: string
+  /** When readers last saw the content change: the article's `contentUpdatedAt`. */
+  updatedAt?: string | null
 }
 
 /**
@@ -16,7 +32,7 @@ export function PublicationDates({
   updatedAt,
 }: PublicationDatesProps): React.ReactNode {
   if (!publishedAt) return null
-  const revised = revision(publishedAt, updatedAt)
+  const revised = updatedAt ? revision(publishedAt, updatedAt) : null
 
   return (
     <TooltipProvider>
@@ -38,20 +54,24 @@ export function PublicationDates({
             </>
           )}
         </TooltipTrigger>
-        <TooltipContent side="top" align="start">
+        {/* Wide enough for the longest stamp (a Wednesday in September at 12:59 p.m.)
+            on one line, and never wider than the screen. */}
+        <TooltipContent side="top" align="start" className="max-w-[calc(100vw-1rem)]">
           {revised ? (
-            <dl className="space-y-0.5">
-              <div className="flex gap-2">
-                <dt className="opacity-70">Published</dt>
-                <dd>{formatFullTimestamp(publishedAt)}</dd>
-              </div>
-              <div className="flex gap-2">
-                <dt className="opacity-70">Updated</dt>
-                <dd>{formatFullTimestamp(revised.dateTime)}</dd>
-              </div>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
+              <dt className="opacity-70">Published</dt>
+              <dd>
+                <FullTimestamp timestamp={publishedAt} />
+              </dd>
+              <dt className="opacity-70">Updated</dt>
+              <dd>
+                <FullTimestamp timestamp={revised.dateTime} />
+              </dd>
             </dl>
           ) : (
-            formatFullTimestamp(publishedAt)
+            <span>
+              <FullTimestamp timestamp={publishedAt} />
+            </span>
           )}
         </TooltipContent>
       </Tooltip>

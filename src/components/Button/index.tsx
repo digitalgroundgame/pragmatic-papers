@@ -13,14 +13,6 @@ interface CMSButtonProps extends React.ComponentProps<"a"> {
 /**
  * Renders a CMS button based on provided `button` data.
  * Supports different button variants and colors.
- *
- * @param link - LinkField object, containing link info (label, href, etc.)
- * @param className - Additional CSS classes for styling.
- * @param children - The content to display inside the button.
- * @param props - All other Button props.
- *
- * @example
- * <CMSButton link={linkData} className="my-4">Click Me</CMSButton>
  */
 export const CMSButton: React.FC<CMSButtonProps> = ({
   className,

@@ -75,6 +75,8 @@ export const ThirdsSplit: Story = {
 
 /** A content block saved with no columns draws nothing, not an empty grid. */
 export const NoColumns: Story = {
+  // Renders nothing, so the docs page leaves it out.
+  tags: ["!autodocs"],
   args: { columns: [] },
   play: async ({ canvasElement }) => {
     await expect(canvasElement.querySelector("section")).not.toBeInTheDocument()

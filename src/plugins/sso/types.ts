@@ -57,6 +57,12 @@ export interface SsoPluginConfig {
    */
   payloadUserCookie?: string
   /**
+   * A cookie set beside every session, readable by the page's scripts, so the browser knows
+   * someone is signed in before asking the server. Default `pp-signed-in`. It carries no
+   * identity and no authority; keep `payload-token` out of its name, like the session's.
+   */
+  signedInCookie?: string
+  /**
    * Whether a signed-in user becomes Payload's `req.user`, with whatever every access rule
    * grants a logged-in user, and may use Payload's own password login. Default: everyone.
    * Anyone it refuses is still signed in, as far as `getSignedInUser` is concerned, so the
@@ -85,6 +91,12 @@ export interface SsoPluginConfig {
    * a table with a required column it couldn't insert, so they're named to it here.
    */
   requiredUserColumns?: string[]
+  /**
+   * Whether the user has a picture of their own (a profile image). Linking a provider saves
+   * its picture to the user (`avatarUrl`) only when they have neither that nor a saved one.
+   * Default: never.
+   */
+  hasPicture?: (args: { payload: Payload; userId: string }) => Promise<boolean>
 }
 
 export interface SsoSignUpConfig {

@@ -64,8 +64,8 @@ export function FeedByline({ article, className }: FeedBylineProps): React.React
     <div className={cn("flex items-center gap-2 px-1", className)}>
       <Avatar
         aria-hidden="true"
-        size="sm"
-        className="shrink-0 overflow-hidden rounded-full ring-1 ring-white/30 after:rounded-full"
+        size="default"
+        className="shrink-0 overflow-hidden rounded-full border-2 border-white/30 after:rounded-full"
       >
         <AvatarImage
           src={heroImageUrl ?? undefined}
@@ -74,18 +74,17 @@ export function FeedByline({ article, className }: FeedBylineProps): React.React
             heroImageObj ? <Media media={heroImageObj} sizes="32px" variant="square" /> : undefined
           }
         />
-        <AvatarFallback className="rounded-full bg-black/40 text-[10px] text-white">
+        <AvatarFallback className="rounded-full bg-black/40 text-base text-white">
           {title.slice(0, 1).toUpperCase()}
         </AvatarFallback>
       </Avatar>
       <div ref={containerRef} className="min-w-0 flex-1 overflow-hidden">
         <span
           ref={textRef}
-          className={
-            marquee
-              ? "feed-marquee inline-block font-sans text-[12px] whitespace-nowrap text-white/70"
-              : "block truncate font-sans text-[12px] text-white/70"
-          }
+          className={cn(
+            "font-sans text-sm text-white/70",
+            marquee ? "feed-marquee inline-block whitespace-nowrap" : "block truncate",
+          )}
           style={
             marquee
               ? ({

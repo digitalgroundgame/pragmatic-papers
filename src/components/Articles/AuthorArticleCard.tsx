@@ -27,7 +27,10 @@ export const AuthorArticleCard: React.FC<AuthorArticleCardProps> = ({
       <CardContent className="flex flex-col items-center gap-4 md:flex-row">
         <div className="bg-muted shrink-0 overflow-hidden rounded-sm border md:h-24 md:w-32">
           {metaImage && typeof metaImage !== "string" && (
-            <HoverPrefetchLink href={href} className="hover:opacity-50">
+            <HoverPrefetchLink
+              href={href}
+              className="card-hover:brightness-[1.02] card-hover:contrast-[1.16] card-hover:saturate-[1.16] transition-[filter] duration-300 ease-out"
+            >
               <Media
                 media={metaImage}
                 className="aspect-3/2 object-cover md:aspect-4/3"
@@ -39,7 +42,7 @@ export const AuthorArticleCard: React.FC<AuthorArticleCardProps> = ({
         </div>
         <div className="flex flex-col gap-1">
           {title && (
-            <h3 className="text-foreground hover:text-foreground/80 line-clamp-3 text-pretty md:text-2xl">
+            <h3 className="text-foreground card-hover:text-foreground/80 line-clamp-3 text-pretty md:text-2xl">
               <HoverPrefetchLink href={href}>{title}</HoverPrefetchLink>
             </h3>
           )}

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, within } from "storybook/test"
+import { expect, waitFor, within } from "storybook/test"
 
 import { authors } from "@/stories/fixtures/docs"
 
@@ -31,6 +31,22 @@ export const Card: Story = {
     for (const profile of canvas.getAllByRole("link", { name: "Jordan Rivera" })) {
       await expect(profile).toHaveAttribute("href", "/contributors/jordan-rivera")
     }
+  },
+}
+
+/** Focus on any link in the card, its social links included, lifts the photo and dims the name. */
+export const CardFocusInside: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const photo = canvasElement.querySelector<HTMLElement>("[data-slot=avatar]")!
+    const name = canvas
+      .getAllByRole("link", { name: "Jordan Rivera" })
+      .find((link) => link.tabIndex !== -1)!
+    const links = canvas.getByRole("navigation", { name: "Links for Jordan Rivera" })
+    within(links).getAllByRole("link")[0]!.focus()
+
+    await waitFor(() => expect(getComputedStyle(photo).filter).toContain("contrast(1.16)"))
+    await expect(getComputedStyle(name).color).toMatch(/\/ 0\.8\)$/)
   },
 }
 

@@ -81,6 +81,8 @@ export const Loaded: Story = {
     const notice = canvas.getByRole("note")
     await expect(notice).toHaveTextContent("More people read this than Google Analytics shows")
     await expect(notice).toHaveTextContent("ad blockers")
+    // Tinted in the admin's blue, so it isn't missed beside the figures.
+    await expect(notice).toHaveStyle({ backgroundColor: "rgb(218, 237, 248)" })
     // Published after counting began, so there's nothing missing from our count.
     await expect(canvas.queryByText(/since we started counting/)).not.toBeInTheDocument()
     await expect(

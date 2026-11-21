@@ -89,12 +89,19 @@ const Problem = ({ children }: { children: React.ReactNode }): React.ReactNode =
 )
 
 /**
+ * The notices' color: Payload's blue (its "success" palette, which its own banners use), so
+ * they stand out from the figures and follow the admin's light and dark themes.
+ */
+const NOTICE =
+  "border-(--theme-success-150) bg-(--theme-success-100) text-(--theme-success-900) *:data-[slot=alert-description]:text-(--theme-success-900)"
+
+/**
  * Above the figures, so a writer reads it before the numbers: GA misses many readers, so
  * its figures run lower than our own count, and lower than the real readership.
  */
 function UndercountNotice({ counted }: { counted: boolean }): React.ReactNode {
   return (
-    <Alert>
+    <Alert className={NOTICE}>
       <Info aria-hidden />
       <AlertTitle>More people read this than Google Analytics shows</AlertTitle>
       <AlertDescription>
@@ -129,7 +136,7 @@ function CountStartedNotice({
   analytics: boolean
 }): React.ReactNode {
   return (
-    <Alert>
+    <Alert className={NOTICE}>
       <CalendarClock aria-hidden />
       <AlertTitle>Views only counts visits since we started counting</AlertTitle>
       <AlertDescription>

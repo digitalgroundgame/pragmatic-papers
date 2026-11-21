@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import type { Article, User } from "@/payload-types"
 import { getSiteURL } from "@/utilities/getURL"
 import { isResolved } from "@/utilities/relationships"
+import { heroAspectRatio } from "./heroAspectRatio"
 import { PublicationDates } from "./PublicationDates"
 
 interface ArticleHeroProps {
@@ -41,7 +42,11 @@ export const ArticleHero: React.FC<ArticleHeroProps> = ({
         sizes="(max-width: 768px) 100vw, 1024px"
         media={heroImage}
         variant="large"
-        className="min-h-56 border object-cover shadow sm:min-h-85 md:min-h-104.5 lg:min-h-142.5"
+        // The image keeps its own shape within limits (`heroAspectRatio`), so a wide banner
+        // isn't zoomed in and cut off at the sides; outside them it's cropped around its
+        // focal point.
+        style={{ aspectRatio: heroAspectRatio(heroImage) }}
+        className="w-full border object-cover shadow"
       />
       <h1 className="mt-3">{title}</h1>
       <Byline authors={bylineAuthors} />

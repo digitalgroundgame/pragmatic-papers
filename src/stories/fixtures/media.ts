@@ -32,6 +32,8 @@ export const landscapeImage = image("landscape.svg", 1600, 900, "Mountains at su
 export const portraitImage = image("portrait.svg", 800, 1200, "A printed page on a green desk")
 export const squareImage = image("square.svg", 800, 800, "Portrait of a writer")
 export const wideImage = image("wide.svg", 1920, 400, "A city skyline at dusk")
+/** 5:2, the shape of a typical article header banner. */
+export const bannerImage = image("banner.svg", 1400, 560, "A pen stroke across a banner")
 
 export function mediaFixture(overrides: Partial<Media> = {}): Media {
   return { ...landscapeImage, id: nextId++, ...overrides }

@@ -20,7 +20,7 @@ vi.mock("../products", () => ({
   getMerchProducts: () => getMerchProducts(),
 }))
 
-import { MerchBlock } from "../Component"
+import { hiddenWhenFits, MerchBlock } from "../Component"
 
 const image = { id: 1, alt: "A mug", mimeType: "image/png", url: "/mug.png" } as unknown as Media
 
@@ -269,5 +269,24 @@ describe("MerchBlock", () => {
     expect(slides).toHaveLength(2)
     expect(slides[0]).toHaveClass("sm:basis-1/2")
     expect(slides[0]).toHaveClass("lg:basis-1/4")
+  })
+})
+
+describe("hiddenWhenFits", () => {
+  // The arrows are server-rendered, so their space is there from the first
+  // paint; these are the widths where `slideVariants` already shows them all.
+  it.each([
+    [1, "hidden"],
+    [2, "sm:hidden"],
+    [3, "md:hidden"],
+    [4, "lg:hidden"],
+    [5, ""],
+  ])("full width with %i products hides the arrows with %j", (count, expected) => {
+    expect(hiddenWhenFits("fullWidth", count)).toBe(expected)
+  })
+
+  it("keeps the arrows at every width for a one-up square of several products", () => {
+    expect(hiddenWhenFits("square", 2)).toBe("")
+    expect(hiddenWhenFits("square", 1)).toBe("hidden")
   })
 })

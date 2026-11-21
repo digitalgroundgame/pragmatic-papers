@@ -1,15 +1,34 @@
-import type { CollectionSlug, Endpoint, PayloadHandler, PayloadRequest } from "payload"
+import {
+  commitTransaction,
+  initTransaction,
+  killTransaction,
+  type CollectionSlug,
+  type Endpoint,
+  type PayloadHandler,
+  type PayloadRequest,
+} from "payload"
 
 import { normalizeCommentBody } from "../body"
 import { COMMENTING_FIELD, commentingOf } from "../commenting"
 import { duplicateCheck, linkCheck, runChecks } from "../checks"
-import { COMMENTS_SLUG, FIRST_COMMENTED_FIELD, VIOLATIONS_SLUG } from "../constants"
+import {
+  COMMENTS_SLUG,
+  FIRST_COMMENTED_FIELD,
+  LAST_COMMENTED_FIELD,
+  VIOLATIONS_SLUG,
+} from "../constants"
 import { SKIP_MODERATION } from "../hooks/recordModeration"
 import { authorLock } from "../lock"
 import { describerFor, findFirstComments } from "../markers"
 import { readSettings } from "../settings"
 import { buildThread, type StoredComment } from "../thread"
-import type { CommentThread, CommentViewer, PublicComment, ResolvedCommentsConfig } from "../types"
+import type {
+  CommentCheckResult,
+  CommentThread,
+  CommentViewer,
+  PublicComment,
+  ResolvedCommentsConfig,
+} from "../types"
 
 /** The most comments one thread reads: the newest, so a new comment always shows. */
 export const THREAD_LIMIT = 500
@@ -218,58 +237,89 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       }
     }
 
-    const since = new Date(Date.now() - config.cooldownSeconds * 1000).toISOString()
-    const recent = await req.payload.count({
-      collection: COMMENTS_SLUG as CollectionSlug,
-      where: { author: { equals: author.id }, createdAt: { greater_than: since } },
-      overrideAccess: true,
-      req,
-    })
-    if (recent.totalDocs > 0) {
-      return Response.json(
-        { message: "You just commented. Give it a few seconds before the next one." },
-        { status: 429, headers: { ...noStore, "Retry-After": String(config.cooldownSeconds) } },
-      )
-    }
-
-    const check = await runChecks([linkCheck, duplicateCheck, ...config.checks], {
-      body: body.body,
-      author,
-      targetId: id,
-      settings,
-      req,
-    })
-
-    const created = (await req.payload.create({
-      collection: COMMENTS_SLUG as CollectionSlug,
-      // The slugs are the plugin's options, so the generated types can't name the fields.
-      data: {
-        body: body.body,
-        target: id,
-        author: author.id,
-        parent: parentId,
-        depth,
-        status: check.ok ? "published" : "auto-hidden",
-        moderationReason: check.ok ? null : check.reason,
-      } as never,
-      overrideAccess: true,
-      context: { [SKIP_MODERATION]: true },
-      req,
-    })) as unknown as StoredComment
-
-    if (!check.ok) {
-      await req.payload.create({
-        collection: VIOLATIONS_SLUG as CollectionSlug,
-        data: {
-          author: author.id,
-          comment: created.id,
-          source: "check",
-          reason: check.reason,
-        } as never,
+    const countAndCreate = async (): Promise<
+      { created: StoredComment; check: CommentCheckResult } | Response
+    > => {
+      const since = new Date(Date.now() - config.cooldownSeconds * 1000).toISOString()
+      const recent = await req.payload.count({
+        collection: COMMENTS_SLUG as CollectionSlug,
+        where: { author: { equals: author.id }, createdAt: { greater_than: since } },
         overrideAccess: true,
         req,
       })
+      if (recent.totalDocs > 0) {
+        return Response.json(
+          { message: "You just commented. Give it a few seconds before the next one." },
+          { status: 429, headers: { ...noStore, "Retry-After": String(config.cooldownSeconds) } },
+        )
+      }
+
+      const check = await runChecks([linkCheck, duplicateCheck, ...config.checks], {
+        body: body.body,
+        author,
+        targetId: id,
+        settings,
+        req,
+      })
+
+      const created = (await req.payload.create({
+        collection: COMMENTS_SLUG as CollectionSlug,
+        // The slugs are the plugin's options, so the generated types can't name the fields.
+        data: {
+          body: body.body,
+          target: id,
+          author: author.id,
+          parent: parentId,
+          depth,
+          status: check.ok ? "published" : "auto-hidden",
+          moderationReason: check.ok ? null : check.reason,
+        } as never,
+        overrideAccess: true,
+        context: { [SKIP_MODERATION]: true },
+        req,
+      })) as unknown as StoredComment
+
+      if (!check.ok) {
+        await req.payload.create({
+          collection: VIOLATIONS_SLUG as CollectionSlug,
+          data: {
+            author: author.id,
+            comment: created.id,
+            source: "check",
+            reason: check.reason,
+          } as never,
+          overrideAccess: true,
+          req,
+        })
+      }
+      return { created, check }
     }
+
+    // The cooldown is counted and the comment created in one transaction that first writes
+    // the author's last-commented time. That write locks their row until the transaction ends,
+    // so a second post sent at the same moment waits here, then counts the first.
+    const ownsTransaction = await initTransaction(req)
+    let result: { created: StoredComment; check: CommentCheckResult } | Response
+    try {
+      await req.payload.db.updateOne({
+        collection: config.authorsSlug,
+        id: author.id,
+        data: { [LAST_COMMENTED_FIELD]: new Date().toISOString() },
+        returning: false,
+        req,
+      })
+      result = await countAndCreate()
+      // A refused post leaves the author's time as it was.
+      if (ownsTransaction) {
+        if (result instanceof Response) await killTransaction(req)
+        else await commitTransaction(req)
+      }
+    } catch (error) {
+      if (ownsTransaction) await killTransaction(req)
+      throw error
+    }
+    if (result instanceof Response) return result
+    const { created, check } = result
 
     // The comment's hook has just kept the author's first-commented time; `author` was read
     // before it, so a first comment brings its own.

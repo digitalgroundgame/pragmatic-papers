@@ -24,3 +24,10 @@ export const VIOLATION_SOURCES = ["check", "moderator", "block"] as const
  * marks read it, so a thread asks nothing more of the database for them.
  */
 export const FIRST_COMMENTED_FIELD = "firstCommentedAt"
+
+/**
+ * The other field the plugin adds to the authors collection: when the author last posted a
+ * comment. Posting writes it first, inside the post's transaction, so the write locks the
+ * author's row and a second post sent at the same moment waits, then sees the first.
+ */
+export const LAST_COMMENTED_FIELD = "lastCommentedAt"

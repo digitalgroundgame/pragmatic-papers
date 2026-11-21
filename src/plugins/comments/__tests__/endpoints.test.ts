@@ -5,6 +5,7 @@ import {
   COMMENTS_SLUG,
   DEFAULT_SETTINGS,
   FIRST_COMMENTED_FIELD,
+  LAST_COMMENTED_FIELD,
   SETTINGS_SLUG,
   VIOLATIONS_SLUG,
 } from "../constants"
@@ -63,7 +64,14 @@ let db: {
 }
 
 const payload = {
-  db: { defaultIDType: "number" },
+  db: {
+    defaultIDType: "number",
+    // Posting writes the author's last-commented time inside a transaction, to lock their row.
+    beginTransaction: vi.fn(async () => "tx-1"),
+    commitTransaction: vi.fn(async () => undefined),
+    rollbackTransaction: vi.fn(async () => undefined),
+    updateOne: vi.fn(async () => ({})),
+  },
   find: vi.fn(async ({ collection }: { collection: string }) => ({
     docs: collection === VIOLATIONS_SLUG ? db.violations : db.comments,
   })),
@@ -628,6 +636,54 @@ describe("POST /thread/:id", () => {
     expect(response.status).toBe(429)
     expect(response.headers.get("Retry-After")).toBe("10")
     expect(payload.create).not.toHaveBeenCalled()
+  })
+
+  describe("the cooldown, against two posts at once", () => {
+    const order = (mock: { mock: { invocationCallOrder: number[] } }) =>
+      mock.mock.invocationCallOrder[0]!
+
+    it("locks the author's row before counting, and counts and creates in the same transaction", async () => {
+      expect((await send({ body: "Hi" })).status).toBe(201)
+
+      expect(payload.db.updateOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          collection: "users",
+          id: 7,
+          data: { [LAST_COMMENTED_FIELD]: expect.any(String) },
+        }),
+      )
+      expect(order(payload.db.beginTransaction)).toBeLessThan(order(payload.db.updateOne))
+      expect(order(payload.db.updateOne)).toBeLessThan(order(payload.count))
+      expect(order(payload.create)).toBeLessThan(order(payload.db.commitTransaction))
+      // Each step runs on the request, which carries the transaction.
+      const [[{ req }]] = payload.count.mock.calls as unknown as [[{ req: PayloadRequest }]]
+      expect(payload.db.updateOne.mock.calls[0]).toEqual([expect.objectContaining({ req })])
+      expect(payload.create.mock.calls[0]).toEqual([expect.objectContaining({ req })])
+      expect(payload.db.commitTransaction).toHaveBeenCalledWith("tx-1")
+      expect(payload.db.rollbackTransaction).not.toHaveBeenCalled()
+    })
+
+    it("rolls back a post the cooldown refuses, so the author's time stays as it was", async () => {
+      db.recent = 1
+      expect((await send({ body: "Again" })).status).toBe(429)
+      expect(payload.db.rollbackTransaction).toHaveBeenCalledWith("tx-1")
+      expect(payload.db.commitTransaction).not.toHaveBeenCalled()
+    })
+
+    it("rolls back when creating the comment fails", async () => {
+      payload.create.mockRejectedValueOnce(new Error("database went away"))
+      await expect(send({ body: "Hi" })).rejects.toThrow("database went away")
+      expect(payload.db.rollbackTransaction).toHaveBeenCalledWith("tx-1")
+      expect(payload.db.commitTransaction).not.toHaveBeenCalled()
+    })
+
+    it("posts nothing when the lock can't be taken", async () => {
+      payload.db.updateOne.mockRejectedValueOnce(new Error("lock timeout"))
+      await expect(send({ body: "Hi" })).rejects.toThrow("lock timeout")
+      expect(payload.count).not.toHaveBeenCalled()
+      expect(payload.create).not.toHaveBeenCalled()
+      expect(payload.db.rollbackTransaction).toHaveBeenCalledWith("tx-1")
+    })
   })
 
   describe("a reply", () => {

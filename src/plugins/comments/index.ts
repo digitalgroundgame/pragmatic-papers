@@ -7,6 +7,7 @@ import { commentsCollection } from "./collections/Comments"
 import { violationsCollection } from "./collections/Violations"
 import { deleteAuthorsComments, deleteCommentsOnTarget } from "./hooks/deleteCommentsOn"
 import { firstCommentedField } from "./hooks/firstCommented"
+import { lastCommentedField } from "./hooks/lastCommented"
 import { settingsGlobal } from "./settings"
 import type { CommentAuthor, CommentsPluginConfig, ResolvedCommentsConfig } from "./types"
 
@@ -94,7 +95,10 @@ export const commentsPlugin = registerPlugin<CommentsPluginConfig>({
         }
         if (existing.slug === comments.authorsSlug) {
           const authors = withHook(existing, deleteAuthorsComments)
-          return { ...authors, fields: [...authors.fields, firstCommentedField()] }
+          return {
+            ...authors,
+            fields: [...authors.fields, firstCommentedField(), lastCommentedField()],
+          }
         }
         return existing
       }),

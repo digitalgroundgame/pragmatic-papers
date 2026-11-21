@@ -5,8 +5,14 @@ import { isolatedDocs } from "@/stories/isolatedDocs"
 
 import { ReadingBeacon } from "."
 
-/** The views the beacon counted, by URL. */
-const views: string[] = []
+interface FetchCalls { mock: { calls: [string, RequestInit][] } }
+const fetched = (): [string, RequestInit][] => (window.fetch as unknown as FetchCalls).mock.calls
+
+/** The views the beacon counted, by URL: each sent without the reader's cookies. */
+const views = (): string[] =>
+  fetched()
+    .filter(([url, init]) => url.endsWith("/view") && init.credentials === "omit")
+    .map(([url]) => url)
 
 /**
  * Signs the browser in (the cookie sign-in sets for the page) when `signedIn`, and answers
@@ -23,18 +29,8 @@ function setUp(signedIn: boolean) {
     const fetchSpy = spyOn(window, "fetch").mockImplementation(
       async () => new Response(null, { status: 204 }),
     )
-    const original = navigator.sendBeacon
-    views.length = 0
-    Object.defineProperty(navigator, "sendBeacon", {
-      configurable: true,
-      value: (url: string | URL) => {
-        views.push(String(url))
-        return true
-      },
-    })
     return () => {
       fetchSpy.mockRestore()
-      Object.defineProperty(navigator, "sendBeacon", { value: original, configurable: true })
       document.cookie = "pp-signed-in=; path=/; max-age=0"
     }
   }
@@ -67,7 +63,7 @@ export const Visit: Story = {
   beforeEach: setUp(true),
   play: async () => {
     await waitFor(() => expect(reports()).toEqual([{ day: expect.any(String) }]))
-    await expect(views).toEqual([])
+    await expect(views()).toEqual([])
   },
 }
 
@@ -77,7 +73,7 @@ export const ArticleRead: Story = {
   beforeEach: setUp(true),
   play: async () => {
     await waitFor(() => expect(reports()).toEqual([{ day: expect.any(String), article: 10 }]))
-    await expect(views).toEqual(["/api/articles/10/view"])
+    await expect(views()).toEqual(["/api/articles/10/view"])
   },
 }
 
@@ -86,7 +82,7 @@ export const SignedOut: Story = {
   args: { articleId: 10 },
   beforeEach: setUp(false),
   play: async () => {
-    await waitFor(() => expect(views).toEqual(["/api/articles/10/view"]))
+    await waitFor(() => expect(views()).toEqual(["/api/articles/10/view"]))
     await new Promise((resolve) => setTimeout(resolve, 100))
     await expect(reports()).toEqual([])
   },

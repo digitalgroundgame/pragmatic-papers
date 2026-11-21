@@ -547,7 +547,7 @@ join field, on each user's record. Only admins delete either.
 /api/reading/mine` is the account page's totals.
   - Deleting an account, or an article, deletes its reads. Only admins see them in the admin.
   - **Views** are counted for every reader, signed in or not, by the same beacon: on an article
-    it sends `POST /api/articles/:id/view` once, with `sendBeacon` (no cookie). The host keeps a
+    it sends `POST /api/articles/:id/view` once, a `fetch` that leaves the cookies out (`sendBeacon` always sends them). The host keeps a
     daily total per article in the plain `article_views` table
     (`src/collections/Articles/stats/views/`), with nothing about the reader; bots that say so
     are left out, and one address adds at most 20 views an hour to an article (kept in memory).

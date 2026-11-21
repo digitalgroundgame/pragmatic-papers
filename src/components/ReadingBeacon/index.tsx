@@ -44,11 +44,11 @@ function storeDay(day: string): void {
  * Counts one view of an article in the site's own view count, for every reader: one request
  * to our own API, with no cookie and nothing about the reader. Ad blockers stop the trackers
  * they know, like Google Analytics, but not a site's own endpoints, so this counts readers GA
- * can't. `sendBeacon` survives the reader leaving at once and never holds the page up.
+ * can't. `keepalive` lets it survive the reader leaving at once. Not `sendBeacon`, which
+ * always sends the site's cookies.
  */
 function sendView(apiPath: string, articleId: number): void {
   const url = `${apiPath}/articles/${articleId}/view`
-  if (typeof navigator.sendBeacon === "function" && navigator.sendBeacon(url)) return
   // A count that doesn't arrive isn't worth troubling the reader about.
   void fetch(url, { method: "POST", keepalive: true, credentials: "omit" }).catch(() => null)
 }

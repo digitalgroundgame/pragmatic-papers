@@ -11,7 +11,7 @@ const noContent = (): Response =>
 
 /**
  * POST /api/articles/:id/view — the article page sends this once per visit
- * (`ArticleViewBeacon`). Anyone may send it: it reads no cookie and stores no detail of the
+ * (`ReadingBeacon`), without cookies. Anyone may send it: it stores no detail of the
  * reader, only one more view on today's count. It answers 204 whether or not the view
  * counted, so it says nothing about which ids are published.
  */

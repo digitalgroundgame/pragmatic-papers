@@ -236,7 +236,7 @@ export const Articles: CollectionConfig = {
         {
           label: "Stats",
           description:
-            "How many people read this article, from Google Analytics, and its comments. Writers see the stats of articles they're credited on, narrators of articles they narrated.",
+            "How many people read this article, by our own count and Google Analytics', with its narration plays, comments and ranking. Writers see the stats of articles they're credited on, narrators of articles they narrated.",
           admin: { condition: showStatsTab },
           fields: [
             {

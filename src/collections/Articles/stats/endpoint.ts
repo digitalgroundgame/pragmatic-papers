@@ -37,7 +37,7 @@ export interface ArticleStats {
   /** The day it was first published (YYYY-MM-DD), or null until it is. */
   publishedOn: string | null
   /**
-   * Our own count of its views, which ad blockers don't stop (`ArticleViewBeacon`). Null
+   * Our own count of its views, which ad blockers don't stop (`ReadingBeacon`). Null
    * until it's published, or when the count couldn't be read.
    */
   views: ViewCounts | null

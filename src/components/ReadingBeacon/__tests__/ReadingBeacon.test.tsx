@@ -7,7 +7,6 @@ import { localDay } from "@/plugins/achievements/reading/days"
 import { READ_AFTER_MS, ReadingBeacon } from ".."
 
 const fetchMock = vi.fn<typeof fetch>()
-const sendBeacon = vi.fn((_url: string | URL) => true)
 let intersect: (() => void) | null = null
 
 class FakeObserver {
@@ -25,14 +24,16 @@ const signIn = () => {
   document.cookie = "pp-signed-in=1; path=/"
 }
 const cookieSet = () => document.cookie.includes("pp-signed-in=1")
-const bodies = () => fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init?.body)))
+const VIEW = /\/articles\/\d+\/view$/
+/** The view counts sent, and everything else (the signed-in reader's reports). */
+const views = () => fetchMock.mock.calls.filter(([url]) => VIEW.test(String(url)))
+const reports = () => fetchMock.mock.calls.filter(([url]) => !VIEW.test(String(url)))
+const bodies = () => reports().map(([, init]) => JSON.parse(String(init?.body)))
 
 beforeEach(() => {
   fetchMock.mockReset().mockResolvedValue(new Response(null, { status: 204 }))
   vi.stubGlobal("fetch", fetchMock)
   vi.stubGlobal("IntersectionObserver", FakeObserver)
-  sendBeacon.mockReset().mockReturnValue(true)
-  Object.defineProperty(navigator, "sendBeacon", { value: sendBeacon, configurable: true })
   localStorage.clear()
   document.cookie = "pp-signed-in=; path=/; max-age=0"
 })
@@ -47,9 +48,8 @@ describe("ReadingBeacon", () => {
     render(<ReadingBeacon />)
     render(<ReadingBeacon articleId={10} />)
     expect(intersect).toBeNull()
-    expect(fetchMock).not.toHaveBeenCalled()
-    expect(sendBeacon).toHaveBeenCalledTimes(1)
-    expect(sendBeacon).toHaveBeenCalledWith("/api/articles/10/view")
+    expect(reports()).toEqual([])
+    expect(views().map(([url]) => url)).toEqual(["/api/articles/10/view"])
   })
 
   it("counts each article's view once, and none off an article", () => {
@@ -57,24 +57,24 @@ describe("ReadingBeacon", () => {
     rerender(<ReadingBeacon articleId={10} />)
     rerender(<ReadingBeacon articleId={11} />)
     render(<ReadingBeacon />)
-    expect(sendBeacon.mock.calls.map(([url]) => url)).toEqual([
-      "/api/articles/10/view",
-      "/api/articles/11/view",
-    ])
+    expect(views().map(([url]) => url)).toEqual(["/api/articles/10/view", "/api/articles/11/view"])
   })
 
-  it("counts the view with a cookie-free fetch when the browser refuses the beacon", () => {
-    sendBeacon.mockReturnValue(false)
+  it("counts the view without the reader's cookies, signed in or not", () => {
+    signIn()
+    const beacon = vi.fn(() => true)
+    Object.defineProperty(navigator, "sendBeacon", { value: beacon, configurable: true })
     render(<ReadingBeacon articleId={10} apiPath="/cms/api" />)
     expect(fetchMock).toHaveBeenCalledWith("/cms/api/articles/10/view", {
       method: "POST",
       keepalive: true,
       credentials: "omit",
     })
+    // sendBeacon always sends cookies, so the view never goes through it.
+    expect(beacon).not.toHaveBeenCalled()
   })
 
   it("ignores a view count that fails", async () => {
-    sendBeacon.mockReturnValue(false)
     fetchMock.mockRejectedValue(new TypeError("offline"))
     render(<ReadingBeacon articleId={10} />)
     await expect(fetchMock.mock.results[0]!.value).rejects.toThrow("offline")
@@ -116,7 +116,7 @@ describe("ReadingBeacon", () => {
     signIn()
     const { container } = render(<ReadingBeacon articleId={10} />)
     expect(container.querySelector("span[aria-hidden]")).toBeInTheDocument()
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(reports()).toEqual([])
 
     act(() => intersect!())
     expect(bodies()).toEqual([{ day: localDay(), article: 10 }])
@@ -133,7 +133,7 @@ describe("ReadingBeacon", () => {
     const hidden = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden")
     act(() => void document.dispatchEvent(new Event("visibilitychange")))
     act(() => vi.advanceTimersByTime(READ_AFTER_MS))
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(reports()).toEqual([])
 
     hidden.mockReturnValue("visible")
     act(() => void document.dispatchEvent(new Event("visibilitychange")))

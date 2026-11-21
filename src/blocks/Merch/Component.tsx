@@ -45,6 +45,22 @@ const imageSizesByLayout = {
 
 type MerchLayout = keyof typeof imageSizesByLayout
 
+/**
+ * The widths at which every product fits on screen, so there's nothing to page
+ * to: the arrows are hidden there from the first paint, before the carousel has
+ * measured. Mirrors `slideVariants` (square is one-up everywhere; full width
+ * shows two from `sm`, three from `md`, four from `lg`). Literal classes, so
+ * Tailwind sees them.
+ */
+export function hiddenWhenFits(layout: MerchLayout, count: number): string {
+  if (count <= 1) return "hidden"
+  if (layout === "square") return ""
+  if (count === 2) return "sm:hidden"
+  if (count === 3) return "md:hidden"
+  if (count === 4) return "lg:hidden"
+  return ""
+}
+
 // The block renders in two places. As a page-layout block it owns its own
 // gutter and closes with a rule that separates it from the next block. Inside a
 // rich-text column it sits in a container that already has both, and the
@@ -156,7 +172,7 @@ export const MerchBlock = async ({
                   Shop all
                 </LinkButton>
               )}
-              <MerchCarouselControls />
+              <MerchCarouselControls hiddenWhenFits={hiddenWhenFits(merchLayout, items.length)} />
             </div>
           </div>
 
@@ -168,7 +184,7 @@ export const MerchBlock = async ({
             ))}
           </CarouselContent>
 
-          {merchLayout === "square" ? <MerchCarouselDots /> : null}
+          {merchLayout === "square" ? <MerchCarouselDots count={items.length} /> : null}
         </MerchCarousel>
       </section>
       {enableGutter && (

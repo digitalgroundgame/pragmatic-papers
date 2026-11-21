@@ -76,6 +76,7 @@ import * as migration_20261113_061907_whip_counts_auto_publish from "./20261113_
 import * as migration_20261114_003655_interactives_whip_count from "./20261114_003655_interactives_whip_count"
 import * as migration_20261114_055741_comments_redesign from "./20261114_055741_comments_redesign"
 import * as migration_20261114_171352_reading_history from "./20261114_171352_reading_history"
+import * as migration_20261114_172255_add_article_views from "./20261114_172255_add_article_views"
 
 export const migrations = [
   {
@@ -467,5 +468,10 @@ export const migrations = [
     up: migration_20261114_171352_reading_history.up,
     down: migration_20261114_171352_reading_history.down,
     name: "20261114_171352_reading_history",
+  },
+  {
+    up: migration_20261114_172255_add_article_views.up,
+    down: migration_20261114_172255_add_article_views.down,
+    name: "20261114_172255_add_article_views",
   },
 ]

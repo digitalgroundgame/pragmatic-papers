@@ -66,8 +66,15 @@ export const ForecastExplained: Story = {
     const forecast = canvasElement.querySelector<HTMLElement>("[data-whip-count-forecast]")!
     await userEvent.hover(forecast)
     const body = within(canvasElement.ownerDocument.body)
-    await expect(await body.findByText(/^A forecast, not a count/)).toBeInTheDocument()
-    await expect(body.getByText("3 if the 1 who won’t back Hale hold to it")).toBeInTheDocument()
+    const method = await body.findByText(/^A forecast, not a count/)
+    await expect(method).toBeInTheDocument()
+    const line = body.getByText("3 if the 1 who won’t back Hale hold to it")
+    await expect(line).toBeInTheDocument()
+    // The title stacks above its explanation, as wide as the popup, rather than squeezed beside it.
+    const lineBox = line.getBoundingClientRect()
+    const methodBox = method.getBoundingClientRect()
+    await expect(lineBox.bottom).toBeLessThanOrEqual(methodBox.top)
+    await expect(lineBox.left).toBe(methodBox.left)
     // Ortiz's total is the right-hand one, with the forecast inward of the count.
     const totals = canvasElement.querySelector<HTMLElement>("[data-whip-count-totals]")!
     await expect(within(totals).getByText("Daniel Ortiz")).toBeInTheDocument()

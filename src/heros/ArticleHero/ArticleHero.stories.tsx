@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import { expect, userEvent, waitFor, within } from "storybook/test"
 
 import { articleFixture, authors } from "@/stories/fixtures/docs"
-import { narrationAudio } from "@/stories/fixtures/media"
+import { bannerImage, narrationAudio, portraitImage, wideImage } from "@/stories/fixtures/media"
 import { stampTableOfContentsAnchors, TableOfContentsProvider } from "@/components/TableOfContents"
 
 import { ArticleHero } from "."
@@ -214,5 +214,35 @@ export const LongestDatesMobile: Story = {
     for (const time of tooltip.querySelectorAll("dd [data-slot=time-of-day]")) {
       await expect(lineCount(time)).toBe(1)
     }
+  },
+}
+
+/** The hero's image, and its shape as the page lays it out. */
+const heroShape = (canvasElement: HTMLElement) => {
+  const { width, height } = canvasElement.querySelector("img")!.getBoundingClientRect()
+  return width / height
+}
+
+/** A wide banner keeps its own shape, so nothing at its sides is cut off. */
+export const BannerImage: Story = {
+  args: { article: articleFixture({ authors: authors.slice(0, 1), heroImage: bannerImage }) },
+  play: async ({ canvasElement }) => {
+    await expect(heroShape(canvasElement)).toBeCloseTo(1400 / 560, 1)
+  },
+}
+
+/** A portrait or square image is cropped to 16:9 around its focal point. */
+export const PortraitImage: Story = {
+  args: { article: articleFixture({ authors: authors.slice(0, 1), heroImage: portraitImage }) },
+  play: async ({ canvasElement }) => {
+    await expect(heroShape(canvasElement)).toBeCloseTo(16 / 9, 1)
+  },
+}
+
+/** A banner wider than 4:1 is cropped to 4:1, so the hero never shrinks to a strip. */
+export const VeryWideImage: Story = {
+  args: { article: articleFixture({ authors: authors.slice(0, 1), heroImage: wideImage }) },
+  play: async ({ canvasElement }) => {
+    await expect(heroShape(canvasElement)).toBeCloseTo(4, 1)
   },
 }

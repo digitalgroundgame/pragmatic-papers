@@ -341,10 +341,10 @@ function Total({
             </TooltipTrigger>
             <TooltipContent
               side="top"
-              className="max-w-xs text-left font-sans text-xs font-normal tracking-normal"
+              className="max-w-xs flex-col items-start gap-1 text-left font-sans text-xs font-normal tracking-normal"
             >
               <p className="font-semibold">{refusalForecastLine(forecast)}</p>
-              <p className="mt-1">{refusalForecastMethod(forecast)}</p>
+              <p>{refusalForecastMethod(forecast)}</p>
             </TooltipContent>
           </Tooltip>
         )}

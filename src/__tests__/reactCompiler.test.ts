@@ -23,6 +23,7 @@ const SKIPPED: Record<string, string> = {
   "src/blocks/Form/FormBlockClient.tsx": "`?.` inside try/catch",
   "src/blocks/InteractiveMap/download/MapDownload.tsx": "try/finally, dynamic import()",
   "src/blocks/NewsletterSignup/Component.client.tsx": "`?.` inside try/catch",
+  "src/collections/Articles/components/ArticleStats/ArticleStatsView.tsx": "try/finally",
   "src/collections/Articles/components/CloneFromProduction/Client.tsx":
     "throw inside try, for await",
   "src/collections/Articles/components/ExtractNarrationButton.tsx": "try/finally",

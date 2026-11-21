@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
-import { expect, mocked, within } from "storybook/test"
+import { expect, mocked, waitFor, within } from "storybook/test"
 
 import type { Merch } from "@/payload-types"
 import { createFakePayload } from "@/stories/fixtures/payload"
@@ -79,4 +79,57 @@ export const Square: Story = {
 
 export const NoHeading: Story = {
   args: { heading: null },
+}
+
+/**
+ * Records the layout shifts inside `root` from now on, as Core Web Vitals'
+ * CLS counts them (not within half a second of input).
+ */
+function watchLayoutShifts(root: Element): { shifts: string[]; stop: () => void } {
+  const shifts: string[] = []
+  const observer = new PerformanceObserver((list) => {
+    for (const entry of list.getEntries() as unknown as LayoutShiftLike[]) {
+      if (entry.hadRecentInput) continue
+      for (const source of entry.sources) {
+        if (source.node && root.contains(source.node)) {
+          const { x, width } = source.previousRect
+          const now = source.currentRect
+          shifts.push(`${source.node.nodeName} x=${x} w=${width} -> x=${now.x} w=${now.width}`)
+        }
+      }
+    }
+  })
+  observer.observe({ type: "layout-shift" })
+  return { shifts, stop: () => observer.disconnect() }
+}
+
+/** `LayoutShift` isn't in TypeScript's DOM types yet. */
+interface LayoutShiftLike {
+  hadRecentInput: boolean
+  sources: { node: Node | null; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }[]
+}
+
+let layoutShifts: ReturnType<typeof watchLayoutShifts> | undefined
+
+/**
+ * The arrows are in the first paint, so nothing in the header moves when the
+ * carousel measures itself and finds there's something to page to. They used
+ * to arrive only then, pushing "Shop all" aside on every page with the block.
+ */
+export const ArrowsDontShiftTheHeader: Story = {
+  beforeEach: ({ canvasElement }) => {
+    layoutShifts = watchLayoutShifts(canvasElement)
+    return () => layoutShifts?.stop()
+  },
+  play: async ({ canvasElement }) => {
+    const section = await within(canvasElement).findByRole("region", {
+      name: "Support the Papers",
+    })
+    const next = await within(section).findByRole("button", { name: "Next slide" })
+    // Enabled once embla has measured and found more products than fit.
+    await waitFor(() => expect(next).toBeEnabled())
+    // Layout-shift entries are delivered after the frame that caused them.
+    await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 100)))
+    await expect(layoutShifts?.shifts).toEqual([])
+  },
 }

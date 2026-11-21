@@ -16,6 +16,7 @@ const lightTheme = {
   "--theme-elevation-650": "rgb(87, 87, 87)",
   "--theme-elevation-800": "rgb(47, 47, 47)",
   "--theme-success-100": "rgb(218, 237, 248)",
+  "--theme-success-150": "rgb(188, 225, 248)",
   "--theme-success-500": "rgb(21, 135, 186)",
   "--theme-success-900": "rgb(19, 44, 58)",
   "--theme-warning-100": "rgb(248, 232, 219)",

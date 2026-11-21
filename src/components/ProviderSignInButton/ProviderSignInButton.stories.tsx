@@ -25,6 +25,22 @@ export const Discord: Story = { args: { provider: "discord", label: "Discord" } 
 
 export const Destiny: Story = { args: { provider: "destiny", label: "Destiny.gg" } }
 
+export const DigitalGroundGame: Story = {
+  args: { provider: "digitalgroundgame", label: "Digital Ground Game" },
+  play: async ({ canvasElement }) => {
+    const button = within(canvasElement).getByRole("button", {
+      name: "Sign in with Digital Ground Game",
+    })
+    await expect(button.querySelector("svg")).toBeInTheDocument()
+  },
+}
+
+/** Its colors flip in the dark theme, so the wordmark stays black on white or white on black. */
+export const DigitalGroundGameDark: Story = {
+  args: { provider: "digitalgroundgame", label: "Digital Ground Game" },
+  globals: { theme: "dark" },
+}
+
 /** A provider without its own look gets the plain outline button. */
 export const Other: Story = { args: { provider: "github", label: "GitHub" } }
 
@@ -33,6 +49,7 @@ export const All: Story = {
   render: (args) => (
     <div className="grid w-72 gap-2">
       <ProviderSignInButton {...args} provider="destiny" label="Destiny.gg" />
+      <ProviderSignInButton {...args} provider="digitalgroundgame" label="Digital Ground Game" />
       <ProviderSignInButton {...args} provider="google" label="Google" />
       <ProviderSignInButton {...args} provider="discord" label="Discord" />
     </div>
@@ -45,6 +62,7 @@ export const IconOnly: Story = {
   render: (args) => (
     <div className="flex gap-2">
       <ProviderSignInButton {...args} provider="destiny" label="Destiny.gg" />
+      <ProviderSignInButton {...args} provider="digitalgroundgame" label="Digital Ground Game" />
       <ProviderSignInButton {...args} provider="google" label="Google" />
       <ProviderSignInButton {...args} provider="discord" label="Discord" />
     </div>

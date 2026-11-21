@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto"
 
 import { isStaff } from "@/access/roles"
-import { destinySignIn, discordSignIn, googleSignIn } from "@/integrations"
+import { destinySignIn, dggSignIn, discordSignIn, googleSignIn } from "@/integrations"
 import type { User } from "@/payload-types"
 import { getSiteURL } from "@/utilities/getURL"
 import type { Payload } from "payload"
@@ -35,6 +35,7 @@ export const ssoOptions: SsoPluginConfig = {
     google: googleSignIn.credentials(),
     discord: discordSignIn.credentials(),
     destiny: destinySignIn.credentials(),
+    digitalgroundgame: dggSignIn.credentials(),
   }),
   baseURL: getSiteURL,
   secret: () => process.env.PAYLOAD_SECRET || "",
@@ -85,9 +86,10 @@ export function signUpProviders(): Array<{ id: SsoProviderId; label: string }> {
     google: googleSignIn.credentials(),
     discord: discordSignIn.credentials(),
     destiny: destinySignIn.credentials(),
+    digitalgroundgame: dggSignIn.credentials(),
   }
-  // Destiny.gg first: most of our readers come from its community.
-  return (["destiny", "google", "discord"] as const)
+  // Destiny.gg first: most of our readers come from its community, and DGG's volunteers next.
+  return (["destiny", "digitalgroundgame", "google", "discord"] as const)
     .filter((id) => credentials[id])
     .map((id) => ({ id, label: SSO_PROVIDER_LABELS[id] }))
 }

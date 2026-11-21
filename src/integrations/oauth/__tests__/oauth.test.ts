@@ -35,4 +35,30 @@ describe("oauthApp", () => {
     expect(app.credentials()).toEqual({ clientId: "id", clientSecret: "secret" })
     expect(integrationStatus(app).configured).toBe(true)
   })
+
+  it("adds the provider's origin for an app we host, defaulting while it's unset", () => {
+    const hosted = oauthApp({
+      id: "hosted-sign-in",
+      label: "Sign in with Hosted",
+      service: "Hosted",
+      clientIdEnv: "EXAMPLE_CLIENT_ID",
+      clientSecretEnv: "EXAMPLE_CLIENT_SECRET",
+      baseUrlEnv: "EXAMPLE_URL",
+      defaultBaseUrl: "https://auth.example.org",
+    })
+    vi.stubEnv("EXAMPLE_CLIENT_ID", "id")
+    vi.stubEnv("EXAMPLE_CLIENT_SECRET", "secret")
+    vi.stubEnv("EXAMPLE_URL", "")
+
+    expect(hosted.credentials()).toEqual({
+      clientId: "id",
+      clientSecret: "secret",
+      baseUrl: "https://auth.example.org",
+    })
+    // The origin has a default, so only the two credentials are required.
+    expect(hosted.required).toEqual(["EXAMPLE_CLIENT_ID", "EXAMPLE_CLIENT_SECRET"])
+
+    vi.stubEnv("EXAMPLE_URL", "https://sso.example.org")
+    expect(hosted.credentials()?.baseUrl).toBe("https://sso.example.org")
+  })
 })

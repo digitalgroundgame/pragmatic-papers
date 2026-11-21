@@ -133,8 +133,8 @@ export const unsplash = unsplashApp({
 /**
  * The OAuth applications behind "Sign in with …" on the admin's login page (the `sso`
  * experiment, `src/plugins/sso`). Each provider's button appears once its two variables are
- * set; its application must list `<SERVER_URL>/api/auth/callback/<google|discord|destiny>`
- * as a redirect URI.
+ * set; its application must list
+ * `<SERVER_URL>/api/auth/callback/<google|discord|destiny|digitalgroundgame>` as a redirect URI.
  */
 export const googleSignIn = oauthApp({
   id: "google-sign-in",
@@ -165,6 +165,21 @@ export const destinySignIn = oauthApp({
   clientSecretEnv: "DESTINY_CLIENT_SECRET",
 })
 
+/**
+ * Digital Ground Game's Authentik: the "pragmatic-papers" OAuth2/OIDC application on
+ * auth.digitalgroundgame.org (its blueprint is in digitalgroundgame/authentik-management-service).
+ * `AUTHENTIK_URL` only needs setting to point at another instance.
+ */
+export const dggSignIn = oauthApp({
+  id: "dgg-sign-in",
+  label: "Sign in with Digital Ground Game",
+  service: "Authentik",
+  clientIdEnv: "AUTHENTIK_CLIENT_ID",
+  clientSecretEnv: "AUTHENTIK_CLIENT_SECRET",
+  baseUrlEnv: "AUTHENTIK_URL",
+  defaultBaseUrl: "https://auth.digitalgroundgame.org",
+})
+
 /** Declaration order is display order. */
 export const INTEGRATIONS: readonly Integration[] = [
   courtTracker,
@@ -181,6 +196,7 @@ export const INTEGRATIONS: readonly Integration[] = [
   googleSignIn,
   discordSignIn,
   destinySignIn,
+  dggSignIn,
 ]
 
 export function getIntegration(id: string): Integration | null {

@@ -1,9 +1,11 @@
 import type { PostgresAdapter } from "@payloadcms/db-postgres"
 import type { betterAuth as BetterAuth } from "better-auth"
+import type { genericOAuth as GenericOAuth } from "better-auth/plugins/generic-oauth"
 import type { Payload } from "payload"
 
 import { AUTH_ENDPOINT_PATH, DISABLED_PATHS, TABLES } from "./constants"
 import { destinyPlugin, type DestinyProfile } from "./destiny"
+import { digitalGroundGameConfig } from "./digitalGroundGame"
 import { linkingPlugin } from "./linking"
 import { payloadUserCookiePlugin } from "./payloadUserCookie"
 import { pictureURL, rememberPicture, savePicture } from "./pictures"
@@ -29,6 +31,14 @@ export async function destinyEmail(
   return linked.rows[0]?.email ?? null
 }
 
+/** Whether some user already has `email` (compared without case). */
+export async function emailTaken(pool: Pool, usersTable: string, email: string): Promise<boolean> {
+  const found = await pool.query(`select 1 from "${usersTable}" where lower(email) = $1 limit 1`, [
+    email.toLowerCase(),
+  ])
+  return found.rows.length > 0
+}
+
 /**
  * Gives a member whose address is a placeholder the one a provider they've just linked has
  * verified, marked verified, unless another user already has it. Their placeholder came from
@@ -49,13 +59,22 @@ export async function adoptVerifiedEmail(
   )
 }
 
-function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: ResolvedSsoConfig) {
+interface BetterAuthModules {
+  betterAuth: typeof BetterAuth
+  genericOAuth: typeof GenericOAuth
+}
+
+function createAuth(
+  { betterAuth, genericOAuth }: BetterAuthModules,
+  payload: Payload,
+  config: ResolvedSsoConfig,
+) {
   const { pool } = payload.db as unknown as PostgresAdapter
   const baseURL = config.baseURL()
   const secure = baseURL.startsWith("https://")
 
   const { signUp } = config
-  const { destiny, ...builtIn } = config.providers()
+  const { destiny, digitalgroundgame, ...builtIn } = config.providers()
   const socialProviders = Object.fromEntries(
     Object.entries(builtIn)
       .filter(([, credentials]) => credentials)
@@ -93,6 +112,20 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
               emailFor: async (profile) =>
                 (await destinyEmail(pool, config.usersSlug, profile)) ??
                 (signUp ? placeholderEmail("destiny", profile.userId) : null),
+            }),
+          ]
+        : []),
+      // Digital Ground Game's Authentik, through Better Auth's generic OAuth.
+      ...(digitalgroundgame
+        ? [
+            genericOAuth({
+              config: [
+                digitalGroundGameConfig({
+                  ...digitalgroundgame,
+                  signUp: Boolean(signUp),
+                  emailTaken: (email) => emailTaken(pool, config.usersSlug, email),
+                }),
+              ],
             }),
           ]
         : []),
@@ -209,7 +242,9 @@ function createAuth(betterAuth: typeof BetterAuth, payload: Payload, config: Res
         requireLocalEmailVerified: false,
         // Destiny.gg vouches for no address: the one it signs in with is that of the user
         // its account is already linked to (`destinyEmail`), so it's trusted to link.
-        trustedProviders: ["destiny"],
+        // Digital Ground Game is trusted for the same reason: it never passes on an address
+        // a user here has (`authentikUser`), so it links only from the account page.
+        trustedProviders: ["destiny", "digitalgroundgame"],
         // Linking from the account page (`linkingPlugin`): the signed-in user chose the
         // account, so its address needn't match theirs (Destiny.gg's has none at all).
         allowDifferentEmails: true,
@@ -243,13 +278,16 @@ const instances = new WeakMap<Payload, Promise<SsoAuth>>()
 
 /**
  * This Payload instance's Better Auth, created on first use, once its pool is connected.
- * Better Auth itself is imported here rather than at the top: the Payload config imports
- * this plugin, and every page imports the config.
+ * Better Auth itself (and its generic OAuth plugin) is imported here rather than at the top:
+ * the Payload config imports this plugin, and every page imports the config.
  */
 export function getAuth(payload: Payload, config: ResolvedSsoConfig): Promise<SsoAuth> {
   let auth = instances.get(payload)
   if (!auth) {
-    auth = import("better-auth").then(({ betterAuth }) => createAuth(betterAuth, payload, config))
+    auth = Promise.all([import("better-auth"), import("better-auth/plugins/generic-oauth")]).then(
+      ([{ betterAuth }, { genericOAuth }]) =>
+        createAuth({ betterAuth, genericOAuth }, payload, config),
+    )
     instances.set(payload, auth)
   }
   return auth

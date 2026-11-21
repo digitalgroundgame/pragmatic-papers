@@ -397,7 +397,7 @@ Reach for these before writing your own:
 
 ### Single sign-on
 
-`src/plugins/sso/` signs people in with Google, Discord or Destiny.gg, behind its switch on
+`src/plugins/sso/` signs people in with Google, Discord, Destiny.gg or Digital Ground Game, behind its switch on
 System → Plugins. Better Auth runs the OAuth exchange and keeps its sessions, linked accounts and
 OAuth state in three plain tables (`auth_sessions`, `auth_accounts`, `auth_verifications`;
 `ssoAfterSchemaInit` declares them, so they aren't collections and don't show in the admin).
@@ -418,7 +418,12 @@ plugin and the account page read too.
   (`placeholderEmail.ts`: `.invalid` can't receive mail, so never send to one), and is
   unverified. Linking Google or Discord later swaps it for the address that provider verified
   (`adoptVerifiedEmail`, from Better Auth's `validateUserInfo`), unless another user has it.
-- Any other provider login attaches to the user whose address the provider has verified.
+- Any other provider login attaches to the user whose address the provider has verified,
+  except Digital Ground Game's: its Authentik (`digitalGroundGame.ts`, through Better Auth's
+  generic OAuth) only ever passes on an address nobody here has (`authentikUser` swaps a taken
+  one for a placeholder), so it makes new members but reaches an existing user only once they
+  link it. Sign-up needs Authentik to send `email_verified: true`, which its default email
+  mapping doesn't.
 - Signed in, anyone can link more accounts: staff from the **Connections** tab
   of their record (`/admin/account`), members from `/account`. `/api/auth-links` (`endpoints/links.ts`) acts on
   the signed-in user and starts the OAuth through a server-only Better Auth endpoint
@@ -447,9 +452,11 @@ plugin and the account page read too.
 - `staffByDefault` (`src/plugins/staffByDefault.ts`, the last plugin) gives every access rule a
   collection or plugin leaves out to staff, where Payload's default is any logged-in user, so a
   forgotten rule can't reach members if one ever becomes `req.user`.
-- The provider credentials are the `googleSignIn`, `discordSignIn` and `destinySignIn`
-  connections (`src/integrations`); a provider's button appears once both of its variables
-  are set.
+- The provider credentials are the `googleSignIn`, `discordSignIn`, `destinySignIn` and
+  `dggSignIn` connections (`src/integrations`); a provider's button appears once both of its
+  variables are set. DGG's Authentik application is a blueprint in
+  digitalgroundgame/authentik-management-service, and `AUTHENTIK_URL` defaults to
+  `https://auth.digitalgroundgame.org`.
 - `tests/integration/sso.test.ts` runs whole Discord sign-ins and sign-ups against the
   database, with Discord stubbed.
 

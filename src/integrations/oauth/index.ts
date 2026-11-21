@@ -3,6 +3,8 @@ import { env, type Integration } from "../types"
 export interface OAuthCredentials {
   clientId: string
   clientSecret: string
+  /** The identity provider's origin, for an app with `baseUrlEnv`. */
+  baseUrl?: string
 }
 
 export interface OAuthAppIntegration extends Integration {
@@ -17,6 +19,12 @@ export interface OAuthAppOptions {
   service: string
   clientIdEnv: string
   clientSecretEnv: string
+  /**
+   * For an identity provider we host (Authentik), the variable naming its origin, read as
+   * `baseUrl`. Optional: `defaultBaseUrl` is used while it's unset.
+   */
+  baseUrlEnv?: string
+  defaultBaseUrl?: string
 }
 
 /**
@@ -30,6 +38,8 @@ export function oauthApp({
   service,
   clientIdEnv,
   clientSecretEnv,
+  baseUrlEnv,
+  defaultBaseUrl,
 }: OAuthAppOptions): OAuthAppIntegration {
   return {
     id,
@@ -40,7 +50,9 @@ export function oauthApp({
     credentials() {
       const clientId = env(clientIdEnv)
       const clientSecret = env(clientSecretEnv)
-      return clientId && clientSecret ? { clientId, clientSecret } : null
+      if (!clientId || !clientSecret) return null
+      const baseUrl = (baseUrlEnv && env(baseUrlEnv)) || defaultBaseUrl
+      return baseUrl ? { clientId, clientSecret, baseUrl } : { clientId, clientSecret }
     },
   }
 }

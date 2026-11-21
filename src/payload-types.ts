@@ -3054,7 +3054,7 @@ export interface Plugin {
      */
     tours?: boolean | null;
     /**
-     * “Sign in with Google”, “Sign in with Discord” and “Sign in with Destiny.gg” on the admin's login page, for people who already have an account here, the Connections tab that links them, and members' sign-ins on the site. Each provider also needs its credentials (System → Integrations).
+     * “Sign in with Google”, “Discord”, “Destiny.gg” and “Digital Ground Game” on the admin's login page, for people who already have an account here, the Connections tab that links them, and members' sign-ins on the site. Each provider also needs its credentials (System → Integrations).
      */
     sso?: boolean | null;
     /**

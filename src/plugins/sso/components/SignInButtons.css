@@ -113,6 +113,27 @@
   border-color: #3a3a3a;
 }
 
+/* Digital Ground Game: black and white, like its wordmark, inverted in the dark theme. */
+.sso-sign-in__button--digitalgroundgame {
+  border-color: #000;
+  background: #000;
+  color: #fff;
+}
+
+.sso-sign-in__button--digitalgroundgame:hover:not(:disabled) {
+  background: #262626;
+}
+
+[data-theme="dark"] .sso-sign-in__button--digitalgroundgame {
+  border-color: #fff;
+  background: #fff;
+  color: #000;
+}
+
+[data-theme="dark"] .sso-sign-in__button--digitalgroundgame:hover:not(:disabled) {
+  background: #e6e6e6;
+}
+
 .sso-sign-in__divider {
   display: flex;
   align-items: center;

@@ -14,6 +14,7 @@ const meta = {
       { id: "google", label: "Google", linked: true },
       { id: "discord", label: "Discord", linked: false },
       { id: "destiny", label: "Destiny.gg", linked: false },
+      { id: "digitalgroundgame", label: "Digital Ground Game", linked: false },
     ],
     pending: null,
     error: null,

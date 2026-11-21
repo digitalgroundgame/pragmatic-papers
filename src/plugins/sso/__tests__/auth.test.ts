@@ -2,7 +2,7 @@ import type { BetterAuthOptions } from "better-auth"
 import type { Payload } from "payload"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { adoptVerifiedEmail, configuredProviders, destinyEmail, getAuth } from "../auth"
+import { adoptVerifiedEmail, configuredProviders, destinyEmail, emailTaken, getAuth } from "../auth"
 import type { ResolvedSsoConfig } from "../types"
 
 const betterAuth = vi.fn((options: BetterAuthOptions) => ({ options }))
@@ -11,6 +11,11 @@ vi.mock("better-auth", () => ({ betterAuth }))
 const google = { clientId: "google-id", clientSecret: "google-secret" }
 const discord = { clientId: "discord-id", clientSecret: "discord-secret" }
 const destiny = { clientId: "dgg-id", clientSecret: "dgg-secret" }
+const digitalgroundgame = {
+  clientId: "ak-id",
+  clientSecret: "ak-secret",
+  baseUrl: "https://auth.example.org",
+}
 
 const config = (overrides: Partial<ResolvedSsoConfig> = {}): ResolvedSsoConfig => ({
   enabled: async () => true,
@@ -162,7 +167,7 @@ describe("getAuth", () => {
     expect(options.account?.accountLinking).toEqual({
       enabled: true,
       requireLocalEmailVerified: false,
-      trustedProviders: ["destiny"],
+      trustedProviders: ["destiny", "digitalgroundgame"],
       allowDifferentEmails: true,
     })
     expect(options.account?.encryptOAuthTokens).toBe(true)
@@ -182,6 +187,43 @@ describe("getAuth", () => {
   it("registers no Destiny.gg plugin without its credentials", async () => {
     const options = await optionsFor(config({ providers: () => ({ google, destiny: null }) }))
     expect(options.plugins?.map(({ id }) => id)).toEqual(["payload-linking", "payload-user-cookie"])
+  })
+
+  it("registers Digital Ground Game through Better Auth's generic OAuth", async () => {
+    const options = await optionsFor(
+      config({ providers: () => ({ google, digitalgroundgame }), signUp: undefined }),
+    )
+    expect(Object.keys(options.socialProviders ?? {})).toEqual(["google"])
+    const plugin = options.plugins?.find(({ id }) => id === "generic-oauth") as
+      { options: { config: Array<Record<string, unknown>> } } | undefined
+    expect(plugin?.options.config).toEqual([
+      expect.objectContaining({
+        providerId: "digitalgroundgame",
+        clientId: "ak-id",
+        authorizationUrl: "https://auth.example.org/application/o/authorize/",
+        disableSignUp: true,
+      }),
+    ])
+  })
+
+  it("registers no generic OAuth without Digital Ground Game's credentials", async () => {
+    const options = await optionsFor(
+      config({ providers: () => ({ google, digitalgroundgame: null }) }),
+    )
+    expect(options.plugins?.map(({ id }) => id)).not.toContain("generic-oauth")
+  })
+})
+
+describe("emailTaken", () => {
+  it("asks whether any user has the address, ignoring case", async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [{ "?column?": 1 }] })
+    expect(await emailTaken({ query } as never, "users", "Ada@Example.com")).toBe(true)
+    expect(query.mock.calls[0]?.[1]).toEqual(["ada@example.com"])
+  })
+
+  it("is false when nobody has it", async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [] })
+    expect(await emailTaken({ query } as never, "users", "new@example.com")).toBe(false)
   })
 })
 

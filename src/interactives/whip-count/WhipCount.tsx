@@ -341,7 +341,6 @@ function Total({
             </TooltipTrigger>
             <TooltipContent
               side="top"
-              // The popup is a flex row by default; the title stacks above its explanation.
               className="max-w-xs flex-col items-start gap-1 text-left font-sans text-xs font-normal tracking-normal"
             >
               <p className="font-semibold">{refusalForecastLine(forecast)}</p>

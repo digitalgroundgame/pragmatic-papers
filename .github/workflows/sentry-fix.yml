@@ -89,6 +89,9 @@ jobs:
       pull-requests: read
     env:
       ISSUE: ${{ needs.gate.outputs.issue }}
+      # Strips CLAUDE_CODE_OAUTH_TOKEN and NODE_AUTH_TOKEN (GH_FONT_READ, which
+      # setup-node exports to every later step) from the commands Claude runs.
+      CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -155,8 +158,8 @@ jobs:
                `pnpm exec vitest run <files>`, then `pnpm lint`, `pnpm format` and
                `pnpm check-types`, and fix what they report. Commit with `git commit` on this
                branch (a conventional-commit subject, no trailers). Don't push: the workflow does.
-               Don't touch .github/, dockerfiles/, package.json or pnpm-lock.yaml; if the fix
-               needs them, describe it and decide "needs-info".
+               Change only files under src/ and tests/: the workflow won't push anything else.
+               If the fix needs another file, describe it and decide "needs-info".
             3. Return your structured output:
                - issue_title: a short, plain description of the cause (under 80 characters, no
                  SQL or stack text), which becomes the issue's title.
@@ -237,8 +240,11 @@ jobs:
           app-id: ${{ vars.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
-      # The patch is applied here, outside the job that ran Claude, and refused
-      # when it touches what CI runs with secrets.
+      # The patch is applied here, outside the job that ran Claude, and pushed only
+      # when it changes nothing but src/ and tests/: PR checks run scripts/,
+      # .storybook/ and the workflows from the branch with secrets (Deploy
+      # Storybook holds CLOUDFLARE_API_TOKEN). --no-renames lists both sides of a
+      # move, so a file moved out of an allowed folder counts.
       - name: Push the branch and open the PR
         id: open
         if: ${{ steps.pr.outputs.open == 'true' }}
@@ -256,8 +262,8 @@ jobs:
           git config user.email "209825114+claude[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
           git am --3way "$patch" || fail "Claude's commits don't apply to dev any more."
-          if git diff --name-only origin/dev..HEAD | grep -E '^(\.github/|dockerfiles/|\.husky/|package\.json$|pnpm-lock\.yaml$)'; then
-            fail "The fix touches CI, Docker or dependency files, which this workflow won't push. The patch is in the run's artifact."
+          if git diff --name-only --no-renames origin/dev..HEAD | grep -vE '^(src|tests)/'; then
+            fail "The fix touches files outside src/ and tests/, which this workflow won't push. The patch is in the run's artifact."
           fi
           git push --force "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
           export GH_TOKEN="$APP_TOKEN"

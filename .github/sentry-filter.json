@@ -10,7 +10,7 @@
     },
     {
       "reason": "Visitors closing the connection mid-request",
-      "message": "\\baborted\\b|ERR_STREAM_PREMATURE_CLOSE|The user aborted a request"
+      "message": "\\baborted$|ERR_STREAM_PREMATURE_CLOSE|The user aborted a request"
     },
     {
       "reason": "Browser extensions and in-app browsers",

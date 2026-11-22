@@ -44,6 +44,8 @@ const DAY_MS = 24 * 60 * 60 * 1000
 const TITLE_MAX = 100
 const MESSAGE_MAX = 500
 const FRAMES_MAX = 12
+/** Pages of Sentry issues a run reads at most: errors already filed or kept out stay in the query. */
+const SENTRY_PAGES = 8
 
 // --- Sentry ------------------------------------------------------------------------------
 
@@ -234,6 +236,16 @@ export function parseFilter(text: string): SentryFilter {
   return value
 }
 
+/** The cursor of the next page in Sentry's `Link` header, or null on the last page. */
+export function nextCursor(link: string | null): string | null {
+  for (const part of (link ?? "").split(",")) {
+    if (/rel="next"/.test(part) && /results="true"/.test(part)) {
+      return part.match(/cursor="([^"]+)"/)?.[1] ?? null
+    }
+  }
+  return null
+}
+
 /** The Sentry short IDs an issue body links, from its `Sentry Issue: [ID](...)` line. */
 export function sentryShortIds(body: string | null | undefined): string[] {
   return [...(body ?? "").matchAll(/Sentry Issue: \[([A-Z0-9][A-Z0-9-]*)\]/g)].map(([, id]) => id!)
@@ -382,7 +394,7 @@ class Http {
     this.deps = deps
   }
 
-  async json<T>(url: string, init: RequestInit = {}): Promise<T> {
+  async response(url: string, init: RequestInit = {}): Promise<Response> {
     const response = await this.deps.fetch(url, init)
     if (!response.ok) {
       const text = await response.text().catch(() => "")
@@ -390,13 +402,26 @@ class Http {
         `${init.method ?? "GET"} ${url.split("?")[0]} → ${response.status} ${clip(text, 300)}`,
       )
     }
+    return response
+  }
+
+  async json<T>(url: string, init: RequestInit = {}): Promise<T> {
+    const response = await this.response(url, init)
     return (response.status === 204 ? null : await response.json()) as T
   }
 
   sentry<T>(path: string): Promise<T> {
-    return this.json<T>(`https://sentry.io/api/0${path}`, {
-      headers: { Authorization: `Bearer ${this.deps.env.SENTRY_AUTH_TOKEN}` },
-    })
+    return this.json<T>(`https://sentry.io/api/0${path}`, this.sentryInit())
+  }
+
+  /** One page of a Sentry list, and the cursor of the next when there is one. */
+  async sentryPage<T>(path: string): Promise<{ items: T[]; next: string | null }> {
+    const response = await this.response(`https://sentry.io/api/0${path}`, this.sentryInit())
+    return { items: (await response.json()) as T[], next: nextCursor(response.headers.get("link")) }
+  }
+
+  private sentryInit(): RequestInit {
+    return { headers: { Authorization: `Bearer ${this.deps.env.SENTRY_AUTH_TOKEN}` } }
   }
 
   github<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -444,14 +469,24 @@ async function remaining(http: Http, deps: Deps, repo: string): Promise<number> 
   return Math.max(0, limit - used)
 }
 
-/** Issues in `repo`, any state, whose body links this Sentry short ID. */
-async function issuesNaming(http: Http, repo: string, shortId: string): Promise<GitHubIssue[]> {
-  const q = encodeURIComponent(`repo:${repo} is:issue "${shortId}" in:body`)
-  const result = await http.github<{ items: GitHubIssue[] }>(
-    "GET",
-    `/search/issues?q=${q}&per_page=20`,
-  )
-  return result.items.filter((issue) => sentryShortIds(issue.body).includes(shortId))
+/**
+ * Every Sentry short ID an issue in `repo` links, any state, with the issue: one search
+ * a run rather than one per error, which the search API's rate limit wouldn't allow.
+ */
+async function filedShortIds(http: Http, repo: string): Promise<Map<string, number>> {
+  const q = encodeURIComponent(`repo:${repo} is:issue "Sentry Issue" in:body`)
+  const filed = new Map<string, number>()
+  for (let page = 1; page <= 10; page++) {
+    const result = await http.github<{ items: GitHubIssue[] }>(
+      "GET",
+      `/search/issues?q=${q}&per_page=100&page=${page}`,
+    )
+    for (const issue of result.items) {
+      for (const id of sentryShortIds(issue.body)) filed.set(id, issue.number)
+    }
+    if (result.items.length < 100) break
+  }
+  return filed
 }
 
 export async function intake(deps: Deps): Promise<number> {
@@ -476,22 +511,16 @@ export async function intake(deps: Deps): Promise<number> {
   for (const environment of (env.SENTRY_ENVIRONMENTS || DEFAULTS.environments).split(",")) {
     if (environment.trim()) params.append("environment", environment.trim())
   }
-  const found = await http.sentry<SentryIssue[]>(`/organizations/${org}/issues/?${params}`)
-  deps.log(`Sentry has ${found.length} issues matching the query.`)
-
   const filter = parseFilter(deps.readFile(env.SENTRY_FILTER_FILE || FILTER_PATH))
   const intakeLimit = readLimit(env.SENTRY_INTAKE_LIMIT, DEFAULTS.intakeLimit)
+  const already = await filedShortIds(http, repo)
   const filed: number[] = []
-  for (const issue of found) {
-    if (filed.length >= intakeLimit) {
-      deps.log(`Filed ${intakeLimit} this run; the rest wait for the next.`)
-      break
-    }
-    if (linkedToRepo(issue, repo)) continue
-    const existing = await issuesNaming(http, repo, issue.shortId)
-    if (existing.length) {
-      deps.log(`${issue.shortId} is already #${existing.map((i) => i.number).join(", #")}.`)
-      continue
+  let read = 0
+  const consider = async (issue: SentryIssue): Promise<number | null> => {
+    if (linkedToRepo(issue, repo)) return null
+    if (already.has(issue.shortId)) {
+      deps.log(`${issue.shortId} is already #${already.get(issue.shortId)}.`)
+      return null
     }
     const event = await http
       .sentry<SentryEvent>(`/organizations/${org}/issues/${issue.id}/events/recommended/`)
@@ -502,11 +531,11 @@ export async function intake(deps: Deps): Promise<number> {
     const skip = filterIssue(issue, event, filter)
     if (skip) {
       deps.log(`${issue.shortId} stays out: ${skip}.`)
-      continue
+      return null
     }
     if (env.DRY_RUN === "true") {
       deps.log(`Would file ${issue.shortId}: ${issueTitle(issue)}`)
-      continue
+      return null
     }
     const created = await http.github<GitHubIssue>("POST", `/repos/${repo}/issues`, {
       title: issueTitle(issue),
@@ -514,8 +543,29 @@ export async function intake(deps: Deps): Promise<number> {
       labels: [LABELS.sentry],
     })
     deps.log(`Filed ${issue.shortId} as #${created.number}.`)
-    filed.push(created.number)
+    return created.number
   }
+
+  // Errors already filed or kept out keep matching the query, so read on past them,
+  // a page at a time, until this run has filed its share.
+  for (let page = 0, cursor: string | null = ""; page < SENTRY_PAGES && cursor !== null; page++) {
+    if (cursor) params.set("cursor", cursor)
+    const { items, next } = await http.sentryPage<SentryIssue>(
+      `/organizations/${org}/issues/?${params}`,
+    )
+    cursor = next
+    read += items.length
+    for (const issue of items) {
+      if (filed.length >= intakeLimit) break
+      const number = await consider(issue)
+      if (number) filed.push(number)
+    }
+    if (filed.length >= intakeLimit) {
+      deps.log(`Filed ${intakeLimit} this run; the rest wait for the next.`)
+      break
+    }
+  }
+  deps.log(`Read ${read} Sentry issues matching the query.`)
 
   let dispatch: number[] = []
   if (env.SENTRY_FIX_AUTO === "false") {
@@ -527,6 +577,12 @@ export async function intake(deps: Deps): Promise<number> {
     )
     const candidates = [...queued.filter((i) => !i.pull_request).map((i) => i.number), ...filed]
     dispatch = [...new Set(candidates)].slice(0, await remaining(http, deps, repo))
+    // What the budget has no room for today waits in the queue, which the next runs read.
+    for (const number of filed.filter((n) => !dispatch.includes(n))) {
+      await http.github("POST", `/repos/${repo}/issues/${number}/labels`, {
+        labels: [LABELS.queued],
+      })
+    }
   }
   deps.output("dispatch", JSON.stringify(dispatch))
   return 0

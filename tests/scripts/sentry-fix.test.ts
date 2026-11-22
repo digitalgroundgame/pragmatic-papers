@@ -7,6 +7,7 @@ import {
   attemptsSince,
   type Deps,
   fence,
+  nextCursor,
   FILTER_PATH,
   filterIssue,
   issueBody,
@@ -151,6 +152,18 @@ describe("issueBody", () => {
       ],
     })
     expect(body).not.toContain("y".repeat(600))
+  })
+})
+
+describe("nextCursor", () => {
+  it("reads the next page's cursor, and nothing on the last page", () => {
+    expect(
+      nextCursor(
+        '<a>; rel="previous"; results="false"; cursor="0:0:1", <b>; rel="next"; results="true"; cursor="0:25:0"',
+      ),
+    ).toBe("0:25:0")
+    expect(nextCursor('<b>; rel="next"; results="false"; cursor="0:50:0"')).toBeNull()
+    expect(nextCursor(null)).toBeNull()
   })
 })
 
@@ -356,6 +369,12 @@ describe("filterIssue", () => {
       expect(filterIssue(sentryIssue(), thrown(message, true, url), filter)).toMatch(/^excluded: /)
     })
 
+    it("files a Postgres transaction that a failed query aborted", () => {
+      const message =
+        "current transaction is aborted, commands ignored until end of transaction block"
+      expect(filterIssue(sentryIssue({ title: message }), thrown(message), filter)).toBeNull()
+    })
+
     it("files a real error in our code", () => {
       expect(
         filterIssue(
@@ -440,11 +459,15 @@ describe("intake", () => {
       if (url.includes("/organizations/digital-ground-game/issues/?")) return issues
       if (url.includes("/events/recommended/")) return { entries: [] }
       if (url.includes("/search/issues")) {
-        return decodeURIComponent(url).includes('"PP-2"')
-          ? { items: [{ number: 8, body: "Sentry Issue: [PP-2](x)" }] }
-          : { items: [{ number: 9, body: "mentions PP-1 elsewhere" }] }
+        return {
+          items: [
+            { number: 8, body: "Sentry Issue: [PP-2](x)" },
+            { number: 9, body: "mentions PP-1 elsewhere" },
+          ],
+        }
       }
       if (method === "POST" && url.endsWith(`/repos/${REPO}/issues`)) return { number: 100 }
+      if (method === "POST" && url.endsWith("/labels")) return []
       if (url.includes("labels=sentry%20queued"))
         return [{ number: 50 }, { number: 51, pull_request: {} }]
       if (url.includes("/issues/comments")) return comments
@@ -465,15 +488,42 @@ describe("intake", () => {
 
     const created = calls.filter((call) => call.method === "POST")
     expect(created).toHaveLength(1)
+    expect(calls.filter((call) => call.url.includes("/search/issues"))).toHaveLength(1)
     expect(created[0]!.body).toMatchObject({ title: "New one", labels: ["sentry"] })
     expect(outputs.dispatch).toBe("[50,100]")
   })
 
   it("dispatches no more than the budget has room for", async () => {
     const used = [marker("2026-11-22T01:00:00Z"), marker("2026-11-22T02:00:00Z")]
-    const { deps, outputs } = fakeDeps({ SENTRY_AUTH_TOKEN: "s" }, routes(used))
+    const { deps, outputs, calls } = fakeDeps({ SENTRY_AUTH_TOKEN: "s" }, routes(used))
     await main(["intake"], deps)
     expect(outputs.dispatch).toBe("[50]")
+    // The new one waits in the queue rather than being forgotten.
+    const queued = calls.find((call) => call.url.endsWith("/issues/100/labels"))!
+    expect(queued.body).toEqual({ labels: ["sentry queued"] })
+  })
+
+  it("reads on to the next page of Sentry issues until it has filed its share", async () => {
+    const pages: Record<string, unknown[]> = {
+      "": [sentryIssue({ id: "2", shortId: "PP-2", title: "Filed already" })],
+      c1: [sentryIssue({ id: "7", shortId: "PP-7", title: "On page two" })],
+    }
+    const { deps, calls } = fakeDeps({ SENTRY_AUTH_TOKEN: "s" }, (call) => {
+      if (call.url.includes("/organizations/digital-ground-game/issues/?")) {
+        const cursor = new URL(call.url).searchParams.get("cursor") ?? ""
+        const link = cursor
+          ? '<x>; rel="next"; results="false"; cursor="c2"'
+          : '<x>; rel="previous"; results="false"; cursor="c0", <x>; rel="next"; results="true"; cursor="c1"'
+        return new Response(JSON.stringify(pages[cursor]), { headers: { link } })
+      }
+      return routes()(call)
+    })
+    await main(["intake"], deps)
+    const created = calls.filter((call) => call.url.endsWith(`/repos/${REPO}/issues`))
+    expect(created.map((call) => (call.body as { title: string }).title)).toEqual(["On page two"])
+    expect(
+      calls.filter((call) => call.url.includes("/organizations/digital-ground-game/issues/?")),
+    ).toHaveLength(2)
   })
 
   it("files but dispatches nothing with SENTRY_FIX_AUTO=false", async () => {
@@ -483,6 +533,7 @@ describe("intake", () => {
     )
     await main(["intake"], deps)
     expect(calls.some((call) => call.method === "POST")).toBe(true)
+    expect(calls.some((call) => call.url.endsWith("/labels"))).toBe(false)
     expect(outputs.dispatch).toBe("[]")
   })
 

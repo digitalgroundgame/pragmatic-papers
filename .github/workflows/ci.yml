@@ -186,6 +186,10 @@ jobs:
     # Usually about 4 minutes. A hung test would otherwise hold the runner for GitHub's
     # 6-hour default before anything reports it.
     timeout-minutes: 15
+    # Read-only: these run a PR's src/ and tests/ code, which on a Sentry fix
+    # PR Claude wrote from production error text.
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v7
@@ -366,6 +370,10 @@ jobs:
     # with playwright.yml (scripts/check-playwright-image-pin.ts checks it).
     container:
       image: mcr.microsoft.com/playwright:v1.65.0-noble
+    # Read-only: these run a PR's src/ and tests/ code, which on a Sentry fix
+    # PR Claude wrote from production error text.
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v7

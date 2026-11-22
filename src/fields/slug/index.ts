@@ -9,6 +9,21 @@ import { slugify as defaultSlugify } from "payload/shared"
 type SlugFieldArgs = NonNullable<Parameters<typeof payloadSlugField>[0]>
 
 /**
+ * Runs Payload's checkbox hook, then, on update, puts back a non-empty slug it
+ * replaced. Payload assigns the slug before its hook first yields, so the
+ * restore happens before the `slug` field reads it.
+ */
+export function keepSlugOnUpdate(hook: FieldHook, name: string): FieldHook {
+  return (args) => {
+    const { data, operation } = args
+    const slug = data?.[name] || args.originalDoc?.[name]
+    const result = hook(args)
+    if (operation === "update" && data && slug) data[name] = slug
+    return result
+  }
+}
+
+/**
  * Payload's `slugField`, with the slug generated on create by the `slug` field
  * itself.
  *
@@ -31,6 +46,12 @@ type SlugFieldArgs = NonNullable<Parameters<typeof payloadSlugField>[0]>
  * Preview button. So while the checkbox is ticked, the hook here also fills an
  * empty slug on update. It never replaces one: a published article can still
  * have the checkbox ticked, and a new slug would move it to a new URL.
+ *
+ * Payload 3.94 (payloadcms/payload#18682) assigns a synchronous `slugify`'s
+ * result before yielding, so its hook now lands in time, and on update it
+ * re-slugs from the title whenever the checkbox is ticked. `keepSlugOnUpdate`
+ * wraps that hook so an update keeps the slug the save brought (or the one the
+ * document has), and only an empty slug is filled.
  */
 export const slugField = (args: SlugFieldArgs = {}): RowField => {
   const {
@@ -63,6 +84,12 @@ export const slugField = (args: SlugFieldArgs = {}): RowField => {
       const slug = row.fields.find(
         (field): field is TextField => "name" in field && field.name === name,
       )
+      const checkbox = row.fields.find((field) => "name" in field && field.name === checkboxName)
+      if (checkbox && "hooks" in checkbox && checkbox.hooks?.beforeChange) {
+        checkbox.hooks.beforeChange = checkbox.hooks.beforeChange.map((hook) =>
+          keepSlugOnUpdate(hook, name),
+        )
+      }
       if (slug) {
         slug.hooks = {
           ...slug.hooks,

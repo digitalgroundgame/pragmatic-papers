@@ -2,7 +2,7 @@
 import type { FieldHook, RowField, TextField } from "payload"
 import { describe, expect, it, vi } from "vitest"
 
-import { slugField } from "../index"
+import { keepSlugOnUpdate, slugField } from "../index"
 
 /** The hook this wrapper puts first on the `slug` field. */
 function generateHook(row: RowField, name = "slug"): FieldHook {
@@ -100,5 +100,53 @@ describe("slugField's generate hook", () => {
     })
     const slug = row.fields.find((f): f is TextField => "name" in f && f.name === "slug")
     expect(slug?.hooks?.beforeChange?.at(-1)).toBe(own)
+  })
+})
+
+describe("keepSlugOnUpdate", () => {
+  // Stands in for Payload's checkbox hook: it assigns the slug before it yields.
+  const reslug: FieldHook = async ({ data }) => {
+    if (data) data.slug = "from-title"
+    await Promise.resolve()
+    return true
+  }
+  const wrapped = keepSlugOnUpdate(reslug, "slug")
+
+  it("puts back the slug the document has when an update re-slugs it", async () => {
+    const data: Record<string, unknown> = { title: "Renamed" }
+    const result = wrapped({
+      operation: "update",
+      data,
+      originalDoc: { slug: "original" },
+    } as never)
+    expect(data.slug).toBe("original")
+    expect(await result).toBe(true)
+  })
+
+  it("keeps a slug the save brought over the document's", () => {
+    const data: Record<string, unknown> = { slug: "hand-edited" }
+    wrapped({ operation: "update", data, originalDoc: { slug: "original" } } as never)
+    expect(data.slug).toBe("hand-edited")
+  })
+
+  it("lets an update fill an empty slug", () => {
+    const data: Record<string, unknown> = { slug: "" }
+    wrapped({ operation: "update", data, originalDoc: { slug: null } } as never)
+    expect(data.slug).toBe("from-title")
+  })
+
+  it("leaves create to Payload's hook", () => {
+    const data: Record<string, unknown> = { slug: "" }
+    wrapped({ operation: "create", data } as never)
+    expect(data.slug).toBe("from-title")
+  })
+
+  it("wraps the checkbox's hook in slugField", () => {
+    const row = slugField()
+    const checkbox = row.fields.find((f) => "name" in f && f.name === "generateSlug")
+    const data: Record<string, unknown> = { title: "Renamed" }
+    const hook = checkbox && "hooks" in checkbox ? checkbox.hooks?.beforeChange?.[0] : undefined
+    void hook?.({ operation: "update", data, originalDoc: { slug: "original" } } as never)
+    expect(data.slug).toBe("original")
   })
 })

@@ -4,7 +4,8 @@ name: Sentry intake
 # matches SENTRY_QUERY and has no issue yet, then starts sentry-fix.yml on as
 # many of the new and queued ones as today's budget has room for. See
 # scripts/sentry-fix.ts for the rules, and the repository variables below for
-# what can be tuned without a PR.
+# what can be tuned without a PR. Which errors are left out (levels, errors
+# with no frame in our code, patterns of known noise) is .github/sentry-filter.json.
 #
 # Needs the SENTRY_AUTH_TOKEN secret: an internal integration's token with
 # Project: Read and Issue & Event: Read (Sentry → Settings → Custom
@@ -37,7 +38,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          sparse-checkout: scripts/sentry-fix.ts
+          sparse-checkout: |
+            scripts/sentry-fix.ts
+            .github/sentry-filter.json
           sparse-checkout-cone-mode: false
           persist-credentials: false
 

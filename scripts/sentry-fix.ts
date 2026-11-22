@@ -7,7 +7,8 @@
  *   node scripts/sentry-fix.ts report   # .github/workflows/sentry-fix.yml, after Claude
  *
  * - **intake** asks Sentry for the unresolved issues matching SENTRY_QUERY in
- *   SENTRY_ENVIRONMENTS, and files a GitHub issue (label `sentry`) for each one no issue
+ *   SENTRY_ENVIRONMENTS, drops those .github/sentry-filter.json keeps out (filterIssue), and
+ *   files a GitHub issue (label `sentry`) for each one no issue
  *   names yet, in any state: an issue a person closed as not planned stays closed. It then
  *   lists, for the workflow to dispatch, the new issues and any left `sentry queued`,
  *   oldest first, as many as today's budget has room for.
@@ -82,6 +83,12 @@ export interface SentryEvent {
   }[]
 }
 
+function exceptionsOf(event: SentryEvent | null) {
+  return (event?.entries ?? [])
+    .filter((entry) => entry.type === "exception")
+    .flatMap((entry) => entry.data?.values ?? [])
+}
+
 /** True when Sentry already links the issue to one in `repo` (its annotations). */
 export function linkedToRepo(issue: SentryIssue, repo: string): boolean {
   const prefix = `github.com/${repo}/issues/`.toLowerCase()
@@ -130,9 +137,7 @@ export function issueBody(issue: SentryIssue, event: SentryEvent | null): string
   if (issue.culprit) context.unshift(`culprit: ${clip(issue.culprit, 200)}`)
   if (context.length) lines.push("**Context**", "", fence(context.join("\n")), "")
 
-  const exceptions = (event?.entries ?? [])
-    .filter((entry) => entry.type === "exception")
-    .flatMap((entry) => entry.data?.values ?? [])
+  const exceptions = exceptionsOf(event)
   for (const exception of exceptions) {
     const head = [exception.type, exception.value].filter(Boolean).join(": ")
     const frames = (exception.stacktrace?.frames ?? []).filter((frame) => frame.inApp)
@@ -150,6 +155,83 @@ export function issueBody(issue: SentryIssue, event: SentryEvent | null): string
     "<sub>Filed by `.github/workflows/sentry-intake.yml`. Values in the blocks come from the event as Sentry received it.</sub>",
   )
   return lines.join("\n")
+}
+
+// --- Filter ------------------------------------------------------------------------------
+
+export const FILTER_FIELDS = ["title", "culprit", "type", "message", "url", "transaction"] as const
+type FilterField = (typeof FILTER_FIELDS)[number]
+export type FilterRule = Partial<Record<FilterField, string>> & { reason?: string }
+
+/** `.github/sentry-filter.json`: which errors intake files. */
+export interface SentryFilter {
+  /** Sentry levels to file; empty or missing files every level. */
+  levels?: string[]
+  /** File only errors whose latest event has a frame in our code. */
+  requireInAppFrame?: boolean
+  /** When there are any, an error must match one. */
+  include?: FilterRule[]
+  exclude?: FilterRule[]
+}
+
+export const FILTER_PATH = ".github/sentry-filter.json"
+
+/** The values rules match against, from the issue and its latest event. */
+export function filterFields(
+  issue: SentryIssue,
+  event: SentryEvent | null,
+): Record<FilterField, string> {
+  const tags = Object.fromEntries((event?.tags ?? []).map(({ key, value }) => [key, value]))
+  const exceptions = exceptionsOf(event)
+  return {
+    title: issue.title,
+    culprit: issue.culprit ?? "",
+    type: exceptions.map((exception) => exception.type ?? "").join("\n"),
+    // The title too: Sentry often puts the message there when the event has no exception.
+    message: [issue.title, ...exceptions.map((exception) => exception.value ?? "")].join("\n"),
+    url: String(tags.url ?? ""),
+    transaction: String(tags.transaction ?? ""),
+  }
+}
+
+function ruleMatches(rule: FilterRule, fields: Record<FilterField, string>): boolean {
+  const named = FILTER_FIELDS.filter((field) => typeof rule[field] === "string")
+  return (
+    named.length > 0 && named.every((field) => new RegExp(rule[field]!, "i").test(fields[field]))
+  )
+}
+
+/** Why an error stays out of the pipeline, or null to file it. */
+export function filterIssue(
+  issue: SentryIssue,
+  event: SentryEvent | null,
+  filter: SentryFilter,
+): string | null {
+  if (filter.levels?.length && !filter.levels.includes(issue.level ?? "")) {
+    return `level ${issue.level ?? "unknown"} isn't one of ${filter.levels.join(", ")}`
+  }
+  if (filter.requireInAppFrame) {
+    const inApp = exceptionsOf(event).some((exception) =>
+      (exception.stacktrace?.frames ?? []).some((frame) => frame.inApp),
+    )
+    if (!inApp) return "no frame in our code"
+  }
+  const fields = filterFields(issue, event)
+  if (filter.include?.length && !filter.include.some((rule) => ruleMatches(rule, fields))) {
+    return "matches no include rule"
+  }
+  const excluded = filter.exclude?.find((rule) => ruleMatches(rule, fields))
+  if (excluded) return `excluded: ${excluded.reason ?? "a rule in the filter"}`
+  return null
+}
+
+/** Parses the filter file; a broken one stops intake rather than filing everything. */
+export function parseFilter(text: string): SentryFilter {
+  const value = JSON.parse(text) as SentryFilter
+  for (const rule of [...(value.include ?? []), ...(value.exclude ?? [])]) {
+    for (const field of FILTER_FIELDS) if (rule[field] !== undefined) new RegExp(rule[field]!, "i")
+  }
+  return value
 }
 
 /** The Sentry short IDs an issue body links, from its `Sentry Issue: [ID](...)` line. */
@@ -397,6 +479,7 @@ export async function intake(deps: Deps): Promise<number> {
   const found = await http.sentry<SentryIssue[]>(`/organizations/${org}/issues/?${params}`)
   deps.log(`Sentry has ${found.length} issues matching the query.`)
 
+  const filter = parseFilter(deps.readFile(env.SENTRY_FILTER_FILE || FILTER_PATH))
   const intakeLimit = readLimit(env.SENTRY_INTAKE_LIMIT, DEFAULTS.intakeLimit)
   const filed: number[] = []
   for (const issue of found) {
@@ -416,6 +499,11 @@ export async function intake(deps: Deps): Promise<number> {
         deps.log(`No event for ${issue.shortId}: ${error.message}`)
         return null
       })
+    const skip = filterIssue(issue, event, filter)
+    if (skip) {
+      deps.log(`${issue.shortId} stays out: ${skip}.`)
+      continue
+    }
     if (env.DRY_RUN === "true") {
       deps.log(`Would file ${issue.shortId}: ${issueTitle(issue)}`)
       continue

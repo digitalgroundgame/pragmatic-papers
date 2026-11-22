@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs"
+
 import { describe, expect, it } from "vitest"
 
 import {
@@ -5,15 +7,19 @@ import {
   attemptsSince,
   type Deps,
   fence,
+  FILTER_PATH,
+  filterIssue,
   issueBody,
   issueTitle,
   linkedToRepo,
   main,
+  parseFilter,
   parseVerdict,
   prBody,
   prTitle,
   readLimit,
   reportComment,
+  type SentryEvent,
   type SentryIssue,
   sentryShortIds,
   type Verdict,
@@ -278,6 +284,94 @@ describe("reportComment", () => {
   })
 })
 
+describe("filterIssue", () => {
+  const thrown = (value: string, inApp = true, url = ""): SentryEvent => ({
+    tags: url ? [{ key: "url", value: url }] : [],
+    entries: [
+      {
+        type: "exception",
+        data: {
+          values: [
+            {
+              type: "Error",
+              value,
+              stacktrace: { frames: [{ filename: "src/a.ts", function: "f", lineNo: 1, inApp }] },
+            },
+          ],
+        },
+      },
+    ],
+  })
+
+  it("files what no rule keeps out", () => {
+    expect(filterIssue(sentryIssue(), thrown("boom"), {})).toBeNull()
+  })
+
+  it("keeps out other levels, and errors with no frame in our code", () => {
+    expect(
+      filterIssue(sentryIssue({ level: "warning" }), thrown("boom"), { levels: ["error"] }),
+    ).toBe("level warning isn't one of error")
+    expect(filterIssue(sentryIssue(), thrown("boom", false), { requireInAppFrame: true })).toBe(
+      "no frame in our code",
+    )
+    expect(filterIssue(sentryIssue(), null, { requireInAppFrame: true })).toBe(
+      "no frame in our code",
+    )
+  })
+
+  it("excludes on a rule whose every field matches, case-insensitively", () => {
+    const filter = { exclude: [{ reason: "DNS", message: "eai_again", culprit: "pg" }] }
+    expect(
+      filterIssue(sentryIssue({ culprit: "pg-pool" }), thrown("getaddrinfo EAI_AGAIN"), filter),
+    ).toBe("excluded: DNS")
+    expect(
+      filterIssue(sentryIssue({ culprit: "src/x" }), thrown("getaddrinfo EAI_AGAIN"), filter),
+    ).toBeNull()
+  })
+
+  it("ignores a rule that names no field", () => {
+    expect(
+      filterIssue(sentryIssue(), thrown("boom"), { exclude: [{ reason: "empty" }] }),
+    ).toBeNull()
+  })
+
+  it("files only what an include rule matches, when there are any", () => {
+    const filter = { include: [{ culprit: "^src/collections/" }] }
+    expect(filterIssue(sentryIssue(), thrown("boom"), filter)).toBe("matches no include rule")
+    expect(
+      filterIssue(sentryIssue({ culprit: "src/collections/Media" }), thrown("boom"), filter),
+    ).toBeNull()
+  })
+
+  describe("the checked-in filter", () => {
+    const filter = parseFilter(readFileSync(FILTER_PATH, "utf8"))
+
+    it.each([
+      ["a DNS blip", "getaddrinfo EAI_AGAIN db.supabase.co", ""],
+      ["a dropped connection", "Connection terminated unexpectedly", ""],
+      ["a visitor going away", "aborted", ""],
+      ["an extension", "window.ethereum.selectedAddress = undefined", ""],
+      ["a dotfile probe", "Not found", "https://pragmaticpapers.com/.env"],
+    ])("keeps out %s", (_, message, url) => {
+      expect(filterIssue(sentryIssue(), thrown(message, true, url), filter)).toMatch(/^excluded: /)
+    })
+
+    it("files a real error in our code", () => {
+      expect(
+        filterIssue(
+          sentryIssue(),
+          thrown("Failed to generate blur data URL: Input Buffer is empty"),
+          filter,
+        ),
+      ).toBeNull()
+    })
+  })
+
+  it("refuses a filter with a broken pattern", () => {
+    expect(() => parseFilter(JSON.stringify({ exclude: [{ message: "(" }] }))).toThrow()
+  })
+})
+
 // --- Commands, against a fake Sentry and GitHub ------------------------------------------
 
 interface Call {
@@ -295,7 +389,13 @@ function fakeDeps(
   const outputs: Record<string, string> = {}
   const logs: string[] = []
   const deps: Deps = {
-    env: { GITHUB_REPOSITORY: REPO, GH_TOKEN: "gh", RUN_URL: "https://run", ...env },
+    env: {
+      GITHUB_REPOSITORY: REPO,
+      GH_TOKEN: "gh",
+      RUN_URL: "https://run",
+      SENTRY_FILTER_FILE: "filter.json",
+      ...env,
+    },
     fetch: (async (input: string, init: RequestInit = {}) => {
       const call = {
         method: init.method ?? "GET",
@@ -310,7 +410,7 @@ function fakeDeps(
     now: () => NOW,
     output: (name, value) => (outputs[name] = value),
     log: (message) => logs.push(message),
-    readFile: (path) => files[path] ?? "",
+    readFile: (path) => files[path] ?? (path === "filter.json" ? "{}" : ""),
   }
   return { deps, calls, outputs, logs }
 }
@@ -384,6 +484,16 @@ describe("intake", () => {
     await main(["intake"], deps)
     expect(calls.some((call) => call.method === "POST")).toBe(true)
     expect(outputs.dispatch).toBe("[]")
+  })
+
+  it("leaves out what the filter excludes", async () => {
+    const filter = JSON.stringify({ exclude: [{ reason: "test", title: "^New one$" }] })
+    const { deps, calls, logs } = fakeDeps({ SENTRY_AUTH_TOKEN: "s" }, routes(), {
+      "filter.json": filter,
+    })
+    await main(["intake"], deps)
+    expect(calls.some((call) => call.method === "POST")).toBe(false)
+    expect(logs).toContain("PP-1 stays out: excluded: test.")
   })
 
   it("files nothing on a dry run", async () => {

@@ -845,7 +845,9 @@ sessions, which can't reach most documentation sites. Next.js's docs are already
 `.github/workflows/sentry-intake.yml` runs hourly: it files a GitHub issue (label `sentry`)
 for each unresolved Sentry error matching `SENTRY_QUERY` (by default seen 3+ times in
 production or staging and still happening, so one-off blips stay out) that no issue names yet,
-open or closed. The issue starts with the `Sentry Issue: [SHORT-ID](link)` line Sentry's own
+open or closed, and that `.github/sentry-filter.json` doesn't keep out (levels, an optional
+filter to errors with a frame in our code, and include/exclude patterns on title, culprit,
+exception type, message, URL or transaction, seeded with known noise). The issue starts with the `Sentry Issue: [SHORT-ID](link)` line Sentry's own
 integration writes, which is how either finds the other. `.github/workflows/sentry-fix.yml`
 then has Claude triage it as fix, noise, duplicate or needs-info, say so in a comment and
 retitle the issue; for a fix it opens a draft PR into dev (branch `claude/sentry-<issue>`,

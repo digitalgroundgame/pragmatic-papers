@@ -1,0 +1,24 @@
+{
+  "$comment": "Which Sentry errors sentry-intake.yml files for Claude (scripts/sentry-fix.ts, filterIssue). SENTRY_QUERY picks candidates in Sentry; these rules then drop what shouldn't reach the pipeline. A rule matches when every field it names matches (case-insensitive regular expressions); fields: title, culprit, type, message, url, transaction. An error is filed only if it matches an include rule (when there are any) and no exclude rule. sentry-fix.yml won't push a fix that edits this file.",
+  "levels": ["error", "fatal"],
+  "requireInAppFrame": false,
+  "include": [],
+  "exclude": [
+    {
+      "reason": "Transient network or database connection blips",
+      "message": "EAI_AGAIN|ENOTFOUND|ECONNRESET|ETIMEDOUT|ECONNREFUSED|socket hang up|Connection terminated"
+    },
+    {
+      "reason": "Visitors closing the connection mid-request",
+      "message": "\\baborted\\b|ERR_STREAM_PREMATURE_CLOSE|The user aborted a request"
+    },
+    {
+      "reason": "Browser extensions and in-app browsers",
+      "message": "__firefox__|window\\.ethereum|chrome-extension://|moz-extension://|safari-(web-)?extension://|Object Not Found Matching Id"
+    },
+    {
+      "reason": "Scanners probing for dotfiles",
+      "url": "/\\.(env|git)\\b"
+    }
+  ]
+}

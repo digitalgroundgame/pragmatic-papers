@@ -67,13 +67,13 @@ describe("loadPlugins", () => {
     expect(atRoot?.pages[0]?.href).toBe("/collections/search")
   })
 
-  it("marks a plugin whose switch starts off as a beta", async () => {
+  it("marks a plugin whose manifest says beta, whatever its switch starts as", async () => {
     const theSwitch = { label: "On", description: "", defaultValue: false }
     const rows = await loadPlugins(
       config([
         plugin({ name: "Package" }),
-        plugin({ name: "Beta", switch: theSwitch }),
-        plugin({ name: "Graduated", switch: { ...theSwitch, defaultValue: true } }),
+        plugin({ name: "Beta", switch: theSwitch, beta: { info: "In beta." } }),
+        plugin({ name: "Graduated", switch: theSwitch }),
       ]),
       admin,
     )

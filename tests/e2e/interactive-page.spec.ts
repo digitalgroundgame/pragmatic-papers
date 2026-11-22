@@ -10,7 +10,10 @@ test.describe("interactive page — federal courts", () => {
 
     const figure = page.locator("[data-interactive-drilldown]")
     await expect(figure).toBeVisible()
-    await expect(page.locator("h1")).toHaveText("Federal Court Appointment Tracker")
+    // By name, not text: the title ends with the beta flask, whose note sits in a hidden span.
+    await expect(
+      page.getByRole("heading", { level: 1, name: /^Federal Court Appointment Tracker\b/ }),
+    ).toBeVisible()
     // The header says when the judiciary last changed, not only when the sync ran.
     await expect(page.locator("[data-interactive-meta]")).toContainText("last appointment")
 

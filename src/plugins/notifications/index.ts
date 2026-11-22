@@ -21,6 +21,7 @@ export const notificationsPlugin = registerPlugin<NotificationsOptions>({
     source: "src/plugins/notifications",
     description:
       "The bell beside the avatar in the admin header: help docs and other news for each staff member.",
+    beta: {},
     switch: {
       label: "Notifications bell",
       description: "The bell beside the avatar in the admin header.",

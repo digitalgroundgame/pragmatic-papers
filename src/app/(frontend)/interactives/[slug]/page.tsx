@@ -17,6 +17,7 @@ import { WhipCountPage } from "@/interactives/whip-count/WhipCountPage"
 import { whipCountMeta } from "@/interactives/whip-count/meta"
 import { generateMeta } from "@/utilities/generateMeta"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { BetaBadge } from "@/components/BetaBadge"
 
 // Explicit, not left to Next's dynamic-API bailout: this page was never meant to hold a Full
 // Route Cache entry (see revalidateInteractive.ts / revalidateSnapshot.ts). Declaring it here
@@ -98,7 +99,10 @@ export default async function InteractivePage({
           <p className="text-brand-text font-serif text-xs font-semibold tracking-widest uppercase">
             Interactive
           </p>
-          <h1 className="mt-2">{interactive.title}</h1>
+          <h1 className="mt-2">
+            {interactive.title}
+            <BetaBadge feature="interactives" />
+          </h1>
           <RichText data={interactive.intro} enableGutter={false} className="mt-4" />
           {composed && (
             <p data-interactive-meta="" className="text-muted-foreground mt-4 text-sm">

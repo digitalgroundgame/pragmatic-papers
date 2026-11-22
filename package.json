@@ -77,7 +77,7 @@
     "@payloadcms/storage-s3": "^3.93.0",
     "@payloadcms/ui": "^3.93.0",
     "@react-email/render": "^2.2.0",
-    "@sentry/nextjs": "^11.11.0",
+    "@sentry/nextjs": "^11.15.0",
     "@wrksz/themes": "^2.1.1",
     "better-auth": "1.7.23",
     "better-react-mathjax": "^3.0.3",

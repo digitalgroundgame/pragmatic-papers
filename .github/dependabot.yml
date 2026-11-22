@@ -34,6 +34,12 @@ updates:
           - "react-dom"
           - "@types/react"
           - "@types/react-dom"
+      # @sentry/nextjs and @sentry/cloudflare (the Worker's) share one release
+      # train and their internal @sentry/* packages, so they move together.
+      # @payloadcms/plugin-sentry stays with the payload group above.
+      sentry:
+        patterns:
+          - "@sentry/*"
     ignore:
       # Majors follow the Node runtime (Dockerfile NODE_VERSION, CI node-version).
       - dependency-name: "@types/node"

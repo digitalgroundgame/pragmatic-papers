@@ -839,6 +839,29 @@ from memory. It clones each project's docs source into the gitignored `.cache/up
 sessions, which can't reach most documentation sites. Next.js's docs are already in
 `node_modules/next/dist/docs/`.
 
+## Sentry errors to draft PRs
+
+`.github/workflows/sentry-intake.yml` runs hourly: it files a GitHub issue (label `sentry`)
+for each unresolved Sentry error matching `SENTRY_QUERY` (by default seen 3+ times in
+production or staging and still happening, so one-off blips stay out) that no issue names yet,
+open or closed, and that `.github/sentry-filter.json` doesn't keep out (levels, an optional
+filter to errors with a frame in our code, and include/exclude patterns on title, culprit,
+exception type, message, URL or transaction, seeded with known noise). The issue starts with the `Sentry Issue: [SHORT-ID](link)` line Sentry's own
+integration writes, which is how either finds the other. `.github/workflows/sentry-fix.yml`
+then has Claude triage it as fix, noise, duplicate or needs-info, say so in a comment and
+retitle the issue; for a fix it opens a draft PR into dev (branch `claude/sentry-<issue>`,
+pushed with the release App's token so its checks run), assigned to `SENTRY_FIX_REVIEWER`.
+Claude runs with a read-only token and its commits leave the job as a patch, since the
+error text it reads comes from production traffic; the commands it runs don't inherit
+`CLAUDE_CODE_OAUTH_TOKEN` or `NODE_AUTH_TOKEN` (`CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`), and a patch
+that changes anything outside `src/` and `tests/` isn't pushed, since PR checks run `scripts/`,
+`.storybook/` and the workflows from the branch with secrets. At most `SENTRY_FIX_DAILY_LIMIT` (3) runs
+start in 24 hours; the rest, including issues filed beyond the day's room, wait labeled
+`sentry queued`. Intake reads Sentry a page at a time (up to 8) past errors already filed or
+kept out, so recurring ones don't crowd out new ones. Adding the `fix with claude` label
+to any issue starts a run now, past the budget; `SENTRY_FIX_AUTO=false` makes that the only
+way. The rules are in `scripts/sentry-fix.ts`.
+
 ## Claude review gate
 
 PRs into `dev` need the **Review acknowledged** check (`review-ack.yml`) on

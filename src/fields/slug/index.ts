@@ -9,17 +9,27 @@ import { slugify as defaultSlugify } from "payload/shared"
 type SlugFieldArgs = NonNullable<Parameters<typeof payloadSlugField>[0]>
 
 /**
- * Runs Payload's checkbox hook, then, on update, puts back a non-empty slug it
- * replaced. Payload assigns the slug before its hook first yields, so the
- * restore happens before the `slug` field reads it.
+ * Runs Payload's checkbox hook, then, on update, puts back the slug it
+ * replaced: the one the save brought, or the document's when the save brought
+ * none. A slug the save cleared stays empty, so the `slug` field's hook
+ * regenerates it. Payload assigns a synchronous `slugify`'s result before its
+ * hook first yields, so the first restore lands before the `slug` field reads
+ * it; the second covers an async `slugify`, which assigns after.
  */
 export function keepSlugOnUpdate(hook: FieldHook, name: string): FieldHook {
   return (args) => {
     const { data, operation } = args
-    const slug = data?.[name] || args.originalDoc?.[name]
+    const given = data?.[name]
+    const slug = given === undefined ? args.originalDoc?.[name] : given
+    const restore = () => {
+      if (operation === "update" && data && slug) data[name] = slug
+    }
     const result = hook(args)
-    if (operation === "update" && data && slug) data[name] = slug
-    return result
+    restore()
+    return Promise.resolve(result).then((value) => {
+      restore()
+      return value
+    })
   }
 }
 

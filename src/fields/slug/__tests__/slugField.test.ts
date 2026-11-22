@@ -135,6 +135,31 @@ describe("keepSlugOnUpdate", () => {
     expect(data.slug).toBe("from-title")
   })
 
+  it("lets an update that clears the slug have it regenerated", () => {
+    const data: Record<string, unknown> = { slug: "" }
+    wrapped({ operation: "update", data, originalDoc: { slug: "original" } } as never)
+    expect(data.slug).toBe("from-title")
+  })
+
+  it("puts the slug back after an async slugify assigns it", async () => {
+    const late: FieldHook = async ({ data }) => {
+      await Promise.resolve()
+      if (data) data.slug = "from-title"
+      return true
+    }
+    const data: Record<string, unknown> = { title: "Renamed" }
+    const result = keepSlugOnUpdate(
+      late,
+      "slug",
+    )({
+      operation: "update",
+      data,
+      originalDoc: { slug: "original" },
+    } as never)
+    expect(await result).toBe(true)
+    expect(data.slug).toBe("original")
+  })
+
   it("leaves create to Payload's hook", () => {
     const data: Record<string, unknown> = { slug: "" }
     wrapped({ operation: "create", data } as never)

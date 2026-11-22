@@ -464,6 +464,16 @@ describe("comments", () => {
     expect((await post(article, cookie, "Two")).status).toBe(429)
   })
 
+  it("lets only one of two comments sent at once past the cooldown", async () => {
+    const cookie = await signIn(reader())
+
+    const responses = await Promise.all([
+      post(article, cookie, "From one tab"),
+      post(article, cookie, "From another"),
+    ])
+    expect(responses.map((response) => response.status).sort()).toEqual([201, 429])
+  })
+
   it("takes comments only on published articles", async () => {
     const cookie = await signIn(reader())
     const writer = await createUser("writer")

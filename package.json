@@ -102,7 +102,7 @@
     "prism-react-renderer": "^2.4.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "react-email": "^6.11.8",
+    "react-email": "^6.11.16",
     "react-hook-form": "^7.92.0",
     "sanitize-html": "^2.18.1",
     "schema-dts": "^2.1.0",

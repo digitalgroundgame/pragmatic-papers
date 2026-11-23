@@ -1,15 +1,17 @@
 name: Sentry intake
 
 # Every hour, files a GitHub issue (label `sentry`) for each Sentry error that
-# matches SENTRY_QUERY and has no issue yet, then starts sentry-fix.yml on as
-# many of the new and queued ones as today's budget has room for. See
+# matches SENTRY_QUERY and has no issue yet, queues the team's open, unassigned
+# bugs Claude hasn't tried (ISSUE_FIX_AUTO=false turns that off), then starts
+# sentry-fix.yml on as many of the new and queued ones as today's budget has
+# room for. See
 # scripts/sentry-fix.ts for the rules, and the repository variables below for
 # what can be tuned without a PR. Which errors are left out (levels, errors
 # with no frame in our code, patterns of known noise) is .github/sentry-filter.json.
 #
 # Needs the SENTRY_AUTH_TOKEN secret: an internal integration's token with
 # Project: Read and Issue & Event: Read (Sentry → Settings → Custom
-# Integrations). Without it the run does nothing.
+# Integrations). Without it Sentry isn't read; the team's bugs still are.
 on:
   schedule:
     - cron: "17 * * * *"
@@ -60,6 +62,8 @@ jobs:
           SENTRY_INTAKE_LIMIT: ${{ vars.SENTRY_INTAKE_LIMIT }}
           SENTRY_FIX_DAILY_LIMIT: ${{ vars.SENTRY_FIX_DAILY_LIMIT }}
           SENTRY_FIX_AUTO: ${{ vars.SENTRY_FIX_AUTO }}
+          ISSUE_FIX_AUTO: ${{ vars.ISSUE_FIX_AUTO }}
+          ISSUE_FIX_TYPES: ${{ vars.ISSUE_FIX_TYPES }}
           DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
         run: node scripts/sentry-fix.ts intake
 

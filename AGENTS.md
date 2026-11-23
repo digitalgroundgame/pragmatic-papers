@@ -845,7 +845,7 @@ from memory. It clones each project's docs source into the gitignored `.cache/up
 sessions, which can't reach most documentation sites. Next.js's docs are already in
 `node_modules/next/dist/docs/`.
 
-## Sentry errors to draft PRs
+## Sentry errors and bugs to draft PRs
 
 `.github/workflows/sentry-intake.yml` runs hourly: it files a GitHub issue (label `sentry`)
 for each unresolved Sentry error matching `SENTRY_QUERY` (by default seen 3+ times in
@@ -863,10 +863,18 @@ error text it reads comes from production traffic; the commands it runs don't in
 that changes anything outside `src/` and `tests/` isn't pushed, since PR checks run `scripts/`,
 `.storybook/` and the workflows from the branch with secrets. At most `SENTRY_FIX_DAILY_LIMIT` (3) runs
 start in 24 hours; the rest, including issues filed beyond the day's room, wait labeled
-`sentry queued`. Intake reads Sentry a page at a time (up to 8) past errors already filed or
+`claude queued`. Intake reads Sentry a page at a time (up to 8) past errors already filed or
 kept out, so recurring ones don't crowd out new ones. Adding the `fix with claude` label
 to any issue starts a run now, past the budget; `SENTRY_FIX_AUTO=false` makes that the only
 way. The rules are in `scripts/sentry-fix.ts`.
+
+The same intake queues the team's own bugs (`eligibleIssue`): open issues of type Bug
+(`ISSUE_FIX_TYPES`, comma-separated), written by someone with access to the repository
+(anyone can file an issue on a public repo, and its text is Claude's instructions), with no
+assignee, none of `HOLD_LABELS` (blocked, discussion, question, waiting on design, security,
+wontfix and the like), and no earlier Claude attempt. They share the daily budget and the
+safeguards above. Assigning someone keeps Claude off an issue; `ISSUE_FIX_AUTO=false`
+leaves only Sentry issues and labeled ones.
 
 ## Claude review gate
 

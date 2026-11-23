@@ -711,12 +711,24 @@ export async function gate(deps: Deps): Promise<number> {
   if (issue.pull_request) return skip(`#${number} is a pull request.`)
   if (issue.state !== "open") return skip(`#${number} is closed.`)
   const labels = new Set((issue.labels ?? []).map((label) => label.name))
+  // A skip that won't change on its own takes the issue out of the queue, or intake would
+  // dispatch it every hour ahead of the issues behind it. Intake queues it again if it
+  // becomes eligible, since it has no attempt marker.
+  const leaveQueue = async (reason: string) => {
+    if (labels.has(LABELS.queued)) {
+      await http.github(
+        "DELETE",
+        `/repos/${repo}/issues/${number}/labels/${encodeURIComponent(LABELS.queued)}`,
+      )
+    }
+    return skip(reason)
+  }
   const sentry = fromSentry(issue)
   if (!sentry && env.FORCE !== "true") {
     const reason = eligibleIssue(issue, issueTypes(env.ISSUE_FIX_TYPES))
-    if (reason) return skip(`#${number} isn't from Sentry, and ${reason}.`)
+    if (reason) return leaveQueue(`#${number} isn't from Sentry, and ${reason}.`)
     if (env.ISSUE_FIX_AUTO === "false")
-      return skip("ISSUE_FIX_AUTO is false: waiting for the label.")
+      return leaveQueue("ISSUE_FIX_AUTO is false: waiting for the label.")
   }
 
   const q = encodeURIComponent(`repo:${repo} is:pr is:open "#${number}" in:body`)
@@ -725,7 +737,7 @@ export async function gate(deps: Deps): Promise<number> {
     `/search/issues?q=${q}&per_page=20`,
   )
   const naming = prs.items.filter((item) => new RegExp(`#${number}(?!\\d)`).test(item.body ?? ""))
-  if (naming.length) return skip(`#${number} already has an open PR: #${naming[0]!.number}.`)
+  if (naming.length) return leaveQueue(`#${number} already has an open PR: #${naming[0]!.number}.`)
 
   if (env.FORCE !== "true") {
     if (env.SENTRY_FIX_AUTO === "false")

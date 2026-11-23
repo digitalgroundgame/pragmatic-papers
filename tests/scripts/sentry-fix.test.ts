@@ -750,6 +750,9 @@ describe("gate", () => {
     expect(calls.some((call) => call.method === "POST" && call.url.endsWith("/labels"))).toBe(false)
   })
 
+  const unqueued = (calls: Call[]) =>
+    calls.some((call) => call.method === "DELETE" && call.url.includes("claude%20queued"))
+
   it("says why it skips an issue that isn't eligible", async () => {
     const outsider = { ...teamBug, author_association: "NONE" }
     const { deps, outputs, logs } = fakeDeps({ ISSUE: "7" }, gateRoutes(outsider))
@@ -758,10 +761,38 @@ describe("gate", () => {
     expect(logs).toContain("#7 isn't from Sentry, and its author isn't on the team.")
   })
 
-  it("leaves the team's bugs to the label with ISSUE_FIX_AUTO=false", async () => {
-    const { deps, outputs } = fakeDeps({ ISSUE: "7", ISSUE_FIX_AUTO: "false" }, gateRoutes(teamBug))
+  it("takes a queued bug out of the queue once someone is assigned", async () => {
+    const taken = { ...teamBug, assignees: [{ login: "tadjh" }] }
+    const { deps, outputs, calls } = fakeDeps({ ISSUE: "7" }, gateRoutes(taken))
     await main(["gate"], deps)
     expect(outputs.run).toBe("false")
+    expect(unqueued(calls)).toBe(true)
+  })
+
+  it("leaves the team's bugs to the label with ISSUE_FIX_AUTO=false", async () => {
+    const { deps, outputs, calls } = fakeDeps(
+      { ISSUE: "7", ISSUE_FIX_AUTO: "false" },
+      gateRoutes(teamBug),
+    )
+    await main(["gate"], deps)
+    expect(outputs.run).toBe("false")
+    expect(unqueued(calls)).toBe(true)
+  })
+
+  it("takes an issue that already has an open PR out of the queue", async () => {
+    const prs = [{ number: 12, body: "Closes #7" }]
+    const { deps, outputs, calls } = fakeDeps({ ISSUE: "7" }, gateRoutes(open, { prs }))
+    await main(["gate"], deps)
+    expect(outputs.run).toBe("false")
+    expect(unqueued(calls)).toBe(true)
+  })
+
+  it("keeps an issue queued while the budget is spent", async () => {
+    const comments = [1, 2, 3].map((hour) => marker(`2026-11-22T0${hour}:00:00Z`))
+    const { deps, outputs, calls } = fakeDeps({ ISSUE: "7" }, gateRoutes(teamBug, { comments }))
+    await main(["gate"], deps)
+    expect(outputs.run).toBe("false")
+    expect(unqueued(calls)).toBe(false)
   })
 
   it("runs on any issue a person labels", async () => {

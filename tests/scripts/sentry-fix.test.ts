@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest"
 import {
   ATTEMPT_MARKER,
   attemptsSince,
+  eligibleIssue,
+  issueTypes,
   type Deps,
   fence,
   nextCursor,
@@ -453,8 +455,17 @@ describe("intake", () => {
   ]
 
   const routes =
-    (comments: unknown[] = []) =>
+    (
+      comments: unknown[] = [],
+      open: unknown[] = [],
+      tried: Record<number, unknown[]> = {},
+      pulls: unknown[] = [],
+    ) =>
     ({ method, url }: Call) => {
+      if (url.includes("/issues?state=open&assignee=none")) return open
+      if (url.includes("/pulls?state=open")) return pulls
+      const perIssue = /\/issues\/(\d+)\/comments/.exec(url)
+      if (perIssue && method === "GET") return tried[Number(perIssue[1])] ?? []
       if (url.endsWith("/projects/digital-ground-game/pragmatic-papers/")) return { id: "99" }
       if (url.includes("/organizations/digital-ground-game/issues/?")) return issues
       if (url.includes("/events/recommended/")) return { entries: [] }
@@ -468,7 +479,7 @@ describe("intake", () => {
       }
       if (method === "POST" && url.endsWith(`/repos/${REPO}/issues`)) return { number: 100 }
       if (method === "POST" && url.endsWith("/labels")) return []
-      if (url.includes("labels=sentry%20queued"))
+      if (url.includes("labels=claude%20queued"))
         return [{ number: 50 }, { number: 51, pull_request: {} }]
       if (url.includes("/issues/comments")) return comments
       throw new Error(`unexpected ${method} ${url}`)
@@ -500,7 +511,7 @@ describe("intake", () => {
     expect(outputs.dispatch).toBe("[50]")
     // The new one waits in the queue rather than being forgotten.
     const queued = calls.find((call) => call.url.endsWith("/issues/100/labels"))!
-    expect(queued.body).toEqual({ labels: ["sentry queued"] })
+    expect(queued.body).toEqual({ labels: ["claude queued"] })
   })
 
   it("reads on to the next page of Sentry issues until it has filed its share", async () => {
@@ -554,11 +565,114 @@ describe("intake", () => {
     expect(logs).toContain("Would file PP-1: New one")
   })
 
-  it("does nothing without a Sentry token", async () => {
+  it("reads only GitHub without a Sentry token", async () => {
     const { deps, calls, outputs } = fakeDeps({}, routes())
     expect(await main(["intake"], deps)).toBe(0)
-    expect(calls).toHaveLength(0)
+    expect(calls.some((call) => call.url.includes("sentry.io"))).toBe(false)
+    expect(outputs.dispatch).toBe("[50]")
+  })
+
+  const teamBug = (number: number, extra: object = {}) => ({
+    number,
+    state: "open",
+    title: `Bug ${number}`,
+    body: "Steps to reproduce",
+    labels: [],
+    assignees: [],
+    author_association: "MEMBER",
+    type: { name: "Bug" },
+    ...extra,
+  })
+
+  it("queues the team's unassigned bugs that Claude hasn't tried", async () => {
+    const open = [
+      teamBug(60),
+      teamBug(61), // tried before
+      teamBug(62, { author_association: "NONE" }),
+      teamBug(63, { type: { name: "Feature" } }),
+      teamBug(64, { labels: [{ name: "blocked" }] }),
+      teamBug(65, { body: "Sentry Issue: [PP-9](x)" }),
+      teamBug(66, { labels: [{ name: "claude queued" }] }),
+    ]
+    const { deps, calls } = fakeDeps({}, routes([], open, { 61: [marker("2026-11-01T00:00:00Z")] }))
+    await main(["intake"], deps)
+    const queued = calls.filter((call) => call.method === "POST" && call.url.endsWith("/labels"))
+    expect(queued.map((call) => call.url.replace(/.*\/issues\/(\d+)\/labels$/, "$1"))).toEqual([
+      "60",
+    ])
+    expect(queued[0]!.body).toEqual({ labels: ["claude queued"] })
+    // Comments are read only for the issues that pass the cheap checks.
+    const commentReads = calls.filter((call) => /\/issues\/\d+\/comments/.test(call.url))
+    expect(commentReads.map((call) => call.url)).toHaveLength(2)
+  })
+
+  it("doesn't queue a bug an open PR already names", async () => {
+    const pulls = [{ body: "Closes #60" }, { body: "Fixes #610" }]
+    const open = [teamBug(60), teamBug(61)]
+    const { deps, calls } = fakeDeps({}, routes([], open, {}, pulls))
+    await main(["intake"], deps)
+    const queued = calls.filter((call) => call.method === "POST" && call.url.endsWith("/labels"))
+    expect(queued.map((call) => call.url.replace(/.*\/issues\/(\d+)\/labels$/, "$1"))).toEqual([
+      "61",
+    ])
+    expect(calls.filter((call) => call.url.includes("/pulls?"))).toHaveLength(1)
+  })
+
+  it("queues no more issues a run than SENTRY_INTAKE_LIMIT", async () => {
+    const open = [teamBug(60), teamBug(61), teamBug(62)]
+    const { deps, calls } = fakeDeps({ SENTRY_INTAKE_LIMIT: "2" }, routes([], open))
+    await main(["intake"], deps)
+    expect(calls.filter((call) => call.method === "POST")).toHaveLength(2)
+  })
+
+  it("only names the issues it would queue on a dry run", async () => {
+    const { deps, calls, logs, outputs } = fakeDeps({ DRY_RUN: "true" }, routes([], [teamBug(60)]))
+    await main(["intake"], deps)
+    expect(calls.some((call) => call.method === "POST")).toBe(false)
+    expect(logs).toContain("Would queue #60 for Claude.")
     expect(outputs.dispatch).toBe("[]")
+  })
+
+  it("leaves other issues alone with ISSUE_FIX_AUTO=false", async () => {
+    const { deps, calls } = fakeDeps({ ISSUE_FIX_AUTO: "false" }, routes([], [teamBug(60)]))
+    await main(["intake"], deps)
+    expect(calls.some((call) => call.url.includes("assignee=none"))).toBe(false)
+  })
+})
+
+describe("eligibleIssue", () => {
+  const bug = {
+    number: 1,
+    state: "open",
+    title: "x",
+    created_at: "2026-11-01T00:00:00Z",
+    labels: [],
+    assignees: [],
+    author_association: "OWNER",
+    type: { name: "Bug" },
+  }
+
+  it("accepts an open, unassigned bug the team filed", () => {
+    expect(eligibleIssue(bug, ["Bug"])).toBeNull()
+    expect(eligibleIssue({ ...bug, author_association: "COLLABORATOR" }, ["Bug"])).toBeNull()
+  })
+
+  it.each([
+    ["a pull request", { pull_request: {} }, "it's a pull request"],
+    ["a closed issue", { state: "closed" }, "it's closed"],
+    ["another type", { type: { name: "Task" } }, "its type (Task) isn't Bug"],
+    ["no type", { type: null }, "its type (none) isn't Bug"],
+    ["an outside author", { author_association: "CONTRIBUTOR" }, "its author isn't on the team"],
+    ["an assignee", { assignees: [{ login: "tadjh" }] }, "someone is assigned"],
+    ["a hold label", { labels: [{ name: "security" }] }, "it's labeled security"],
+  ])("turns down %s", (_, change, reason) => {
+    expect(eligibleIssue({ ...bug, ...change }, ["Bug"])).toBe(reason)
+  })
+
+  it("takes the types from ISSUE_FIX_TYPES", () => {
+    expect(issueTypes(undefined)).toEqual(["Bug"])
+    expect(issueTypes("Bug, Task")).toEqual(["Bug", "Task"])
+    expect(eligibleIssue({ ...bug, type: { name: "Task" } }, issueTypes("Bug,Task"))).toBeNull()
   })
 })
 
@@ -578,17 +692,17 @@ describe("gate", () => {
     state: "open",
     title: "x",
     body: "Sentry Issue: [PP-7](x)",
-    labels: [{ name: "sentry queued" }],
+    labels: [{ name: "claude queued" }],
   }
 
   it("starts a run: labels it sentry, unqueues it and posts the marked comment", async () => {
     const { deps, calls, outputs } = fakeDeps({ ISSUE: "7" }, gateRoutes(open))
     await main(["gate"], deps)
-    expect(outputs).toEqual({ run: "true", comment_id: "555" })
+    expect(outputs).toEqual({ run: "true", sentry: "true", comment_id: "555" })
     const comment = calls.find((call) => call.url.endsWith("/issues/7/comments"))!
     expect((comment.body as { body: string }).body).toContain(ATTEMPT_MARKER)
     expect(
-      calls.some((call) => call.method === "DELETE" && call.url.includes("sentry%20queued")),
+      calls.some((call) => call.method === "DELETE" && call.url.includes("claude%20queued")),
     ).toBe(true)
     expect(
       calls.find((call) => call.method === "POST" && call.url.endsWith("/labels"))!.body,
@@ -604,7 +718,7 @@ describe("gate", () => {
     await main(["gate"], deps)
     expect(outputs.run).toBe("false")
     expect(calls.find((call) => call.url.endsWith("/issues/7/labels"))!.body).toEqual({
-      labels: ["sentry queued"],
+      labels: ["claude queued"],
     })
   })
 
@@ -634,6 +748,77 @@ describe("gate", () => {
     await main(["gate"], deps)
     expect(outputs.run).toBe("false")
     expect(calls.some((call) => call.method === "POST")).toBe(false)
+  })
+
+  const teamBug = {
+    number: 7,
+    state: "open",
+    title: "Button does nothing",
+    body: "Steps to reproduce",
+    labels: [{ name: "claude queued" }],
+    assignees: [],
+    author_association: "MEMBER",
+    type: { name: "Bug" },
+  }
+
+  it("runs on the team's bug without calling it a Sentry issue", async () => {
+    const { deps, calls, outputs } = fakeDeps({ ISSUE: "7" }, gateRoutes(teamBug))
+    await main(["gate"], deps)
+    expect(outputs.run).toBe("true")
+    expect(outputs.sentry).toBe("false")
+    expect(calls.some((call) => call.method === "POST" && call.url.endsWith("/labels"))).toBe(false)
+  })
+
+  const unqueued = (calls: Call[]) =>
+    calls.some((call) => call.method === "DELETE" && call.url.includes("claude%20queued"))
+
+  it("says why it skips an issue that isn't eligible", async () => {
+    const outsider = { ...teamBug, author_association: "NONE" }
+    const { deps, outputs, logs } = fakeDeps({ ISSUE: "7" }, gateRoutes(outsider))
+    await main(["gate"], deps)
+    expect(outputs.run).toBe("false")
+    expect(logs).toContain("#7 isn't from Sentry, and its author isn't on the team.")
+  })
+
+  it("takes a queued bug out of the queue once someone is assigned", async () => {
+    const taken = { ...teamBug, assignees: [{ login: "tadjh" }] }
+    const { deps, outputs, calls } = fakeDeps({ ISSUE: "7" }, gateRoutes(taken))
+    await main(["gate"], deps)
+    expect(outputs.run).toBe("false")
+    expect(unqueued(calls)).toBe(true)
+  })
+
+  it("leaves the team's bugs to the label with ISSUE_FIX_AUTO=false", async () => {
+    const { deps, outputs, calls } = fakeDeps(
+      { ISSUE: "7", ISSUE_FIX_AUTO: "false" },
+      gateRoutes(teamBug),
+    )
+    await main(["gate"], deps)
+    expect(outputs.run).toBe("false")
+    expect(unqueued(calls)).toBe(true)
+  })
+
+  it("takes an issue that already has an open PR out of the queue", async () => {
+    const prs = [{ number: 12, body: "Closes #7" }]
+    const { deps, outputs, calls } = fakeDeps({ ISSUE: "7" }, gateRoutes(open, { prs }))
+    await main(["gate"], deps)
+    expect(outputs.run).toBe("false")
+    expect(unqueued(calls)).toBe(true)
+  })
+
+  it("keeps an issue queued while the budget is spent", async () => {
+    const comments = [1, 2, 3].map((hour) => marker(`2026-11-22T0${hour}:00:00Z`))
+    const { deps, outputs, calls } = fakeDeps({ ISSUE: "7" }, gateRoutes(teamBug, { comments }))
+    await main(["gate"], deps)
+    expect(outputs.run).toBe("false")
+    expect(unqueued(calls)).toBe(false)
+  })
+
+  it("runs on any issue a person labels", async () => {
+    const outsider = { ...teamBug, author_association: "NONE", type: null }
+    const { deps, outputs } = fakeDeps({ ISSUE: "7", FORCE: "true" }, gateRoutes(outsider))
+    await main(["gate"], deps)
+    expect(outputs.run).toBe("true")
   })
 
   it("doesn't count a PR naming #70 as one for #7", async () => {

@@ -17,6 +17,7 @@ export const toursPlugin = registerPlugin<ToursOptions>({
     source: "src/plugins/tours",
     description:
       "driver.js walkthroughs of the admin, started from a help doc or the bell's Show me.",
+    beta: {},
     switch: {
       label: "Guided tours",
       description:

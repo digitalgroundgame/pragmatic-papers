@@ -144,6 +144,7 @@ export const ssoPlugin = registerPlugin<SsoPluginConfig>({
     source: "src/plugins/sso",
     description:
       "Sign-in with Google, Discord or Destiny.gg, through Better Auth: staff to the admin, with a Connections tab on their account, and members to the site, when sign-ups are open. Email and password login stays on.",
+    beta: { info: "Accounts are in beta: we're still trying them out, so they may change." },
     switch: {
       label: "Single sign-on",
       description:

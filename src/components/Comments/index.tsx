@@ -4,6 +4,7 @@ import { ArrowLeftIcon, LockIcon } from "lucide-react"
 import Link from "next/link"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 
+import { BetaBadge } from "@/components/BetaBadge"
 import { ProviderSignInButton } from "@/components/ProviderSignInButton"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -279,6 +280,7 @@ export const Comments: React.FC<CommentsProps> = ({ articleId, apiPath = "/api",
               </span>
             </>
           ) : null}
+          <BetaBadge feature="comments" />
         </h2>
         {thread && thread.comments.length > 1 ? (
           <SortMenu

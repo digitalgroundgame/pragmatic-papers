@@ -74,6 +74,10 @@ export const Loaded: Story = {
     // Plays of the article's narration, beside its readers.
     await expect(figureRow(table, "Narration plays")).toHaveTextContent("2,830")
     await expect(canvas.getByText(/Views is our own count: one for each visit/)).toBeInTheDocument()
+    // An editor checking their own article is usually previewing, which sends no view.
+    await expect(
+      canvas.getByText(/Visits made while previewing aren't counted/),
+    ).toBeInTheDocument()
     const referrers = canvas.getByRole("table", { name: "Where readers came from" })
     await expect(within(referrers).getByRole("row", { name: /google/ })).toHaveTextContent("7,820")
     await expect(canvas.getByText(/updated 12 minutes ago/)).toBeInTheDocument()

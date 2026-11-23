@@ -224,7 +224,8 @@ function ReadersCard({
           {views ? (
             <Note>
               Views is our own count: one for each visit to the article, with no cookies and nothing
-              kept about the reader.
+              kept about the reader. Visits made while previewing aren&apos;t counted, so exit
+              preview to see your own.
             </Note>
           ) : (
             <Problem>Our view count couldn&apos;t be read. Try again in a moment.</Problem>

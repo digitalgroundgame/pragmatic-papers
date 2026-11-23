@@ -78,6 +78,7 @@ import * as migration_20261114_055741_comments_redesign from "./20261114_055741_
 import * as migration_20261114_171352_reading_history from "./20261114_171352_reading_history"
 import * as migration_20261114_172255_add_article_views from "./20261114_172255_add_article_views"
 import * as migration_20261122_225750_shorten_long_constraint_names from "./20261122_225750_shorten_long_constraint_names"
+import * as migration_20261122_235342_untick_generate_slug from "./20261122_235342_untick_generate_slug"
 
 export const migrations = [
   {
@@ -479,5 +480,10 @@ export const migrations = [
     up: migration_20261122_225750_shorten_long_constraint_names.up,
     down: migration_20261122_225750_shorten_long_constraint_names.down,
     name: "20261122_225750_shorten_long_constraint_names",
+  },
+  {
+    up: migration_20261122_235342_untick_generate_slug.up,
+    down: migration_20261122_235342_untick_generate_slug.down,
+    name: "20261122_235342_untick_generate_slug",
   },
 ]

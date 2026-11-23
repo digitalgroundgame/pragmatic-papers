@@ -1,5 +1,5 @@
 import type { CollectionConfig } from "payload"
-import { slugField } from "@/fields/slug"
+import { slugField } from "payload"
 
 import {
   AlignFeature,

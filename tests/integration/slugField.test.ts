@@ -1,14 +1,14 @@
 import { beforeAll, describe, expect, it } from "vitest"
+import { sql, type MigrateUpArgs } from "@payloadcms/db-postgres"
 import type { Payload } from "payload"
 import type { Article, Interactive, Page, Volume } from "@/payload-types"
 import { createUser, getPayload } from "./helpers/testUsers"
 import { ARTICLE_CONTENT } from "./fixtures/content"
+import { up as untickGenerateSlug } from "@/migrations/20261122_235342_untick_generate_slug"
 
-// Payload 3.90.2 made slugField's generateSlug hook assign the slug after an
-// await, so the required `slug` sibling validated first and every create
-// without a slug failed with "Slug: This field is required." Our wrapper in
-// `@/fields/slug` generates it in a hook on `slug` itself to get around it. Pin the
-// generated slugs directly so a regression names itself here.
+// Payload's slugField generates the slug in a hook on its hidden `generateSlug` checkbox, and
+// while the box is ticked it re-slugs from the title on every update. Pin both halves: slugs
+// are generated on create, and a published document's slug survives a rename.
 describe("slugField generation on create", () => {
   let payload: Payload
   const ctx = { disableRevalidate: true }
@@ -122,9 +122,7 @@ describe("slugField generation on create", () => {
   })
 
   // The admin's autosave creates an article on the first change, which can come
-  // before a title (a hero image, an author). Payload's own hook sets the slug on
-  // later saves too late for them, so without ours the draft kept an empty slug,
-  // and with it no Preview button.
+  // before a title (a hero image, an author). Without a slug the draft has no Preview button.
   it("fills an empty slug once a draft started without a title gets one", async () => {
     const writer = await createUser("writer")
     const started = await payload.create({
@@ -157,7 +155,7 @@ describe("slugField generation on create", () => {
     expect(titled.slug).toBe("slug-test-titled-later")
   })
 
-  it("leaves a slug alone when the title changes", async () => {
+  it("leaves a published article's slug alone when the title changes", async () => {
     const article = await payload.create({
       collection: "articles",
       overrideAccess: true,
@@ -175,9 +173,66 @@ describe("slugField generation on create", () => {
       overrideAccess: true,
       draft: true,
       context: ctx,
-      data: { title: "Slug Test After Rename", generateSlug: true, _status: "draft" },
+      data: { title: "Slug Test After Rename", _status: "draft" },
     })
-
     expect(renamed.slug).toBe("slug-test-before-rename")
+
+    const republished = await payload.update({
+      collection: "articles",
+      id: article.id,
+      overrideAccess: true,
+      context: ctx,
+      data: { title: "Slug Test After Rename", _status: "published" },
+    })
+    expect(republished.slug).toBe("slug-test-before-rename")
+  })
+
+  // Rows from before Payload unticked the box on publish still had it ticked, until the
+  // untick_generate_slug migration.
+  it("keeps the slug of a document the migration unticked", async () => {
+    const article = await payload.create({
+      collection: "articles",
+      overrideAccess: true,
+      context: ctx,
+      data: {
+        title: "Slug Test Legacy Row",
+        content: ARTICLE_CONTENT,
+        _status: "published",
+      } as unknown as Article,
+    })
+    await payload.db.drizzle.execute(
+      sql`UPDATE "articles" SET "generate_slug" = true WHERE "id" = ${article.id}`,
+    )
+    await payload.db.drizzle.execute(
+      sql`UPDATE "_articles_v" SET "version_generate_slug" = true WHERE "parent_id" = ${article.id}`,
+    )
+
+    await untickGenerateSlug({ db: payload.db.drizzle, payload } as unknown as MigrateUpArgs)
+
+    const renamed = await payload.update({
+      collection: "articles",
+      id: article.id,
+      overrideAccess: true,
+      context: ctx,
+      data: { title: "Slug Test Legacy Renamed", _status: "published" },
+    })
+    expect(renamed.slug).toBe("slug-test-legacy-row")
+  })
+
+  it("renames a user without changing their slug", async () => {
+    const user = await createUser("writer")
+    await payload.db.drizzle.execute(
+      sql`UPDATE "users" SET "generate_slug" = true WHERE "id" = ${user.id}`,
+    )
+    await untickGenerateSlug({ db: payload.db.drizzle, payload } as unknown as MigrateUpArgs)
+
+    const renamed = await payload.update({
+      collection: "users",
+      id: user.id,
+      overrideAccess: true,
+      context: ctx,
+      data: { name: "Someone Else Entirely" },
+    })
+    expect(renamed.slug).toBe(user.slug)
   })
 })

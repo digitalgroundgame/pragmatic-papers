@@ -56,6 +56,7 @@ jobs:
     outputs:
       run: ${{ steps.gate.outputs.run }}
       comment_id: ${{ steps.gate.outputs.comment_id }}
+      sentry: ${{ steps.gate.outputs.sentry }}
       issue: ${{ inputs.issue || github.event.issue.number }}
     steps:
       - uses: actions/checkout@v7
@@ -279,6 +280,7 @@ jobs:
           TITLE: ${{ steps.pr.outputs.title }}
           BODY: ${{ steps.pr.outputs.body }}
           REVIEWER: ${{ vars.SENTRY_FIX_REVIEWER || 'tadjh' }}
+          FROM_SENTRY: ${{ needs.gate.outputs.sentry }}
         run: |
           fail() { echo "error=$1" >> "$GITHUB_OUTPUT"; echo "::error::$1"; exit 0; }
           patch="$RUNNER_TEMP/out/fix.patch"
@@ -298,7 +300,9 @@ jobs:
           echo "url=$url" >> "$GITHUB_OUTPUT"
           number="${url##*/}"
           # Each on its own, and best-effort: a refused label or reviewer leaves the PR open.
-          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$number/labels" -f "labels[]=sentry" >/dev/null || true
+          if [ "$FROM_SENTRY" = "true" ]; then
+            gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$number/labels" -f "labels[]=sentry" >/dev/null || true
+          fi
           gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$number/assignees" -f "assignees[]=$REVIEWER" >/dev/null || true
           gh api -X POST "repos/$GITHUB_REPOSITORY/pulls/$number/requested_reviewers" -f "reviewers[]=$REVIEWER" >/dev/null || true
 

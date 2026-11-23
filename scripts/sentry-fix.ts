@@ -771,6 +771,7 @@ export async function gate(deps: Deps): Promise<number> {
     },
   )
   deps.output("run", "true")
+  deps.output("sentry", String(sentry))
   deps.output("comment_id", String(comment.id))
   return 0
 }

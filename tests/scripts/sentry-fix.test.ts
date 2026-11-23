@@ -680,7 +680,7 @@ describe("gate", () => {
   it("starts a run: labels it sentry, unqueues it and posts the marked comment", async () => {
     const { deps, calls, outputs } = fakeDeps({ ISSUE: "7" }, gateRoutes(open))
     await main(["gate"], deps)
-    expect(outputs).toEqual({ run: "true", comment_id: "555" })
+    expect(outputs).toEqual({ run: "true", sentry: "true", comment_id: "555" })
     const comment = calls.find((call) => call.url.endsWith("/issues/7/comments"))!
     expect((comment.body as { body: string }).body).toContain(ATTEMPT_MARKER)
     expect(
@@ -747,6 +747,7 @@ describe("gate", () => {
     const { deps, calls, outputs } = fakeDeps({ ISSUE: "7" }, gateRoutes(teamBug))
     await main(["gate"], deps)
     expect(outputs.run).toBe("true")
+    expect(outputs.sentry).toBe("false")
     expect(calls.some((call) => call.method === "POST" && call.url.endsWith("/labels"))).toBe(false)
   })
 

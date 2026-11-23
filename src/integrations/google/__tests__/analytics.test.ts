@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { integrationStatus } from "../../types"
-import { googleAnalyticsProperty, pageFiguresRequests, toPageFigures } from "../analytics"
+import {
+  googleAnalyticsProperty,
+  googleErrorReason,
+  pageFiguresRequests,
+  toPageFigures,
+} from "../analytics"
 
 const row = (dims: string[], metrics: string[]) => ({
   dimensionValues: dims.map((value) => ({ value })),
@@ -170,5 +175,24 @@ describe("googleAnalyticsProperty", () => {
     await expect(
       connection().pageFigures({ path: "/articles/a", since: "2026-10-01" }),
     ).rejects.toThrow("set GA4_PROPERTY_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL")
+  })
+})
+
+describe("googleErrorReason", () => {
+  it("keeps the first line of GA's message", () => {
+    expect(googleErrorReason(new Error("7 PERMISSION_DENIED: no access\n    at stack"))).toBe(
+      "7 PERMISSION_DENIED: no access",
+    )
+  })
+
+  it("shortens a long message", () => {
+    const reason = googleErrorReason(new Error("x".repeat(500)))
+    expect(reason).toHaveLength(300)
+    expect(reason.endsWith("…")).toBe(true)
+  })
+
+  it("describes something thrown that isn't an Error", () => {
+    expect(googleErrorReason("boom")).toBe("boom")
+    expect(googleErrorReason(new Error(""))).toBe("Unknown error")
   })
 })

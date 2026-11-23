@@ -3,7 +3,7 @@ import type { Endpoint, PayloadRequest } from "payload"
 import { isEditor } from "@/access/roles"
 import { NARRATION_PLAY_EVENT } from "@/components/NarrationPlayer/events"
 import { googleAnalytics, integrationStatus } from "@/integrations"
-import type { PageFigures } from "@/integrations/google/analytics"
+import { googleErrorReason, type PageFigures } from "@/integrations/google/analytics"
 import type { User } from "@/payload-types"
 import { absoluteURL } from "@/utilities/getURL"
 import { docPath } from "@/utilities/routes"
@@ -27,7 +27,11 @@ export type GoogleAnalyticsStats =
     }
   /** No credentials on this site: only production has a property with readers. */
   | { status: "unconfigured" }
-  | { status: "error" }
+  | {
+      status: "error"
+      /** What GA said, for editors (who can fix the property or the request); null for others. */
+      reason: string | null
+    }
 
 export interface ArticleStats {
   /** False for an article that's never been published: there's nothing to count yet. */
@@ -91,8 +95,13 @@ async function analyticsFor(
       reportsUrl: isEditor(req.user as User) ? googleAnalytics.reportsUrl() : null,
     }
   } catch (err) {
-    req.payload.logger.warn({ err }, `Google Analytics figures for article ${article.id} failed`)
-    return { status: "error" }
+    const reason = googleErrorReason(err)
+    // Error level, so Sentry files it: a refused request is a bug or a setting to fix.
+    req.payload.logger.error(
+      { err },
+      `Google Analytics figures for article ${article.id} failed: ${reason}`,
+    )
+    return { status: "error", reason: isEditor(req.user as User) ? reason : null }
   }
 }
 

@@ -623,14 +623,31 @@ async function fileSentryIssues(http: Http, deps: Deps, intakeLimit: number): Pr
   return filed
 }
 
+/** The issue numbers open PRs name in their descriptions (`Closes #12`). */
+async function namedByOpenPRs(http: Http, repo: string): Promise<Set<number>> {
+  const named = new Set<number>()
+  for (let page = 1; page <= ISSUE_PAGES; page++) {
+    const batch = await http.github<{ body?: string | null }[]>(
+      "GET",
+      `/repos/${repo}/pulls?state=open&per_page=100&page=${page}`,
+    )
+    for (const pull of batch) {
+      for (const match of (pull.body ?? "").matchAll(/#(\d+)(?!\d)/g)) named.add(Number(match[1]))
+    }
+    if (batch.length < 100) break
+  }
+  return named
+}
+
 /**
- * Open issues `eligibleIssue` accepts that Claude hasn't tried (no ATTEMPT_MARKER comment)
- * and that aren't queued yet, oldest first, up to `limit`.
+ * Open issues `eligibleIssue` accepts that Claude hasn't tried (no ATTEMPT_MARKER comment),
+ * that aren't queued yet and that no open PR names, oldest first, up to `limit`.
  */
 async function eligibleIssues(http: Http, deps: Deps, limit: number): Promise<number[]> {
   const repo = deps.env.GITHUB_REPOSITORY!
   const types = issueTypes(deps.env.ISSUE_FIX_TYPES)
   const found: number[] = []
+  let named: Set<number> | undefined
   for (let page = 1; page <= ISSUE_PAGES && found.length < limit; page++) {
     const batch = await http.github<GitHubIssue[]>(
       "GET",
@@ -640,6 +657,9 @@ async function eligibleIssues(http: Http, deps: Deps, limit: number): Promise<nu
       if (found.length >= limit) break
       if (fromSentry(issue) || issue.labels?.some((l) => l.name === LABELS.queued)) continue
       if (eligibleIssue(issue, types)) continue
+      // The gate would skip it, and with no attempt marker it would be queued again next hour.
+      named ??= await namedByOpenPRs(http, repo)
+      if (named.has(issue.number)) continue
       const comments = await http.github<Comment[]>(
         "GET",
         `/repos/${repo}/issues/${issue.number}/comments?per_page=100`,

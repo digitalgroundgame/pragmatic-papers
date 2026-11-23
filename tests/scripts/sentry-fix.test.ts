@@ -455,9 +455,15 @@ describe("intake", () => {
   ]
 
   const routes =
-    (comments: unknown[] = [], open: unknown[] = [], tried: Record<number, unknown[]> = {}) =>
+    (
+      comments: unknown[] = [],
+      open: unknown[] = [],
+      tried: Record<number, unknown[]> = {},
+      pulls: unknown[] = [],
+    ) =>
     ({ method, url }: Call) => {
       if (url.includes("/issues?state=open&assignee=none")) return open
+      if (url.includes("/pulls?state=open")) return pulls
       const perIssue = /\/issues\/(\d+)\/comments/.exec(url)
       if (perIssue && method === "GET") return tried[Number(perIssue[1])] ?? []
       if (url.endsWith("/projects/digital-ground-game/pragmatic-papers/")) return { id: "99" }
@@ -598,6 +604,18 @@ describe("intake", () => {
     // Comments are read only for the issues that pass the cheap checks.
     const commentReads = calls.filter((call) => /\/issues\/\d+\/comments/.test(call.url))
     expect(commentReads.map((call) => call.url)).toHaveLength(2)
+  })
+
+  it("doesn't queue a bug an open PR already names", async () => {
+    const pulls = [{ body: "Closes #60" }, { body: "Fixes #610" }]
+    const open = [teamBug(60), teamBug(61)]
+    const { deps, calls } = fakeDeps({}, routes([], open, {}, pulls))
+    await main(["intake"], deps)
+    const queued = calls.filter((call) => call.method === "POST" && call.url.endsWith("/labels"))
+    expect(queued.map((call) => call.url.replace(/.*\/issues\/(\d+)\/labels$/, "$1"))).toEqual([
+      "61",
+    ])
+    expect(calls.filter((call) => call.url.includes("/pulls?"))).toHaveLength(1)
   })
 
   it("queues no more issues a run than SENTRY_INTAKE_LIMIT", async () => {

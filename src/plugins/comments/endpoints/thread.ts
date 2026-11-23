@@ -1,3 +1,4 @@
+import { sql, type PostgresAdapter } from "@payloadcms/db-postgres"
 import {
   commitTransaction,
   initTransaction,
@@ -11,12 +12,7 @@ import {
 import { normalizeCommentBody } from "../body"
 import { COMMENTING_FIELD, commentingOf } from "../commenting"
 import { duplicateCheck, linkCheck, runChecks } from "../checks"
-import {
-  COMMENTS_SLUG,
-  FIRST_COMMENTED_FIELD,
-  LAST_COMMENTED_FIELD,
-  VIOLATIONS_SLUG,
-} from "../constants"
+import { COMMENTS_SLUG, FIRST_COMMENTED_FIELD, VIOLATIONS_SLUG } from "../constants"
 import { SKIP_MODERATION } from "../hooks/recordModeration"
 import { authorLock } from "../lock"
 import { describerFor, findFirstComments } from "../markers"
@@ -50,6 +46,43 @@ function parseId(req: PayloadRequest, raw: unknown): number | string | null {
 function isCrossSite(req: PayloadRequest, config: ResolvedCommentsConfig): boolean {
   const origin = req.headers.get("origin")
   return !origin || origin !== new URL(config.baseURL()).origin
+}
+
+/**
+ * Runs `post` in a transaction holding a Postgres advisory lock on the author, so a second
+ * comment they send at the same moment waits for the first, then counts it and hits the
+ * cooldown. The lock is the transaction's own (`pg_advisory_xact_lock`): it's released when
+ * the transaction ends, on the same connection, so it holds behind a pooler too. A refused
+ * post (a `Response`) and an error both roll back.
+ */
+async function oneAtATime<T>(
+  req: PayloadRequest,
+  authorId: number | string,
+  post: () => Promise<T | Response>,
+): Promise<T | Response> {
+  const ownsTransaction = await initTransaction(req)
+  try {
+    const transactionID = await req.transactionID
+    // Typed through the adapter, so a Payload change to its sessions fails the type check.
+    const session =
+      transactionID === undefined
+        ? undefined
+        : (req.payload.db as unknown as PostgresAdapter).sessions[String(transactionID)]
+    // Without a transaction to hold it, the lock would end at once and guard nothing.
+    if (!session) throw new Error("Posting a comment needs a database transaction.")
+    await session.db.execute(
+      sql`select pg_advisory_xact_lock(hashtext('comments:post'), hashtext(${String(authorId)}))`,
+    )
+    const result = await post()
+    if (ownsTransaction) {
+      if (result instanceof Response) await killTransaction(req)
+      else await commitTransaction(req)
+    }
+    return result
+  } catch (error) {
+    if (ownsTransaction) await killTransaction(req)
+    throw error
+  }
 }
 
 const lockedMessage = (until: string | null) =>
@@ -295,29 +328,7 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       return { created, check }
     }
 
-    // The cooldown is counted and the comment created in one transaction that first writes
-    // the author's last-commented time. That write locks their row until the transaction ends,
-    // so a second post sent at the same moment waits here, then counts the first.
-    const ownsTransaction = await initTransaction(req)
-    let result: { created: StoredComment; check: CommentCheckResult } | Response
-    try {
-      await req.payload.db.updateOne({
-        collection: config.authorsSlug,
-        id: author.id,
-        data: { [LAST_COMMENTED_FIELD]: new Date().toISOString() },
-        returning: false,
-        req,
-      })
-      result = await countAndCreate()
-      // A refused post leaves the author's time as it was.
-      if (ownsTransaction) {
-        if (result instanceof Response) await killTransaction(req)
-        else await commitTransaction(req)
-      }
-    } catch (error) {
-      if (ownsTransaction) await killTransaction(req)
-      throw error
-    }
+    const result = await oneAtATime(req, author.id, countAndCreate)
     if (result instanceof Response) return result
     const { created, check } = result
 

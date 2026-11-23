@@ -481,21 +481,6 @@ describe("comments", () => {
     expect(mine.totalDocs).toBe(1)
   })
 
-  it("keeps when each author last commented, leaving it alone for a refused post", async () => {
-    const profile = reader()
-    const cookie = await signIn(profile)
-    const lastCommented = async () => (await userByEmail(profile.email)).lastCommentedAt ?? null
-
-    expect(await lastCommented()).toBeNull()
-    const before = Date.now()
-    expect((await post(article, cookie, "One")).status).toBe(201)
-    const first = await lastCommented()
-    expect(new Date(first!).getTime()).toBeGreaterThanOrEqual(before - 1000)
-
-    expect((await post(article, cookie, "Two")).status).toBe(429)
-    expect(await lastCommented()).toBe(first)
-  })
-
   it("takes comments only on published articles", async () => {
     const cookie = await signIn(reader())
     const writer = await createUser("writer")

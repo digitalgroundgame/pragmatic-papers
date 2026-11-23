@@ -598,7 +598,6 @@ export interface User {
    * When their earliest published comment was posted. Comments keep it up to date.
    */
   firstCommentedAt?: string | null;
-  lastCommentedAt?: string | null;
   /**
    * Give an achievement that's given by hand with Add new, or open one to revoke it. Verified isn't listed until it's revoked: add a row for it with Revoked ticked.
    */
@@ -2448,7 +2447,6 @@ export interface UsersSelect<T extends boolean = true> {
   avatarUrl?: T;
   ssoConnections?: T;
   firstCommentedAt?: T;
-  lastCommentedAt?: T;
   awards?: T;
   reading?:
     | T

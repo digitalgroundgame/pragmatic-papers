@@ -193,6 +193,20 @@ export function toPageFigures(
   return figures
 }
 
+/** The longest error reason `googleErrorReason` returns. */
+const MAX_REASON = 300
+
+/**
+ * What GA said when a request failed, in one line: the Data API's own message, which names
+ * the status and the field it refused (`3 INVALID_ARGUMENT: …`, `7 PERMISSION_DENIED: …`).
+ * Holds no credentials, so staff may see it.
+ */
+export function googleErrorReason(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err)
+  const line = message.split("\n")[0]?.trim() || "Unknown error"
+  return line.length > MAX_REASON ? `${line.slice(0, MAX_REASON - 1)}…` : line
+}
+
 /**
  * A GA4 property read through the Data API with a service account. The tag on the public
  * pages is separate (`NEXT_PUBLIC_GOOGLE_ANALYTICS_ID`); this is what reads the numbers back.

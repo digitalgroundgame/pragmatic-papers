@@ -140,6 +140,18 @@ describe("Payload errors in Sentry", () => {
     expect(events).toHaveLength(0)
   })
 
+  it("doesn't report a logout from a session that already ended", async () => {
+    await routeError(new APIError("No User", 400))
+
+    expect(events).toHaveLength(0)
+  })
+
+  it("still reports other 400 APIErrors Payload logs at error", async () => {
+    await routeError(new APIError("Something else", 400))
+
+    expect(events).toHaveLength(1)
+  })
+
   it("reports an error-level line of our own, and a recovered failure Payload logs", async () => {
     logger.error({ err: new Error("Sync failed") }, "Shopify sync failed")
     logger.error({

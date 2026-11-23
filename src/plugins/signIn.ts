@@ -59,7 +59,7 @@ export const ssoOptions: SsoPluginConfig = {
       })
     },
   },
-  // The Users collection's slug field (`src/fields/slug`), set by Payload on create.
+  // The Users collection's slug field (Payload's `slugField`), set by Payload on create.
   requiredUserColumns: ["slug"],
   // A linked account's picture is saved only for someone with no profile image.
   hasPicture: async ({ payload, userId }) => {

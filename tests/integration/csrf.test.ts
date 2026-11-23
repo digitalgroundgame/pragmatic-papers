@@ -59,6 +59,21 @@ describe("the login cookie", () => {
     expect(await whoIs({ "sec-fetch-site": "cross-site" })).toBeNull()
   })
 
+  // A link to the admin from Slack, email or GitHub: Payload takes the cookie on a page load
+  // from another site, which can't read the answer.
+  it("signs in a page opened from another site", async () => {
+    const pageLoad = { "sec-fetch-mode": "navigate", "sec-fetch-dest": "document" }
+    expect(await whoIs({ "sec-fetch-site": "cross-site", ...pageLoad })).toBe(userId)
+  })
+
+  it("is ignored on another site's fetch or frame", async () => {
+    const site = { "sec-fetch-site": "cross-site" }
+    expect(await whoIs({ ...site, "sec-fetch-mode": "cors", "sec-fetch-dest": "empty" })).toBeNull()
+    expect(
+      await whoIs({ ...site, "sec-fetch-mode": "navigate", "sec-fetch-dest": "iframe" }),
+    ).toBeNull()
+  })
+
   it("leaves a token sent in the Authorization header alone", async () => {
     const { user } = await payload.auth({
       headers: new Headers({ authorization: `JWT ${token}`, origin: "https://example.com" }),

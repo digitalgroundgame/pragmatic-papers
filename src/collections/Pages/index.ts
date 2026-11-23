@@ -17,7 +17,7 @@ import { populatePublishedAt } from "@/hooks/populatePublishedAt"
 import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
 import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 import { rememberReadersCopy } from "@/utilities/readersCopy"
-import { slugField } from "@/fields/slug"
+import { slugField } from "payload"
 import { revalidateDelete, revalidatePage } from "./hooks/revalidatePage"
 
 import { admin } from "@/access/collections"

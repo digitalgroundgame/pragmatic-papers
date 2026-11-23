@@ -859,7 +859,7 @@ retitle the issue; for a fix it opens a draft PR into dev (branch `claude/sentry
 pushed with the release App's token so its checks run), assigned to `SENTRY_FIX_REVIEWER`.
 Claude runs with a read-only token and its commits leave the job as a patch, since the
 error text it reads comes from production traffic; the commands it runs don't inherit
-`CLAUDE_CODE_OAUTH_TOKEN` or `NODE_AUTH_TOKEN` (`CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`), and a patch
+`CLAUDE_CODE_OAUTH_TOKEN` or `NODE_AUTH_TOKEN` (`CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`, which runs them in Claude Code's Bash sandbox, so the job installs bubblewrap and socat first), and a patch
 that changes anything outside `src/` and `tests/` isn't pushed, since PR checks run `scripts/`,
 `.storybook/` and the workflows from the branch with secrets. At most `SENTRY_FIX_DAILY_LIMIT` (3) runs
 start in 24 hours; the rest, including issues filed beyond the day's room, wait labeled

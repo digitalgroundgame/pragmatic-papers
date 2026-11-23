@@ -105,6 +105,21 @@ jobs:
           gh-font-read-token: ${{ secrets.GH_FONT_READ }}
           payload-secret: ci-sentry-fix-secret
 
+      # With CLAUDE_CODE_SUBPROCESS_ENV_SCRUB set, Claude Code runs every Bash
+      # command in its sandbox, which on Linux needs bubblewrap and socat; without
+      # them each command fails. Ubuntu 24.04 lets only profiled programs create
+      # user namespaces, so bwrap gets the profile the sandboxing docs give.
+      - name: Install the Bash sandbox
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq bubblewrap socat
+          printf '%s\n' 'abi <abi/4.0>,' 'include <tunables/global>' \
+            'profile bwrap /usr/bin/bwrap flags=(unconfined) {' '  userns,' \
+            '  include if exists <local/bwrap>' '}' | sudo tee /etc/apparmor.d/bwrap >/dev/null
+          if command -v apparmor_parser >/dev/null; then sudo apparmor_parser -r /etc/apparmor.d/bwrap; fi
+          # Fail here, loudly, rather than as a run where no command works.
+          bwrap --ro-bind / / --unshare-user --unshare-pid --proc /proc true
+
       # Claude reads the issue, and the issues and PRs it could duplicate, from
       # files: the scrub below also takes GH_TOKEN from the commands it runs, so
       # it has no gh of its own. Its commits get the Claude App's name.

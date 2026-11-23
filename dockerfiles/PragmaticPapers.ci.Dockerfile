@@ -22,7 +22,7 @@
 #     --secret id=GH_FONT_READ,env=GH_FONT_READ --build-arg DATABASE_URI=... \
 #     --build-arg PACKAGE_MANAGER="$(jq -r .packageManager package.json)" \
 #     [--build-arg NODE_REGISTRY=ghcr.io/digitalgroundgame] .
-ARG NODE_VERSION=24.15.0
+ARG NODE_VERSION=24.22.3
 # Where Docker Hub's official node image comes from. Docker Hub rate-limits anonymous
 # pulls by address, and so does Amazon ECR Public's mirror of it, the default here;
 # GitHub's shared runners run out of both. build-app-image passes the GHCR copy

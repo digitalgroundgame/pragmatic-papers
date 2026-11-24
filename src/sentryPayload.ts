@@ -87,6 +87,19 @@ const PINO_ERROR_LEVEL = 50
 const SENTRY_CAPTURED = "__sentry_captured__"
 
 /**
+ * Payload's 400 "No User" from `POST /api/users/logout` when the request has no session:
+ * its token expired, or another tab already logged out. The reader is signed out either way,
+ * but Payload logs it at `error`, and `loggingLevels` can only lower every `APIError` at once.
+ */
+function isLogoutWithoutSession(err: object): boolean {
+  return (
+    (err as { name?: unknown }).name === "APIError" &&
+    pluginStatus(err) === 400 &&
+    (err as { message?: unknown }).message === "No User"
+  )
+}
+
+/**
  * A pino `logMethod` hook for Payload's logger: an error Payload logs on its way to answering
  * with a 5xx is written to the log as usual, but left to the plugin to report (see the top of
  * this file), by marking it reported while it is logged. Payload's `logError` logs it as
@@ -105,7 +118,7 @@ export function skipPluginErrorsInPino(
   level: number,
 ): void {
   const [logged] = args
-  const err =
+  const payloadErr =
     level === PINO_ERROR_LEVEL &&
     args.length === 1 &&
     typeof logged === "object" &&
@@ -113,10 +126,17 @@ export function skipPluginErrorsInPino(
     Object.keys(logged).length === 1 &&
     "err" in logged &&
     typeof logged.err === "object" &&
-    logged.err !== null &&
-    pluginStatus(logged.err) >= 500 &&
-    !(SENTRY_CAPTURED in logged.err)
+    logged.err !== null
       ? logged.err
+      : undefined
+  if (payloadErr && isLogoutWithoutSession(payloadErr)) {
+    // Logged at info, as Payload logs its routine failures, so the pino integration skips it.
+    ;(this as { info: (obj: object) => void }).info({ msg: (payloadErr as Error).message })
+    return
+  }
+  const err =
+    payloadErr && pluginStatus(payloadErr) >= 500 && !(SENTRY_CAPTURED in payloadErr)
+      ? payloadErr
       : undefined
   if (!err) {
     method.apply(this, args)

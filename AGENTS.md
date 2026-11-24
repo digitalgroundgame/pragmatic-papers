@@ -448,9 +448,8 @@ plugin and the account page read too.
   request from another origin. Staging and PR previews are subdomains of the production site,
   which SameSite=Lax doesn't keep apart. The admin only works on `SERVER_URL`'s hostname.
   A page opened from another site (a link in Slack or email, a provider's redirect back after
-  a sign-in) is a cross-site request too: the SSO session is still taken on a top-level page
-  load, and for Payload's cookie, which isn't, `ResumeSession` (`src/components/BeforeLogin`)
-  sends someone the login page finds signed in on to where they were headed.
+  a sign-in) is a cross-site request too: both still sign someone in on a top-level page
+  load (`GET`, `Sec-Fetch-Mode: navigate`), which the other site can't read the answer to.
 - `staffByDefault` (`src/plugins/staffByDefault.ts`, the last plugin) gives every access rule a
   collection or plugin leaves out to staff, where Payload's default is any logged-in user, so a
   forgotten rule can't reach members if one ever becomes `req.user`.
@@ -847,7 +846,7 @@ from memory. It clones each project's docs source into the gitignored `.cache/up
 sessions, which can't reach most documentation sites. Next.js's docs are already in
 `node_modules/next/dist/docs/`.
 
-## Sentry errors to draft PRs
+## Sentry errors and bugs to draft PRs
 
 `.github/workflows/sentry-intake.yml` runs hourly: it files a GitHub issue (label `sentry`)
 for each unresolved Sentry error matching `SENTRY_QUERY` (by default seen 3+ times in
@@ -861,14 +860,22 @@ retitle the issue; for a fix it opens a draft PR into dev (branch `claude/sentry
 pushed with the release App's token so its checks run), assigned to `SENTRY_FIX_REVIEWER`.
 Claude runs with a read-only token and its commits leave the job as a patch, since the
 error text it reads comes from production traffic; the commands it runs don't inherit
-`CLAUDE_CODE_OAUTH_TOKEN` or `NODE_AUTH_TOKEN` (`CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`), and a patch
+`CLAUDE_CODE_OAUTH_TOKEN` or `NODE_AUTH_TOKEN` (`CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`, which runs them in Claude Code's Bash sandbox, so the job installs bubblewrap and socat first), and a patch
 that changes anything outside `src/` and `tests/` isn't pushed, since PR checks run `scripts/`,
 `.storybook/` and the workflows from the branch with secrets. At most `SENTRY_FIX_DAILY_LIMIT` (3) runs
 start in 24 hours; the rest, including issues filed beyond the day's room, wait labeled
-`sentry queued`. Intake reads Sentry a page at a time (up to 8) past errors already filed or
+`claude queued`. Intake reads Sentry a page at a time (up to 8) past errors already filed or
 kept out, so recurring ones don't crowd out new ones. Adding the `fix with claude` label
 to any issue starts a run now, past the budget; `SENTRY_FIX_AUTO=false` makes that the only
 way. The rules are in `scripts/sentry-fix.ts`.
+
+The same intake queues the team's own bugs (`eligibleIssue`): open issues of type Bug
+(`ISSUE_FIX_TYPES`, comma-separated), written by someone with access to the repository
+(anyone can file an issue on a public repo, and its text is Claude's instructions), with no
+assignee, none of `HOLD_LABELS` (blocked, discussion, question, waiting on design, security,
+wontfix and the like), and no earlier Claude attempt. They share the daily budget and the
+safeguards above. Assigning someone keeps Claude off an issue; `ISSUE_FIX_AUTO=false`
+leaves only Sentry issues and labeled ones.
 
 ## Claude review gate
 

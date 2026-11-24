@@ -26,6 +26,7 @@ const isVerified = vi.fn()
 const extraCheck = vi.fn()
 const authorBadges = vi.fn()
 const targetWriters = vi.fn()
+const lockQuery = vi.fn(async () => ({ rows: [] }))
 
 const config = {
   enabled,
@@ -63,7 +64,14 @@ let db: {
 }
 
 const payload = {
-  db: { defaultIDType: "number" },
+  db: {
+    defaultIDType: "number",
+    // Posting takes an advisory lock on the author inside a transaction.
+    beginTransaction: vi.fn(async (): Promise<string | null> => "tx-1"),
+    commitTransaction: vi.fn(async () => undefined),
+    rollbackTransaction: vi.fn(async () => undefined),
+    sessions: { "tx-1": { db: { execute: lockQuery } } },
+  },
   find: vi.fn(async ({ collection }: { collection: string }) => ({
     docs: collection === VIOLATIONS_SLUG ? db.violations : db.comments,
   })),
@@ -628,6 +636,61 @@ describe("POST /thread/:id", () => {
     expect(response.status).toBe(429)
     expect(response.headers.get("Retry-After")).toBe("10")
     expect(payload.create).not.toHaveBeenCalled()
+  })
+
+  describe("the cooldown, against two posts at once", () => {
+    const order = (mock: { mock: { invocationCallOrder: number[] } }) =>
+      mock.mock.invocationCallOrder[0]!
+
+    /** The SQL text of the lock query, with its parameters. */
+    const lockSQL = () => {
+      const [[query]] = lockQuery.mock.calls as unknown as [[{ queryChunks: unknown[] }]]
+      return JSON.stringify(query.queryChunks)
+    }
+
+    it("locks the author before counting, and counts and creates in the same transaction", async () => {
+      expect((await send({ body: "Hi" })).status).toBe(201)
+
+      expect(lockQuery).toHaveBeenCalledTimes(1)
+      expect(lockSQL()).toContain("pg_advisory_xact_lock")
+      expect(lockSQL()).toContain('"7"')
+      expect(order(payload.db.beginTransaction)).toBeLessThan(order(lockQuery))
+      expect(order(lockQuery)).toBeLessThan(order(payload.count))
+      expect(order(payload.create)).toBeLessThan(order(payload.db.commitTransaction))
+      // Each step runs on the request, which carries the transaction.
+      const [[{ req }]] = payload.count.mock.calls as unknown as [[{ req: PayloadRequest }]]
+      expect(payload.create.mock.calls[0]).toEqual([expect.objectContaining({ req })])
+      expect(payload.db.commitTransaction).toHaveBeenCalledWith("tx-1")
+      expect(payload.db.rollbackTransaction).not.toHaveBeenCalled()
+    })
+
+    it("rolls back a post the cooldown refuses", async () => {
+      db.recent = 1
+      expect((await send({ body: "Again" })).status).toBe(429)
+      expect(payload.db.rollbackTransaction).toHaveBeenCalledWith("tx-1")
+      expect(payload.db.commitTransaction).not.toHaveBeenCalled()
+    })
+
+    it("rolls back when creating the comment fails", async () => {
+      payload.create.mockRejectedValueOnce(new Error("database went away"))
+      await expect(send({ body: "Hi" })).rejects.toThrow("database went away")
+      expect(payload.db.rollbackTransaction).toHaveBeenCalledWith("tx-1")
+      expect(payload.db.commitTransaction).not.toHaveBeenCalled()
+    })
+
+    it("posts nothing when the lock can't be taken", async () => {
+      lockQuery.mockRejectedValueOnce(new Error("lock timeout"))
+      await expect(send({ body: "Hi" })).rejects.toThrow("lock timeout")
+      expect(payload.count).not.toHaveBeenCalled()
+      expect(payload.create).not.toHaveBeenCalled()
+      expect(payload.db.rollbackTransaction).toHaveBeenCalledWith("tx-1")
+    })
+
+    it("refuses to post without a transaction to hold the lock", async () => {
+      payload.db.beginTransaction.mockResolvedValueOnce(null)
+      await expect(send({ body: "Hi" })).rejects.toThrow(/needs a database transaction/)
+      expect(payload.create).not.toHaveBeenCalled()
+    })
   })
 
   describe("a reply", () => {

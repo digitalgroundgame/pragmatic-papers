@@ -1,6 +1,6 @@
 # Dockerfile for Pragmatic Papers (Next.js + Payload CMS)
 # Based on official Next.js Docker deployment guides
-ARG NODE_VERSION=24.15.0
+ARG NODE_VERSION=24.22.3
 # Docker Hub's official node image, through Amazon ECR Public's mirror of it, as
 # PragmaticPapers.ci.Dockerfile pulls it: Docker Hub rate-limits anonymous pulls.
 

@@ -1,6 +1,6 @@
 /**
- * Turns Sentry errors into GitHub issues, and those issues into draft PRs for a person to
- * review. Run under plain Node 24 (no install needed) by two workflows:
+ * Turns Sentry errors into GitHub issues, and those issues, and the team's own bug reports,
+ * into draft PRs for a person to review. Run under plain Node 24 (no install needed) by two workflows:
  *
  *   node scripts/sentry-fix.ts intake   # .github/workflows/sentry-intake.yml, hourly
  *   node scripts/sentry-fix.ts gate     # .github/workflows/sentry-fix.yml, before Claude
@@ -9,13 +9,14 @@
  * - **intake** asks Sentry for the unresolved issues matching SENTRY_QUERY in
  *   SENTRY_ENVIRONMENTS, drops those .github/sentry-filter.json keeps out (filterIssue), and
  *   files a GitHub issue (label `sentry`) for each one no issue
- *   names yet, in any state: an issue a person closed as not planned stays closed. It then
- *   lists, for the workflow to dispatch, the new issues and any left `sentry queued`,
- *   oldest first, as many as today's budget has room for.
- * - **gate** decides whether Claude works on an issue now. Not when it's closed or an open
- *   PR already names it. A person adding the `fix with claude` label (FORCE) always gets a
+ *   names yet, in any state: an issue a person closed as not planned stays closed. It also
+ *   queues the open issues `eligibleIssue` accepts (the team's unassigned bugs) that Claude
+ *   hasn't tried before. It then lists, for the workflow to dispatch, the new Sentry issues
+ *   and any left `claude queued`, oldest first, as many as today's budget has room for.
+ * - **gate** decides whether Claude works on an issue now. Not when it's closed, an open
+ *   PR already names it, or it's neither from Sentry nor accepted by `eligibleIssue`. A person adding the `fix with claude` label (FORCE) always gets a
  *   run; otherwise SENTRY_FIX_AUTO=false or a spent budget stops it, and a spent budget
- *   labels it `sentry queued` for the next day's room. A run starts with a comment carrying
+ *   labels it `claude queued` for the next day's room. A run starts with a comment carrying
  *   ATTEMPT_MARKER, which is what the budget counts.
  * - **report** rewrites that comment with Claude's verdict, retitles the issue to Claude's
  *   short description, and labels a duplicate.
@@ -28,7 +29,7 @@ import { appendFileSync, readFileSync } from "node:fs"
 import { pathToFileURL } from "node:url"
 
 export const ATTEMPT_MARKER = "<!-- sentry-fix:attempt -->"
-export const LABELS = { sentry: "sentry", queued: "sentry queued", force: "fix with claude" }
+export const LABELS = { sentry: "sentry", queued: "claude queued", force: "fix with claude" }
 export const DEFAULTS = {
   org: "digital-ground-game",
   project: "pragmatic-papers",
@@ -39,7 +40,28 @@ export const DEFAULTS = {
   environments: "production,staging",
   dailyLimit: 3,
   intakeLimit: 5,
+  issueTypes: "Bug",
 }
+/**
+ * Labels that keep an issue from Claude unless a person adds `fix with claude`: it waits on
+ * people, isn't a bug to fix, or (security) shouldn't get a public draft PR.
+ */
+export const HOLD_LABELS = [
+  "blocked",
+  "discussion",
+  "question",
+  "waiting on design",
+  "security",
+  "wontfix",
+  "invalid",
+  "duplicate",
+  "in progress",
+  "stale",
+]
+/** Who an issue's author must be for its text to steer Claude: people with access to the repository. */
+const TEAM = new Set(["OWNER", "MEMBER", "COLLABORATOR"])
+/** Open issues intake reads per run when looking for ones to queue. */
+const ISSUE_PAGES = 3
 const DAY_MS = 24 * 60 * 60 * 1000
 const TITLE_MAX = 100
 const MESSAGE_MAX = 500
@@ -378,6 +400,54 @@ export function parseVerdict(text: string | undefined): Verdict | null {
 
 // --- Commands ----------------------------------------------------------------------------
 
+export interface GitHubIssue {
+  number: number
+  state: string
+  title: string
+  body?: string | null
+  created_at: string
+  labels?: { name: string }[]
+  pull_request?: unknown
+  assignees?: unknown[] | null
+  author_association?: string
+  type?: { name: string } | null
+}
+
+/** Whether an issue came from Sentry: its label, or the integration's link line. */
+export function fromSentry(issue: GitHubIssue): boolean {
+  return (
+    (issue.labels ?? []).some((l) => l.name === LABELS.sentry) ||
+    sentryShortIds(issue.body).length > 0
+  )
+}
+
+/**
+ * Why Claude shouldn't pick up an issue that isn't from Sentry on its own, or null when it
+ * may: an open issue of one of `types` (ISSUE_FIX_TYPES, default Bug), written by someone
+ * with access to the repository (anyone can file an issue on a public one, and its text
+ * is Claude's instructions), with no assignee (assigning yourself keeps Claude off it) and
+ * none of HOLD_LABELS.
+ */
+export function eligibleIssue(issue: GitHubIssue, types: string[]): string | null {
+  if (issue.pull_request) return "it's a pull request"
+  if (issue.state !== "open") return "it's closed"
+  if (!issue.type?.name || !types.includes(issue.type.name)) {
+    return `its type (${issue.type?.name ?? "none"}) isn't ${types.join(" or ")}`
+  }
+  if (!TEAM.has(issue.author_association ?? "")) return "its author isn't on the team"
+  if (issue.assignees?.length) return "someone is assigned"
+  const hold = (issue.labels ?? []).find((l) => HOLD_LABELS.includes(l.name))
+  if (hold) return `it's labeled ${hold.name}`
+  return null
+}
+
+export function issueTypes(value: string | undefined): string[] {
+  return (value || DEFAULTS.issueTypes)
+    .split(",")
+    .map((type) => type.trim())
+    .filter(Boolean)
+}
+
 export interface Deps {
   env: Record<string, string | undefined>
   fetch: typeof fetch
@@ -438,16 +508,6 @@ class Http {
   }
 }
 
-interface GitHubIssue {
-  number: number
-  state: string
-  title: string
-  body?: string | null
-  created_at: string
-  labels?: { name: string }[]
-  pull_request?: unknown
-}
-
 async function recentComments(http: Http, repo: string, now: Date): Promise<Comment[]> {
   const since = new Date(now.getTime() - DAY_MS).toISOString()
   const comments: Comment[] = []
@@ -489,15 +549,10 @@ async function filedShortIds(http: Http, repo: string): Promise<Map<string, numb
   return filed
 }
 
-export async function intake(deps: Deps): Promise<number> {
+/** Files a GitHub issue for each Sentry error that passes the filter, up to `intakeLimit`. */
+async function fileSentryIssues(http: Http, deps: Deps, intakeLimit: number): Promise<number[]> {
   const { env } = deps
   const repo = env.GITHUB_REPOSITORY!
-  if (!env.SENTRY_AUTH_TOKEN) {
-    deps.log("SENTRY_AUTH_TOKEN isn't set; nothing to read.")
-    deps.output("dispatch", "[]")
-    return 0
-  }
-  const http = new Http(deps)
   const org = env.SENTRY_ORG || DEFAULTS.org
   const projectSlug = env.SENTRY_PROJECT || DEFAULTS.project
   const project = await http.sentry<{ id: string }>(`/projects/${org}/${projectSlug}/`)
@@ -512,7 +567,6 @@ export async function intake(deps: Deps): Promise<number> {
     if (environment.trim()) params.append("environment", environment.trim())
   }
   const filter = parseFilter(deps.readFile(env.SENTRY_FILTER_FILE || FILTER_PATH))
-  const intakeLimit = readLimit(env.SENTRY_INTAKE_LIMIT, DEFAULTS.intakeLimit)
   const already = await filedShortIds(http, repo)
   const filed: number[] = []
   let read = 0
@@ -566,11 +620,85 @@ export async function intake(deps: Deps): Promise<number> {
     }
   }
   deps.log(`Read ${read} Sentry issues matching the query.`)
+  return filed
+}
+
+/** The issue numbers open PRs name in their descriptions (`Closes #12`). */
+async function namedByOpenPRs(http: Http, repo: string): Promise<Set<number>> {
+  const named = new Set<number>()
+  for (let page = 1; page <= ISSUE_PAGES; page++) {
+    const batch = await http.github<{ body?: string | null }[]>(
+      "GET",
+      `/repos/${repo}/pulls?state=open&per_page=100&page=${page}`,
+    )
+    for (const pull of batch) {
+      for (const match of (pull.body ?? "").matchAll(/#(\d+)(?!\d)/g)) named.add(Number(match[1]))
+    }
+    if (batch.length < 100) break
+  }
+  return named
+}
+
+/**
+ * Open issues `eligibleIssue` accepts that Claude hasn't tried (no ATTEMPT_MARKER comment),
+ * that aren't queued yet and that no open PR names, oldest first, up to `limit`.
+ */
+async function eligibleIssues(http: Http, deps: Deps, limit: number): Promise<number[]> {
+  const repo = deps.env.GITHUB_REPOSITORY!
+  const types = issueTypes(deps.env.ISSUE_FIX_TYPES)
+  const found: number[] = []
+  let named: Set<number> | undefined
+  for (let page = 1; page <= ISSUE_PAGES && found.length < limit; page++) {
+    const batch = await http.github<GitHubIssue[]>(
+      "GET",
+      `/repos/${repo}/issues?state=open&assignee=none&sort=created&direction=asc&per_page=100&page=${page}`,
+    )
+    for (const issue of batch) {
+      if (found.length >= limit) break
+      if (fromSentry(issue) || issue.labels?.some((l) => l.name === LABELS.queued)) continue
+      if (eligibleIssue(issue, types)) continue
+      // The gate would skip it, and with no attempt marker it would be queued again next hour.
+      named ??= await namedByOpenPRs(http, repo)
+      if (named.has(issue.number)) continue
+      const comments = await http.github<Comment[]>(
+        "GET",
+        `/repos/${repo}/issues/${issue.number}/comments?per_page=100`,
+      )
+      if (comments.some((c) => c.body?.includes(ATTEMPT_MARKER))) continue
+      found.push(issue.number)
+    }
+    if (batch.length < 100) break
+  }
+  return found
+}
+
+export async function intake(deps: Deps): Promise<number> {
+  const { env } = deps
+  const repo = env.GITHUB_REPOSITORY!
+  const http = new Http(deps)
+  const intakeLimit = readLimit(env.SENTRY_INTAKE_LIMIT, DEFAULTS.intakeLimit)
+  const filed = env.SENTRY_AUTH_TOKEN ? await fileSentryIssues(http, deps, intakeLimit) : []
+  if (!env.SENTRY_AUTH_TOKEN) deps.log("SENTRY_AUTH_TOKEN isn't set; Sentry isn't read.")
+
+  if (env.ISSUE_FIX_AUTO === "false") {
+    deps.log("ISSUE_FIX_AUTO is false: only Sentry issues and labeled ones get Claude.")
+  } else {
+    for (const number of await eligibleIssues(http, deps, intakeLimit)) {
+      if (env.DRY_RUN === "true") {
+        deps.log(`Would queue #${number} for Claude.`)
+        continue
+      }
+      await http.github("POST", `/repos/${repo}/issues/${number}/labels`, {
+        labels: [LABELS.queued],
+      })
+      deps.log(`Queued #${number} for Claude.`)
+    }
+  }
 
   let dispatch: number[] = []
   if (env.SENTRY_FIX_AUTO === "false") {
     deps.log("SENTRY_FIX_AUTO is false: Claude starts only on the label.")
-  } else {
+  } else if (env.DRY_RUN !== "true") {
     const queued = await http.github<GitHubIssue[]>(
       "GET",
       `/repos/${repo}/issues?state=open&labels=${encodeURIComponent(LABELS.queued)}&sort=created&direction=asc&per_page=50`,
@@ -603,8 +731,24 @@ export async function gate(deps: Deps): Promise<number> {
   if (issue.pull_request) return skip(`#${number} is a pull request.`)
   if (issue.state !== "open") return skip(`#${number} is closed.`)
   const labels = new Set((issue.labels ?? []).map((label) => label.name))
-  if (!labels.has(LABELS.sentry) && !sentryShortIds(issue.body).length && env.FORCE !== "true") {
-    return skip(`#${number} isn't from Sentry.`)
+  // A skip that won't change on its own takes the issue out of the queue, or intake would
+  // dispatch it every hour ahead of the issues behind it. Intake queues it again if it
+  // becomes eligible, since it has no attempt marker.
+  const leaveQueue = async (reason: string) => {
+    if (labels.has(LABELS.queued)) {
+      await http.github(
+        "DELETE",
+        `/repos/${repo}/issues/${number}/labels/${encodeURIComponent(LABELS.queued)}`,
+      )
+    }
+    return skip(reason)
+  }
+  const sentry = fromSentry(issue)
+  if (!sentry && env.FORCE !== "true") {
+    const reason = eligibleIssue(issue, issueTypes(env.ISSUE_FIX_TYPES))
+    if (reason) return leaveQueue(`#${number} isn't from Sentry, and ${reason}.`)
+    if (env.ISSUE_FIX_AUTO === "false")
+      return leaveQueue("ISSUE_FIX_AUTO is false: waiting for the label.")
   }
 
   const q = encodeURIComponent(`repo:${repo} is:pr is:open "#${number}" in:body`)
@@ -613,7 +757,7 @@ export async function gate(deps: Deps): Promise<number> {
     `/search/issues?q=${q}&per_page=20`,
   )
   const naming = prs.items.filter((item) => new RegExp(`#${number}(?!\\d)`).test(item.body ?? ""))
-  if (naming.length) return skip(`#${number} already has an open PR: #${naming[0]!.number}.`)
+  if (naming.length) return leaveQueue(`#${number} already has an open PR: #${naming[0]!.number}.`)
 
   if (env.FORCE !== "true") {
     if (env.SENTRY_FIX_AUTO === "false")
@@ -628,9 +772,9 @@ export async function gate(deps: Deps): Promise<number> {
     }
   }
 
-  const add = [LABELS.sentry].filter((label) => !labels.has(label))
-  if (add.length)
-    await http.github("POST", `/repos/${repo}/issues/${number}/labels`, { labels: add })
+  if (sentry && !labels.has(LABELS.sentry)) {
+    await http.github("POST", `/repos/${repo}/issues/${number}/labels`, { labels: [LABELS.sentry] })
+  }
   for (const label of [LABELS.queued, LABELS.force]) {
     if (labels.has(label)) {
       await http.github(
@@ -647,6 +791,7 @@ export async function gate(deps: Deps): Promise<number> {
     },
   )
   deps.output("run", "true")
+  deps.output("sentry", String(sentry))
   deps.output("comment_id", String(comment.id))
   return 0
 }

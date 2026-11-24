@@ -9,6 +9,7 @@ import { draftMode } from "next/headers"
 import { notFound } from "next/navigation"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { PageHeader, PageShell } from "@/components/PageShell"
 import { getPayloadClient } from "@/data/payload"
 
 export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
@@ -60,23 +61,18 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
 
   return (
     <>
-      <Breadcrumbs items={[{ name: "Topics", path: "/topics" }]} />
-      <article className="mx-auto max-w-3xl space-y-6 px-4">
+      <Breadcrumbs shell items={[{ name: "Topics", path: "/topics" }]} />
+      <PageShell>
         {draft && <LivePreviewListener />}
 
-        <header className="space-y-3">
-          <h1>Topics</h1>
-          <p className="text-muted-foreground text-sm">Browse all topics</p>
-        </header>
+        <PageHeader title="Topics" description="Browse all topics" />
 
         <section aria-label="All topics" className="mt-6">
           {topics.length === 0 ? (
             <p className="text-muted-foreground text-sm">No topics found.</p>
           ) : (
             <>
-              <div className="mt-6 flex justify-center">
-                <TopicsList topics={topics} />
-              </div>
+              <TopicsList topics={topics} />
               <Pagination
                 className="mt-18 flex justify-center"
                 page={currentPage}
@@ -85,7 +81,7 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
             </>
           )}
         </section>
-      </article>
+      </PageShell>
     </>
   )
 }

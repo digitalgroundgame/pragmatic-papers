@@ -9,6 +9,7 @@ import { draftMode } from "next/headers"
 import type { PaginatedDocs } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { PageHeader, PageShell, ReadingColumn } from "@/components/PageShell"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { docPath } from "@/utilities/routes"
 import { getPayloadClient } from "@/data/payload"
@@ -124,106 +125,107 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
 
   return (
     <>
-      <Breadcrumbs items={[{ name: "Search", path: "/search" }]} />
-      <main className="mx-auto max-w-3xl space-y-6 px-4">
-        <h1>Search</h1>
+      <Breadcrumbs shell items={[{ name: "Search", path: "/search" }]} />
+      <PageShell as="div">
+        <PageHeader title="Search" />
+        <ReadingColumn className="space-y-6">
+          <form action="/search" method="get" className="flex gap-2">
+            <input
+              type="search"
+              name="q"
+              defaultValue={q}
+              placeholder="Search…"
+              className="border-input bg-background placeholder:text-muted-foreground flex h-10 w-full rounded-md border px-3 py-2 text-sm"
+            />
+            <button
+              type="submit"
+              className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm"
+            >
+              Search
+            </button>
+          </form>
 
-        <form action="/search" method="get" className="flex gap-2">
-          <input
-            type="search"
-            name="q"
-            defaultValue={q}
-            placeholder="Search…"
-            className="border-input bg-background placeholder:text-muted-foreground flex h-10 w-full rounded-md border px-3 py-2 text-sm"
-          />
-          <button
-            type="submit"
-            className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm"
-          >
-            Search
-          </button>
-        </form>
+          {q && (
+            <div className="flex items-center justify-between">
+              <PageRange
+                collectionLabels={{ plural: "Results", singular: "Result" }}
+                currentPage={currentPage}
+                limit={RESULTS_PER_PAGE}
+                totalDocs={totalDocs}
+              />
+            </div>
+          )}
 
-        {q && (
-          <div className="flex items-center justify-between">
+          {docs.length > 0 ? (
+            <>
+              <ul className="space-y-4">
+                {docs.map((result: SearchResult) => {
+                  const relationTo = result.doc?.relationTo ?? ""
+                  const href = docPath(relationTo, result.slug ?? "")
+
+                  const image = isMedia(result.image) ? result.image : null
+                  return (
+                    <li key={result.id} className="border-b pb-4 last:border-0">
+                      <div className="flex gap-4">
+                        {image && (
+                          <div className="bg-muted shrink-0 overflow-hidden rounded-sm border md:h-20 md:w-28">
+                            <HoverPrefetchLink href={href} tabIndex={-1} aria-hidden>
+                              <Media
+                                media={image}
+                                variant="thumbnail"
+                                sizes="112px"
+                                className="aspect-3/2 h-full w-full object-cover"
+                              />
+                            </HoverPrefetchLink>
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-1">
+                          <HoverPrefetchLink href={href} className="hover:underline">
+                            <h2 className="text-lg font-semibold">{result.title}</h2>
+                          </HoverPrefetchLink>
+                          {result.excerpt && (
+                            <p className="text-muted-foreground line-clamp-2 text-sm">
+                              {result.excerpt}
+                            </p>
+                          )}
+                          <div className="text-muted-foreground mt-auto flex items-center gap-2 text-xs">
+                            <span className="capitalize">{relationTo}</span>
+                            {result.topics && (
+                              <>
+                                <span>{"•"}</span>
+                                <span>{`${formatList(result.topics.split(", "), { conjunction: "&" })}`}</span>
+                              </>
+                            )}
+                            {result.authors && (
+                              <>
+                                <span>{"•"}</span>
+                                <span>{`by ${formatList(result.authors.split(", "), { conjunction: "&" })}`}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+
+              <Pagination
+                page={currentPage}
+                totalPages={totalPages}
+                buildHref={(pageNum) => `/search?q=${encodeURIComponent(q)}&p=${pageNum}`}
+              />
+            </>
+          ) : q ? (
             <PageRange
               collectionLabels={{ plural: "Results", singular: "Result" }}
               currentPage={currentPage}
               limit={RESULTS_PER_PAGE}
-              totalDocs={totalDocs}
+              totalDocs={0}
             />
-          </div>
-        )}
-
-        {docs.length > 0 ? (
-          <>
-            <ul className="space-y-4">
-              {docs.map((result: SearchResult) => {
-                const relationTo = result.doc?.relationTo ?? ""
-                const href = docPath(relationTo, result.slug ?? "")
-
-                const image = isMedia(result.image) ? result.image : null
-                return (
-                  <li key={result.id} className="border-b pb-4 last:border-0">
-                    <div className="flex gap-4">
-                      {image && (
-                        <div className="bg-muted shrink-0 overflow-hidden rounded-sm border md:h-20 md:w-28">
-                          <HoverPrefetchLink href={href} tabIndex={-1} aria-hidden>
-                            <Media
-                              media={image}
-                              variant="thumbnail"
-                              sizes="112px"
-                              className="aspect-3/2 h-full w-full object-cover"
-                            />
-                          </HoverPrefetchLink>
-                        </div>
-                      )}
-                      <div className="flex flex-col gap-1">
-                        <HoverPrefetchLink href={href} className="hover:underline">
-                          <h2 className="text-lg font-semibold">{result.title}</h2>
-                        </HoverPrefetchLink>
-                        {result.excerpt && (
-                          <p className="text-muted-foreground line-clamp-2 text-sm">
-                            {result.excerpt}
-                          </p>
-                        )}
-                        <div className="text-muted-foreground mt-auto flex items-center gap-2 text-xs">
-                          <span className="capitalize">{relationTo}</span>
-                          {result.topics && (
-                            <>
-                              <span>{"•"}</span>
-                              <span>{`${formatList(result.topics.split(", "), { conjunction: "&" })}`}</span>
-                            </>
-                          )}
-                          {result.authors && (
-                            <>
-                              <span>{"•"}</span>
-                              <span>{`by ${formatList(result.authors.split(", "), { conjunction: "&" })}`}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-
-            <Pagination
-              page={currentPage}
-              totalPages={totalPages}
-              buildHref={(pageNum) => `/search?q=${encodeURIComponent(q)}&p=${pageNum}`}
-            />
-          </>
-        ) : q ? (
-          <PageRange
-            collectionLabels={{ plural: "Results", singular: "Result" }}
-            currentPage={currentPage}
-            limit={RESULTS_PER_PAGE}
-            totalDocs={0}
-          />
-        ) : null}
-      </main>
+          ) : null}
+        </ReadingColumn>
+      </PageShell>
     </>
   )
 }

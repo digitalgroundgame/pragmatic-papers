@@ -10,6 +10,7 @@ import { draftMode } from "next/headers"
 import { notFound } from "next/navigation"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { PageHeader, PageShell } from "@/components/PageShell"
 import { relationshipId } from "@/utilities/relationships"
 import { getPayloadClient } from "@/data/payload"
 
@@ -97,22 +98,18 @@ export default async function TopicPage({
   return (
     <>
       <Breadcrumbs
+        shell
         items={[
           { name: "Topics", path: "/topics" },
           { name: topic.name, path: url },
         ]}
       />
-      <article className="mx-auto max-w-3xl space-y-6 px-4">
+      <PageShell>
         <PayloadRedirects disableNotFound url={url} />
 
         {draft && <LivePreviewListener />}
 
-        <header className="space-y-3">
-          <h1>{topic.name}</h1>
-          {topic.description && (
-            <p className="text-muted-foreground text-sm">{topic.description}</p>
-          )}
-        </header>
+        <PageHeader title={topic.name} description={topic.description} />
 
         <section aria-label="Articles for this topic">
           <h2 className="mb-3">Articles</h2>
@@ -120,7 +117,7 @@ export default async function TopicPage({
             <p className="text-muted-foreground text-sm">No articles found for this topic yet.</p>
           ) : (
             <>
-              <div className="flex flex-col gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 {articles.map((article) => {
                   const volume = volumeByArticleId.get(article.id)
                   return <AuthorArticleCard key={article.id} article={article} volume={volume} />
@@ -130,7 +127,7 @@ export default async function TopicPage({
             </>
           )}
         </section>
-      </article>
+      </PageShell>
     </>
   )
 }

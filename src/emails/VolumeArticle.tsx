@@ -112,6 +112,8 @@ export function VolumeArticleEmail({
     <Html>
       <Head />
       <Preview>{`${article.title} — ${excerpt}`}</Preview>
+      {/* No config: React Email's Tailwind uses the default scale, where `rounded-md` is 6px, the
+          site's `rounded-sm`. Keep `rounded-md` here so the email's corners match the site's. */}
       <Tailwind>
         <Body className="bg-white font-sans">
           <Container className="mx-auto max-w-[560px] px-5 py-8">
@@ -132,7 +134,7 @@ export function VolumeArticleEmail({
                     alt={article.title}
                     width={image?.width}
                     height={image?.height}
-                    className="my-3 rounded-sm bg-black"
+                    className="my-3 rounded-md bg-black"
                   />
                 </Link>
               </Section>
@@ -180,7 +182,7 @@ export function VolumeArticleEmail({
               )}
               <Link
                 href={articleUrl}
-                className="mx-auto my-3 block w-fit rounded-sm px-5 py-3 text-center font-medium text-white no-underline"
+                className="mx-auto my-3 block w-fit rounded-md px-5 py-3 text-center font-medium text-white no-underline"
                 style={{ backgroundColor: "#ff401a" }}
               >
                 Read on The Pragmatic Papers

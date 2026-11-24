@@ -41,7 +41,8 @@ const tileVariants = cva("group/card relative flex", {
   defaultVariants: { layout: "row", density: "default", imagePosition: "start" },
 })
 
-const frameVariants = cva("bg-muted relative shrink-0 overflow-hidden rounded-sm", {
+// A thin border on the picture (not the card): it adds no padding.
+const frameVariants = cva("bg-muted relative shrink-0 overflow-hidden rounded-sm border", {
   variants: {
     layout: { row: "w-28 sm:w-40", stacked: "w-full", split: "w-full md:basis-1/2" },
     // tailwind-merge (`cn`) lets these win over the row widths above.

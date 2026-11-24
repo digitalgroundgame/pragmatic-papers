@@ -185,7 +185,8 @@ jobs:
                `pnpm exec vitest run <files>`, then `pnpm lint`, `pnpm format` and
                `pnpm check-types`, and fix what they report. Commit with `git commit` on this
                branch (a conventional-commit subject, no trailers). Don't push: the workflow does.
-               Change only files under src/ and tests/: the workflow won't push anything else.
+               Change only files under src/ and tests/, and no AGENTS.md or CLAUDE.md: the
+               workflow won't push anything else.
                If the fix needs another file, describe it and decide "needs-info".
             3. Return your structured output:
                - issue_title: a short, plain description of the cause (under 80 characters, no
@@ -270,8 +271,11 @@ jobs:
       # The patch is applied here, outside the job that ran Claude, and pushed only
       # when it changes nothing but src/ and tests/: PR checks run scripts/,
       # .storybook/ and the workflows from the branch with secrets (Deploy
-      # Storybook holds CLOUDFLARE_API_TOKEN). --no-renames lists both sides of a
-      # move, so a file moved out of an allowed folder counts.
+      # Storybook holds CLOUDFLARE_API_TOKEN). Nor when it changes an AGENTS.md or
+      # CLAUDE.md, which sit in those folders too: the error text Claude read comes
+      # from production traffic, and those files instruct every later agent run.
+      # --no-renames lists both sides of a move, so a file moved out of an allowed
+      # folder counts.
       - name: Push the branch and open the PR
         id: open
         if: ${{ steps.pr.outputs.open == 'true' }}
@@ -290,8 +294,13 @@ jobs:
           git config user.email "209825114+claude[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
           git am --3way "$patch" || fail "Claude's commits don't apply to dev any more."
-          if git diff --name-only --no-renames origin/dev..HEAD | grep -vE '^(src|tests)/'; then
+          changed=$(git diff --name-only --no-renames origin/dev..HEAD)
+          [ -n "$changed" ] || fail "Claude's commits change nothing."
+          if grep -vE '^(src|tests)/' <<< "$changed"; then
             fail "The fix touches files outside src/ and tests/, which this workflow won't push. The patch is in the run's artifact."
+          fi
+          if grep -E '(^|/)(AGENTS|CLAUDE)\.md$' <<< "$changed"; then
+            fail "The fix changes agent instructions (AGENTS.md or CLAUDE.md), which this workflow won't push. The patch is in the run's artifact."
           fi
           git push --force "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$BRANCH"
           export GH_TOKEN="$APP_TOKEN"

@@ -41,6 +41,12 @@ type Status = "idle" | "verifying" | "submitting" | "success" | "error"
 
 const TURNSTILE_SCRIPT = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
 
+const CHALLENGE_FAILED = "We couldn't check that you're human. Please try again."
+const SCRIPT_FAILED =
+  "We couldn't load our spam check. Allow challenges.cloudflare.com or reload the page, then try again."
+/** How long a submit waits on the challenge before it gives up and lets the reader retry. */
+export const VERIFY_TIMEOUT_MS = 30_000
+
 export type NewsletterSignupBlockProps = NewsletterSignupTypes & {
   /**
    * Cloudflare Turnstile site key, from `getTurnstileSiteKey()` on the server. Without
@@ -74,6 +80,15 @@ export const NewsletterSignupForm: React.FC<
   // A submit waiting on the challenge, and the latest `send` for the widget's callbacks.
   const waitingRef = React.useRef(false)
   const sendRef = React.useRef<((token: string | null) => Promise<void>) | null>(null)
+  const scriptFailedRef = React.useRef(false)
+
+  // Ends a submit that was waiting on the challenge with an error, so the reader can retry.
+  const stopWaiting = React.useCallback((reason: string): void => {
+    if (!waitingRef.current) return
+    waitingRef.current = false
+    setStatus("error")
+    setMessage(reason)
+  }, [])
 
   React.useEffect(() => {
     if (!scriptReady || !turnstileSiteKey) return
@@ -94,11 +109,7 @@ export const NewsletterSignupForm: React.FC<
       "expired-callback": () => setToken(null),
       "error-callback": () => {
         setToken(null)
-        if (waitingRef.current) {
-          waitingRef.current = false
-          setStatus("error")
-          setMessage("We couldn't check that you're human. Please try again.")
-        }
+        stopWaiting(CHALLENGE_FAILED)
       },
     })
     return () => {
@@ -106,7 +117,15 @@ export const NewsletterSignupForm: React.FC<
       if (id && window.turnstile) window.turnstile.remove(id)
       widgetIdRef.current = null
     }
-  }, [scriptReady, turnstileSiteKey])
+  }, [scriptReady, turnstileSiteKey, stopWaiting])
+
+  // A challenge that never answers (a stalled network, a widget stuck loading) mustn't leave
+  // the form on "Verifying…" for good.
+  React.useEffect(() => {
+    if (status !== "verifying") return
+    const timer = setTimeout(() => stopWaiting(CHALLENGE_FAILED), VERIFY_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [status, stopWaiting])
 
   const headingText = heading ?? DEFAULT_HEADING
   const buttonText = buttonLabel ?? DEFAULT_BUTTON_LABEL
@@ -152,6 +171,11 @@ export const NewsletterSignupForm: React.FC<
     e.preventDefault()
     if (busy) return
     if (turnstileSiteKey && !token) {
+      if (scriptFailedRef.current) {
+        setStatus("error")
+        setMessage(SCRIPT_FAILED)
+        return
+      }
       // The challenge is still running (or hasn't started): send once it hands over a token.
       waitingRef.current = true
       arm()
@@ -175,6 +199,11 @@ export const NewsletterSignupForm: React.FC<
           src={TURNSTILE_SCRIPT}
           strategy="afterInteractive"
           onReady={() => setScriptReady(true)}
+          onError={() => {
+            // Blocked by an extension or the network: nothing will ever call back.
+            scriptFailedRef.current = true
+            stopWaiting(SCRIPT_FAILED)
+          }}
         />
       )}
       <h3 className="mt-0!">{headingText}</h3>

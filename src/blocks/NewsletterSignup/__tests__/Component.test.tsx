@@ -7,12 +7,23 @@ import type { NewsletterSignupBlock as NewsletterSignupTypes } from "@/payload-t
 // network. Replace it with a stub that records the load and synchronously fires
 // `onReady` after mount so the widget-initialization effect runs in tests.
 const scriptLoads = vi.hoisted(() => [] as string[])
+// Set to make the next script load fail, as a blocker or a dropped connection would.
+const scriptBehavior = vi.hoisted(() => ({ fail: false }))
 vi.mock("next/script", async () => {
   const React = await import("react")
-  const ScriptMock = ({ src, onReady }: { src: string; onReady?: () => void }) => {
+  const ScriptMock = ({
+    src,
+    onReady,
+    onError,
+  }: {
+    src: string
+    onReady?: () => void
+    onError?: () => void
+  }) => {
     React.useEffect(() => {
       scriptLoads.push(src)
-      onReady?.()
+      if (scriptBehavior.fail) onError?.()
+      else onReady?.()
       // eslint-disable-next-line react-hooks/exhaustive-deps -- once per script, like next/script
     }, [src])
     return null
@@ -221,6 +232,7 @@ describe("NewsletterSignupBlock (with Turnstile)", () => {
 
   beforeEach(() => {
     scriptLoads.length = 0
+    scriptBehavior.fail = false
   })
 
   afterEach(() => {
@@ -349,6 +361,58 @@ describe("NewsletterSignupBlock (with Turnstile)", () => {
     expect(alert).toHaveTextContent("We couldn't check that you're human. Please try again.")
     expect(screen.getByRole("button", { name: "Sign Up" })).toBeEnabled()
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("shows an error when the Turnstile script can't load while a submit waits", async () => {
+    scriptBehavior.fail = true
+    const turnstile = stubTurnstile()
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+
+    const NewsletterSignupBlock = await importComponent(SITE_KEY)
+    render(<NewsletterSignupBlock />)
+    typeEmail("reader@example.com")
+    fireEvent.submit(getForm())
+
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent(/couldn't load our spam check/)
+    expect(screen.getByRole("button", { name: "Sign Up" })).toBeEnabled()
+    expect(screen.getByLabelText("Email address")).toBeEnabled()
+    expect(turnstile.api.render).not.toHaveBeenCalled()
+
+    // A second try says so straight away rather than waiting on a script that won't come.
+    fireEvent.submit(getForm())
+    expect(screen.getByRole("alert")).toHaveTextContent(/couldn't load our spam check/)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("gives up waiting when the challenge never answers", async () => {
+    const { VERIFY_TIMEOUT_MS } = await import("../Component.client")
+    stubTurnstile()
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+
+    const NewsletterSignupBlock = await importComponent(SITE_KEY)
+    render(<NewsletterSignupBlock />)
+    typeEmail("reader@example.com")
+
+    vi.useFakeTimers()
+    try {
+      fireEvent.submit(getForm())
+      expect(screen.getByRole("button")).toHaveTextContent("Verifying…")
+
+      act(() => {
+        vi.advanceTimersByTime(VERIFY_TIMEOUT_MS)
+      })
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "We couldn't check that you're human. Please try again.",
+      )
+      expect(screen.getByRole("button", { name: "Sign Up" })).toBeEnabled()
+      expect(fetchMock).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("resets the Turnstile widget after a failed submission", async () => {

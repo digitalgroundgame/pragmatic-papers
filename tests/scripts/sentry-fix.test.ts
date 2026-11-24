@@ -1,4 +1,6 @@
+import { spawnSync } from "node:child_process"
 import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
 
 import { describe, expect, it } from "vitest"
 
@@ -877,5 +879,44 @@ describe("report and pr", () => {
   it("prints usage for an unknown command", async () => {
     const { deps } = fakeDeps({}, routes)
     expect(await main(["nope"], deps)).toBe(1)
+  })
+})
+
+describe("sentry-fix.yml's check on what a fix may change", () => {
+  const workflow = readFileSync(
+    resolve(__dirname, "../../.github/workflows/sentry-fix.yml"),
+    "utf8",
+  )
+  // The workflow's own greps, run by bash as the job runs them.
+  const checks = [...workflow.matchAll(/^\s+if (grep .+ <<< "\$changed"); then$/gm)].map(
+    (match) => match[1]!,
+  )
+  const refused = (...files: string[]) =>
+    checks.some(
+      (check) =>
+        spawnSync("bash", ["-c", check], { env: { ...process.env, changed: files.join("\n") } })
+          .status === 0,
+    )
+
+  it("has both checks", () => {
+    expect(checks).toHaveLength(2)
+  })
+
+  it("lets a fix change code and tests", () => {
+    expect(refused("src/plugins/sso/auth.ts", "tests/integration/sso.test.ts")).toBe(false)
+    expect(refused("src/docs/writing/agents.md", "src/components/CLAUDE.md.tsx")).toBe(false)
+  })
+
+  it("refuses a fix that changes anything outside src/ and tests/", () => {
+    expect(refused("src/a.ts", "scripts/sentry-fix.ts")).toBe(true)
+    expect(refused(".github/workflows/ci.yml")).toBe(true)
+    expect(refused("AGENTS.md")).toBe(true)
+  })
+
+  it("refuses a fix that changes agent instructions", () => {
+    expect(refused("src/plugins/sso/AGENTS.md")).toBe(true)
+    expect(refused("src/a.ts", "src/plugins/CLAUDE.md")).toBe(true)
+    expect(refused("tests/AGENTS.md")).toBe(true)
+    expect(refused("src/new/folder/CLAUDE.md")).toBe(true)
   })
 })

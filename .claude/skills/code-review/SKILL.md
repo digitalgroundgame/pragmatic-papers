@@ -47,8 +47,9 @@ zero, one, or many:
   behavior (a path, a header, what runs where) against the code. A
   description that contradicts what the code does at runtime is at least a
   `should-fix`: the reviewer approving it is approving the description.
-- **The repo's own rules** — `AGENTS.md` sets conventions a change can
-  break without CI noticing: experiments gated at every entry point,
+- **The repo's own rules** — `AGENTS.md`, and the `AGENTS.md` in each folder
+  the change touches (`src/blocks/`, `src/plugins/`, `tests/`, …), set
+  conventions a change can break without CI noticing: experiments gated at every entry point,
   `purgeEdgeCache` in `revalidate*` hooks, media-holding fields listed in
   `SOURCES` (`collectMediaReferences.ts`), a feed converter for every block
   in a feed's editor, heavy client code behind a `*.lazy.tsx`, help docs

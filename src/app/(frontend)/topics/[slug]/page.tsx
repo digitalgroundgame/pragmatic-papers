@@ -2,9 +2,9 @@ import { MediaRow, MediaRowList } from "@/components/MediaRow"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
-import type { User, Volume } from "@/payload-types"
+import type { Topic, User } from "@/payload-types"
 import { generateMeta, paginatedPath } from "@/utilities/generateMeta"
-import { queryTopicBySlug, queryVolumesForArticles } from "@/data/queries"
+import { queryTopicBySlug } from "@/data/queries"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import { notFound } from "next/navigation"
@@ -18,7 +18,7 @@ import {
   RelatedTopicsPanel,
   WithAside,
 } from "@/components/Aside"
-import { isResolved, relationshipId } from "@/utilities/relationships"
+import { isResolved } from "@/utilities/relationships"
 import { Byline } from "@/components/Authors/Byline"
 import { toBylineAuthor } from "@/components/Authors/BylineAuthor"
 import { getPayloadClient } from "@/data/payload"
@@ -88,22 +88,6 @@ export default async function TopicPage({
   } = await queryArticlesByTopic(topic.id, page)
   // A page past the last one would be an empty listing that names itself as canonical.
   if (page > 1 && page > totalPages) notFound()
-  const articleIds = articles.map((article) => article.id).filter(Boolean)
-  const volumes = await queryVolumesForArticles(articleIds)
-
-  const volumeByArticleId = new Map<number, Volume>()
-
-  for (const volume of volumes) {
-    const volumeArticles = volume.articles || []
-    for (const articleRef of volumeArticles) {
-      const articleId = relationshipId(articleRef)
-
-      if (articleId != null && !volumeByArticleId.has(articleId)) {
-        volumeByArticleId.set(articleId, volume)
-      }
-    }
-  }
-
   return (
     <>
       <Breadcrumbs
@@ -138,7 +122,6 @@ export default async function TopicPage({
               <>
                 <MediaRowList>
                   {articles.map((article) => {
-                    const volume = volumeByArticleId.get(article.id)
                     return (
                       <MediaRow
                         key={article.id}
@@ -146,7 +129,11 @@ export default async function TopicPage({
                         title={article.title}
                         summary={article.meta?.description}
                         image={article.meta?.image}
-                        meta={volume?.title}
+                        // The article's other topics; this one is the page.
+                        badges={(article.topics ?? [])
+                          .filter(isResolved<Topic>)
+                          .filter((t) => t.id !== topic.id && t.slug)
+                          .map((t) => ({ label: t.name, href: `/topics/${t.slug}` }))}
                         byline={
                           <Byline
                             authors={(article.authors ?? [])

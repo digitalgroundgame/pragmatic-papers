@@ -59,6 +59,8 @@ html[data-theme] {
   --input: var(--theme-elevation-250);
   --ring: var(--theme-elevation-400);
   --radius: var(--style-radius-m, 0.375rem);
+  /* The unread count's red (#b3261e): darker than the brand, so white text reads at 11px */
+  --notifications-badge: oklch(0.501 0.178 28.7);
   /* Exactly #ff401a, as on the site (globals.css) */
   --brand: oklch(0.6567 0.2311 32.7);
 }

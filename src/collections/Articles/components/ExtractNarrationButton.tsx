@@ -2,6 +2,8 @@
 
 import { Button, toast, useDocumentInfo, useFormFields } from "@payloadcms/ui"
 import React, { useState, useSyncExternalStore } from "react"
+
+import "./ExtractNarrationButton.css"
 import { extractNarrationText } from "@/collections/Articles/narration/extractNarrationText"
 import {
   collectAuthorIds,
@@ -48,50 +50,26 @@ function renderFormattedNarration(text: string): React.ReactNode {
   return (
     <div
       aria-label="Formatted narration preview"
-      style={{
-        padding: "1rem",
-        borderRadius: "6px",
-        border: "1px solid var(--theme-elevation-200, #333333)",
-        backgroundColor: "var(--theme-elevation-50, #121212)",
-        lineHeight: "1.6",
-        display: "flex",
-        flexDirection: "column",
-        gap: "1rem",
-        fontSize: "0.95rem",
-      }}
+      className="narration-tools__script narration-tools__preview"
     >
       {paragraphs.map((p, idx) => {
         const lines = p.split("\n")
         return (
-          <div key={idx} style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+          <div key={idx} className="narration-tools__paragraph">
             {lines.map((line, lineIdx) => {
               const trimmed = line.trim()
               if (!trimmed) return null
 
               if (trimmed.startsWith("<break time=")) {
                 return (
-                  <div key={lineIdx} style={{ margin: "0.25rem 0" }}>
-                    <span
-                      style={{
-                        display: "inline-block",
-                        padding: "2px 8px",
-                        borderRadius: "4px",
-                        backgroundColor: "oklch(0.844 0.146 93.3 / 0.15)",
-                        border: "1px solid oklch(0.844 0.146 93.3 / 0.4)",
-                        color: "oklch(0.844 0.146 93.3)",
-                        fontSize: "0.75rem",
-                        fontFamily: "monospace",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {trimmed}
-                    </span>
+                  <div key={lineIdx}>
+                    <span className="narration-tools__break">{trimmed}</span>
                   </div>
                 )
               }
 
               return (
-                <p key={lineIdx} style={{ margin: 0 }}>
+                <p key={lineIdx} className="narration-tools__line">
                   {line}
                 </p>
               )
@@ -182,31 +160,23 @@ export function ExtractNarrationButton(): React.ReactNode {
 
   if (!isMounted) {
     return (
-      <div style={{ padding: "1rem 0" }}>
-        <p style={{ margin: 0, fontSize: "0.85rem", opacity: 0.8 }}>Loading narration tools...</p>
+      <div className="narration-tools">
+        <p className="narration-tools__hint">Loading narration tools...</p>
       </div>
     )
   }
 
   return (
-    <div style={{ padding: "1rem 0", display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "1rem",
-          flexWrap: "wrap",
-        }}
-      >
+    <div className="narration-tools">
+      <div className="narration-tools__header">
         <div>
-          <h3 style={{ margin: "0 0 0.25rem 0", fontSize: "1.1rem" }}>Narration Script</h3>
-          <p style={{ margin: 0, fontSize: "0.85rem", opacity: 0.8 }}>
+          <h3 className="narration-tools__title">Narration Script</h3>
+          <p className="narration-tools__hint">
             Extract narration-ready script for ElevenLabs AI voice-over. Edits persist while
             navigating tabs, but will be reset if the page is reloaded.
           </p>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div className="narration-tools__actions">
           {hasGenerated && (
             <Button
               buttonStyle="subtle"
@@ -245,18 +215,7 @@ export function ExtractNarrationButton(): React.ReactNode {
             value={editableText}
             onChange={handleTextChange}
             rows={20}
-            style={{
-              width: "100%",
-              fontFamily: "monospace",
-              fontSize: "0.9rem",
-              padding: "1rem",
-              borderRadius: "6px",
-              border: "1px solid var(--theme-elevation-200, #333333)",
-              backgroundColor: "var(--theme-elevation-50, #121212)",
-              color: "inherit",
-              resize: "vertical",
-              boxSizing: "border-box",
-            }}
+            className="narration-tools__script"
           />
         ))}
     </div>

@@ -78,7 +78,7 @@ export function NotificationsMenu({
           // Not the brand orange: white text on it is too faint at this size.
           <Badge
             aria-hidden
-            className="absolute -top-0.5 -right-1 h-4.5 min-w-4.5 bg-[oklch(0.501_0.178_28.7)] px-1 text-[11px] text-white"
+            className="absolute -top-0.5 -right-1 h-4.5 min-w-4.5 bg-(--notifications-badge) px-1 text-[11px] text-white"
           >
             {count > 9 ? "9+" : count}
           </Badge>

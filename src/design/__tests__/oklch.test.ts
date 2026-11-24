@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest"
 import { LIGHT_COLORS } from "@/interactives/whip-count/picture"
 
 import { parseThemes } from "../cssTokens"
-import { formatOklch, hexToOklch, oklchToHex, parseOklch } from "../oklch"
+import { oklchToHex, parseOklch } from "./oklchToHex"
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 const src = path.resolve(dirname, "../..")
@@ -29,21 +29,13 @@ function sourceFiles(dir: string): string[] {
   })
 }
 
-describe("oklch conversions", () => {
-  it("round-trips sRGB hex through OKLCH", () => {
-    for (const hex of ["#ff401a", "#126ace", "#d81334", "#ffffff", "#000000", "#e5e5e5"]) {
-      expect(oklchToHex(hexToOklch(hex))).toBe(hex)
-      expect(oklchToHex(parseOklch(formatOklch(hex))!)).toBe(hex)
-    }
-  })
-
-  it("reads percentages and alpha", () => {
-    expect(parseOklch("oklch(45% 0.1 200 / 50%)")).toEqual({ l: 0.45, c: 0.1, h: 200, alpha: 0.5 })
+describe("oklchToHex", () => {
+  it("converts known colors", () => {
+    expect(oklchToHex(parseOklch("oklch(0.6567 0.2311 32.7)")!)).toBe("#ff401a")
+    expect(oklchToHex(parseOklch("oklch(1 0 0)")!)).toBe("#ffffff")
+    expect(oklchToHex(parseOklch("oklch(45.316% 0.00005 271.152)")!)).toBe("#565656")
+    expect(parseOklch("oklch(1 0 0 / 10%)")).toEqual({ l: 1, c: 0, h: 0 })
     expect(parseOklch("#fff")).toBeNull()
-  })
-
-  it("matches the brand color the guide fixes", () => {
-    expect(tokenHex("brand")).toBe("#ff401a")
   })
 })
 

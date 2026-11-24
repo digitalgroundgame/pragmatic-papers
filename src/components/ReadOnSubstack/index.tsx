@@ -57,7 +57,7 @@ export const ReadOnSubstack: React.FC<ReadOnSubstackProps> = ({
       className={cn(buttonVariants({ variant: "outline", size: "lg" }), className)}
       {...props}
     >
-      <SubstackIcon className="text-[oklch(0.698_0.201_42.2)]" />
+      <SubstackIcon className="text-substack" />
       Read on Substack
     </a>
   )

@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* Plugins' own color tokens */
+@import "../../plugins/sso/components/providerColors.css";
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
@@ -145,14 +147,16 @@
   --error: oklch(0.58 0.22 27);
   --success: oklch(0.55 0.18 150);
   --warning: oklch(0.7 0.18 80);
+  /* Substack's orange (#ff6719), for its logo only */
+  --substack: oklch(0.698 0.201 42.2);
   /* py-3 (0.75rem × 2) + size-8 button (2rem) + border-b (1px) */
   --header-height: 3.5625rem;
 
   /* The site's one data palette: a diverging red/blue scale, read through `var()` by the
      choropleth block's colour scale, the drilldown engine, the Federal Courts charts and the
      whip count alike, so it is a site token rather than any one feature's own. The hex beside
-     each step is the copy rasterizers use (they can't read oklch); `oklch.test.ts` keeps
-     the two in step. */
+     each step is the copy rasterizers use (they can't read oklch);
+     src/design/__tests__/oklch.test.ts keeps the two in step. */
   --map-positive-1: oklch(0.85 0.083 15.2); /* #ffb8bc */
   --map-positive-2: oklch(0.732 0.142 16.9); /* #f48088 */
   --map-positive-3: oklch(0.627 0.193 19); /* #e54858 */
@@ -243,6 +247,7 @@
   --color-error: var(--error);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-substack: var(--substack);
   /* FK Screamer ligatures render incorrectly at 30px and below, so bumping 3xl to 32px. Overriding this core utilty to prevent us from accidently using it at 30px. */
   --text-3xl: 2rem;
   --text-3xl--line-height: calc(2.25 / 2);

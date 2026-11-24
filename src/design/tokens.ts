@@ -110,6 +110,12 @@ export const COLOR_GROUPS: ColorGroup[] = [
     ],
   },
   {
+    title: "Third parties",
+    description:
+      "Another company's color, for its own logo. A plugin's tokens live in a CSS file in the plugin's folder instead (the SSO plugin's providerColors.css, which globals.css imports).",
+    tokens: [{ name: "substack", utility: "text-substack", use: "Substack's logo (#ff6719)." }],
+  },
+  {
     title: "Data",
     description:
       "The site's one data palette, a diverging red/blue scale: the choropleth block, the drilldown pages, the Federal Courts charts and the whip count all read it through var(). The same in both themes. Brand orange never stands for data.",

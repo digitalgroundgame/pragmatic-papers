@@ -37,7 +37,7 @@ export interface PageFiguresQuery {
   path: string
   /** The first day to count (YYYY-MM-DD), the day it was published. */
   since: string
-  /** How many referrers to return. */
+  /** How many referrers to return (5). */
   referrerLimit?: number
   /** A GA event to count on the page per range, such as `narration_play`. */
   countEvent?: string
@@ -77,10 +77,20 @@ const RANGES = [
   { name: "last7Days", key: "last7Days" },
 ] as const
 
-/** The two reports `pageFigures` asks for: the figures per range, and the top referrers. */
+const REFERRER_LIMIT = 5
+
+/**
+ * The reports `pageFigures` asks for: the figures per range, the referrers (most views first),
+ * and the plays of `countEvent`.
+ *
+ * No 64-bit field is set (`limit`, `offset`): protobufjs makes them a `Long`, and the REST
+ * encoder recognizes one by `constructor.name === "Long"`, which the production build's
+ * minifier renames, so the request fails before it's sent. `toPageFigures` keeps the top
+ * referrers instead.
+ */
 export function pageFiguresRequests(
   propertyId: string,
-  { path, since, referrerLimit = 5, countEvent }: PageFiguresQuery,
+  { path, since, countEvent }: PageFiguresQuery,
 ): RunReportRequest[] {
   const dateRanges = [
     { startDate: since, endDate: "today", name: "allTime" },
@@ -108,7 +118,6 @@ export function pageFiguresRequests(
       metrics: [{ name: "screenPageViews" }],
       dimensionFilter: pagePath,
       orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
-      limit: referrerLimit,
     },
     ...(countEvent
       ? [
@@ -161,12 +170,14 @@ function rangeRows(report: RunReportResponse | null | undefined) {
 
 /**
  * The reports `pageFiguresRequests` describes, as figures. A range with no row had no views.
- * With several date ranges GA adds a `dateRange` dimension holding each range's name.
+ * With several date ranges GA adds a `dateRange` dimension holding each range's name. Only
+ * the first `referrerLimit` referrers are kept (GA sends them most views first).
  */
 export function toPageFigures(
   figuresReport: RunReportResponse | null | undefined,
   referrersReport: RunReportResponse | null | undefined,
   eventsReport?: RunReportResponse | null,
+  referrerLimit = REFERRER_LIMIT,
 ): PageFigures {
   const figures: PageFigures = {
     allTime: zero(),
@@ -186,6 +197,7 @@ export function toPageFigures(
     figures[range].eventCount = toNumber(metrics[0]?.value)
   }
   for (const row of referrersReport?.rows ?? []) {
+    if (figures.referrers.length >= referrerLimit) break
     const source = row.dimensionValues?.[0]?.value
     if (!source) continue
     figures.referrers.push({ source, views: toNumber(row.metricValues?.[0]?.value) })
@@ -249,7 +261,7 @@ export function googleAnalyticsProperty(
         requests: pageFiguresRequests(property, query),
       })
       const [figuresReport, referrersReport, eventsReport] = response.reports ?? []
-      return toPageFigures(figuresReport, referrersReport, eventsReport)
+      return toPageFigures(figuresReport, referrersReport, eventsReport, query.referrerLimit)
     },
   }
 }

@@ -27,7 +27,7 @@ export function MediaRow({
   href: string
   title: React.ReactNode
   summary?: string | null
-  /** "by …", on its own line. */
+  /** The authors, on their own line: `<Byline>`, faces and names. */
   byline?: React.ReactNode
   /** A short muted line: a kind, a count, a volume. */
   meta?: React.ReactNode
@@ -71,7 +71,7 @@ export function MediaRow({
         {summary && (
           <p className="text-muted-foreground line-clamp-2 font-serif text-sm">{summary}</p>
         )}
-        {byline && <p className="text-foreground text-sm">{byline}</p>}
+        {byline && <div className="relative z-10 text-sm">{byline}</div>}
         {meta && <p className="text-muted-foreground text-xs">{meta}</p>}
         {badges && badges.length > 0 && (
           <ul className="relative z-10 flex flex-wrap gap-1.5 pt-1">

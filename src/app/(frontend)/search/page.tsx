@@ -2,7 +2,6 @@ import { MediaRow, MediaRowList } from "@/components/MediaRow"
 import { PageRange } from "@/components/PageRange"
 import { Pagination } from "@/components/Pagination"
 import type { Media as MediaType } from "@/payload-types"
-import { formatList } from "@/utilities/formatList"
 import { sql } from "@payloadcms/db-postgres"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
@@ -14,6 +13,10 @@ import { MostReadPanel, SearchTipsPanel, TopicsPanel, WithAside } from "@/compon
 import { docPath } from "@/utilities/routes"
 import { getPayloadClient } from "@/data/payload"
 import { firstParam } from "./firstParam"
+import { Byline } from "@/components/Authors/Byline"
+import { toBylineAuthor, type BylineAuthor } from "@/components/Authors/BylineAuthor"
+import type { User } from "@/payload-types"
+import { isResolved, relationshipId } from "@/utilities/relationships"
 
 interface SearchResult {
   id: number
@@ -117,6 +120,24 @@ const queryTopicSlugs = cache(async (): Promise<Map<string, string>> => {
   return new Map(docs.flatMap((t) => (t.slug ? [[t.name, t.slug] as const] : [])))
 })
 
+/** Each result article's authors, for the byline's faces and names, by article id. */
+const queryResultAuthors = cache(
+  async (articleIds: number[]): Promise<Map<number, BylineAuthor[]>> => {
+    if (!articleIds.length) return new Map()
+    const payload = await getPayloadClient()
+    const { docs } = await payload.find({
+      collection: "articles",
+      where: { id: { in: articleIds } },
+      pagination: false,
+      depth: 2,
+      select: { authors: true },
+    })
+    return new Map(
+      docs.map((a) => [a.id, (a.authors ?? []).filter(isResolved<User>).map(toBylineAuthor)]),
+    )
+  },
+)
+
 // Results pages are endless variations of pages that are already indexed, and Google asks sites
 // not to let them into its index. Links on them are still followed.
 export const metadata: Metadata = {
@@ -139,6 +160,11 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
     querySearch(q, page),
     queryTopicSlugs(),
   ])
+  const articleIdOf = (r: SearchResult): number | null =>
+    r.doc?.relationTo === "articles" ? relationshipId(r.doc.value as number | { id: number }) : null
+  const authorsByArticle = await queryResultAuthors(
+    docs.map(articleIdOf).filter((id): id is number => id != null),
+  )
 
   return (
     <>
@@ -194,10 +220,11 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
                       title={result.title}
                       summary={result.excerpt}
                       image={result.image}
-                      byline={
-                        result.authors &&
-                        `By ${formatList(result.authors.split(", "), { conjunction: "&" })}`
-                      }
+                      byline={(() => {
+                        const id = articleIdOf(result)
+                        const authors = id != null ? authorsByArticle.get(id) : undefined
+                        return authors?.length ? <Byline authors={authors} /> : null
+                      })()}
                       // Articles are most results; only say what kind the others are.
                       meta={relationTo === "articles" ? null : KIND_LABELS[relationTo]}
                       badges={topicNames.flatMap((name) => {

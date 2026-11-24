@@ -2,7 +2,7 @@ import { MediaRow, MediaRowList } from "@/components/MediaRow"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
-import type { Volume } from "@/payload-types"
+import type { User, Volume } from "@/payload-types"
 import { generateMeta, paginatedPath } from "@/utilities/generateMeta"
 import { queryTopicBySlug, queryVolumesForArticles } from "@/data/queries"
 import type { Metadata } from "next"
@@ -18,7 +18,9 @@ import {
   RelatedTopicsPanel,
   WithAside,
 } from "@/components/Aside"
-import { relationshipId } from "@/utilities/relationships"
+import { isResolved, relationshipId } from "@/utilities/relationships"
+import { Byline } from "@/components/Authors/Byline"
+import { toBylineAuthor } from "@/components/Authors/BylineAuthor"
 import { getPayloadClient } from "@/data/payload"
 
 interface Args {
@@ -145,6 +147,13 @@ export default async function TopicPage({
                         summary={article.meta?.description}
                         image={article.meta?.image}
                         meta={volume?.title}
+                        byline={
+                          <Byline
+                            authors={(article.authors ?? [])
+                              .filter(isResolved<User>)
+                              .map(toBylineAuthor)}
+                          />
+                        }
                       />
                     )
                   })}

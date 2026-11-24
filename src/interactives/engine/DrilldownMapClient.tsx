@@ -760,7 +760,7 @@ export function DrilldownMapClient({
               // The map keeps its whole height and gives up width instead. `flex-1` only
               // from `md`, where the row flexes across; on a phone it is a column, and a basis
               // of zero there is a map of no height at all.
-              "bg-muted/30 @container relative h-(--drilldown-stage-h) min-w-0 overflow-hidden rounded-lg md:flex-1",
+              "bg-muted/30 @container relative h-(--drilldown-stage-h) min-w-0 overflow-hidden rounded-sm md:flex-1",
               // The ring on the map itself; the hover outline follows focus in stage.ts.
               "has-[path[tabindex]:focus-visible]:outline-ring has-[path[tabindex]:focus-visible]:outline-2 has-[path[tabindex]:focus-visible]:outline-offset-2",
             )}
@@ -816,7 +816,7 @@ export function DrilldownMapClient({
               <div
                 data-drilldown-sheet=""
                 data-open={paneOpen ? "" : undefined}
-                className="bg-card border-border flex min-h-0 flex-col rounded-lg border md:h-(--drilldown-stage-h) md:w-90"
+                className="bg-card border-border flex min-h-0 flex-col rounded-sm border md:h-(--drilldown-stage-h) md:w-90"
               >
                 {pane}
               </div>

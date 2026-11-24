@@ -101,7 +101,7 @@ export function DrilldownTooltip({
       // Parked off-screen until it has somewhere to be; after that it stays where it last was,
       // faded out, rather than returning to the corner.
       style={{ transform: "translate3d(-9999px, -9999px, 0)" }}
-      className="bg-foreground text-background pointer-events-none fixed top-0 left-0 z-50 max-w-64 rounded-md px-3 py-2 text-sm opacity-0 shadow-md transition-opacity data-visible:opacity-100"
+      className="bg-foreground text-background pointer-events-none fixed top-0 left-0 z-50 max-w-64 rounded-sm px-3 py-2 text-sm opacity-0 shadow-md transition-opacity data-visible:opacity-100"
     >
       <div ref={labelEl} className="font-semibold" />
       <div ref={summaryEl} hidden className="text-xs opacity-85" />

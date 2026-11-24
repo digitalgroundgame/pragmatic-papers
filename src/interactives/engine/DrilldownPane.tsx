@@ -167,7 +167,7 @@ export function DrilldownPane({
         ref={headingRef}
         tabIndex={-1}
         data-drilldown-pane-title=""
-        className="bg-background shrink-0 rounded px-2 py-1.5 text-2xl leading-none outline-none"
+        className="bg-background shrink-0 rounded-sm px-2 py-1.5 text-2xl leading-none outline-none"
       >
         {region?.heading ?? region?.label ?? overviewLabel}
       </h2>

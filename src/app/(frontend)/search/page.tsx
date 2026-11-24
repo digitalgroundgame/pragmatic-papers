@@ -134,11 +134,11 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
             name="q"
             defaultValue={q}
             placeholder="Search…"
-            className="border-input bg-background placeholder:text-muted-foreground flex h-10 w-full rounded-md border px-3 py-2 text-sm"
+            className="border-input bg-background placeholder:text-muted-foreground flex h-10 w-full rounded-sm border px-3 py-2 text-sm"
           />
           <button
             type="submit"
-            className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm"
+            className="bg-primary text-primary-foreground rounded-sm px-4 py-2 text-sm"
           >
             Search
           </button>

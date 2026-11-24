@@ -64,7 +64,7 @@ export const FeedTableRowReflow: FeedBlockRenderer = ({ node }) => {
         return (
           <article
             key={ri}
-            className="rounded-2xl border border-white/15 bg-white/[0.04] p-4 backdrop-blur-sm"
+            className="rounded-sm border border-white/15 bg-white/[0.04] p-4 backdrop-blur-sm"
           >
             {rowHeaderCell && (
               <h3 className="font-display mb-2 text-lg text-white">

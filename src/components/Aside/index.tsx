@@ -24,7 +24,7 @@ export function WithAside({
   children: React.ReactNode
 }): React.ReactNode {
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem] xl:grid-cols-[minmax(0,1fr)_20rem]">
+    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="min-w-0 space-y-6">{children}</div>
       <aside aria-label="More to read" className="space-y-6 lg:sticky lg:top-24 lg:self-start">
         {aside}

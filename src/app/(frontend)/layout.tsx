@@ -1,4 +1,6 @@
 import { AdminBar, AdminBarHint } from "@/components/AdminBar"
+import { BetaFeaturesProvider } from "@/components/BetaBadge"
+import { getBetaFeatures } from "@/data/betaFeatures"
 import { Footer } from "@/Footer/Component"
 import { Header } from "@/Header/Component"
 import { sentryHtmlAttributes } from "@/sentryConfig"
@@ -40,12 +42,14 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AdminBar />
-          <Header />
-          <main role="main" className="flex-1">
-            {children}
-          </main>
-          <Footer />
+          <BetaFeaturesProvider features={await getBetaFeatures()}>
+            <AdminBar />
+            <Header />
+            <main role="main" className="flex-1">
+              {children}
+            </main>
+            <Footer />
+          </BetaFeaturesProvider>
         </ThemeProvider>
         <ReadingBeacon />
       </body>

@@ -79,8 +79,9 @@ checkbox in the Settings global's `experiments` group
 (`src/globals/SiteSettings/config.ts`). Each environment has its own database,
 so each has its own switches; PR previews start with staging's. To add one:
 
-1. Add a `checkbox` to the `experiments` group, `defaultValue: false`, then
-   run `pnpm payload generate:types` and `pnpm migrate:create`.
+1. Add an `experimentField` to the `experiments` group, `defaultValue: false`, with
+   `beta: { info }` if readers will see it (a flask beside its heading says so, `BetaBadge`),
+   then run `pnpm payload generate:types` and `pnpm migrate:create`.
 2. Turn it on in the seed's "Enabling experiments..." step
    (`src/endpoints/seed/index.ts`), so local dev shows it.
 3. Gate **every** entry point with
@@ -363,6 +364,37 @@ from memory. It clones each project's docs source into the gitignored `.cache/up
 (Payload's pinned to our installed version) and says where to look. It works in cloud
 sessions, which can't reach most documentation sites. Next.js's docs are already in
 `node_modules/next/dist/docs/`.
+
+## Sentry errors and bugs to draft PRs
+
+`.github/workflows/sentry-intake.yml` runs hourly: it files a GitHub issue (label `sentry`)
+for each unresolved Sentry error matching `SENTRY_QUERY` (by default seen 3+ times in
+production or staging and still happening, so one-off blips stay out) that no issue names yet,
+open or closed, and that `.github/sentry-filter.json` doesn't keep out (levels, an optional
+filter to errors with a frame in our code, and include/exclude patterns on title, culprit,
+exception type, message, URL or transaction, seeded with known noise). The issue starts with the `Sentry Issue: [SHORT-ID](link)` line Sentry's own
+integration writes, which is how either finds the other. `.github/workflows/sentry-fix.yml`
+then has Claude triage it as fix, noise, duplicate or needs-info, say so in a comment and
+retitle the issue; for a fix it opens a draft PR into dev (branch `claude/sentry-<issue>`,
+pushed with the release App's token so its checks run), assigned to `SENTRY_FIX_REVIEWER`.
+Claude runs with a read-only token and its commits leave the job as a patch, since the
+error text it reads comes from production traffic; the commands it runs don't inherit
+`CLAUDE_CODE_OAUTH_TOKEN` or `NODE_AUTH_TOKEN` (`CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`, which runs them in Claude Code's Bash sandbox, so the job installs bubblewrap and socat first), and a patch
+that changes anything outside `src/` and `tests/` isn't pushed, since PR checks run `scripts/`,
+`.storybook/` and the workflows from the branch with secrets. At most `SENTRY_FIX_DAILY_LIMIT` (3) runs
+start in 24 hours; the rest, including issues filed beyond the day's room, wait labeled
+`claude queued`. Intake reads Sentry a page at a time (up to 8) past errors already filed or
+kept out, so recurring ones don't crowd out new ones. Adding the `fix with claude` label
+to any issue starts a run now, past the budget; `SENTRY_FIX_AUTO=false` makes that the only
+way. The rules are in `scripts/sentry-fix.ts`.
+
+The same intake queues the team's own bugs (`eligibleIssue`): open issues of type Bug
+(`ISSUE_FIX_TYPES`, comma-separated), written by someone with access to the repository
+(anyone can file an issue on a public repo, and its text is Claude's instructions), with no
+assignee, none of `HOLD_LABELS` (blocked, discussion, question, waiting on design, security,
+wontfix and the like), and no earlier Claude attempt. They share the daily budget and the
+safeguards above. Assigning someone keeps Claude off an issue; `ISSUE_FIX_AUTO=false`
+leaves only Sentry issues and labeled ones.
 
 ## Claude review gate
 

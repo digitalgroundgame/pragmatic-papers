@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react"
 
+import { BetaBadge } from "@/components/BetaBadge"
 import { Badge } from "@/components/ui/badge"
 import type { HeldAchievement, MyAchievements } from "@/plugins/achievements"
 
@@ -37,6 +38,7 @@ export const Achievements: React.FC<AchievementsProps> = ({ apiPath = "/api" }) 
     <section className="space-y-3" aria-labelledby="achievements-heading">
       <h2 id="achievements-heading" className="text-lg font-semibold">
         Achievements
+        <BetaBadge feature="achievements" />
       </h2>
       {held.length ? (
         <>

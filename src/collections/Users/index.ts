@@ -13,7 +13,7 @@ import {
   UnorderedListFeature,
 } from "@payloadcms/richtext-lexical"
 import type { CollectionConfig } from "payload"
-import { slugField } from "@/fields/slug"
+import { slugField } from "payload"
 import { userExists } from "./hooks/userExists"
 
 export const Users: CollectionConfig = {

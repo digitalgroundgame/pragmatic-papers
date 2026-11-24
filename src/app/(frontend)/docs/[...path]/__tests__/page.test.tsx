@@ -2,6 +2,7 @@ import { cleanup, render, screen, within } from "@testing-library/react"
 import type React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { BetaFeaturesProvider } from "@/components/BetaBadge"
 import { docParentId, docTreeParents } from "@/stories/fixtures/docsTree"
 
 const { queries, draft, experiments } = vi.hoisted(() => ({
@@ -84,11 +85,15 @@ const args = (path = PATH) => ({
   params: Promise.resolve({ path: path.split("/").slice(2) }),
 })
 // The page hands its slug and path to DocView, an async component the test renders itself.
-const renderPage = async (path?: string) => {
+const renderPage = async (path?: string, betas: { docs?: string } = {}) => {
   const page = (await DocPage(args(path))) as React.ReactElement<
     React.ComponentProps<typeof DocView>
   >
-  return render((await DocView(page.props)) as React.ReactElement)
+  return render(
+    <BetaFeaturesProvider features={betas}>
+      {(await DocView(page.props)) as React.ReactElement}
+    </BetaFeaturesProvider>,
+  )
 }
 const published = { ...doc, parent: docParentId("site-settings") }
 
@@ -151,6 +156,20 @@ describe("DocPage", () => {
     await renderPage("/docs/experiments")
     const trail = screen.getByRole("navigation", { name: "breadcrumb" })
     expect(within(trail).getByRole("link", { name: "Editing" })).toBeInTheDocument()
+  })
+
+  it("marks the doc's title with the flask while help docs are a beta", async () => {
+    await renderPage(undefined, { docs: "Help docs are in beta." })
+    const title = screen.getByRole("heading", { level: 1, name: /^Switch beta features on/ })
+    expect(within(title).getByRole("button", { name: "Beta feature" })).toHaveAccessibleDescription(
+      "Help docs are in beta.",
+    )
+  })
+
+  it("leaves the flask off once help docs graduate", async () => {
+    await renderPage()
+    const title = screen.getByRole("heading", { level: 1, name: "Switch beta features on" })
+    expect(within(title).queryByRole("button", { name: "Beta feature" })).not.toBeInTheDocument()
   })
 
   it("renders the doc with its hero, dek, date, breadcrumbs and share buttons", async () => {

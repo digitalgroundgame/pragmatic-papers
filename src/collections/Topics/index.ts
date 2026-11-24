@@ -7,7 +7,7 @@ import {
   PreviewField,
 } from "@payloadcms/plugin-seo/fields"
 import type { CollectionConfig } from "payload"
-import { slugField } from "@/fields/slug"
+import { slugField } from "payload"
 import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
 import {
   rememberTopicArticles,

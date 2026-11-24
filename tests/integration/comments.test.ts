@@ -464,6 +464,23 @@ describe("comments", () => {
     expect((await post(article, cookie, "Two")).status).toBe(429)
   })
 
+  it("lets only one of several comments sent at the same moment past the cooldown", async () => {
+    const profile = reader()
+    const cookie = await signIn(profile)
+    const { id } = await userByEmail(profile.email)
+
+    const statuses = await Promise.all(
+      ["One", "Two", "Three"].map(async (body) => (await post(article, cookie, body)).status),
+    )
+
+    expect(statuses.sort()).toEqual([201, 429, 429])
+    const mine = await payload.count({
+      collection: "comments",
+      where: { author: { equals: id } },
+    })
+    expect(mine.totalDocs).toBe(1)
+  })
+
   it("takes comments only on published articles", async () => {
     const cookie = await signIn(reader())
     const writer = await createUser("writer")

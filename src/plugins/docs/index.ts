@@ -21,6 +21,9 @@ export const docsPlugin = registerPlugin<SitePluginOptions>({
     name: "Help docs",
     source: "src/plugins/docs",
     description: "Help docs at /docs, written by editors in the admin.",
+    beta: {
+      info: "Help docs are in beta: we're still writing and arranging them, so they may change.",
+    },
     switch: {
       label: "Help docs",
       description:

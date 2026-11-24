@@ -1,0 +1,79 @@
+name: Sentry intake
+
+# Every hour, files a GitHub issue (label `sentry`) for each Sentry error that
+# matches SENTRY_QUERY and has no issue yet, queues the team's open, unassigned
+# bugs Claude hasn't tried (ISSUE_FIX_AUTO=false turns that off), then starts
+# sentry-fix.yml on as many of the new and queued ones as today's budget has
+# room for. See
+# scripts/sentry-fix.ts for the rules, and the repository variables below for
+# what can be tuned without a PR. Which errors are left out (levels, errors
+# with no frame in our code, patterns of known noise) is .github/sentry-filter.json.
+#
+# Needs the SENTRY_AUTH_TOKEN secret: an internal integration's token with
+# Project: Read and Issue & Event: Read (Sentry → Settings → Custom
+# Integrations). Without it Sentry isn't read; the team's bugs still are.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: List what would be filed, and file nothing
+        type: boolean
+        default: false
+
+concurrency:
+  group: sentry-intake
+  cancel-in-progress: false
+
+jobs:
+  intake:
+    name: File Sentry issues
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      # gh workflow run, to start sentry-fix.yml. A workflow_dispatch is the one
+      # event the job's own token can start another workflow with.
+      actions: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            scripts/sentry-fix.ts
+            .github/sentry-filter.json
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.x"
+
+      - name: File new issues
+        id: intake
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          SENTRY_QUERY: ${{ vars.SENTRY_QUERY }}
+          SENTRY_ENVIRONMENTS: ${{ vars.SENTRY_ENVIRONMENTS }}
+          SENTRY_INTAKE_LIMIT: ${{ vars.SENTRY_INTAKE_LIMIT }}
+          SENTRY_FIX_DAILY_LIMIT: ${{ vars.SENTRY_FIX_DAILY_LIMIT }}
+          SENTRY_FIX_AUTO: ${{ vars.SENTRY_FIX_AUTO }}
+          ISSUE_FIX_AUTO: ${{ vars.ISSUE_FIX_AUTO }}
+          ISSUE_FIX_TYPES: ${{ vars.ISSUE_FIX_TYPES }}
+          DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+        run: node scripts/sentry-fix.ts intake
+
+      - name: Start Claude on them
+        if: ${{ steps.intake.outputs.dispatch != '' && steps.intake.outputs.dispatch != '[]' && !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISPATCH: ${{ steps.intake.outputs.dispatch }}
+        run: |
+          for issue in $(jq -r '.[]' <<< "$DISPATCH"); do
+            echo "Starting sentry-fix.yml on #$issue"
+            gh workflow run sentry-fix.yml --repo "$GITHUB_REPOSITORY" --ref dev -f issue="$issue"
+          done

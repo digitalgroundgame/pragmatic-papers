@@ -1,4 +1,13 @@
-import type { CollectionSlug, Endpoint, PayloadHandler, PayloadRequest } from "payload"
+import { sql, type PostgresAdapter } from "@payloadcms/db-postgres"
+import {
+  commitTransaction,
+  initTransaction,
+  killTransaction,
+  type CollectionSlug,
+  type Endpoint,
+  type PayloadHandler,
+  type PayloadRequest,
+} from "payload"
 
 import { normalizeCommentBody } from "../body"
 import { COMMENTING_FIELD, commentingOf } from "../commenting"
@@ -9,7 +18,13 @@ import { authorLock } from "../lock"
 import { describerFor, findFirstComments } from "../markers"
 import { readSettings } from "../settings"
 import { buildThread, type StoredComment } from "../thread"
-import type { CommentThread, CommentViewer, PublicComment, ResolvedCommentsConfig } from "../types"
+import type {
+  CommentCheckResult,
+  CommentThread,
+  CommentViewer,
+  PublicComment,
+  ResolvedCommentsConfig,
+} from "../types"
 
 /** The most comments one thread reads: the newest, so a new comment always shows. */
 export const THREAD_LIMIT = 500
@@ -31,6 +46,43 @@ function parseId(req: PayloadRequest, raw: unknown): number | string | null {
 function isCrossSite(req: PayloadRequest, config: ResolvedCommentsConfig): boolean {
   const origin = req.headers.get("origin")
   return !origin || origin !== new URL(config.baseURL()).origin
+}
+
+/**
+ * Runs `post` in a transaction holding a Postgres advisory lock on the author, so a second
+ * comment they send at the same moment waits for the first, then counts it and hits the
+ * cooldown. The lock is the transaction's own (`pg_advisory_xact_lock`): it's released when
+ * the transaction ends, on the same connection, so it holds behind a pooler too. A refused
+ * post (a `Response`) and an error both roll back.
+ */
+async function oneAtATime<T>(
+  req: PayloadRequest,
+  authorId: number | string,
+  post: () => Promise<T | Response>,
+): Promise<T | Response> {
+  const ownsTransaction = await initTransaction(req)
+  try {
+    const transactionID = await req.transactionID
+    // Typed through the adapter, so a Payload change to its sessions fails the type check.
+    const session =
+      transactionID === undefined
+        ? undefined
+        : (req.payload.db as unknown as PostgresAdapter).sessions[String(transactionID)]
+    // Without a transaction to hold it, the lock would end at once and guard nothing.
+    if (!session) throw new Error("Posting a comment needs a database transaction.")
+    await session.db.execute(
+      sql`select pg_advisory_xact_lock(hashtext('comments:post'), hashtext(${String(authorId)}))`,
+    )
+    const result = await post()
+    if (ownsTransaction) {
+      if (result instanceof Response) await killTransaction(req)
+      else await commitTransaction(req)
+    }
+    return result
+  } catch (error) {
+    if (ownsTransaction) await killTransaction(req)
+    throw error
+  }
 }
 
 const lockedMessage = (until: string | null) =>
@@ -218,58 +270,67 @@ export function threadEndpoints(config: ResolvedCommentsConfig): Endpoint[] {
       }
     }
 
-    const since = new Date(Date.now() - config.cooldownSeconds * 1000).toISOString()
-    const recent = await req.payload.count({
-      collection: COMMENTS_SLUG as CollectionSlug,
-      where: { author: { equals: author.id }, createdAt: { greater_than: since } },
-      overrideAccess: true,
-      req,
-    })
-    if (recent.totalDocs > 0) {
-      return Response.json(
-        { message: "You just commented. Give it a few seconds before the next one." },
-        { status: 429, headers: { ...noStore, "Retry-After": String(config.cooldownSeconds) } },
-      )
-    }
-
-    const check = await runChecks([linkCheck, duplicateCheck, ...config.checks], {
-      body: body.body,
-      author,
-      targetId: id,
-      settings,
-      req,
-    })
-
-    const created = (await req.payload.create({
-      collection: COMMENTS_SLUG as CollectionSlug,
-      // The slugs are the plugin's options, so the generated types can't name the fields.
-      data: {
-        body: body.body,
-        target: id,
-        author: author.id,
-        parent: parentId,
-        depth,
-        status: check.ok ? "published" : "auto-hidden",
-        moderationReason: check.ok ? null : check.reason,
-      } as never,
-      overrideAccess: true,
-      context: { [SKIP_MODERATION]: true },
-      req,
-    })) as unknown as StoredComment
-
-    if (!check.ok) {
-      await req.payload.create({
-        collection: VIOLATIONS_SLUG as CollectionSlug,
-        data: {
-          author: author.id,
-          comment: created.id,
-          source: "check",
-          reason: check.reason,
-        } as never,
+    const countAndCreate = async (): Promise<
+      { created: StoredComment; check: CommentCheckResult } | Response
+    > => {
+      const since = new Date(Date.now() - config.cooldownSeconds * 1000).toISOString()
+      const recent = await req.payload.count({
+        collection: COMMENTS_SLUG as CollectionSlug,
+        where: { author: { equals: author.id }, createdAt: { greater_than: since } },
         overrideAccess: true,
         req,
       })
+      if (recent.totalDocs > 0) {
+        return Response.json(
+          { message: "You just commented. Give it a few seconds before the next one." },
+          { status: 429, headers: { ...noStore, "Retry-After": String(config.cooldownSeconds) } },
+        )
+      }
+
+      const check = await runChecks([linkCheck, duplicateCheck, ...config.checks], {
+        body: body.body,
+        author,
+        targetId: id,
+        settings,
+        req,
+      })
+
+      const created = (await req.payload.create({
+        collection: COMMENTS_SLUG as CollectionSlug,
+        // The slugs are the plugin's options, so the generated types can't name the fields.
+        data: {
+          body: body.body,
+          target: id,
+          author: author.id,
+          parent: parentId,
+          depth,
+          status: check.ok ? "published" : "auto-hidden",
+          moderationReason: check.ok ? null : check.reason,
+        } as never,
+        overrideAccess: true,
+        context: { [SKIP_MODERATION]: true },
+        req,
+      })) as unknown as StoredComment
+
+      if (!check.ok) {
+        await req.payload.create({
+          collection: VIOLATIONS_SLUG as CollectionSlug,
+          data: {
+            author: author.id,
+            comment: created.id,
+            source: "check",
+            reason: check.reason,
+          } as never,
+          overrideAccess: true,
+          req,
+        })
+      }
+      return { created, check }
     }
+
+    const result = await oneAtATime(req, author.id, countAndCreate)
+    if (result instanceof Response) return result
+    const { created, check } = result
 
     // The comment's hook has just kept the author's first-commented time; `author` was read
     // before it, so a first comment brings its own.

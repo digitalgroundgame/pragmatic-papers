@@ -54,8 +54,9 @@ export type NewsletterSignupBlockProps = NewsletterSignupTypes & {
  * elements on the server, so the Lexical converters don't ship to the browser.
  *
  * Turnstile waits until a reader shows interest: the script loads and the challenge runs
- * the first time the pointer enters the form or anything in it takes focus, so the footer
- * on every page doesn't run one. The widget renders `interaction-only`, so it stays out of
+ * the first time anything in the form takes focus (anyone signing up focuses the email
+ * field, and typing an address gives the challenge time to finish), so the footer on every
+ * page doesn't run one. Hover isn't a signal: pointers cross the footer on the way elsewhere. The widget renders `interaction-only`, so it stays out of
  * sight (and out of the layout) unless Cloudflare wants the reader to click it. A submit
  * that beats the token waits for it ("Verifying…") and then sends.
  */
@@ -168,7 +169,7 @@ export const NewsletterSignupForm: React.FC<
   const currentId = blockId || "newsletter-email"
 
   return (
-    <div className="space-y-3 font-sans" onPointerEnter={arm} onFocus={arm}>
+    <div className="space-y-3 font-sans" onFocus={arm}>
       {armed && (
         <Script
           src={TURNSTILE_SCRIPT}

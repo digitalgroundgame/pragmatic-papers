@@ -243,14 +243,16 @@ describe("NewsletterSignupBlock (with Turnstile)", () => {
     ])
   })
 
-  it("starts the challenge when the pointer enters the form", async () => {
+  it("doesn't start the challenge when the pointer only passes over the form", async () => {
     const turnstile = stubTurnstile()
     const NewsletterSignupBlock = await importComponent(SITE_KEY)
     const { container } = render(<NewsletterSignupBlock />)
 
     fireEvent.pointerEnter(container.firstElementChild as HTMLElement)
+    fireEvent.pointerOver(screen.getByLabelText("Email address"))
 
-    await waitFor(() => expect(turnstile.api.render).toHaveBeenCalledTimes(1))
+    expect(scriptLoads).toEqual([])
+    expect(turnstile.api.render).not.toHaveBeenCalled()
   })
 
   it("renders the widget only when Cloudflare asks the reader to interact", async () => {

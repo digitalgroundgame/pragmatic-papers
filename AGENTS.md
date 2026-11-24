@@ -888,7 +888,13 @@ it again asks for another; or a comment mentioning `@claude` asking for a review
 `claude.yml`) or one they posted with a local `/code-review --comment <pr>` (they
 need write access).
 Fixes pushed after a review need a new approval or reply, not a new
-review. **Never post `/reviewed` or `LGTM` (or anything starting with either),
+review. A third way needs no person: when CI's review finds no blocker or
+should-fix and every file the PR changes is one `.claude/approvals.yml` lets
+Claude approve (docs, tests, stories, nothing sensitive), `claude-review.yml`
+records the check itself (`scripts/approval-policy.ts`, always run from dev's
+copies). The policy is a subset of Claude Ship's Claude Approvals format, so
+it carries over if we move to Ship; a PR a bot opened, or one that changes the
+policy, always needs a person. **Never post `/reviewed` or `LGTM` (or anything starting with either),
 and never submit an approving review** — not even when asked to get a PR mergeable. Both
 record that a person read the change; say it's waiting on them instead.
 

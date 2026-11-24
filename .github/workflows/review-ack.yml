@@ -20,6 +20,11 @@ name: Review acknowledgement
 #   from its progress comment). Older progress comments end in the visible
 #   `<sub>claude-review sha=…</sub>` form, which still counts.
 #
+# - Policy: claude-review.yml records it itself when the review finds nothing
+#   to fix and every file the PR changes is one `.claude/approvals.yml` lets
+#   Claude approve (docs, tests, stories; never CI, agent instructions or the
+#   sensitive paths). See scripts/approval-policy.ts.
+#
 # Either way the status belongs to one commit, so a push afterwards needs a
 # new approval or reply.
 #

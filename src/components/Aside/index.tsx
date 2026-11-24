@@ -39,7 +39,7 @@ export function AsidePanel({
   className?: string
 }): React.ReactNode {
   return (
-    <section className={cn("space-y-3 rounded-sm border p-4", className)}>
+    <section className={cn("space-y-3 border-t pt-3", className)}>
       <h2 className="text-brand-text font-serif text-xs font-semibold tracking-widest uppercase">
         {title}
       </h2>
@@ -116,6 +116,16 @@ export async function LatestVolumePanel(): Promise<React.ReactNode> {
     </AsidePanel>
   )
 }
+
+/** Published articles per topic, by topic id. */
+export const articleCountsByTopic = cache(async (): Promise<Map<number, number>> => {
+  const counts = await rows<{ id: number; count: number }>(sql`
+    SELECT r.topics_id AS id, COUNT(*)::int AS count
+      FROM articles_rels r JOIN articles a ON a.id = r.parent_id AND a._status = 'published'
+     WHERE r.path = 'topics' GROUP BY r.topics_id
+  `)
+  return new Map(counts.map((c) => [c.id, c.count]))
+})
 
 const topicCounts = cache(() =>
   rows<{ slug: string; name: string; count: number }>(sql`

@@ -1,4 +1,4 @@
-import { AuthorArticleCard } from "@/components/Articles/AuthorArticleCard"
+import { MediaRow, MediaRowList } from "@/components/MediaRow"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
@@ -129,17 +129,26 @@ export default async function TopicPage({
           }
         >
           <section aria-label="Articles for this topic">
-            <h2 className="mb-3">Articles</h2>
+            <h2 className="sr-only">Articles</h2>
             {totalDocs === 0 ? (
               <p className="text-muted-foreground text-sm">No articles found for this topic yet.</p>
             ) : (
               <>
-                <div className="grid gap-4 md:grid-cols-2">
+                <MediaRowList>
                   {articles.map((article) => {
                     const volume = volumeByArticleId.get(article.id)
-                    return <AuthorArticleCard key={article.id} article={article} volume={volume} />
+                    return (
+                      <MediaRow
+                        key={article.id}
+                        href={`/articles/${article.slug}`}
+                        title={article.title}
+                        summary={article.meta?.description}
+                        image={article.meta?.image}
+                        meta={volume?.title}
+                      />
+                    )
                   })}
-                </div>
+                </MediaRowList>
                 <Pagination page={currentPage} totalPages={totalPages} />
               </>
             )}

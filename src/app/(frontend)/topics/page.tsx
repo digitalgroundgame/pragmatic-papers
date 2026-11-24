@@ -1,6 +1,6 @@
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
-import { TopicsList } from "@/components/Topics/TopicsList"
+import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { paginatedPath } from "@/utilities/generateMeta"
 import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
@@ -10,7 +10,13 @@ import { notFound } from "next/navigation"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { PageHeader, PageShell } from "@/components/PageShell"
-import { LatestVolumePanel, MostReadPanel, NewsletterPanel, WithAside } from "@/components/Aside"
+import {
+  articleCountsByTopic,
+  LatestVolumePanel,
+  MostReadPanel,
+  NewsletterPanel,
+  WithAside,
+} from "@/components/Aside"
 import { getPayloadClient } from "@/data/payload"
 
 export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
@@ -57,6 +63,7 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
   if (!Number.isInteger(page) || page < 1) page = 1
 
   const { docs: topics, totalPages, page: currentPage } = await queryTopics(page)
+  const counts = await articleCountsByTopic()
   // A page past the last one would be an empty listing that names itself as canonical.
   if (page > 1 && page > totalPages) notFound()
 
@@ -82,7 +89,33 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
               <p className="text-muted-foreground text-sm">No topics found.</p>
             ) : (
               <>
-                <TopicsList topics={topics} />
+                <ul className="grid gap-x-8 sm:grid-cols-2">
+                  {topics.map((topic) => {
+                    const count = counts.get(topic.id) ?? 0
+                    return (
+                      <li key={topic.id} className="border-b">
+                        <HoverPrefetchLink
+                          href={`/topics/${topic.slug}`}
+                          className="group/card block space-y-1 py-4"
+                        >
+                          <div className="flex items-baseline justify-between gap-3">
+                            <h2 className="card-hover:text-foreground/80 mt-0! text-xl md:text-2xl">
+                              {topic.name}
+                            </h2>
+                            <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                              {count} {count === 1 ? "article" : "articles"}
+                            </span>
+                          </div>
+                          {topic.description && (
+                            <p className="text-muted-foreground line-clamp-2 font-serif text-sm">
+                              {topic.description}
+                            </p>
+                          )}
+                        </HoverPrefetchLink>
+                      </li>
+                    )
+                  })}
+                </ul>
                 <Pagination
                   className="mt-18 flex justify-center"
                   page={currentPage}

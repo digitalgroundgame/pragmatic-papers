@@ -1,4 +1,4 @@
-import { Media, isMedia } from "@/components/Media"
+import { MediaRow, MediaRowList } from "@/components/MediaRow"
 import { PageRange } from "@/components/PageRange"
 import { Pagination } from "@/components/Pagination"
 import type { Media as MediaType } from "@/payload-types"
@@ -11,7 +11,6 @@ import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { PageHeader, PageShell } from "@/components/PageShell"
 import { MostReadPanel, SearchTipsPanel, TopicsPanel, WithAside } from "@/components/Aside"
-import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { docPath } from "@/utilities/routes"
 import { getPayloadClient } from "@/data/payload"
 import { firstParam } from "./firstParam"
@@ -167,57 +166,29 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
 
           {docs.length > 0 ? (
             <>
-              <ul className="space-y-4">
+              <MediaRowList>
                 {docs.map((result: SearchResult) => {
                   const relationTo = result.doc?.relationTo ?? ""
-                  const href = docPath(relationTo, result.slug ?? "")
-
-                  const image = isMedia(result.image) ? result.image : null
+                  const meta = [
+                    relationTo.charAt(0).toUpperCase() + relationTo.slice(1),
+                    result.topics && formatList(result.topics.split(", "), { conjunction: "&" }),
+                    result.authors &&
+                      `by ${formatList(result.authors.split(", "), { conjunction: "&" })}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" • ")
                   return (
-                    <li key={result.id} className="border-b pb-4 last:border-0">
-                      <div className="flex gap-4">
-                        {image && (
-                          <div className="bg-muted shrink-0 overflow-hidden rounded-sm border md:h-20 md:w-28">
-                            <HoverPrefetchLink href={href} tabIndex={-1} aria-hidden>
-                              <Media
-                                media={image}
-                                variant="thumbnail"
-                                sizes="112px"
-                                className="aspect-3/2 h-full w-full object-cover"
-                              />
-                            </HoverPrefetchLink>
-                          </div>
-                        )}
-                        <div className="flex flex-col gap-1">
-                          <HoverPrefetchLink href={href} className="hover:underline">
-                            <h2 className="text-lg font-semibold">{result.title}</h2>
-                          </HoverPrefetchLink>
-                          {result.excerpt && (
-                            <p className="text-muted-foreground line-clamp-2 text-sm">
-                              {result.excerpt}
-                            </p>
-                          )}
-                          <div className="text-muted-foreground mt-auto flex items-center gap-2 text-xs">
-                            <span className="capitalize">{relationTo}</span>
-                            {result.topics && (
-                              <>
-                                <span>{"•"}</span>
-                                <span>{`${formatList(result.topics.split(", "), { conjunction: "&" })}`}</span>
-                              </>
-                            )}
-                            {result.authors && (
-                              <>
-                                <span>{"•"}</span>
-                                <span>{`by ${formatList(result.authors.split(", "), { conjunction: "&" })}`}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </li>
+                    <MediaRow
+                      key={result.id}
+                      href={docPath(relationTo, result.slug ?? "")}
+                      title={result.title}
+                      summary={result.excerpt}
+                      image={result.image}
+                      meta={meta}
+                    />
                   )
                 })}
-              </ul>
+              </MediaRowList>
 
               <Pagination
                 page={currentPage}

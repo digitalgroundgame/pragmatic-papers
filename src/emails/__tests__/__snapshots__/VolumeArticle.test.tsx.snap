@@ -79,7 +79,7 @@ exports[`VolumeArticleEmail > renders the full email 1`] = `
                                 alt="The Written Word"
                                 height="300"
                                 src="https://site.example.com/_next/image?url=%2Fapi%2Fmedia%2Ffile%2Fhero.png&amp;w=1080&amp;q=80"
-                                style="display:block;outline:none;border:none;text-decoration:none;margin-bottom:0.75rem;margin-top:0.75rem;border-radius:0.375rem;background-color:rgb(0,0,0)"
+                                style="display:block;outline:none;border:none;text-decoration:none;margin-bottom:0.75rem;margin-top:0.75rem;border-radius:0.25rem;background-color:rgb(0,0,0)"
                                 width="600"
                             /></a>
                           </td>
@@ -156,7 +156,7 @@ exports[`VolumeArticleEmail > renders the full email 1`] = `
                             </p>
                             <a
                               href="https://site.example.com/articles/the-written-word"
-                              style="color:rgb(255,255,255);text-decoration-line:none;margin-right:auto;margin-left:auto;margin-bottom:0.75rem;margin-top:0.75rem;display:block;width:fit-content;border-radius:0.375rem;padding-right:1.25rem;padding-left:1.25rem;padding-bottom:0.75rem;padding-top:0.75rem;text-align:center;font-weight:500;background-color:#ff401a"
+                              style="color:rgb(255,255,255);text-decoration-line:none;margin-right:auto;margin-left:auto;margin-bottom:0.75rem;margin-top:0.75rem;display:block;width:fit-content;border-radius:0.25rem;padding-right:1.25rem;padding-left:1.25rem;padding-bottom:0.75rem;padding-top:0.75rem;text-align:center;font-weight:500;background-color:#ff401a"
                               target="_blank"
                               >Read on The Pragmatic Papers</a
                             >

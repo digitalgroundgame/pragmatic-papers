@@ -2,7 +2,7 @@ import type { PublicGroup, WhipCountCandidate, WhipCountData } from "./model"
 
 /** A fill as the page's theme names it, and how strongly it is laid on. */
 export interface Paint {
-  /** A CSS color, usually a theme variable (`var(--chart-3)`). */
+  /** A CSS color, usually a theme variable (`var(--map-negative-4)`). */
   color: string
   opacity: number
 }
@@ -15,10 +15,13 @@ export const UNASSIGNED: Paint = { color: "var(--border)", opacity: 1 }
  */
 export const SECOND_CANDIDATE = "var(--map-positive-4)"
 
+/** The first candidate's colour: the maps' strongest D+ blue, the data palette's other end. */
+export const FIRST_CANDIDATE = "var(--map-negative-4)"
+
 /** The first candidate is drawn in blue, the second in red, any other in ink. */
 export function candidateColor(data: WhipCountData, candidate?: WhipCountCandidate): string {
   if (!candidate) return "var(--muted-foreground)"
-  if (data.candidates[0]?.id === candidate.id) return "var(--chart-3)"
+  if (data.candidates[0]?.id === candidate.id) return FIRST_CANDIDATE
   return data.candidates[1]?.id === candidate.id ? SECOND_CANDIDATE : "var(--foreground)"
 }
 

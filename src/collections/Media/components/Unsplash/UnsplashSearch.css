@@ -45,7 +45,7 @@
 
 .unsplash-search__error {
   margin: 0;
-  color: var(--theme-error-500, rgb(198, 40, 40));
+  color: var(--theme-error-500);
 }
 
 .unsplash-search__note {
@@ -107,8 +107,8 @@
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgb(0 0 0 / 0.6);
-  color: #fff;
+  background: oklch(0 0 0 / 0.6);
+  color: oklch(1 0 0);
   font-weight: 600;
 }
 

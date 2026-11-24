@@ -110,9 +110,9 @@ export const COLOR_GROUPS: ColorGroup[] = [
     ],
   },
   {
-    title: "Maps",
+    title: "Data",
     description:
-      "The election maps' diverging scale, read through var() by the choropleth block and the drilldown pages. The same in both themes.",
+      "The site's one data palette, a diverging red/blue scale: the choropleth block, the drilldown pages, the Federal Courts charts and the whip count all read it through var(). The same in both themes. Brand orange never stands for data.",
     tokens: [
       ...[1, 2, 3, 4].map((step) => ({
         name: `map-positive-${step}`,
@@ -126,16 +126,6 @@ export const COLOR_GROUPS: ColorGroup[] = [
       })),
       { name: "map-neutral", utility: "var(--map-neutral)", use: "Regions with no value." },
     ],
-  },
-  {
-    title: "Charts",
-    description:
-      "shadcn's chart blues. Nothing uses them today: the Federal Courts charts color by party.",
-    tokens: [1, 2, 3, 4, 5].map((step) => ({
-      name: `chart-${step}`,
-      utility: `fill-chart-${step}`,
-      use: "",
-    })),
   },
   {
     title: "Sidebar",

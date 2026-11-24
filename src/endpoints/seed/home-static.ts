@@ -23,7 +23,7 @@ export const homeStatic: RequiredDataFromCollectionSlug<"pages"> = {
             direction: "ltr" as const,
             format: "" as const,
             indent: 0,
-            tag: "h1",
+            tag: "h2",
             type: "heading",
             version: 1,
           },

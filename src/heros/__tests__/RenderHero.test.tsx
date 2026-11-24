@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { Page } from "@/payload-types"
 
+import { homeStatic } from "@/endpoints/seed/home-static"
+
 import { RenderHero, hasH1 } from "../RenderHero"
 
 // The heroes render rich text, which is server-only; stand-ins say which one rendered.
@@ -71,5 +73,11 @@ describe("RenderHero", () => {
   it("renders nothing without a hero or a title", () => {
     const { container } = render(<RenderHero type="none" />)
     expect(container).toBeEmptyDOMElement()
+  })
+})
+
+describe("the unseeded home page's hero", () => {
+  it("has no h1, since the home page renders its own", () => {
+    expect(hasH1(homeStatic.hero.richText)).toBe(false)
   })
 })

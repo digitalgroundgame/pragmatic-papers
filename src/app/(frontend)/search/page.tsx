@@ -223,7 +223,7 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
                       byline={(() => {
                         const id = articleIdOf(result)
                         const authors = id != null ? authorsByArticle.get(id) : undefined
-                        return authors?.length ? <Byline authors={authors} /> : null
+                        return authors?.length ? <Byline size="sm" authors={authors} /> : null
                       })()}
                       // Articles are most results; only say what kind the others are.
                       meta={relationTo === "articles" ? null : KIND_LABELS[relationTo]}

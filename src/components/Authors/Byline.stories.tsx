@@ -30,3 +30,13 @@ export const ThreeAuthors: Story = {
     await expect(canvasElement).toHaveTextContent("Jordan Rivera, Sam Okafor & Priya Natarajan")
   },
 }
+
+/** The small size, for lists of results (search, a topic's articles): 24px faces. */
+export const Small: Story = {
+  args: { authors: authors.slice(0, 2).map(toBylineAuthor), size: "sm" },
+  play: async ({ canvasElement }) => {
+    const avatars = canvasElement.querySelectorAll('[data-slot="avatar"]')
+    await expect(avatars).toHaveLength(2)
+    for (const avatar of avatars) await expect(avatar).toHaveAttribute("data-size", "sm")
+  },
+}

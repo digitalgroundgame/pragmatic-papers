@@ -2,9 +2,13 @@ import { sql } from "@payloadcms/db-postgres"
 import React, { cache } from "react"
 
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
+import { PaperIcon } from "@/components/Logo/icons/PaperIcon"
+import { Media } from "@/components/Media"
 import { NewsletterSignupForm } from "@/blocks/NewsletterSignup/Component.client"
 import { getPayloadClient } from "@/data/payload"
-import type { Media as MediaType } from "@/payload-types"
+import type { Media as MediaType, User } from "@/payload-types"
+import { Byline } from "@/components/Authors/Byline"
+import { toBylineAuthor, type BylineAuthor } from "@/components/Authors/BylineAuthor"
 import { cn } from "@/utilities/utils"
 
 /**
@@ -57,15 +61,26 @@ const rows = async <T extends Record<string, unknown>>(
   return result.rows as T[]
 }
 
-const mostRead = cache((topicId?: number) =>
-  rows<{ slug: string; title: string; views: number }>(sql`
-    SELECT a.slug, a.title, SUM(v.views)::int AS views
+const mostRead = cache(async (topicId?: number) => {
+  const top = await rows<{ slug: string; title: string; media: number | null; views: number }>(sql`
+    SELECT a.slug, a.title, a.meta_image_id AS media, SUM(v.views)::int AS views
       FROM article_views v JOIN articles a ON a.id = v.article_id
      WHERE v.day > (now() at time zone 'utc')::date - 7 AND a._status = 'published'
        ${topicId ? sql`AND EXISTS (SELECT 1 FROM articles_rels r WHERE r.parent_id = a.id AND r.path = 'topics' AND r.topics_id = ${topicId})` : sql``}
      GROUP BY a.id ORDER BY views DESC LIMIT 5
-  `),
-)
+  `)
+  const mediaIds = top.flatMap((a) => (a.media ? [a.media] : []))
+  if (!mediaIds.length) return top.map((a) => ({ ...a, image: null }))
+  const payload = await getPayloadClient()
+  const { docs } = await payload.find({
+    collection: "media",
+    where: { id: { in: mediaIds } },
+    pagination: false,
+    depth: 0,
+  })
+  const byId = new Map(docs.map((d) => [d.id, d]))
+  return top.map((a) => ({ ...a, image: a.media ? (byId.get(a.media) ?? null) : null }))
+})
 
 export async function MostReadPanel({ topicId }: { topicId?: number }): Promise<React.ReactNode> {
   const articles = await mostRead(topicId)
@@ -73,16 +88,30 @@ export async function MostReadPanel({ topicId }: { topicId?: number }): Promise<
   return (
     <AsidePanel title={topicId ? "Most read in this topic" : "Most read this week"}>
       <ol className="space-y-3">
-        {articles.map((a, i) => (
-          <li key={a.slug} className="flex gap-3">
-            <span className="text-muted-foreground font-serif text-2xl leading-none tabular-nums">
-              {i + 1}
-            </span>
+        {articles.map((a) => (
+          <li key={a.slug}>
             <HoverPrefetchLink
               href={`/articles/${a.slug}`}
-              className="text-sm leading-snug font-medium hover:underline"
+              className="group/card flex items-center gap-3"
             >
-              {a.title}
+              <div className="bg-muted relative size-14 shrink-0 overflow-hidden rounded-sm">
+                {a.image ? (
+                  <Media
+                    media={a.image}
+                    variant="square"
+                    sizes="56px"
+                    className="card-hover:brightness-[1.02] card-hover:contrast-[1.16] card-hover:saturate-[1.16] absolute inset-0 h-full w-full object-cover transition-[filter] duration-300 ease-out"
+                  />
+                ) : (
+                  <PaperIcon
+                    aria-hidden="true"
+                    className="text-muted-foreground/40 absolute inset-0 m-auto size-5"
+                  />
+                )}
+              </div>
+              <span className="card-hover:text-foreground/80 line-clamp-3 text-sm leading-snug font-medium">
+                {a.title}
+              </span>
             </HoverPrefetchLink>
           </li>
         ))}
@@ -222,16 +251,32 @@ export async function RelatedTopicsPanel({
   )
 }
 
-const topicContributors = cache((topicId: number) =>
-  rows<{ slug: string; name: string; count: number }>(sql`
-    SELECT u.slug, u.name, COUNT(DISTINCT a.id)::int AS count
-      FROM articles_rels t
-      JOIN articles a ON a.id = t.parent_id AND a._status = 'published'
-      JOIN articles_rels au ON au.parent_id = a.id AND au.path = 'authors'
-      JOIN users u ON u.id = au.users_id
-     WHERE t.path = 'topics' AND t.topics_id = ${topicId}
-     GROUP BY u.id ORDER BY count DESC, u.name LIMIT 6
-  `),
+/** Who has the most published articles on a topic, with what the byline draws. */
+const topicContributors = cache(
+  async (topicId: number): Promise<{ author: BylineAuthor; count: number }[]> => {
+    const counts = await rows<{ id: number; count: number }>(sql`
+      SELECT au.users_id AS id, COUNT(DISTINCT a.id)::int AS count
+        FROM articles_rels t
+        JOIN articles a ON a.id = t.parent_id AND a._status = 'published'
+        JOIN articles_rels au ON au.parent_id = a.id AND au.path = 'authors'
+       WHERE t.path = 'topics' AND t.topics_id = ${topicId}
+       GROUP BY au.users_id ORDER BY count DESC LIMIT 6
+    `)
+    if (!counts.length) return []
+    const payload = await getPayloadClient()
+    const { docs } = await payload.find({
+      collection: "users",
+      where: { id: { in: counts.map((c) => c.id) } },
+      pagination: false,
+      depth: 1,
+      select: { name: true, slug: true, profileImage: true },
+    })
+    const byId = new Map(docs.map((u) => [u.id, toBylineAuthor(u as User)]))
+    return counts.flatMap((c) => {
+      const author = byId.get(c.id)
+      return author ? [{ author, count: c.count }] : []
+    })
+  },
 )
 
 export async function ContributorsPanel({
@@ -243,14 +288,12 @@ export async function ContributorsPanel({
   if (!people.length) return null
   return (
     <AsidePanel title="Who writes on this">
-      <ul className="space-y-1.5 text-sm">
-        {people.map((p) => (
-          <li key={p.slug} className="flex justify-between gap-3">
-            <HoverPrefetchLink href={`/contributors/${p.slug}`} className="hover:underline">
-              {p.name}
-            </HoverPrefetchLink>
-            <span className="text-muted-foreground tabular-nums">
-              {p.count} {p.count === 1 ? "article" : "articles"}
+      <ul className="space-y-2">
+        {people.map(({ author, count }) => (
+          <li key={author.id} className="flex items-center justify-between gap-3">
+            <Byline size="sm" authors={[author]} />
+            <span className="text-muted-foreground shrink-0 text-sm tabular-nums">
+              {count} {count === 1 ? "article" : "articles"}
             </span>
           </li>
         ))}

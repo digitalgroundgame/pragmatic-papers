@@ -76,4 +76,17 @@ describe("Byline", () => {
     render(<Byline authors={[{ id: 1, name: null, slug: "anon", avatarUrl: null }]} />)
     expect(screen.getByText("A")).toBeInTheDocument()
   })
+
+  it("draws faces at the article size by default and small for lists", () => {
+    const { container, rerender } = render(<Byline authors={FOUR.slice(0, 2)} />)
+    const sizes = (): (string | null)[] =>
+      [...container.querySelectorAll('[data-slot="avatar"]')].map((a) =>
+        a.getAttribute("data-size"),
+      )
+    expect(sizes()).toEqual(["md", "md"])
+
+    rerender(<Byline authors={FOUR.slice(0, 2)} size="sm" />)
+    expect(sizes()).toEqual(["sm", "sm"])
+    expect(container.querySelector('[data-slot="byline"]')).toHaveClass("text-sm")
+  })
 })

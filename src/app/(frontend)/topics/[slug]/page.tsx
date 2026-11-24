@@ -136,6 +136,7 @@ export default async function TopicPage({
                           .map((t) => ({ label: t.name, href: `/topics/${t.slug}` }))}
                         byline={
                           <Byline
+                            size="sm"
                             authors={(article.authors ?? [])
                               .filter(isResolved<User>)
                               .map(toBylineAuthor)}

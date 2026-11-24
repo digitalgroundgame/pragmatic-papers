@@ -1,0 +1,50 @@
+# Which PRs into dev Claude's review can mark "Review acknowledged" on its own.
+#
+# Read by scripts/approval-policy.ts in claude-review.yml, always from dev's copy,
+# never the PR's, and written in a subset of Claude Ship's Claude Approvals format
+# (https://code.claude.com/docs/en/approvals-policy) so it carries over if we move
+# to it. A file no rule covers needs a person, and the strictest rule that applies
+# to a file wins. A PR a bot opened, or one that changes this file, always needs a
+# person. Everything that needs one keeps the usual path: an approval, or
+# `/reviewed` after reading the review (review-ack.yml).
+#
+# Keep the second rule's paths in step with SENSITIVE in scripts/review-effort.ts;
+# tests/scripts/approval-policy.test.ts fails when they drift.
+version: 1
+mode: enforce
+rules:
+  - purpose: "Docs, tests and stories: Claude approves when its review finds no blocker or should-fix."
+    paths:
+      - "**/*.md"
+      - "**/*.mdx"
+      - "src/docs/**"
+      - "tests/**"
+      - "**/__tests__/**"
+      - "**/*.test.ts"
+      - "**/*.test.tsx"
+      - "**/*.stories.tsx"
+      - "src/stories/fixtures/**"
+    verdict: { claude: comments, seats: 1 }
+    override:
+      - if: "claude/code_review = pass"
+        verdict: { claude: approves, seats: 0 }
+
+  - purpose: "CI, agent instructions, migrations, access, sign-in, comments, the edge cache, hosting and config always need a person."
+    paths:
+      - ".github/**"
+      - ".claude/**"
+      - "CLAUDE.md"
+      - "AGENTS.md"
+      - "scripts/**"
+      - "tests/scripts/**"
+      - "src/migrations/**"
+      - "src/access/**"
+      - "src/plugins/sso/**"
+      - "src/plugins/comments/**"
+      - "src/hooks/purgeEdgeCache.ts"
+      - "src/cloudflare/**"
+      - "cloudflare/**"
+      - "dockerfiles/**"
+      - "src/payload.config.ts"
+      - "next.config.ts"
+    verdict: { claude: comments, seats: 1 }

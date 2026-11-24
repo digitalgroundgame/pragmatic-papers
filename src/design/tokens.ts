@@ -68,7 +68,7 @@ export const COLOR_GROUPS: ColorGroup[] = [
       {
         name: "primary",
         utility: "bg-primary",
-        use: "The default button's fill. Not for text (use foreground).",
+        use: "Solid neutral fills: the default button, a checked checkbox or switch. Never text.",
       },
       {
         name: "primary-foreground",

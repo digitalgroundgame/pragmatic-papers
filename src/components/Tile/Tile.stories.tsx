@@ -89,3 +89,11 @@ export const StackedGrid: Story = {
     </TileList>
   ),
 }
+
+/** Under a page's h1 with no section heading between (the Collection Grid block). */
+export const AsH2: Story = {
+  args: { as: "h2", layout: "stacked", ratio: "video" },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole("heading", { level: 2 })).toBeVisible()
+  },
+}

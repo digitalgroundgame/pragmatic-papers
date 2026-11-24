@@ -78,6 +78,8 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
       }
       ratio="video"
       titleSize="fluid"
+      // The grid has no title of its own, so its tiles sit right under the page's h1.
+      as="h2"
       imageVariant={variant}
       sizes={sizes}
       preload={preload}

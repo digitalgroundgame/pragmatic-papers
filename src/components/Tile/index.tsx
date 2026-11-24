@@ -87,6 +87,12 @@ export interface TileProps
   /** When it was published: `<TimeAgo>`. */
   date?: React.ReactNode
   titleSize?: "default" | "lg" | "fluid"
+  /**
+   * The title's heading level: one below the heading the tiles sit under. `h3` for tiles in a
+   * titled section (a page's list, an aside panel); `h2` where the page's h1 is the nearest
+   * heading (the Collection Grid block, which has no title of its own).
+   */
+  as?: "h2" | "h3" | "h4"
   /** The picture's rendition and `sizes`, and whether it's above the fold. */
   imageVariant?: ImageVariant
   sizes?: string
@@ -113,6 +119,7 @@ export function Tile({
   loading,
   id,
   imagePosition = "start",
+  as: Heading = "h3",
   layout = "row",
   density = "default",
   ratio,
@@ -169,11 +176,11 @@ export function Tile({
             {kicker}
           </p>
         )}
-        <h3 className={cn(titleVariants({ layout, titleSize, density }))}>
+        <Heading className={cn(titleVariants({ layout, titleSize, density }))}>
           <HoverPrefetchLink href={href} className="after:absolute after:inset-0">
             {title}
           </HoverPrefetchLink>
-        </h3>
+        </Heading>
         {!compact && summary && (
           <p
             className={cn(

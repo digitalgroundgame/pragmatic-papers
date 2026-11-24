@@ -1,17 +1,20 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { NewsletterSignupBlock as NewsletterSignupTypes } from "@/payload-types"
 
 // `next/script` would otherwise try to load the Turnstile script from the
-// network. Replace it with a stub that synchronously fires `onReady` after
-// mount so the widget-initialization effect runs in tests.
+// network. Replace it with a stub that records the load and synchronously fires
+// `onReady` after mount so the widget-initialization effect runs in tests.
+const scriptLoads = vi.hoisted(() => [] as string[])
 vi.mock("next/script", async () => {
   const React = await import("react")
-  const ScriptMock = ({ onReady }: { onReady?: () => void }) => {
+  const ScriptMock = ({ src, onReady }: { src: string; onReady?: () => void }) => {
     React.useEffect(() => {
+      scriptLoads.push(src)
       onReady?.()
-    }, [onReady])
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- once per script, like next/script
+    }, [src])
     return null
   }
   return { default: ScriptMock }
@@ -184,39 +187,137 @@ describe("NewsletterSignupBlock (no Turnstile)", () => {
 describe("NewsletterSignupBlock (with Turnstile)", () => {
   const SITE_KEY = "test-site-key"
 
+  interface RenderOptions {
+    sitekey: string
+    appearance?: string
+    callback: (token: string) => void
+    "error-callback"?: () => void
+  }
+
+  /** A fake `window.turnstile` whose widget hands over its token when `issue` is called. */
+  function stubTurnstile(options: { issueOnRender?: boolean } = {}) {
+    const rendered: RenderOptions[] = []
+    const api = {
+      render: vi.fn((_el: HTMLElement, opts: RenderOptions) => {
+        rendered.push(opts)
+        if (options.issueOnRender) opts.callback("captcha-token")
+        return "widget-1"
+      }),
+      reset: vi.fn(),
+      remove: vi.fn(),
+    }
+    ;(window as { turnstile?: unknown }).turnstile = api
+    return {
+      api,
+      rendered,
+      issue: (token = "captcha-token") => act(() => rendered.at(-1)?.callback(token)),
+      fail: () => act(() => rendered.at(-1)?.["error-callback"]?.()),
+    }
+  }
+
+  function engage(): void {
+    fireEvent.focus(screen.getByLabelText("Email address"))
+  }
+
+  beforeEach(() => {
+    scriptLoads.length = 0
+  })
+
   afterEach(() => {
     delete (window as { turnstile?: unknown }).turnstile
   })
 
-  it("keeps the submit button disabled until a Turnstile token is issued", async () => {
-    // No window.turnstile means the widget never renders a token.
+  it("doesn't load Turnstile until the reader engages with the form", async () => {
+    const turnstile = stubTurnstile()
     const NewsletterSignupBlock = await importComponent(SITE_KEY)
     render(<NewsletterSignupBlock />)
 
-    expect(screen.getByRole("button")).toBeDisabled()
+    expect(scriptLoads).toEqual([])
+    expect(turnstile.api.render).not.toHaveBeenCalled()
+
+    engage()
+
+    await waitFor(() => expect(turnstile.api.render).toHaveBeenCalledTimes(1))
+    expect(scriptLoads).toEqual([
+      "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit",
+    ])
   })
 
-  it("enables submission and includes the token once the widget issues one", async () => {
-    const reset = vi.fn()
-    ;(window as { turnstile?: unknown }).turnstile = {
-      render: (_el: HTMLElement, opts: { callback: (token: string) => void }) => {
-        opts.callback("captcha-token")
-        return "widget-1"
-      },
-      reset,
-      remove: vi.fn(),
-    }
+  it("starts the challenge when the pointer enters the form", async () => {
+    const turnstile = stubTurnstile()
+    const NewsletterSignupBlock = await importComponent(SITE_KEY)
+    const { container } = render(<NewsletterSignupBlock />)
 
+    fireEvent.pointerEnter(container.firstElementChild as HTMLElement)
+
+    await waitFor(() => expect(turnstile.api.render).toHaveBeenCalledTimes(1))
+  })
+
+  it("renders the widget only when Cloudflare asks the reader to interact", async () => {
+    const turnstile = stubTurnstile()
+    const NewsletterSignupBlock = await importComponent(SITE_KEY)
+    render(<NewsletterSignupBlock />)
+    engage()
+
+    await waitFor(() => expect(turnstile.rendered).toHaveLength(1))
+    expect(turnstile.rendered[0]).toMatchObject({
+      sitekey: SITE_KEY,
+      appearance: "interaction-only",
+    })
+  })
+
+  it("leaves the button enabled before a token arrives", async () => {
+    stubTurnstile()
+    const NewsletterSignupBlock = await importComponent(SITE_KEY)
+    render(<NewsletterSignupBlock />)
+
+    expect(screen.getByRole("button", { name: "Sign Up" })).toBeEnabled()
+  })
+
+  it("holds a submit that beats the token, then sends it with the token", async () => {
+    const turnstile = stubTurnstile()
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) })
     vi.stubGlobal("fetch", fetchMock)
 
     const NewsletterSignupBlock = await importComponent(SITE_KEY)
     render(<NewsletterSignupBlock />)
 
-    const button = screen.getByRole("button")
-    await waitFor(() => expect(button).not.toBeDisabled())
-
     typeEmail("reader@example.com")
+    fireEvent.submit(getForm())
+
+    const button = screen.getByRole("button")
+    await waitFor(() => expect(button).toHaveTextContent("Verifying…"))
+    expect(button).toBeDisabled()
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    await waitFor(() => expect(turnstile.rendered).toHaveLength(1))
+    turnstile.issue()
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/newsletter/subscribe",
+        expect.objectContaining({
+          body: JSON.stringify({ email: "reader@example.com", turnstileToken: "captcha-token" }),
+        }),
+      ),
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(
+      await screen.findByText("Check your inbox to confirm your subscription."),
+    ).toBeInTheDocument()
+  })
+
+  it("sends straight away when the token is already there", async () => {
+    stubTurnstile({ issueOnRender: true })
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) })
+    vi.stubGlobal("fetch", fetchMock)
+
+    const NewsletterSignupBlock = await importComponent(SITE_KEY)
+    render(<NewsletterSignupBlock />)
+    engage()
+    typeEmail("reader@example.com")
+    await waitFor(() => expect(window.turnstile?.render).toHaveBeenCalled())
+
     fireEvent.submit(getForm())
 
     await waitFor(() =>
@@ -229,17 +330,27 @@ describe("NewsletterSignupBlock (with Turnstile)", () => {
     )
   })
 
-  it("resets the Turnstile widget after a failed submission", async () => {
-    const reset = vi.fn()
-    ;(window as { turnstile?: unknown }).turnstile = {
-      render: (_el: HTMLElement, opts: { callback: (token: string) => void }) => {
-        opts.callback("captcha-token")
-        return "widget-1"
-      },
-      reset,
-      remove: vi.fn(),
-    }
+  it("shows an error when the challenge fails while a submit waits on it", async () => {
+    const turnstile = stubTurnstile()
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
 
+    const NewsletterSignupBlock = await importComponent(SITE_KEY)
+    render(<NewsletterSignupBlock />)
+    typeEmail("reader@example.com")
+    fireEvent.submit(getForm())
+    await waitFor(() => expect(turnstile.rendered).toHaveLength(1))
+
+    turnstile.fail()
+
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent("We couldn't check that you're human. Please try again.")
+    expect(screen.getByRole("button", { name: "Sign Up" })).toBeEnabled()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("resets the Turnstile widget after a failed submission", async () => {
+    const turnstile = stubTurnstile({ issueOnRender: true })
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: "nope" }) }),
@@ -247,13 +358,12 @@ describe("NewsletterSignupBlock (with Turnstile)", () => {
 
     const NewsletterSignupBlock = await importComponent(SITE_KEY)
     render(<NewsletterSignupBlock />)
-
-    const button = screen.getByRole("button")
-    await waitFor(() => expect(button).not.toBeDisabled())
+    engage()
+    await waitFor(() => expect(turnstile.api.render).toHaveBeenCalled())
 
     typeEmail("reader@example.com")
     fireEvent.submit(getForm())
 
-    await waitFor(() => expect(reset).toHaveBeenCalled())
+    await waitFor(() => expect(turnstile.api.reset).toHaveBeenCalledWith("widget-1"))
   })
 })

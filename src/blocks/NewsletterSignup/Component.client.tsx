@@ -22,6 +22,7 @@ interface TurnstileRenderOptions {
   "expired-callback"?: () => void
   theme?: "light" | "dark" | "auto"
   size?: "normal" | "flexible" | "compact"
+  appearance?: "always" | "execute" | "interaction-only"
 }
 
 interface TurnstileApi {
@@ -36,7 +37,9 @@ declare global {
   }
 }
 
-type Status = "idle" | "submitting" | "success" | "error"
+type Status = "idle" | "verifying" | "submitting" | "success" | "error"
+
+const TURNSTILE_SCRIPT = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
 
 export type NewsletterSignupBlockProps = NewsletterSignupTypes & {
   /**
@@ -49,6 +52,12 @@ export type NewsletterSignupBlockProps = NewsletterSignupTypes & {
 /**
  * The form. `notice` arrives already rendered: Component.tsx turns its rich text into
  * elements on the server, so the Lexical converters don't ship to the browser.
+ *
+ * Turnstile waits until a reader shows interest: the script loads and the challenge runs
+ * the first time the pointer enters the form or anything in it takes focus, so the footer
+ * on every page doesn't run one. The widget renders `interaction-only`, so it stays out of
+ * sight (and out of the layout) unless Cloudflare wants the reader to click it. A submit
+ * that beats the token waits for it ("Verifying…") and then sends.
  */
 export const NewsletterSignupForm: React.FC<
   Omit<NewsletterSignupBlockProps, "notice"> & { notice?: React.ReactNode }
@@ -57,9 +66,13 @@ export const NewsletterSignupForm: React.FC<
   const [status, setStatus] = React.useState<Status>("idle")
   const [message, setMessage] = React.useState<string | null>(null)
   const [token, setToken] = React.useState<string | null>(null)
+  const [armed, setArmed] = React.useState(false)
   const [scriptReady, setScriptReady] = React.useState(false)
   const widgetContainerRef = React.useRef<HTMLDivElement>(null)
   const widgetIdRef = React.useRef<string | null>(null)
+  // A submit waiting on the challenge, and the latest `send` for the widget's callbacks.
+  const waitingRef = React.useRef(false)
+  const sendRef = React.useRef<((token: string | null) => Promise<void>) | null>(null)
 
   React.useEffect(() => {
     if (!scriptReady || !turnstileSiteKey) return
@@ -69,9 +82,23 @@ export const NewsletterSignupForm: React.FC<
     widgetIdRef.current = turnstile.render(container, {
       sitekey: turnstileSiteKey,
       theme: "auto",
-      callback: (t) => setToken(t),
+      appearance: "interaction-only",
+      callback: (t) => {
+        setToken(t)
+        if (waitingRef.current) {
+          waitingRef.current = false
+          void sendRef.current?.(t)
+        }
+      },
       "expired-callback": () => setToken(null),
-      "error-callback": () => setToken(null),
+      "error-callback": () => {
+        setToken(null)
+        if (waitingRef.current) {
+          waitingRef.current = false
+          setStatus("error")
+          setMessage("We couldn't check that you're human. Please try again.")
+        }
+      },
     })
     return () => {
       const id = widgetIdRef.current
@@ -82,7 +109,11 @@ export const NewsletterSignupForm: React.FC<
 
   const headingText = heading ?? DEFAULT_HEADING
   const buttonText = buttonLabel ?? DEFAULT_BUTTON_LABEL
-  const disabled = status === "submitting" || status === "success" || (!!turnstileSiteKey && !token)
+  const busy = status === "verifying" || status === "submitting"
+  const disabled = busy || status === "success"
+  const arm = (): void => {
+    if (turnstileSiteKey && !armed) setArmed(true)
+  }
 
   const resetWidget = (): void => {
     const id = widgetIdRef.current
@@ -90,16 +121,14 @@ export const NewsletterSignupForm: React.FC<
     setToken(null)
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
-    e.preventDefault()
-    if (status === "submitting" || (turnstileSiteKey && !token)) return
+  const send = async (turnstileToken: string | null): Promise<void> => {
     setStatus("submitting")
     setMessage(null)
     try {
       const res = await fetch("/api/newsletter/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, turnstileToken: token }),
+        body: JSON.stringify({ email, turnstileToken }),
       })
       const body = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) {
@@ -118,15 +147,35 @@ export const NewsletterSignupForm: React.FC<
     }
   }
 
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
+    e.preventDefault()
+    if (busy) return
+    if (turnstileSiteKey && !token) {
+      // The challenge is still running (or hasn't started): send once it hands over a token.
+      waitingRef.current = true
+      arm()
+      setMessage(null)
+      setStatus("verifying")
+      return
+    }
+    void send(token)
+  }
+
+  React.useEffect(() => {
+    sendRef.current = send
+  })
+
   const currentId = blockId || "newsletter-email"
 
   return (
-    <div className="space-y-3 font-sans">
-      <Script
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
-        strategy="lazyOnload"
-        onReady={() => setScriptReady(true)}
-      />
+    <div className="space-y-3 font-sans" onPointerEnter={arm} onFocus={arm}>
+      {armed && (
+        <Script
+          src={TURNSTILE_SCRIPT}
+          strategy="afterInteractive"
+          onReady={() => setScriptReady(true)}
+        />
+      )}
       <h3 className="mt-0!">{headingText}</h3>
       {description && <p className="font-serif">{description}</p>}
       <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -143,11 +192,15 @@ export const NewsletterSignupForm: React.FC<
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             maxLength={254}
-            disabled={status === "submitting" || status === "success"}
+            disabled={disabled}
           />
         </Field>
         <Button type="submit" disabled={disabled}>
-          {status === "submitting" ? "Subscribing…" : buttonText}
+          {status === "verifying"
+            ? "Verifying…"
+            : status === "submitting"
+              ? "Subscribing…"
+              : buttonText}
         </Button>
       </form>
       {status === "error" && message ? (

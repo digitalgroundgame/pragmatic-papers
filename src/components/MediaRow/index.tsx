@@ -7,7 +7,7 @@ import { cn } from "@/utilities/utils"
 
 /**
  * PROTOTYPE: the one compact card. No border, no padding box: a small thumbnail, the title,
- * a line of summary and a meta line, with a hairline between rows (`divide-y` on the list).
+ * a line of summary and a meta line, spaced apart with whitespace, no rules.
  * The whole row is one link and reacts as one (`group/card`, `card-hover:`).
  */
 export function MediaRow({
@@ -26,7 +26,7 @@ export function MediaRow({
   className?: string
 }): React.ReactNode {
   return (
-    <HoverPrefetchLink href={href} className={cn("group/card flex gap-4 py-4", className)}>
+    <HoverPrefetchLink href={href} className={cn("group/card flex gap-4", className)}>
       {isMedia(image) && (
         <Media
           media={image}
@@ -48,7 +48,7 @@ export function MediaRow({
   )
 }
 
-/** Rows of `MediaRow`, a hairline between each; `columns` sets two side by side from md up. */
+/** Rows of `MediaRow`, spaced apart; `columns` sets two side by side from md up. */
 export function MediaRowList({
   columns = 1,
   children,
@@ -60,10 +60,7 @@ export function MediaRowList({
 }): React.ReactNode {
   return (
     <div
-      className={cn(
-        columns === 2 ? "grid gap-x-8 md:grid-cols-2 [&>*]:border-b" : "divide-y",
-        className,
-      )}
+      className={cn(columns === 2 ? "grid gap-x-8 gap-y-6 md:grid-cols-2" : "space-y-6", className)}
     >
       {children}
     </div>

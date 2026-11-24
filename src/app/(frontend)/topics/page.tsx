@@ -89,14 +89,14 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
               <p className="text-muted-foreground text-sm">No topics found.</p>
             ) : (
               <>
-                <ul className="grid gap-x-8 sm:grid-cols-2">
+                <ul className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
                   {topics.map((topic) => {
                     const count = counts.get(topic.id) ?? 0
                     return (
-                      <li key={topic.id} className="border-b">
+                      <li key={topic.id}>
                         <HoverPrefetchLink
                           href={`/topics/${topic.slug}`}
-                          className="group/card block space-y-1 py-4"
+                          className="group/card block space-y-1"
                         >
                           <div className="flex items-baseline justify-between gap-3">
                             <h2 className="card-hover:text-foreground/80 mt-0! text-xl md:text-2xl">

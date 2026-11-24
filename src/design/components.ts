@@ -64,7 +64,7 @@ export const PRIMITIVES: ComponentUse[] = [
       ui("Dialog"),
       ui("Tooltip"),
     ],
-    notes: "Load them lazily where they're on every page (src/blocks/AGENTS.md).",
+    notes: "Load them lazily where they're on every page (AGENTS.md).",
   },
   { need: "Pages of results", components: [ui("Pagination")], notes: "Centered under the list." },
   { need: "A brand flourish", components: [ui("Squiggle")], notes: "The end-of-article rule." },

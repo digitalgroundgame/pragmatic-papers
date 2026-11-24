@@ -180,6 +180,7 @@ In `src/blocks/AGENTS.md`, which loads when you work under `src/blocks/`.
 - **Content rendering**: Blocks system with Lexical rich text editor; each block has a config and a React component
 - **Pre-push hooks**: Husky runs full checks on all files (`lint:fix`, `format:fix`, `check-types`) before pushing
 - **Pre-commit hooks**: lint-staged runs ESLint + Prettier on staged files only (fast, ~1-2 seconds)
+- **Menus and toggles load on first use**: the header's sheets, mega menu and mode toggles are on every page, and most readers never open them. Their `*.lazy.tsx` wrappers render through `LoadOnInteraction` (`src/components/LoadOnInteraction`): markup that looks the same (the trigger button, or the menu's links) until the reader points at, touches, focuses or clicks it, then the base-ui component, with the click replayed and focus kept. Keep the layouts' server components from importing anything that imports base-ui's dialogs or menus (`ui/sheet`, `ui/dropdown-menu`, `ui/navigation-menu`): its client code would be back in every page's first-load JavaScript. `pnpm bundle-size` shows it
 - **Colocation**: Prefer colocating logic near where it's used. A helper only one feature uses lives with that feature; `src/utilities/` is for what several features share (see [Utilities](#utilities)).
 - **Commit trailers**: don't add a `Claude-Session:` trailer (or any other link to an agent session) to commit messages. A `Co-Authored-By:` trailer is fine.
 - **Issue and PR numbers in comments**: comments and docs describe the code as it is now; why and when it changed is what `git log` and `git blame` are for. Don't write "added in #970", "before #672" or "see #883" — the sentence should stand on its own. Two exceptions, each a pointer with an exit: an upstream bug a workaround depends on (full URL; remove the workaround when it's fixed), and an **open** issue tracking a known gap or a skipped check (say what to remove when it closes, as `knownContrastIssue` does for #998). When that issue closes, delete the comment and what it guards; never append to it.
@@ -381,7 +382,8 @@ Claude runs with a read-only token and its commits leave the job as a patch, sin
 error text it reads comes from production traffic; the commands it runs don't inherit
 `CLAUDE_CODE_OAUTH_TOKEN` or `NODE_AUTH_TOKEN` (`CLAUDE_CODE_SUBPROCESS_ENV_SCRUB`, which runs them in Claude Code's Bash sandbox, so the job installs bubblewrap and socat first), and a patch
 that changes anything outside `src/` and `tests/` isn't pushed, since PR checks run `scripts/`,
-`.storybook/` and the workflows from the branch with secrets. At most `SENTRY_FIX_DAILY_LIMIT` (3) runs
+`.storybook/` and the workflows from the branch with secrets; nor is one that changes an
+`AGENTS.md` or `CLAUDE.md`, the instructions later agent runs load. At most `SENTRY_FIX_DAILY_LIMIT` (3) runs
 start in 24 hours; the rest, including issues filed beyond the day's room, wait labeled
 `claude queued`. Intake reads Sentry a page at a time (up to 8) past errors already filed or
 kept out, so recurring ones don't crowd out new ones. Adding the `fix with claude` label

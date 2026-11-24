@@ -35,8 +35,9 @@ export default async function HomePage(): Promise<React.ReactNode> {
     <article>
       <JsonLd data={buildHomeJsonLd(socials)} />
       {draft && <LivePreviewListener />}
-      {/* The home page's h1 is the site's name; a hero without one gets it hidden. */}
-      <RenderHero {...hero} title={SITE_NAME} />
+      {/* The home page's h1 is always the site's name, hidden: the hero's headings sit under it. */}
+      <h1 className="sr-only">{SITE_NAME}</h1>
+      <RenderHero {...hero} />
       {/* A Volume View here lists the newest volumes: its `?p=` links can't be read. */}
       <RenderBlocks blocks={layout} paginated={false} />
     </article>

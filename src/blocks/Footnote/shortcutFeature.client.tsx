@@ -25,12 +25,15 @@ import type { FootnoteBlock } from "@/payload-types"
 
 import { truncate } from "@/utilities/truncate"
 
+import { $trimSpaceBefore, registerFootnoteSpaceTrim } from "@/blocks/Footnote/trimSpace"
+
 type CreateInlineBlockFields = Parameters<typeof $createInlineBlockNode>[0]
 const createFootnoteNode = (fields: Partial<FootnoteBlock> & { blockType: "footnote" }) =>
   $createInlineBlockNode(fields as unknown as CreateInlineBlockFields)
 
 const SHORTCUT_REGEX = /\[\^([^\]]+)\]/
-const TRIGGER_REGEX = /(^|\s|\()(\[\^([^\]]*))$/
+// `[^` opens the menu anywhere, even straight after a word, so no space is needed before it.
+const TRIGGER_REGEX = /\[\^([^\]]*)$/
 const PREVIEW_LIMIT = 60
 const MAX_SUGGESTIONS = 8
 
@@ -70,13 +73,13 @@ const collectFootnoteSources = (): FootnoteSource[] => {
   return out
 }
 
-const triggerFn: TriggerFn = (text) => {
+export const triggerFn: TriggerFn = (text) => {
   const match = TRIGGER_REGEX.exec(text)
   if (!match) return null
   return {
-    leadOffset: match.index + (match[1]?.length ?? 0),
-    matchingString: match[3] ?? "",
-    replaceableString: match[2] ?? "",
+    leadOffset: match.index,
+    matchingString: match[1] ?? "",
+    replaceableString: match[0],
   }
 }
 
@@ -138,8 +141,11 @@ const FootnoteShortcutPlugin: React.FC = () => {
           : { blockName: "", blockType: "footnote", note: noteText },
       )
       matchNode.replace(footnote)
+      $trimSpaceBefore(footnote)
     })
   }, [editor])
+
+  useEffect(() => registerFootnoteSpaceTrim(editor), [editor])
 
   const onSelectOption = useCallback(
     (
@@ -171,6 +177,7 @@ const FootnoteShortcutPlugin: React.FC = () => {
           link: option.source.link,
         })
         triggerNode.replace(footnote)
+        $trimSpaceBefore(footnote)
         closeMenu()
       })
     },

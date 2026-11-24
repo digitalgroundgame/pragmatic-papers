@@ -39,15 +39,15 @@ export function AsidePanel({
   children,
   className,
 }: {
-  title: string
+  /** Left out when what's inside brings its own heading (the newsletter form). */
+  title?: string
   children: React.ReactNode
   className?: string
 }): React.ReactNode {
   return (
     <section className={cn("space-y-3 border-t pt-3", className)}>
-      <h2 className="text-brand-text font-serif text-xs font-semibold tracking-widest uppercase">
-        {title}
-      </h2>
+      {/* At the h3 token: FKScreamer's floor, and a step under the page's own h2s. */}
+      {title && <h2 className="mt-0! text-2xl md:text-3xl">{title}</h2>}
       {children}
     </section>
   )
@@ -322,7 +322,7 @@ export function SearchTipsPanel(): React.ReactNode {
 
 export function NewsletterPanel(): React.ReactNode {
   return (
-    <AsidePanel title="Newsletter">
+    <AsidePanel>
       <NewsletterSignupForm
         id="aside-newsletter"
         blockType="newsletterSignup"

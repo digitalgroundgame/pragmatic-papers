@@ -8,8 +8,9 @@ import type { Media as MediaType } from "@/payload-types"
 import { cn } from "@/utilities/utils"
 
 /**
- * PROTOTYPE: the one compact card. No border, no padding box: a fixed 3:2 thumbnail, the title,
- * a line of summary, the byline, then the topics as badges, spaced apart with whitespace.
+ * PROTOTYPE: the one compact card. No border, no padding box: a fixed 4:3 thumbnail, the title,
+ * a line of summary, the byline, then the topics as badges, spaced apart with whitespace. Every line is clamped to one, so
+ * the thumbnail sets the row's height and every row in a list is the same height.
  * The title's link stretches over the whole row (`after:inset-0`), so the row clicks as one
  * and reacts as one (`group/card`, `card-hover:`), while the badges stay links of their own.
  */
@@ -41,7 +42,7 @@ export function MediaRow({
   return (
     <div className={cn("group/card relative flex gap-4", className)}>
       {/* The frame is always there, at one size and ratio, so rows line up with or without a picture. */}
-      <div className="bg-muted relative aspect-3/2 w-28 shrink-0 self-start overflow-hidden rounded-sm sm:w-40">
+      <div className="bg-muted relative aspect-4/3 w-28 shrink-0 self-start overflow-hidden rounded-sm sm:w-40">
         {isMedia(image) ? (
           <Media
             media={image}
@@ -56,10 +57,10 @@ export function MediaRow({
           />
         )}
       </div>
-      <div className="min-w-0 space-y-1">
+      <div className="min-w-0 flex-1 space-y-1">
         <h3
           className={cn(
-            "card-hover:text-foreground/80 mt-0! line-clamp-2 leading-tight text-pretty",
+            "card-hover:text-foreground/80 mt-0! line-clamp-1 leading-tight",
             // The h3 token (24 / 32px) is FKScreamer's floor; `lg` is the h2 step.
             size === "lg" && "text-3xl md:text-4xl",
           )}
@@ -69,12 +70,17 @@ export function MediaRow({
           </HoverPrefetchLink>
         </h3>
         {summary && (
-          <p className="text-muted-foreground line-clamp-2 font-serif text-sm">{summary}</p>
+          <p className="text-muted-foreground line-clamp-1 font-serif text-sm max-sm:hidden">
+            {summary}
+          </p>
         )}
-        {byline && <div className="relative z-10 text-sm">{byline}</div>}
+        {byline && (
+          <div className="relative z-10 overflow-hidden text-sm whitespace-nowrap">{byline}</div>
+        )}
         {meta && <p className="text-muted-foreground text-xs">{meta}</p>}
         {badges && badges.length > 0 && (
-          <ul className="relative z-10 flex flex-wrap gap-1.5 pt-1">
+          // One row of badges: any that don't fit wrap onto a second line that's cut off.
+          <ul className="relative z-10 flex max-h-6 flex-wrap gap-1.5 overflow-hidden pt-1">
             {badges.map((b) => (
               <li key={b.href}>
                 <Badge

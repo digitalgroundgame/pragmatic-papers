@@ -96,6 +96,7 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
                     return (
                       <MediaRow
                         key={topic.id}
+                        size="lg"
                         href={`/topics/${topic.slug}`}
                         title={topic.name}
                         summary={topic.description}

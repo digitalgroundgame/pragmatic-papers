@@ -103,6 +103,20 @@ const querySearch = cache(async (rawQuery: string, page: number) => {
   return { ...emptyPage, docs: sorted }
 })
 
+const KIND_LABELS: Record<string, string> = { volumes: "Volume", topics: "Topic", pages: "Page" }
+
+/** Topic slugs by name: a search row stores its topics' names only. */
+const queryTopicSlugs = cache(async (): Promise<Map<string, string>> => {
+  const payload = await getPayloadClient()
+  const { docs } = await payload.find({
+    collection: "topics",
+    pagination: false,
+    depth: 0,
+    select: { name: true, slug: true },
+  })
+  return new Map(docs.flatMap((t) => (t.slug ? [[t.name, t.slug] as const] : [])))
+})
+
 // Results pages are endless variations of pages that are already indexed, and Google asks sites
 // not to let them into its index. Links on them are still followed.
 export const metadata: Metadata = {
@@ -121,7 +135,10 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
   let page = Number(p) || 1
   if (!Number.isInteger(page) || page < 1) page = 1
 
-  const { docs, totalDocs, totalPages, page: currentPage } = await querySearch(q, page)
+  const [{ docs, totalDocs, totalPages, page: currentPage }, topicSlugs] = await Promise.all([
+    querySearch(q, page),
+    queryTopicSlugs(),
+  ])
 
   return (
     <>
@@ -169,14 +186,7 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
               <MediaRowList>
                 {docs.map((result: SearchResult) => {
                   const relationTo = result.doc?.relationTo ?? ""
-                  const meta = [
-                    relationTo.charAt(0).toUpperCase() + relationTo.slice(1),
-                    result.topics && formatList(result.topics.split(", "), { conjunction: "&" }),
-                    result.authors &&
-                      `by ${formatList(result.authors.split(", "), { conjunction: "&" })}`,
-                  ]
-                    .filter(Boolean)
-                    .join(" • ")
+                  const topicNames = result.topics ? result.topics.split(", ") : []
                   return (
                     <MediaRow
                       key={result.id}
@@ -184,7 +194,16 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
                       title={result.title}
                       summary={result.excerpt}
                       image={result.image}
-                      meta={meta}
+                      byline={
+                        result.authors &&
+                        `By ${formatList(result.authors.split(", "), { conjunction: "&" })}`
+                      }
+                      // Articles are most results; only say what kind the others are.
+                      meta={relationTo === "articles" ? null : KIND_LABELS[relationTo]}
+                      badges={topicNames.flatMap((name) => {
+                        const slug = topicSlugs.get(name)
+                        return slug ? [{ label: name, href: `/topics/${slug}` }] : []
+                      })}
                     />
                   )
                 })}

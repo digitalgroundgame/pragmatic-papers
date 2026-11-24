@@ -22,6 +22,12 @@ a step larger.
 `text-3xl` is 32px rather than Tailwind's 30px: FKScreamer's ligatures break at 30px and
 below, so globals.css moves the step up.
 
+**FKScreamer stays at the `h3` size or larger** (24px, 32px from `md` up). Below that the
+condensed face turns hard to read and its ligatures break, so a smaller title, such as a
+caption, a list label or a panel's heading, is set in Geist or the serif rather than
+shrinking a heading. Don't put a `text-sm`/`text-lg`/`text-xl` class on an `h1`–`h3`; pick
+the heading level whose size you want, or a different face.
+
 <Unstyled>
   <HeadingScale />
 </Unstyled>
@@ -41,4 +47,7 @@ below, so globals.css moves the step up.
 - **The serif has two weights.** Libertinus Serif ships regular and bold (and their
   italics), so serif text marked `font-semibold` is drawn in the bold face: the volume's
   article links, the interactive page's eyebrow and the What's new list.
+- **FKScreamer below the `h3` size.** The account page's section headings (18px), the
+  federal bench summary (20 / 24px) and the feed's table cards (18px) shrink a heading
+  under the floor.
 - **The docs set headings in Geist** (`DocsLayout`), on purpose, to read as a wiki.

@@ -1,6 +1,7 @@
 import React from "react"
 
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
+import { PaperIcon } from "@/components/Logo/icons/PaperIcon"
 import { Media, isMedia } from "@/components/Media"
 import type { Media as MediaType } from "@/payload-types"
 import { cn } from "@/utilities/utils"
@@ -27,14 +28,22 @@ export function MediaRow({
 }): React.ReactNode {
   return (
     <HoverPrefetchLink href={href} className={cn("group/card flex gap-4", className)}>
-      {isMedia(image) && (
-        <Media
-          media={image}
-          variant="thumbnail"
-          sizes="96px"
-          className="card-hover:brightness-[1.02] card-hover:contrast-[1.16] card-hover:saturate-[1.16] aspect-3/2 w-24 shrink-0 rounded-sm object-cover transition-[filter] duration-300 ease-out"
-        />
-      )}
+      {/* The frame is always there, at one size and ratio, so rows line up with or without a picture. */}
+      <div className="bg-muted relative aspect-3/2 w-28 shrink-0 self-start overflow-hidden rounded-sm sm:w-40">
+        {isMedia(image) ? (
+          <Media
+            media={image}
+            variant="thumbnail"
+            sizes="(max-width: 640px) 112px, 160px"
+            className="card-hover:brightness-[1.02] card-hover:contrast-[1.16] card-hover:saturate-[1.16] absolute inset-0 h-full w-full object-cover transition-[filter] duration-300 ease-out"
+          />
+        ) : (
+          <PaperIcon
+            aria-hidden="true"
+            className="text-muted-foreground/40 absolute inset-0 m-auto size-8"
+          />
+        )}
+      </div>
       <div className="min-w-0 space-y-1">
         <h3 className="card-hover:text-foreground/80 mt-0! line-clamp-2 text-lg leading-tight text-pretty md:text-xl">
           {title}

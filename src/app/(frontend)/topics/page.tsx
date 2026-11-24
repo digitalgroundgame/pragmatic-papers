@@ -1,6 +1,6 @@
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
-import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
+import { MediaRow, MediaRowList } from "@/components/MediaRow"
 import { paginatedPath } from "@/utilities/generateMeta"
 import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
@@ -12,6 +12,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { PageHeader, PageShell } from "@/components/PageShell"
 import {
   articleCountsByTopic,
+  topicCovers,
   LatestVolumePanel,
   MostReadPanel,
   NewsletterPanel,
@@ -63,7 +64,7 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
   if (!Number.isInteger(page) || page < 1) page = 1
 
   const { docs: topics, totalPages, page: currentPage } = await queryTopics(page)
-  const counts = await articleCountsByTopic()
+  const [counts, covers] = await Promise.all([articleCountsByTopic(), topicCovers()])
   // A page past the last one would be an empty listing that names itself as canonical.
   if (page > 1 && page > totalPages) notFound()
 
@@ -89,33 +90,21 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
               <p className="text-muted-foreground text-sm">No topics found.</p>
             ) : (
               <>
-                <ul className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
+                <MediaRowList>
                   {topics.map((topic) => {
                     const count = counts.get(topic.id) ?? 0
                     return (
-                      <li key={topic.id}>
-                        <HoverPrefetchLink
-                          href={`/topics/${topic.slug}`}
-                          className="group/card block space-y-1"
-                        >
-                          <div className="flex items-baseline justify-between gap-3">
-                            <h2 className="card-hover:text-foreground/80 mt-0! text-xl md:text-2xl">
-                              {topic.name}
-                            </h2>
-                            <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                              {count} {count === 1 ? "article" : "articles"}
-                            </span>
-                          </div>
-                          {topic.description && (
-                            <p className="text-muted-foreground line-clamp-2 font-serif text-sm">
-                              {topic.description}
-                            </p>
-                          )}
-                        </HoverPrefetchLink>
-                      </li>
+                      <MediaRow
+                        key={topic.id}
+                        href={`/topics/${topic.slug}`}
+                        title={topic.name}
+                        summary={topic.description}
+                        image={topic.meta?.image ?? covers.get(topic.id)}
+                        meta={`${count} ${count === 1 ? "article" : "articles"}`}
+                      />
                     )
                   })}
-                </ul>
+                </MediaRowList>
                 <Pagination
                   className="mt-18 flex justify-center"
                   page={currentPage}

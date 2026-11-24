@@ -10,6 +10,7 @@ import { notFound } from "next/navigation"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { PageHeader, PageShell } from "@/components/PageShell"
+import { LatestVolumePanel, MostReadPanel, NewsletterPanel, WithAside } from "@/components/Aside"
 import { getPayloadClient } from "@/data/payload"
 
 export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
@@ -67,20 +68,30 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
 
         <PageHeader title="Topics" description="Browse all topics" />
 
-        <section aria-label="All topics" className="mt-6">
-          {topics.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No topics found.</p>
-          ) : (
+        <WithAside
+          aside={
             <>
-              <TopicsList topics={topics} />
-              <Pagination
-                className="mt-18 flex justify-center"
-                page={currentPage}
-                totalPages={totalPages}
-              />
+              <MostReadPanel />
+              <LatestVolumePanel />
+              <NewsletterPanel />
             </>
-          )}
-        </section>
+          }
+        >
+          <section aria-label="All topics">
+            {topics.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No topics found.</p>
+            ) : (
+              <>
+                <TopicsList topics={topics} />
+                <Pagination
+                  className="mt-18 flex justify-center"
+                  page={currentPage}
+                  totalPages={totalPages}
+                />
+              </>
+            )}
+          </section>
+        </WithAside>
       </PageShell>
     </>
   )

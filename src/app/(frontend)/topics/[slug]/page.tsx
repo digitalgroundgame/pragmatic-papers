@@ -11,6 +11,13 @@ import { notFound } from "next/navigation"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { PageHeader, PageShell } from "@/components/PageShell"
+import {
+  ContributorsPanel,
+  MostReadPanel,
+  NewsletterPanel,
+  RelatedTopicsPanel,
+  WithAside,
+} from "@/components/Aside"
 import { relationshipId } from "@/utilities/relationships"
 import { getPayloadClient } from "@/data/payload"
 
@@ -111,22 +118,33 @@ export default async function TopicPage({
 
         <PageHeader title={topic.name} description={topic.description} />
 
-        <section aria-label="Articles for this topic">
-          <h2 className="mb-3">Articles</h2>
-          {totalDocs === 0 ? (
-            <p className="text-muted-foreground text-sm">No articles found for this topic yet.</p>
-          ) : (
+        <WithAside
+          aside={
             <>
-              <div className="grid gap-4 md:grid-cols-2">
-                {articles.map((article) => {
-                  const volume = volumeByArticleId.get(article.id)
-                  return <AuthorArticleCard key={article.id} article={article} volume={volume} />
-                })}
-              </div>
-              <Pagination page={currentPage} totalPages={totalPages} />
+              <MostReadPanel topicId={topic.id} />
+              <ContributorsPanel topicId={topic.id} />
+              <RelatedTopicsPanel topicId={topic.id} />
+              <NewsletterPanel />
             </>
-          )}
-        </section>
+          }
+        >
+          <section aria-label="Articles for this topic">
+            <h2 className="mb-3">Articles</h2>
+            {totalDocs === 0 ? (
+              <p className="text-muted-foreground text-sm">No articles found for this topic yet.</p>
+            ) : (
+              <>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {articles.map((article) => {
+                    const volume = volumeByArticleId.get(article.id)
+                    return <AuthorArticleCard key={article.id} article={article} volume={volume} />
+                  })}
+                </div>
+                <Pagination page={currentPage} totalPages={totalPages} />
+              </>
+            )}
+          </section>
+        </WithAside>
       </PageShell>
     </>
   )

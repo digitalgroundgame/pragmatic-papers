@@ -9,7 +9,8 @@ import { draftMode } from "next/headers"
 import type { PaginatedDocs } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
-import { PageHeader, PageShell, ReadingColumn } from "@/components/PageShell"
+import { PageHeader, PageShell } from "@/components/PageShell"
+import { MostReadPanel, SearchTipsPanel, TopicsPanel, WithAside } from "@/components/Aside"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { docPath } from "@/utilities/routes"
 import { getPayloadClient } from "@/data/payload"
@@ -128,7 +129,15 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
       <Breadcrumbs shell items={[{ name: "Search", path: "/search" }]} />
       <PageShell as="div">
         <PageHeader title="Search" />
-        <ReadingColumn className="space-y-6">
+        <WithAside
+          aside={
+            <>
+              <SearchTipsPanel />
+              <TopicsPanel />
+              <MostReadPanel />
+            </>
+          }
+        >
           <form action="/search" method="get" className="flex gap-2">
             <input
               type="search"
@@ -224,7 +233,7 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
               totalDocs={0}
             />
           ) : null}
-        </ReadingColumn>
+        </WithAside>
       </PageShell>
     </>
   )

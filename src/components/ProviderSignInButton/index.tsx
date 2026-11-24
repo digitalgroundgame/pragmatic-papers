@@ -1,5 +1,6 @@
 "use client"
 
+import { cva } from "class-variance-authority"
 import React from "react"
 
 import { Button } from "@/components/ui/button"
@@ -7,25 +8,44 @@ import { ProviderLogo } from "@/plugins/sso/components/ProviderLogo"
 import { cn } from "@/utilities/utils"
 
 /**
- * Each provider's button as its branding guidelines draw it (the admin's login page uses the
- * same colors, in `SignInButtons.css`): Google white with a grey outline, or its dark variant;
- * Discord's blurple; Destiny.gg's near-black with its blue on hover; Digital Ground Game's
- * black and white, like its wordmark.
+ * Each provider's button as its branding guidelines draw it, in the `provider-*` tokens of
+ * globals.css (dark mode is in the tokens, so no `dark:` classes here): Google white with a
+ * grey outline, or its dark variant; Discord's blurple; Destiny.gg's near-black with its blue
+ * on hover; Digital Ground Game's black and white, like its wordmark. A provider without its
+ * own look gets the outline button's colors.
  */
-const BRANDS = {
-  google:
-    "border-[#747775] bg-white text-[#1f1f1f] hover:bg-[#f8f9fa] hover:text-[#1f1f1f] dark:border-[#8e918f] dark:bg-[#131314] dark:text-[#e3e3e3] dark:hover:bg-[#1f1f20] dark:hover:text-[#e3e3e3]",
-  discord:
-    "border-[#5865f2] bg-[#5865f2] text-white hover:bg-[#4752c4] hover:text-white dark:border-[#5865f2] dark:bg-[#5865f2] dark:hover:bg-[#4752c4]",
-  destiny:
-    "border-[#1a1a1a] bg-[#1a1a1a] text-white hover:border-[#59aeea] hover:bg-[#262626] hover:text-white dark:border-[#3a3a3a] dark:bg-[#1a1a1a] dark:hover:bg-[#262626]",
-  digitalgroundgame:
-    "border-black bg-black text-white hover:bg-[#262626] hover:text-white dark:border-white dark:bg-white dark:text-black dark:hover:bg-[#e6e6e6] dark:hover:text-black",
-} as const
+const providerSignInButton = cva("font-medium", {
+  variants: {
+    provider: {
+      google:
+        "border-provider-google-border bg-provider-google text-provider-google-foreground hover:bg-provider-google-hover hover:text-provider-google-foreground",
+      discord:
+        "border-provider-discord-border bg-provider-discord text-provider-discord-foreground hover:bg-provider-discord-hover hover:text-provider-discord-foreground",
+      destiny:
+        "border-provider-destiny-border bg-provider-destiny text-provider-destiny-foreground hover:border-provider-destiny-accent hover:bg-provider-destiny-hover hover:text-provider-destiny-foreground",
+      digitalgroundgame:
+        "border-provider-digitalgroundgame-border bg-provider-digitalgroundgame text-provider-digitalgroundgame-foreground hover:bg-provider-digitalgroundgame-hover hover:text-provider-digitalgroundgame-foreground",
+      other: "",
+    },
+    shape: {
+      /** The logo alone, in a square. */
+      icon: "size-10",
+      label: "h-10 justify-start gap-3 px-4",
+    },
+  },
+  defaultVariants: { provider: "other", shape: "label" },
+})
 
-type Brand = keyof typeof BRANDS
+type Brand = "google" | "discord" | "destiny" | "digitalgroundgame"
 
-const isBrand = (id: string): id is Brand => id in BRANDS
+const BRANDS: readonly string[] = [
+  "google",
+  "discord",
+  "destiny",
+  "digitalgroundgame",
+] satisfies Brand[]
+
+const isBrand = (id: string): id is Brand => BRANDS.includes(id)
 
 export interface ProviderSignInButtonProps {
   /** The provider's id: `google`, `discord`, `destiny` or `digitalgroundgame` get their own look. */
@@ -55,16 +75,19 @@ export const ProviderSignInButton: React.FC<ProviderSignInButtonProps> = ({
   return (
     <Button
       type="button"
-      variant="outline"
+      // A branded button brings all of its own colors; the outline variant's include
+      // `dark:` ones that would win over them.
+      variant={isBrand(provider) ? "default" : "outline"}
       size={iconOnly && logo ? "icon-lg" : "lg"}
       disabled={disabled}
       onClick={onClick}
       data-provider={provider}
       title={iconOnly && logo ? `Sign in with ${label}` : undefined}
       className={cn(
-        "font-medium",
-        iconOnly && logo ? "size-10" : "h-10 justify-start gap-3 px-4",
-        isBrand(provider) && BRANDS[provider],
+        providerSignInButton({
+          provider: isBrand(provider) ? provider : "other",
+          shape: iconOnly && logo ? "icon" : "label",
+        }),
         className,
       )}
     >

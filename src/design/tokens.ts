@@ -128,6 +128,33 @@ export const COLOR_GROUPS: ColorGroup[] = [
     ],
   },
   {
+    title: "Sign-in providers",
+    description:
+      "Each sign-in provider's button in its own colors, as its branding guidelines ask: fill, label, outline and hovered fill, through ProviderSignInButton's variants. Google has a dark variant; Digital Ground Game's flips to white in dark mode. Only those buttons use them.",
+    tokens: (
+      [
+        ["google", "Google"],
+        ["discord", "Discord"],
+        ["destiny", "Destiny.gg"],
+        ["digitalgroundgame", "Digital Ground Game"],
+      ] as const
+    ).flatMap(([id, name]) => [
+      { name: `provider-${id}`, utility: `bg-provider-${id}`, use: `${name}'s button.` },
+      { name: `provider-${id}-foreground`, utility: `text-provider-${id}-foreground`, use: "" },
+      { name: `provider-${id}-border`, utility: `border-provider-${id}-border`, use: "" },
+      { name: `provider-${id}-hover`, utility: `hover:bg-provider-${id}-hover`, use: "" },
+      ...(id === "destiny"
+        ? [
+            {
+              name: "provider-destiny-accent",
+              utility: "hover:border-provider-destiny-accent",
+              use: "Destiny.gg's blue, on a hovered button's outline.",
+            },
+          ]
+        : []),
+    ]),
+  },
+  {
     title: "Charts",
     description:
       "shadcn's chart blues. Nothing uses them today: the Federal Courts charts color by party.",

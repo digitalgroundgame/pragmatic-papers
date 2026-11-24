@@ -34,6 +34,9 @@ export const DigitalGroundGame: Story = {
       name: "Sign in with Digital Ground Game",
     })
     await expect(button.querySelector("svg")).toBeInTheDocument()
+    // Its colors come from the provider-digitalgroundgame tokens: black, with a white label.
+    await expect(getComputedStyle(button).backgroundColor).toBe("rgb(0, 0, 0)")
+    await expect(getComputedStyle(button).color).toBe("rgb(255, 255, 255)")
   },
 }
 
@@ -42,6 +45,11 @@ export const DigitalGroundGameDark: Story = {
   args: { provider: "digitalgroundgame", label: "Digital Ground Game" },
   globals: { theme: "dark" },
   parameters: isolatedDocs("80px"),
+  play: async ({ canvasElement }) => {
+    const button = within(canvasElement).getByRole("button")
+    await expect(getComputedStyle(button).backgroundColor).toBe("rgb(255, 255, 255)")
+    await expect(getComputedStyle(button).color).toBe("rgb(0, 0, 0)")
+  },
 }
 
 /** A provider without its own look gets the plain outline button. */

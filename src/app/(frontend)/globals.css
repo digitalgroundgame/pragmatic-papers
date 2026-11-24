@@ -167,6 +167,27 @@
   --map-negative-4: #126ace;
 
   --map-neutral: oklch(0.9528 0.0086 84.57);
+  /* Sign-in buttons, in each provider's own colors (its branding guidelines): fill,
+     label, outline and hovered fill. The admin's login page, which doesn't load this file,
+     repeats them in SignInButtons.css. */
+  --provider-google: #fff;
+  --provider-google-foreground: #1f1f1f;
+  --provider-google-border: #747775;
+  --provider-google-hover: #f8f9fa;
+  --provider-discord: #5865f2;
+  --provider-discord-foreground: #fff;
+  --provider-discord-border: #5865f2;
+  --provider-discord-hover: #4752c4;
+  --provider-destiny: #1a1a1a;
+  --provider-destiny-foreground: #fff;
+  --provider-destiny-border: #1a1a1a;
+  /* Destiny.gg's blue, on the outline of a hovered button */
+  --provider-destiny-accent: #59aeea;
+  --provider-destiny-hover: #262626;
+  --provider-digitalgroundgame: #000;
+  --provider-digitalgroundgame-foreground: #fff;
+  --provider-digitalgroundgame-border: #000;
+  --provider-digitalgroundgame-hover: #262626;
 }
 
 .dark {
@@ -206,6 +227,16 @@
   --error: oklch(0.704 0.191 22.216);
   --success: oklch(0.65 0.18 150);
   --warning: oklch(0.78 0.16 80);
+  /* Google's dark button; DGG's flips to white so its wordmark stays black on white */
+  --provider-google: #131314;
+  --provider-google-foreground: #e3e3e3;
+  --provider-google-border: #8e918f;
+  --provider-google-hover: #1f1f20;
+  --provider-destiny-border: #3a3a3a;
+  --provider-digitalgroundgame: #fff;
+  --provider-digitalgroundgame-foreground: #000;
+  --provider-digitalgroundgame-border: #fff;
+  --provider-digitalgroundgame-hover: #e6e6e6;
 }
 
 @theme inline {
@@ -256,6 +287,23 @@
   --color-error: var(--error);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-provider-google: var(--provider-google);
+  --color-provider-google-foreground: var(--provider-google-foreground);
+  --color-provider-google-border: var(--provider-google-border);
+  --color-provider-google-hover: var(--provider-google-hover);
+  --color-provider-discord: var(--provider-discord);
+  --color-provider-discord-foreground: var(--provider-discord-foreground);
+  --color-provider-discord-border: var(--provider-discord-border);
+  --color-provider-discord-hover: var(--provider-discord-hover);
+  --color-provider-destiny: var(--provider-destiny);
+  --color-provider-destiny-foreground: var(--provider-destiny-foreground);
+  --color-provider-destiny-border: var(--provider-destiny-border);
+  --color-provider-destiny-hover: var(--provider-destiny-hover);
+  --color-provider-destiny-accent: var(--provider-destiny-accent);
+  --color-provider-digitalgroundgame: var(--provider-digitalgroundgame);
+  --color-provider-digitalgroundgame-foreground: var(--provider-digitalgroundgame-foreground);
+  --color-provider-digitalgroundgame-border: var(--provider-digitalgroundgame-border);
+  --color-provider-digitalgroundgame-hover: var(--provider-digitalgroundgame-hover);
   /* FK Screamer ligatures render incorrectly at 30px and below, so bumping 3xl to 32px. Overriding this core utilty to prevent us from accidently using it at 30px. */
   --text-3xl: 2rem;
   --text-3xl--line-height: calc(2.25 / 2);

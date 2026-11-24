@@ -54,7 +54,12 @@ export const PRIMITIVES: ComponentUse[] = [
     notes:
       "The 404 pages and the notifications bell. Empty lists on pages are plain muted text today.",
   },
-  { need: "Loading", components: [ui("Skeleton")], notes: "Match the loaded layout's shapes." },
+  {
+    need: "Loading",
+    components: [ui("Skeleton"), ui("Spinner")],
+    notes:
+      "Skeleton where the loaded layout is known (match its shapes); Spinner for a wait inside a control, like a search field or a saving button.",
+  },
   {
     need: "Menus and panels",
     components: [

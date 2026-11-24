@@ -254,7 +254,15 @@ function ReadersCard({
             </Note>
           )}
           {analytics?.status === "error" && (
-            <Problem>Google Analytics couldn&apos;t be reached. Try again in a moment.</Problem>
+            <Problem>
+              Google Analytics&apos; figures couldn&apos;t be loaded. Try again in a moment.
+              {analytics.reason && (
+                <>
+                  {" "}
+                  Google Analytics said: <code>{analytics.reason}</code>
+                </>
+              )}
+            </Problem>
           )}
           {analytics?.status === "ok" && analytics.throttled && (
             <Note role="status">

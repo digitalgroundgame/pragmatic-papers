@@ -64,7 +64,7 @@ function request({
   const counts: Record<string, number> = { published: 4, "auto-hidden": 2, hidden: 1 }
   const payload = {
     config: { routes: { admin: "/admin" } },
-    logger: { warn: vi.fn() },
+    logger: { warn: vi.fn(), error: vi.fn() },
     findByID: vi.fn(async ({ collection }: { collection: string }) =>
       collection === "media" ? { narrator } : article,
     ),
@@ -235,17 +235,27 @@ describe("article stats endpoints", () => {
     expect(ga.pageFigures).not.toHaveBeenCalled()
   })
 
-  it("still shows comments and the ranking when GA fails, and logs it", async () => {
-    ga.pageFigures.mockRejectedValue(new Error("quota"))
+  it("still shows comments and the ranking when GA fails, and logs GA's reason as an error", async () => {
+    ga.pageFigures.mockRejectedValue(new Error("3 INVALID_ARGUMENT: Field x is not valid.\nstack"))
     const { req, payload } = request()
     const stats = await body(await articleStatsHandler(req))
 
-    expect(stats.analytics).toEqual({ status: "error" })
+    expect(stats.analytics).toEqual({
+      status: "error",
+      reason: "3 INVALID_ARGUMENT: Field x is not valid.",
+    })
     expect(stats.comments).toMatchObject({ published: 4 })
-    expect(payload.logger.warn).toHaveBeenCalledWith(
+    expect(payload.logger.error).toHaveBeenCalledWith(
       { err: expect.any(Error) },
-      "Google Analytics figures for article 7 failed",
+      "Google Analytics figures for article 7 failed: 3 INVALID_ARGUMENT: Field x is not valid.",
     )
+  })
+
+  it("keeps GA's reason from writers", async () => {
+    ga.pageFigures.mockRejectedValue(new Error("7 PERMISSION_DENIED: no access"))
+    const stats = await body(await articleStatsHandler(request({ user: writer }).req))
+
+    expect(stats.analytics).toEqual({ status: "error", reason: null })
   })
 
   it("reads GA once an hour, and Refresh straight after keeps the figures it has", async () => {

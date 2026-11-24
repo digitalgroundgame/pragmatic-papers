@@ -1,7 +1,13 @@
+import { protos } from "@google-analytics/data"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { integrationStatus } from "../../types"
-import { googleAnalyticsProperty, pageFiguresRequests, toPageFigures } from "../analytics"
+import {
+  googleAnalyticsProperty,
+  googleErrorReason,
+  pageFiguresRequests,
+  toPageFigures,
+} from "../analytics"
 
 const row = (dims: string[], metrics: string[]) => ({
   dimensionValues: dims.map((value) => ({ value })),
@@ -60,8 +66,26 @@ describe("pageFiguresRequests", () => {
     expect(referrers).toMatchObject({
       dateRanges: [{ startDate: "2026-10-01", endDate: "today" }],
       dimensions: [{ name: "sessionSource" }],
-      limit: 5,
     })
+  })
+
+  it("sets no 64-bit field, which the minified production build can't encode", () => {
+    const { RunReportRequest } = protos.google.analytics.data.v1beta
+    // protobufjs's 64-bit integers are `Long`s: { low, high, unsigned }.
+    const longs = (value: unknown): string[] =>
+      value && typeof value === "object"
+        ? "low" in value && "high" in value && "unsigned" in value
+          ? [String(value)]
+          : Object.values(value).flatMap(longs)
+        : []
+    const requests = pageFiguresRequests("123", {
+      path: "/a",
+      since: "2026-10-01",
+      countEvent: "narration_play",
+    })
+    for (const request of requests) {
+      expect(longs(RunReportRequest.fromObject(request))).toEqual([])
+    }
   })
 })
 
@@ -107,6 +131,17 @@ describe("toPageFigures", () => {
         { source: "(direct)", views: 400 },
       ],
     })
+  })
+
+  it("keeps only the top referrers", () => {
+    const rows = ["google", "(direct)", "bsky.app"].map((source, i) => ({
+      dimensionValues: [{ value: source }],
+      metricValues: [{ value: String(30 - i) }],
+    }))
+    expect(toPageFigures({}, { rows }, null, 2).referrers).toEqual([
+      { source: "google", views: 30 },
+      { source: "(direct)", views: 29 },
+    ])
   })
 
   it("is all zeroes when GA sends no rows", () => {
@@ -170,5 +205,24 @@ describe("googleAnalyticsProperty", () => {
     await expect(
       connection().pageFigures({ path: "/articles/a", since: "2026-10-01" }),
     ).rejects.toThrow("set GA4_PROPERTY_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL")
+  })
+})
+
+describe("googleErrorReason", () => {
+  it("keeps the first line of GA's message", () => {
+    expect(googleErrorReason(new Error("7 PERMISSION_DENIED: no access\n    at stack"))).toBe(
+      "7 PERMISSION_DENIED: no access",
+    )
+  })
+
+  it("shortens a long message", () => {
+    const reason = googleErrorReason(new Error("x".repeat(500)))
+    expect(reason).toHaveLength(300)
+    expect(reason.endsWith("…")).toBe(true)
+  })
+
+  it("describes something thrown that isn't an Error", () => {
+    expect(googleErrorReason("boom")).toBe("boom")
+    expect(googleErrorReason(new Error(""))).toBe("Unknown error")
   })
 })

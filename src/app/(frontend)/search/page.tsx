@@ -1,4 +1,4 @@
-import { MediaRow, MediaRowList } from "@/components/MediaRow"
+import { Tile, TileList } from "@/components/Tile"
 import { PageRange } from "@/components/PageRange"
 import { Pagination } from "@/components/Pagination"
 import type { Media as MediaType } from "@/payload-types"
@@ -209,12 +209,12 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
 
           {docs.length > 0 ? (
             <>
-              <MediaRowList>
+              <TileList>
                 {docs.map((result: SearchResult) => {
                   const relationTo = result.doc?.relationTo ?? ""
                   const topicNames = result.topics ? result.topics.split(", ") : []
                   return (
-                    <MediaRow
+                    <Tile
                       key={result.id}
                       href={docPath(relationTo, result.slug ?? "")}
                       title={result.title}
@@ -234,7 +234,7 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
                     />
                   )
                 })}
-              </MediaRowList>
+              </TileList>
 
               <Pagination
                 page={currentPage}

@@ -1,4 +1,4 @@
-import { MediaRow, MediaRowList } from "@/components/MediaRow"
+import { Tile, TileList } from "@/components/Tile"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
@@ -120,10 +120,10 @@ export default async function TopicPage({
               <p className="text-muted-foreground text-sm">No articles found for this topic yet.</p>
             ) : (
               <>
-                <MediaRowList>
+                <TileList>
                   {articles.map((article) => {
                     return (
-                      <MediaRow
+                      <Tile
                         key={article.id}
                         href={`/articles/${article.slug}`}
                         title={article.title}
@@ -145,7 +145,7 @@ export default async function TopicPage({
                       />
                     )
                   })}
-                </MediaRowList>
+                </TileList>
                 <Pagination page={currentPage} totalPages={totalPages} />
               </>
             )}

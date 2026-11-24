@@ -1,6 +1,6 @@
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
-import { MediaRow, MediaRowList } from "@/components/MediaRow"
+import { Tile, TileList } from "@/components/Tile"
 import { paginatedPath } from "@/utilities/generateMeta"
 import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
@@ -90,13 +90,13 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
               <p className="text-muted-foreground text-sm">No topics found.</p>
             ) : (
               <>
-                <MediaRowList>
+                <TileList>
                   {topics.map((topic) => {
                     const count = counts.get(topic.id) ?? 0
                     return (
-                      <MediaRow
+                      <Tile
                         key={topic.id}
-                        size="lg"
+                        titleSize="lg"
                         href={`/topics/${topic.slug}`}
                         title={topic.name}
                         summary={topic.description}
@@ -105,7 +105,7 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
                       />
                     )
                   })}
-                </MediaRowList>
+                </TileList>
                 <Pagination
                   className="mt-18 flex justify-center"
                   page={currentPage}

@@ -2,8 +2,7 @@ import { sql } from "@payloadcms/db-postgres"
 import React, { cache } from "react"
 
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
-import { PaperIcon } from "@/components/Logo/icons/PaperIcon"
-import { Media } from "@/components/Media"
+import { Tile, TileList } from "@/components/Tile"
 import { NewsletterSignupForm } from "@/blocks/NewsletterSignup/Component.client"
 import { getPayloadClient } from "@/data/payload"
 import type { Media as MediaType, User } from "@/payload-types"
@@ -87,39 +86,20 @@ export async function MostReadPanel({ topicId }: { topicId?: number }): Promise<
   if (!articles.length) return null
   return (
     <AsidePanel title={topicId ? "Most read in this topic" : "Most read this week"}>
-      <ol className="space-y-3">
+      <TileList as="ol" className="space-y-3!">
         {articles.map((a, i) => (
           <li key={a.slug}>
-            <HoverPrefetchLink
+            <Tile
+              density="compact"
+              ratio="square"
+              rank={i + 1}
               href={`/articles/${a.slug}`}
-              className="group/card flex items-center gap-3"
-            >
-              <span className="text-muted-foreground font-display w-5 shrink-0 text-center text-3xl leading-none tabular-nums">
-                {i + 1}
-              </span>
-              <div className="bg-muted relative size-16 shrink-0 overflow-hidden rounded-sm">
-                {a.image ? (
-                  <Media
-                    media={a.image}
-                    variant="square"
-                    sizes="64px"
-                    className="card-hover:brightness-[1.02] card-hover:contrast-[1.16] card-hover:saturate-[1.16] absolute inset-0 h-full w-full object-cover transition-[filter] duration-300 ease-out"
-                  />
-                ) : (
-                  <PaperIcon
-                    aria-hidden="true"
-                    className="text-muted-foreground/40 absolute inset-0 m-auto size-5"
-                  />
-                )}
-              </div>
-              {/* FKScreamer at its floor (24px), held there: 32px is too big for the aside. */}
-              <h3 className="card-hover:text-foreground/80 mt-0! line-clamp-2 text-2xl md:text-2xl">
-                {a.title}
-              </h3>
-            </HoverPrefetchLink>
+              title={a.title}
+              image={a.image}
+            />
           </li>
         ))}
-      </ol>
+      </TileList>
     </AsidePanel>
   )
 }

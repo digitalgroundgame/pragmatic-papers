@@ -1,3 +1,4 @@
+import { protos } from "@google-analytics/data"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { integrationStatus } from "../../types"
@@ -65,8 +66,26 @@ describe("pageFiguresRequests", () => {
     expect(referrers).toMatchObject({
       dateRanges: [{ startDate: "2026-10-01", endDate: "today" }],
       dimensions: [{ name: "sessionSource" }],
-      limit: 5,
     })
+  })
+
+  it("sets no 64-bit field, which the minified production build can't encode", () => {
+    const { RunReportRequest } = protos.google.analytics.data.v1beta
+    // protobufjs's 64-bit integers are `Long`s: { low, high, unsigned }.
+    const longs = (value: unknown): string[] =>
+      value && typeof value === "object"
+        ? "low" in value && "high" in value && "unsigned" in value
+          ? [String(value)]
+          : Object.values(value).flatMap(longs)
+        : []
+    const requests = pageFiguresRequests("123", {
+      path: "/a",
+      since: "2026-10-01",
+      countEvent: "narration_play",
+    })
+    for (const request of requests) {
+      expect(longs(RunReportRequest.fromObject(request))).toEqual([])
+    }
   })
 })
 
@@ -112,6 +131,17 @@ describe("toPageFigures", () => {
         { source: "(direct)", views: 400 },
       ],
     })
+  })
+
+  it("keeps only the top referrers", () => {
+    const rows = ["google", "(direct)", "bsky.app"].map((source, i) => ({
+      dimensionValues: [{ value: source }],
+      metricValues: [{ value: String(30 - i) }],
+    }))
+    expect(toPageFigures({}, { rows }, null, 2).referrers).toEqual([
+      { source: "google", views: 30 },
+      { source: "(direct)", views: 29 },
+    ])
   })
 
   it("is all zeroes when GA sends no rows", () => {

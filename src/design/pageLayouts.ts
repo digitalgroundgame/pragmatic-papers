@@ -103,7 +103,7 @@ export const PAGE_LAYOUTS: PageLayout[] = [
     bottomGap: 43,
     deviations: [
       "The column is a second <main> inside the layout's <main>, so the page has two main landmarks.",
-      "The search field and button are hand-styled <input> and <button> (h-10, rounded-md) rather than the Input and Button components (h-8, rounded-sm), so they're taller and rounder than every other control.",
+      "The search field and button are hand-styled <input> and <button> (h-10) rather than the Input and Button components (h-8), so they're taller than every other control.",
       "A search with no results says “Search produced no results.” twice.",
     ],
   },

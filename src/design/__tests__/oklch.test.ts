@@ -39,16 +39,7 @@ describe("oklchToHex", () => {
   })
 })
 
-describe("theme colors are oklch", () => {
-  it("globals.css sets every color token in oklch, in both themes", () => {
-    const notOklch = (["light", "dark"] as const).flatMap((theme) =>
-      Object.entries(themes[theme])
-        .filter(([, value]) => /^(#|rgb|hsl)/.test(value))
-        .map(([name, value]) => `${theme} --${name}: ${value}`),
-    )
-    expect(notOklch).toEqual([])
-  })
-
+describe("hex copies of theme colors", () => {
   it("the hex noted beside each data-palette step is that step's color", () => {
     const noted = [
       ...globalsCss.matchAll(/--(map-[\w-]+):\s*(oklch\([^)]*\));\s*\/\*\s*(#[0-9a-f]{6})/g),

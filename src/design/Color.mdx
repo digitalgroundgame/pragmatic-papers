@@ -33,7 +33,8 @@ uses `brand-text`, and white labels sit on `brand-fill`.
 - Colors are written in `oklch()`, the tokens and any one-off alike. Hex stays only where
   `oklch()` can't be read: emails, the pictures the server draws (sharp and `next/og`), and
   sign-in buttons that follow a provider's published colors. Those hex copies name their
-  token, and `src/design/__tests__/oklch.test.ts` fails when one drifts from it.
+  token, and `src/design/__tests__/oklch.test.ts` fails when one drifts from it, since nothing
+  else would notice.
 - Data has one palette: the diverging red/blue `map-*` scale, for maps, charts and the whip
   count alike. There are no separate chart colors.
 

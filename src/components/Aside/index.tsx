@@ -88,18 +88,21 @@ export async function MostReadPanel({ topicId }: { topicId?: number }): Promise<
   return (
     <AsidePanel title={topicId ? "Most read in this topic" : "Most read this week"}>
       <ol className="space-y-3">
-        {articles.map((a) => (
+        {articles.map((a, i) => (
           <li key={a.slug}>
             <HoverPrefetchLink
               href={`/articles/${a.slug}`}
               className="group/card flex items-center gap-3"
             >
-              <div className="bg-muted relative size-14 shrink-0 overflow-hidden rounded-sm">
+              <span className="text-muted-foreground font-display w-5 shrink-0 text-center text-3xl leading-none tabular-nums">
+                {i + 1}
+              </span>
+              <div className="bg-muted relative size-16 shrink-0 overflow-hidden rounded-sm">
                 {a.image ? (
                   <Media
                     media={a.image}
                     variant="square"
-                    sizes="56px"
+                    sizes="64px"
                     className="card-hover:brightness-[1.02] card-hover:contrast-[1.16] card-hover:saturate-[1.16] absolute inset-0 h-full w-full object-cover transition-[filter] duration-300 ease-out"
                   />
                 ) : (
@@ -109,9 +112,10 @@ export async function MostReadPanel({ topicId }: { topicId?: number }): Promise<
                   />
                 )}
               </div>
-              <span className="card-hover:text-foreground/80 line-clamp-3 text-sm leading-snug font-medium">
+              {/* FKScreamer at its floor (24px), held there: 32px is too big for the aside. */}
+              <h3 className="card-hover:text-foreground/80 mt-0! line-clamp-2 text-2xl md:text-2xl">
                 {a.title}
-              </span>
+              </h3>
             </HoverPrefetchLink>
           </li>
         ))}

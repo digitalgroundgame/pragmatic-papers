@@ -43,9 +43,13 @@ export const Euler2 = layoutStory("euler-2")
 export const Euler3: Story = {
   ...layoutStory("euler-3"),
   play: async ({ canvasElement }) => {
-    const links = await within(canvasElement).findAllByRole("link")
-    await expect(links).toHaveLength(3)
-    await expect(links[0]).toHaveAttribute("href", "/articles/article-1")
+    // One link per tile, on its title (the bylines link their authors as well).
+    const headings = await within(canvasElement).findAllByRole("heading", { level: 3 })
+    await expect(headings).toHaveLength(3)
+    await expect(within(headings[0]!).getByRole("link")).toHaveAttribute(
+      "href",
+      "/articles/article-1",
+    )
   },
 }
 export const Newton4 = layoutStory("newton-4")
@@ -59,9 +63,10 @@ export const Gauss10 = layoutStory("gauss-10")
 export const Gauss10WithoutOptionalSlots: Story = {
   args: { layout: "gauss-10", slots: slotsFor("gauss-10").slice(0, 8) },
   play: async ({ canvasElement }) => {
-    const links = await within(canvasElement).findAllByRole("link")
-    await expect(links).toHaveLength(8)
-    await expect(links.map((link) => link.getAttribute("href"))).toContain("/articles/article-8")
+    const headings = await within(canvasElement).findAllByRole("heading", { level: 3 })
+    await expect(headings).toHaveLength(8)
+    const hrefs = headings.map((h) => within(h).getByRole("link").getAttribute("href"))
+    await expect(hrefs).toContain("/articles/article-8")
   },
 }
 

@@ -1,13 +1,14 @@
 import type { CollectionGridSlots, Media as MediaType, User } from "@/payload-types"
 import React from "react"
 
-import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
-import { isMedia, Media } from "@/components/Media"
+import { Byline } from "@/components/Authors/Byline"
+import { toBylineAuthor } from "@/components/Authors/BylineAuthor"
+import { isMedia } from "@/components/Media"
+import { Tile } from "@/components/Tile"
 import type { ImageVariant } from "@/components/Media/CMSImage"
 import { TimeAgo } from "@/components/TimeAgo"
 import { isResolved } from "@/utilities/relationships"
 import { docPath } from "@/utilities/routes"
-import { cn } from "@/utilities/utils"
 
 export type ImagePosition = "above" | "below" | "left" | "right" | "none"
 
@@ -52,74 +53,35 @@ export const CollectionTile: React.FC<CollectionTileProps> = ({
   }
 
   const isHorizontal = imagePosition === "left" || imagePosition === "right"
+  const authors = showByline ? populatedAuthors.map(toBylineAuthor) : []
 
-  // Volume authors are not supported for the byline at this time
-  const authorNames =
-    populatedAuthors
-      ?.map((a) => a.name)
-      .filter((a) => Boolean(a))
-      .join(", ") ?? null
-
+  // The block's slot, mapped onto the site's one card. Above is a stacked tile, left and
+  // right a split one, below a stacked one turned over; none drops the picture.
   return (
-    <HoverPrefetchLink
-      href={href}
+    <Tile
       id={id ?? undefined}
-      className={cn(
-        "group/card @container flex flex-col gap-x-6 gap-y-2",
-        isHorizontal && "flex-col items-start md:flex-row",
-        className,
-      )}
-    >
-      {heroImage && (
-        <div
-          className={cn(
-            "aspect-video w-full overflow-hidden rounded-sm border",
-            isHorizontal ? "md:basis-1/2" : "shrink",
-            imagePosition === "left" && "md:order-first",
-            imagePosition === "right" && "md:order-last",
-          )}
-        >
-          <Media
-            media={heroImage}
-            className="card-hover:brightness-[1.02] card-hover:contrast-[1.16] card-hover:saturate-[1.16] h-full w-full object-cover object-center transition-[filter] duration-300 ease-out"
-            variant={variant}
-            sizes={sizes}
-            preload={preload}
-            loading={loading}
-          />
-        </div>
-      )}
-      <div
-        className={cn(
-          isHorizontal && "@container flex flex-col justify-center self-stretch md:basis-1/2",
-        )}
-      >
-        {/* Kicker */}
-        {kicker && (
-          <p className="text-brand-text font-serif text-sm font-bold tracking-wider uppercase">
-            {kicker}
-          </p>
-        )}
-
-        {/* Title — uses container queries to scale with available space */}
-        <h2 className="text-foreground card-hover:text-foreground/80 text-2xl text-balance @xs:text-2xl @sm:text-3xl @md:text-4xl @lg:text-5xl">
-          {overrideTitle || title}
-        </h2>
-
-        {/* Byline */}
-        {showByline && authorNames && (
-          <p className="text-muted-foreground mt-1 line-clamp-1 font-sans text-sm">{authorNames}</p>
-        )}
-
-        {/* Description */}
-        {meta?.description && (
-          <p className="text-foreground mt-1 line-clamp-4 font-serif text-base leading-tight">
-            {meta!.description}
-          </p>
-        )}
-
-        <TimeAgo publishedAt={publishedAt} />
-      </div>
-    </HoverPrefetchLink>
+      className={className}
+      href={href}
+      title={overrideTitle || title}
+      kicker={kicker}
+      summary={meta?.description}
+      byline={authors.length > 0 ? <Byline size="sm" authors={authors} /> : null}
+      date={<TimeAgo publishedAt={publishedAt} />}
+      image={heroImage}
+      layout={isHorizontal ? "split" : "stacked"}
+      imagePosition={
+        imagePosition === "none"
+          ? "none"
+          : imagePosition === "right" || imagePosition === "below"
+            ? "end"
+            : "start"
+      }
+      ratio="video"
+      titleSize="fluid"
+      imageVariant={variant}
+      sizes={sizes}
+      preload={preload}
+      loading={loading}
+    />
   )
 }

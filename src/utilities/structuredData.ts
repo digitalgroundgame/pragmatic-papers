@@ -16,7 +16,7 @@ import type {
 } from "schema-dts"
 
 const SERVER_URL = getSiteURL()
-const SITE_NAME = "The Pragmatic Papers"
+export const SITE_NAME = "The Pragmatic Papers"
 const SITE_DESCRIPTION =
   "Pragmatic, community-driven articles focusing on news, politics, economics, and more."
 

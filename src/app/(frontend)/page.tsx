@@ -11,7 +11,7 @@ import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { RenderHero } from "@/heros/RenderHero"
 import { generateMeta } from "@/utilities/generateMeta"
 import { HOME_SLUG } from "@/utilities/routes"
-import { buildHomeJsonLd } from "@/utilities/structuredData"
+import { SITE_NAME, buildHomeJsonLd } from "@/utilities/structuredData"
 
 // The page slugged `home`, served here (`/home` redirects, next.config.ts). It reads no `?p=`,
 // so unlike `/[slug]` it's prerendered and served from the cache. Saving it revalidates it, and
@@ -35,7 +35,8 @@ export default async function HomePage(): Promise<React.ReactNode> {
     <article>
       <JsonLd data={buildHomeJsonLd(socials)} />
       {draft && <LivePreviewListener />}
-      <RenderHero {...hero} />
+      {/* The home page's h1 is the site's name; a hero without one gets it hidden. */}
+      <RenderHero {...hero} title={SITE_NAME} />
       {/* A Volume View here lists the newest volumes: its `?p=` links can't be read. */}
       <RenderBlocks blocks={layout} paginated={false} />
     </article>

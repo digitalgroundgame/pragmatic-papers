@@ -121,13 +121,13 @@ export const COLOR_GROUPS: ColorGroup[] = [
       "The site's one data palette, a diverging red/blue scale: the choropleth block, the drilldown pages, the Federal Courts charts and the whip count all read it through var(). The same in both themes. Brand orange never stands for data.",
     tokens: [
       ...[1, 2, 3, 4].map((step) => ({
-        name: `chart-positive-${step}`,
-        utility: `var(--chart-positive-${step})`,
+        name: `chart-red-${step}`,
+        utility: `var(--chart-red-${step})`,
         use: step === 1 ? "R+, lightest to strongest." : "",
       })),
       ...[1, 2, 3, 4].map((step) => ({
-        name: `chart-negative-${step}`,
-        utility: `var(--chart-negative-${step})`,
+        name: `chart-blue-${step}`,
+        utility: `var(--chart-blue-${step})`,
         use: step === 1 ? "D+, lightest to strongest." : "",
       })),
       { name: "chart-neutral", utility: "var(--chart-neutral)", use: "Regions with no value." },

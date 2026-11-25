@@ -38,16 +38,16 @@ const DOMAIN_MAX = 100
 const DIVERGING_RED_BLUE = {
   breakpoints: [1, 5, 15, 30],
   positive: [
-    "var(--chart-positive-1, #ffb8bc)",
-    "var(--chart-positive-2, #f48088)",
-    "var(--chart-positive-3, #e54858)",
-    "var(--chart-positive-4, #d81334)",
+    "var(--chart-red-1, #ffb8bc)",
+    "var(--chart-red-2, #f48088)",
+    "var(--chart-red-3, #e54858)",
+    "var(--chart-red-4, #d81334)",
   ],
   negative: [
-    "var(--chart-negative-1, #b4d4f8)",
-    "var(--chart-negative-2, #72aef3)",
-    "var(--chart-negative-3, #2c86ed)",
-    "var(--chart-negative-4, #126ace)",
+    "var(--chart-blue-1, #b4d4f8)",
+    "var(--chart-blue-2, #72aef3)",
+    "var(--chart-blue-3, #2c86ed)",
+    "var(--chart-blue-4, #126ace)",
   ],
 } as const
 

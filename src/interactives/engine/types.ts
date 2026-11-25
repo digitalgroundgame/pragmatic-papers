@@ -71,7 +71,7 @@ export interface SeatGroup {
   /** Fact holding this group's seat count. */
   fact: string
   label: string
-  /** Any CSS color. `var(--chart-positive-3)` style tokens keep it theme-aware. */
+  /** Any CSS color. `var(--chart-red-3)` style tokens keep it theme-aware. */
   color: string
 }
 

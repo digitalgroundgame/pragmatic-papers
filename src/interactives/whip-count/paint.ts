@@ -2,7 +2,7 @@ import type { PublicGroup, WhipCountCandidate, WhipCountData } from "./model"
 
 /** A fill as the page's theme names it, and how strongly it is laid on. */
 export interface Paint {
-  /** A CSS color, usually a theme variable (`var(--chart-negative-4)`). */
+  /** A CSS color, usually a theme variable (`var(--chart-blue-4)`). */
   color: string
   opacity: number
 }
@@ -13,10 +13,10 @@ export const UNASSIGNED: Paint = { color: "var(--border)", opacity: 1 }
  * The second candidate's colour: the red the maps use for their strongest R+. Never the brand
  * orange, which would read as the site endorsing them; the count keeps the brand away from it.
  */
-export const SECOND_CANDIDATE = "var(--chart-positive-4)"
+export const SECOND_CANDIDATE = "var(--chart-red-4)"
 
 /** The first candidate's colour: the maps' strongest D+ blue, the data palette's other end. */
-export const FIRST_CANDIDATE = "var(--chart-negative-4)"
+export const FIRST_CANDIDATE = "var(--chart-blue-4)"
 
 /** The first candidate is drawn in blue, the second in red, any other in ink. */
 export function candidateColor(data: WhipCountData, candidate?: WhipCountCandidate): string {

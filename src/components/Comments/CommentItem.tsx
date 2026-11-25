@@ -34,7 +34,10 @@ const depthLimitMessage = (maxDepth: number) =>
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`
 
-/** The one row a collapsed comment shrinks to. */
+/**
+ * The one row a collapsed comment shrinks to. The expand button takes the avatar's place, the
+ * same size, and the line beside it is the comment's own, so nothing on it moves when it folds.
+ */
 const CollapsedRow: React.FC<{
   node: CommentNode
   who: string
@@ -44,33 +47,39 @@ const CollapsedRow: React.FC<{
   const { comment } = node
   const hidden = replyCount(node)
   return (
-    <div className="flex items-center gap-2 text-sm leading-6">
+    <div className="flex gap-2">
       <Button
         ref={expandRef}
         type="button"
-        variant="ghost"
+        variant="outline"
         size="icon-xs"
         aria-expanded={false}
         aria-label={`Expand ${who}`}
         onClick={onExpand}
+        className="shrink-0 rounded-full"
       >
         <PlusIcon aria-hidden="true" />
       </Button>
-      {comment.author ? (
-        <>
-          <AuthorAvatar author={comment.author} size="sm" />
-          <span className="font-semibold">{comment.author.name}</span>
-        </>
-      ) : (
-        <span className="text-muted-foreground italic">Removed comment</span>
-      )}
-      <span aria-hidden="true" className="text-muted-foreground">
-        ·
-      </span>
-      <CommentTime createdAt={comment.createdAt} />
-      {hidden > 0 ? (
-        <span className="text-muted-foreground">({plural(hidden, "reply", "replies")})</span>
-      ) : null}
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 text-sm leading-6">
+        {comment.author && !comment.removed ? (
+          <CommentMeta
+            author={comment.author}
+            createdAt={comment.createdAt}
+            firstComment={comment.firstComment}
+          />
+        ) : (
+          <>
+            <span className="text-muted-foreground italic">Removed comment</span>
+            <span aria-hidden="true" className="text-muted-foreground">
+              ·
+            </span>
+            <CommentTime createdAt={comment.createdAt} />
+          </>
+        )}
+        {hidden > 0 ? (
+          <span className="text-muted-foreground">({plural(hidden, "reply", "replies")})</span>
+        ) : null}
+      </div>
     </div>
   )
 }

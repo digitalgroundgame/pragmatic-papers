@@ -181,7 +181,7 @@ export const CommentItem: React.FC<{
               // Focusable, so arriving on its link puts a screen reader on it.
               tabIndex={-1}
               className={cn(
-                "-mx-2 space-y-1 rounded-md px-2 transition-colors duration-700 outline-none",
+                "-mx-2 space-y-1 rounded-sm px-2 transition-colors duration-700 outline-none",
                 highlighted === id && "bg-muted",
               )}
               aria-label={`Comment by ${comment.author!.name}`}

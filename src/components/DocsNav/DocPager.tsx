@@ -32,7 +32,7 @@ function PagerLink({
       href={doc.href}
       rel={direction === "next" ? "next" : "prev"}
       className={cn(
-        "group hover:border-foreground/40 flex flex-col gap-1 rounded-md border p-4 no-underline transition-colors",
+        "group hover:border-foreground/40 flex flex-col gap-1 rounded-sm border p-4 no-underline transition-colors",
         // A lone Next card still sits on the right, where readers look for it.
         next && "items-end text-right sm:col-start-2",
       )}

@@ -23,9 +23,10 @@ are the values the pages repeat.
 
 ## Corners
 
-`--radius` is 0.625rem (10px), and Tailwind's radius steps are multiples of it. The site's
-default is `rounded-sm` (6px). shadcn's Card is `rounded-xl`, and every card on the site
-overrides it to `rounded-sm`.
+`--radius` is 0.625rem (10px), and Tailwind's radius steps are multiples of it. Every corner
+on the site is `rounded-sm` (6px), the shadcn components' included. Only two others are used:
+`rounded-xs` for marks too small for 6px, and `rounded-full` for circles and pills. The reading
+feed's phone frame (`md:rounded-3xl`, drawn like a device) is the one exception.
 
 <Unstyled>
   <Radii />

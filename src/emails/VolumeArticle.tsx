@@ -112,6 +112,8 @@ export function VolumeArticleEmail({
     <Html>
       <Head />
       <Preview>{`${article.title} — ${excerpt}`}</Preview>
+      {/* No config: React Email's Tailwind uses the default scale, where `rounded-md` is 6px, the
+          site's `rounded-sm`. Keep `rounded-md` here so the email's corners match the site's. */}
       <Tailwind>
         <Body className="bg-white font-sans">
           <Container className="mx-auto max-w-[560px] px-5 py-8">

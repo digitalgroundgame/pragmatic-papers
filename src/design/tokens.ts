@@ -278,15 +278,17 @@ export const RADII: RadiusStep[] = [
   {
     utility: "rounded-sm",
     value: "6px",
-    use: "The site's default: buttons, inputs, popovers, thumbnails, and every card (the Card component's own rounded-xl is overridden to it)",
+    use: "Every corner: buttons, inputs, menus, tooltips, popovers, dialogs, cards, thumbnails",
   },
-  { utility: "rounded-md", value: "8px", use: "Menu items and tooltips" },
-  { utility: "rounded-lg", value: "10px", use: "The interactive page's empty state" },
-  { utility: "rounded-xl", value: "14px", use: "Dialogs, and Card before a page overrides it" },
+  {
+    utility: "rounded-xs",
+    value: "2px",
+    use: "Marks of 16px or less, where 6px would make a circle: legend swatches, a whip count's voter ticks, the checkbox",
+  },
   {
     utility: "rounded-full",
     value: "9999px",
-    use: "Avatars, dots, the topic badges (rounded-4xl)",
+    use: "Circles and pills: avatars, dots, switches, badges",
   },
 ]
 

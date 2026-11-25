@@ -26,7 +26,7 @@ function Slides(props: React.ComponentProps<typeof Carousel>): React.ReactNode {
       <CarouselContent>
         {slides.map((slide, index) => (
           <CarouselItem key={slide} aria-label={`${index + 1} of ${slides.length}`}>
-            <div className="bg-muted flex aspect-square items-center justify-center rounded-md text-2xl font-bold">
+            <div className="bg-muted flex aspect-square items-center justify-center rounded-sm text-2xl font-bold">
               {slide}
             </div>
           </CarouselItem>

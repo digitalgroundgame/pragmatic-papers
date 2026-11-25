@@ -227,13 +227,38 @@ export const NoGoogleAnalytics: Story = {
 
 export const GoogleAnalyticsDown: Story = {
   args: {
-    load: fn<LoadArticleStats>(async () => loaded({ analytics: { status: "error" } })),
+    load: fn<LoadArticleStats>(async () =>
+      loaded({
+        analytics: {
+          status: "error",
+          reason:
+            "3 INVALID_ARGUMENT: Did you mean scrolledUsers? Field scrolledUser is not valid.",
+        },
+      }),
+    ),
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByRole("alert")).toHaveTextContent("couldn't be reached")
+    const alert = await canvas.findByRole("alert")
+    await expect(alert).toHaveTextContent("couldn't be loaded")
+    await expect(alert).toHaveTextContent("Google Analytics said: 3 INVALID_ARGUMENT")
     await expect(canvas.getByRole("button", { name: "Refresh" })).toBeEnabled()
     await expect(canvas.getByText("14 published")).toBeInTheDocument()
+  },
+}
+
+/** A writer gets no reason: it's for whoever can fix the property or the request. */
+export const GoogleAnalyticsDownForWriter: Story = {
+  args: {
+    load: fn<LoadArticleStats>(async () =>
+      loaded({ analytics: { status: "error", reason: null } }),
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const alert = await canvas.findByRole("alert")
+    await expect(alert).toHaveTextContent("couldn't be loaded")
+    await expect(alert).not.toHaveTextContent("Google Analytics said")
   },
 }
 

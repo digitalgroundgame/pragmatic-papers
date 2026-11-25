@@ -17,7 +17,7 @@ const BlockImageGallery = ({ slugs }: { slugs: string[] }) => (
   <ul className="grid list-none grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4 p-4">
     {slugs.map((slug) => {
       return (
-        <li key={slug} className="rounded-lg border p-2">
+        <li key={slug} className="rounded-sm border p-2">
           {/* eslint-disable-next-line @next/next/no-img-element -- loads them as Payload's admin does */}
           <img src={dataURL(`${slug}.svg`)} alt="" width={240} height={160} className="w-full" />
           <span className="mt-2 flex items-center gap-2 text-sm">

@@ -2,7 +2,7 @@
 
 exports[`AuthorCard > renders minimal author with no bio, image, or affiliation 1`] = `
 <div
-  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl rounded-sm"
+  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-sm *:[img:last-child]:rounded-b-sm rounded-sm"
   data-size="default"
   data-slot="card"
 >
@@ -59,7 +59,7 @@ exports[`AuthorCard > renders minimal author with no bio, image, or affiliation 
 
 exports[`AuthorCard > renders with affiliation and short biography 1`] = `
 <div
-  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl rounded-sm"
+  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-sm *:[img:last-child]:rounded-b-sm rounded-sm"
   data-size="default"
   data-slot="card"
 >
@@ -126,7 +126,7 @@ exports[`AuthorCard > renders with affiliation and short biography 1`] = `
 
 exports[`AuthorCard > renders with biography longer than 255 characters (truncates) 1`] = `
 <div
-  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl rounded-sm"
+  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-sm *:[img:last-child]:rounded-b-sm rounded-sm"
   data-size="default"
   data-slot="card"
 >
@@ -188,7 +188,7 @@ exports[`AuthorCard > renders with biography longer than 255 characters (truncat
 
 exports[`AuthorCard > renders with null name using fallback 1`] = `
 <div
-  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl rounded-sm"
+  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-sm *:[img:last-child]:rounded-b-sm rounded-sm"
   data-size="default"
   data-slot="card"
 >
@@ -243,7 +243,7 @@ exports[`AuthorCard > renders with null name using fallback 1`] = `
 
 exports[`AuthorCard > renders with profileImage as a numeric id 1`] = `
 <div
-  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl rounded-sm"
+  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-sm *:[img:last-child]:rounded-b-sm rounded-sm"
   data-size="default"
   data-slot="card"
 >
@@ -300,7 +300,7 @@ exports[`AuthorCard > renders with profileImage as a numeric id 1`] = `
 
 exports[`AuthorCard > renders with profileImage object containing a square URL 1`] = `
 <div
-  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl rounded-sm"
+  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-sm *:[img:last-child]:rounded-b-sm rounded-sm"
   data-size="default"
   data-slot="card"
 >
@@ -357,7 +357,7 @@ exports[`AuthorCard > renders with profileImage object containing a square URL 1
 
 exports[`AuthorCard > renders with profileImage object without a square URL 1`] = `
 <div
-  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl rounded-sm"
+  class="group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-4 overflow-hidden py-4 text-sm ring-1 has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:gap-3 data-[size=sm]:py-3 data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-sm *:[img:last-child]:rounded-b-sm rounded-sm"
   data-size="default"
   data-slot="card"
 >

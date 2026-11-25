@@ -62,7 +62,7 @@ export function HeroPage({ article, topInset }: HeroPageProps): React.ReactNode 
           <FeedActionColumn article={article} />
         </div>
 
-        <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md">
+        <div className="rounded-sm border border-white/15 bg-white/10 p-4 backdrop-blur-md">
           {volume?.title && (
             <p className="font-sans text-xs tracking-wide text-white/70 uppercase">
               {volume.title}

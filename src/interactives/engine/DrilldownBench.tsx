@@ -83,7 +83,7 @@ export function AssociateNode({
       type="button"
       data-drilldown-associate-node=""
       className={cn(
-        "focus-visible:ring-ring/60 rounded-md outline-none focus-visible:ring-2",
+        "focus-visible:ring-ring/60 rounded-sm outline-none focus-visible:ring-2",
         inline ? "flex items-center gap-2 text-left" : "block w-full text-center",
       )}
       onPointerEnter={() => onHover(record)}
@@ -324,7 +324,7 @@ export function DrilldownBench({
             data-cohort={cohort ? "" : undefined}
             className={cn(
               NODE_MOTION,
-              "focus-visible:ring-ring/60 absolute top-0 left-0 rounded-md text-center outline-none focus-visible:ring-2",
+              "focus-visible:ring-ring/60 absolute top-0 left-0 rounded-sm text-center outline-none focus-visible:ring-2",
               !show && "pointer-events-none opacity-0",
             )}
             style={at(p)}

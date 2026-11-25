@@ -232,7 +232,7 @@ function CountBar({
             className="absolute top-full z-10 pt-1.5"
             style={{ left: open.left, width: CARD_WIDTH }}
           >
-            <div className="bg-popover text-popover-foreground border-border rounded-md border p-3 text-sm shadow-md">
+            <div className="bg-popover text-popover-foreground border-border rounded-sm border p-3 text-sm shadow-md">
               <p className="font-medium">
                 {vote.member.name}{" "}
                 <span className="text-muted-foreground font-normal">
@@ -627,7 +627,7 @@ export function WhipCount({
       {drafting ? (
         <section
           aria-labelledby="whip-count-draft"
-          className="border-border bg-card rounded-lg border p-5 md:p-6"
+          className="border-border bg-card rounded-sm border p-5 md:p-6"
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -735,7 +735,7 @@ export function WhipCount({
       ) : (
         <section
           aria-labelledby="whip-count-draft"
-          className="border-border bg-card flex flex-wrap items-center justify-between gap-4 rounded-lg border p-5 md:p-6"
+          className="border-border bg-card flex flex-wrap items-center justify-between gap-4 rounded-sm border p-5 md:p-6"
         >
           <div>
             <h2 id="whip-count-draft" className={`${heading} text-xl md:text-2xl`}>

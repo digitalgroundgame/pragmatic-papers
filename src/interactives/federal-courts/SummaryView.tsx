@@ -127,7 +127,7 @@ function SupremeCourt({
               data-summary-justice={String(record._id ?? i)}
               onClick={() => regionId && selection?.select(regionId)}
               title={fieldString(record, display.title) ?? undefined}
-              className="focus-visible:ring-ring/60 absolute rounded-md text-center outline-none focus-visible:ring-2"
+              className="focus-visible:ring-ring/60 absolute rounded-sm text-center outline-none focus-visible:ring-2"
               style={{
                 left: `${(point.x / width) * 100}%`,
                 top: `${(point.y / height) * 100}%`,

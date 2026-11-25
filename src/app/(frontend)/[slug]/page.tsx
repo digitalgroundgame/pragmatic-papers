@@ -66,7 +66,7 @@ export default async function Page({ params, searchParams }: Args): Promise<Reac
 
         {draft && <LivePreviewListener />}
 
-        <RenderHero {...hero} />
+        <RenderHero {...hero} title={page.title} />
 
         <RenderBlocks blocks={layout} pageNumber={pageNumber} />
       </article>

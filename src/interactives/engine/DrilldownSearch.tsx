@@ -188,7 +188,7 @@ export function DrilldownSearch({
       {showList && (
         <div
           className={cn(
-            "border-border bg-card absolute z-20 mt-1 w-full overflow-hidden rounded-md border shadow-lg",
+            "border-border bg-card absolute z-20 mt-1 w-full overflow-hidden rounded-sm border shadow-lg",
           )}
         >
           {state === "loading" && results.length === 0 && (

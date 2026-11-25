@@ -18,7 +18,7 @@ export interface PicturePalette {
   background: string
   ink: string
   quietInk: string
-  /** A theme color as the page names it (`var(--map-negative-4)`), resolved to a plain color. */
+  /** A theme color as the page names it (`var(--chart-negative-4)`), resolved to a plain color. */
   color: (color: string) => string
 }
 
@@ -27,14 +27,14 @@ export interface PicturePalette {
  * oklch. `src/design/__tests__/oklch.test.ts` fails when one drifts from its token.
  */
 export const LIGHT_COLORS: Record<string, string> = {
-  "var(--map-negative-4)": "#126ace",
+  "var(--chart-negative-4)": "#126ace",
   "var(--brand-fill)": "#e0330f",
   "var(--muted-foreground)": "#565656",
   "var(--warning)": "#d78e00",
   "var(--border)": "#e5e5e5",
   "var(--brand-text)": "#e0330f",
   "var(--foreground)": "#0a0a0a",
-  "var(--map-positive-4)": "#d81334",
+  "var(--chart-positive-4)": "#d81334",
 }
 
 /** A theme color as the light theme draws it, for pictures drawn without the page. */

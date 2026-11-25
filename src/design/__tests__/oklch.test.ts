@@ -42,15 +42,15 @@ describe("oklchToHex", () => {
 describe("hex copies of theme colors", () => {
   it("the hex noted beside each data-palette step is that step's color", () => {
     const noted = [
-      ...globalsCss.matchAll(/--(map-[\w-]+):\s*(oklch\([^)]*\));\s*\/\*\s*(#[0-9a-f]{6})/g),
+      ...globalsCss.matchAll(/--(chart-[\w-]+):\s*(oklch\([^)]*\));\s*\/\*\s*(#[0-9a-f]{6})/g),
     ]
     expect(noted).toHaveLength(8)
     for (const [, name, , hex] of noted) expect(tokenHex(name!)).toBe(hex)
   })
 
-  it("every `var(--map-…, #hex)` fallback is its token's color", () => {
+  it("every `var(--chart-…, #hex)` fallback is its token's color", () => {
     const fallbacks = sourceFiles(src).flatMap((file) =>
-      [...readFileSync(file, "utf8").matchAll(/var\(--(map-[\w-]+),\s*(#[0-9a-fA-F]{6})\)/g)].map(
+      [...readFileSync(file, "utf8").matchAll(/var\(--(chart-[\w-]+),\s*(#[0-9a-fA-F]{6})\)/g)].map(
         ([, name, hex]) => ({
           where: `${path.relative(src, file)} --${name}`,
           name: name!,

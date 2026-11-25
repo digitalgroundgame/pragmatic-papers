@@ -340,9 +340,9 @@
   --tw-prose-quotes: var(--color-muted-foreground);
   --tw-prose-quote-borders: var(--color-brand);
   --tw-prose-captions: var(--color-muted-foreground);
-  --tw-prose-kbd: var(--color-primary);
+  --tw-prose-kbd: var(--color-foreground);
   --tw-prose-kbd-shadows: var(--color-border);
-  --tw-prose-code: var(--color-primary);
+  --tw-prose-code: var(--color-foreground);
   --tw-prose-pre-code: var(--color-muted-foreground);
   --tw-prose-pre-bg: var(--color-muted);
   --tw-prose-th-borders: var(--color-ring);

@@ -67,9 +67,10 @@ devenv.local.nix
 # act files
 .actrc
 
-# claude files (local settings only — .claude/skills/ is versioned and used by CI)
+# claude files (local settings only — .claude/skills/ and the approval policy are versioned and used by CI)
 .claude/*
 !.claude/skills/
+!.claude/approvals.yml
 
 .eslintcache
 tsconfig.tsbuildinfo

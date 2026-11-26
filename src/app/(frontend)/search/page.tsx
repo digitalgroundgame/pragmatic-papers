@@ -9,6 +9,8 @@ import { draftMode } from "next/headers"
 import type { PaginatedDocs } from "payload"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { docPath } from "@/utilities/routes"
 import { getPayloadClient } from "@/data/payload"
@@ -129,19 +131,14 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
         <h1>Search</h1>
 
         <form action="/search" method="get" className="flex gap-2">
-          <input
+          <Input
             type="search"
             name="q"
             defaultValue={q}
             placeholder="Search…"
-            className="border-input bg-background placeholder:text-muted-foreground flex h-10 w-full rounded-sm border px-3 py-2 text-sm"
+            aria-label="Search the site"
           />
-          <button
-            type="submit"
-            className="bg-primary text-primary-foreground rounded-sm px-4 py-2 text-sm"
-          >
-            Search
-          </button>
+          <Button type="submit">Search</Button>
         </form>
 
         {q && (

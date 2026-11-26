@@ -38,7 +38,7 @@ type FootnoteSource = Pick<FootnoteBlock, "note" | "attributionEnabled" | "link"
   id: string
 }
 
-const collectFootnoteSources = (): FootnoteSource[] => {
+export const collectFootnoteSources = (): FootnoteSource[] => {
   const out: FootnoteSource[] = []
   const seen = new Set<string>()
   const stack: LexicalNode[] = [$getRoot()]
@@ -70,7 +70,7 @@ const collectFootnoteSources = (): FootnoteSource[] => {
   return out
 }
 
-const triggerFn: TriggerFn = (text) => {
+export const triggerFn: TriggerFn = (text) => {
   const match = TRIGGER_REGEX.exec(text)
   if (!match) return null
   return {
@@ -80,7 +80,7 @@ const triggerFn: TriggerFn = (text) => {
   }
 }
 
-class FootnoteMenuOption extends MenuOption {
+export class FootnoteMenuOption extends MenuOption {
   source: FootnoteSource
   constructor(source: FootnoteSource) {
     super(source.id)

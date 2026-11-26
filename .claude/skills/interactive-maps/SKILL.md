@@ -30,7 +30,7 @@ The tree says the same thing: `src/blocks/InteractiveMap/` is the choropleth
 block and nothing else, and the drilldown engine that draws an interactive page
 lives with the pages it serves, in `src/interactives/engine/`. Nothing in the
 block imports the engine. They share exactly two modules — the SVG sanitizer
-(`sanitize.ts`) and the `Sources` strip — plus the `--map-*` colour palette,
+(`sanitize.ts`) and the `Sources` strip — plus the `--chart-*` colour palette,
 which is a site theme token in `globals.css`.
 
 ## Choropleth mode
@@ -665,7 +665,7 @@ shows the full overview, strip, facts and any records carried in the overview.
 - Maps collection (`map-assets`) — `src/collections/MapAssets/index.ts`
 - Drilldown engine contract — `src/interactives/engine/types.ts`, `contract.ts`
 - Drilldown rendering, regions, morph, seat layout, search — `src/interactives/engine/`
-- Drilldown stylesheet — `src/interactives/engine/styles.css`; the `--map-*` palette both
+- Drilldown stylesheet — `src/interactives/engine/styles.css`; the `--chart-*` palette both
   maps read is in `src/app/(frontend)/globals.css`
 - Ownership split and composition — `src/interactives/types.ts`, `compose.ts`
 - SVG → geometry snapshot — `src/interactives/geometry.ts`, `scripts/snapshot-federal-courts.ts`

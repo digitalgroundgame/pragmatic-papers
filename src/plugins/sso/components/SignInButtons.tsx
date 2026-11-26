@@ -6,6 +6,7 @@ import React, { useState } from "react"
 import { PROVIDER_LABELS } from "../constants"
 import type { SsoProviderId } from "../types"
 import { ProviderLogo } from "./ProviderLogo"
+import "./providerColors.css"
 import "./SignInButtons.css"
 
 /** What Better Auth puts in `?error=` when it sends someone back to the login page. */

@@ -30,6 +30,13 @@ uses `brand-text`, and white labels sit on `brand-fill`.
   white labels on `brand-fill`, white text over photographs (the reading feed, the
   high-impact hero), and black for the admin bar and the sheet's overlay.
 - Emails (`src/emails/`) can't use custom properties, and hard-code `#ff401a`.
+- Colors are written in `oklch()`, the tokens and any one-off alike. Hex stays only where
+  `oklch()` can't be read: emails, and the pictures the server draws (sharp and `next/og`).
+  The pictures' copies name their token (`var(--chart-…, #hex)`, the whip count's
+  `LIGHT_COLORS`), and `src/design/__tests__/oklch.test.ts` fails when one drifts from it,
+  since nothing else would notice.
+- Data has one palette: the diverging red/blue `chart-*` scale, for maps, charts and the whip
+  count alike. There's no second set of chart colors.
 
 <Unstyled>
   <AllColorTokens />

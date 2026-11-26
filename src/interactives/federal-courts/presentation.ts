@@ -9,8 +9,8 @@ import type { DrilldownPresentation } from "../types"
  * fallbacks are for contexts without the tokens (tests, an archived page).
  */
 export const COLORS = {
-  Republican: "var(--map-positive-3, #e54858)",
-  Democratic: "var(--map-negative-3, #2c86ed)",
+  Republican: "var(--chart-red-3, #e54858)",
+  Democratic: "var(--chart-blue-3, #2c86ed)",
   other: "var(--muted-foreground, #9aa3ad)",
 } as const
 

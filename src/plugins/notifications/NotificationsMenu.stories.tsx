@@ -61,7 +61,11 @@ type Story = StoryObj<typeof meta>
 export const Unread: Story = {
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole("button", { name: "Notifications, 1 unread" }))
+    const bell = canvas.getByRole("button", { name: "Notifications, 1 unread" })
+    // The count's red is a token outside the admin's data-theme, so it fills here too.
+    const count = bell.querySelector('[data-slot="badge"]')!
+    await expect(getComputedStyle(count).backgroundColor).not.toBe("rgba(0, 0, 0, 0)")
+    await userEvent.click(bell)
 
     const item = await screen.findByRole("link", { name: /Find a photo on Unsplash.*\(unread\)/ })
     await waitFor(() => expect(item).toBeVisible())

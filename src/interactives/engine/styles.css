@@ -5,7 +5,7 @@
  * a component owns (the stage's height, the rail's cap, the focus ring, a bench node's
  * transition) belongs on that component and has moved there.
  *
- * The `--map-*` palette these rules read is a site theme token (globals.css), not the engine's
+ * The `--chart-*` palette these rules read is a site theme token (globals.css), not the engine's
  * own: the choropleth block reads the same scale. */
 :root {
   --drilldown-parent-fill: color-mix(in oklch, var(--muted-foreground) 22%, var(--background));
@@ -16,7 +16,7 @@
   --drilldown-outline-width: 1.25;
   /* Selection is a state, not a value: the same neutral the choropleth paints a region with
      no data, so a selected region never reads as a red/blue result. */
-  --drilldown-selected-fill: var(--map-neutral, oklch(0.9528 0.0086 84.57));
+  --drilldown-selected-fill: var(--chart-neutral, oklch(0.9528 0.0086 84.57));
   --drilldown-hover-stroke: var(--foreground);
 }
 
@@ -219,7 +219,7 @@ rect[data-block-hit] {
   cursor: pointer;
 }
 rect[data-block-seat] {
-  stroke: rgba(255, 255, 255, 0.85);
+  stroke: oklch(1 0 0 / 0.85);
   stroke-width: 0.6;
   vector-effect: non-scaling-stroke;
   transform-box: fill-box;

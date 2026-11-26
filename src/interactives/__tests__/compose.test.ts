@@ -56,7 +56,7 @@ const display: RecordDisplay = {
   title: "full_name",
   category: {
     field: "party",
-    values: [{ value: "D", label: "Democratic", color: "var(--map-negative-3)" }],
+    values: [{ value: "D", label: "Democratic", color: "var(--chart-blue-3)" }],
   },
   details: [{ field: "full_name" }],
 }
@@ -121,7 +121,7 @@ describe("composeOverview", () => {
     expect(asset.payload?.facts).toBe(presentation.facts)
     expect(asset.payload?.seats).toBe(presentation.seats)
     expect(asset.payload?.records?.display).toBe(display)
-    expect(asset.payload?.records?.display.category.values[0]?.color).toBe("var(--map-negative-3)")
+    expect(asset.payload?.records?.display.category.values[0]?.color).toBe("var(--chart-blue-3)")
   })
 
   it("empties path facts so nothing baked into a geometry file reaches the reader", () => {

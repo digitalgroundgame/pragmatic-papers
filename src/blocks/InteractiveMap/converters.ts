@@ -80,7 +80,7 @@ export interface MapPalette {
   quietInk: string
   /** The lines between regions. */
   outline: string
-  /** A region's or legend swatch's color as the page gives it (`var(--map-…, fallback)`). */
+  /** A region's or legend swatch's color as the page gives it (`var(--chart-…, fallback)`). */
   color: (color: string) => string
 }
 

@@ -62,9 +62,10 @@ export type NewsletterSignupBlockProps = NewsletterSignupTypes & {
  * Turnstile waits until a reader shows interest: the script loads and the challenge runs
  * the first time anything in the form takes focus (anyone signing up focuses the email
  * field, and typing an address gives the challenge time to finish), so the footer on every
- * page doesn't run one. Hover isn't a signal: pointers cross the footer on the way elsewhere. The widget renders `interaction-only`, so it stays out of
- * sight (and out of the layout) unless Cloudflare wants the reader to click it. A submit
- * that beats the token waits for it ("Verifying…") and then sends.
+ * page doesn't run one. Hover isn't a signal: pointers cross the footer on the way elsewhere.
+ * The widget renders `interaction-only`, so it stays out of sight (and out of the layout)
+ * unless Cloudflare wants the reader to click it. A submit that beats the token waits for
+ * it ("Verifying…") and then sends, or gives up after `VERIFY_TIMEOUT_MS`.
  */
 export const NewsletterSignupForm: React.FC<
   Omit<NewsletterSignupBlockProps, "notice"> & { notice?: React.ReactNode }
@@ -77,19 +78,69 @@ export const NewsletterSignupForm: React.FC<
   const [scriptReady, setScriptReady] = React.useState(false)
   const widgetContainerRef = React.useRef<HTMLDivElement>(null)
   const widgetIdRef = React.useRef<string | null>(null)
-  // A submit waiting on the challenge, and the latest `send` for the widget's callbacks.
-  const waitingRef = React.useRef(false)
-  const sendRef = React.useRef<((token: string | null) => Promise<void>) | null>(null)
   const scriptFailedRef = React.useRef(false)
+  // A submit waiting on the challenge: the address it was made with, and its give-up timer.
+  const pendingRef = React.useRef<{
+    email: string
+    timer: ReturnType<typeof setTimeout>
+  } | null>(null)
 
-  // Ends a submit that was waiting on the challenge with an error, so the reader can retry.
-  const stopWaiting = React.useCallback((reason: string): void => {
-    if (!waitingRef.current) return
-    waitingRef.current = false
-    setStatus("error")
-    setMessage(reason)
+  /** Takes the waiting submit, if there is one, and stops its timer. */
+  const takePending = React.useCallback((): { email: string } | null => {
+    const pending = pendingRef.current
+    if (!pending) return null
+    clearTimeout(pending.timer)
+    pendingRef.current = null
+    return pending
   }, [])
 
+  // Ends a submit that was waiting on the challenge with an error, so the reader can retry.
+  const stopWaiting = React.useCallback(
+    (reason: string): void => {
+      if (!takePending()) return
+      setStatus("error")
+      setMessage(reason)
+    },
+    [takePending],
+  )
+
+  const resetWidget = React.useCallback((): void => {
+    const id = widgetIdRef.current
+    if (id && window.turnstile) window.turnstile.reset(id)
+    setToken(null)
+  }, [])
+
+  const send = React.useCallback(
+    async (address: string, turnstileToken: string | null): Promise<void> => {
+      setStatus("submitting")
+      setMessage(null)
+      try {
+        const res = await fetch("/api/newsletter/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: address, turnstileToken }),
+        })
+        const body = (await res.json().catch(() => ({}))) as { error?: string }
+        if (!res.ok) {
+          setStatus("error")
+          setMessage(body.error ?? "Something went wrong. Please try again.")
+          resetWidget()
+          return
+        }
+        setStatus("success")
+        setMessage("Check your inbox to confirm your subscription.")
+        setEmail("")
+      } catch {
+        setStatus("error")
+        setMessage("Network error. Please try again.")
+        resetWidget()
+      }
+    },
+    [resetWidget],
+  )
+
+  // The one effect: Turnstile is outside React, so the widget is rendered into its container
+  // once the script is ready, and removed on unmount.
   React.useEffect(() => {
     if (!scriptReady || !turnstileSiteKey) return
     const container = widgetContainerRef.current
@@ -101,10 +152,8 @@ export const NewsletterSignupForm: React.FC<
       appearance: "interaction-only",
       callback: (t) => {
         setToken(t)
-        if (waitingRef.current) {
-          waitingRef.current = false
-          void sendRef.current?.(t)
-        }
+        const pending = takePending()
+        if (pending) void send(pending.email, t)
       },
       "expired-callback": () => setToken(null),
       "error-callback": () => {
@@ -117,15 +166,7 @@ export const NewsletterSignupForm: React.FC<
       if (id && window.turnstile) window.turnstile.remove(id)
       widgetIdRef.current = null
     }
-  }, [scriptReady, turnstileSiteKey, stopWaiting])
-
-  // A challenge that never answers (a stalled network, a widget stuck loading) mustn't leave
-  // the form on "Verifying…" for good.
-  React.useEffect(() => {
-    if (status !== "verifying") return
-    const timer = setTimeout(() => stopWaiting(CHALLENGE_FAILED), VERIFY_TIMEOUT_MS)
-    return () => clearTimeout(timer)
-  }, [status, stopWaiting])
+  }, [scriptReady, turnstileSiteKey, takePending, send, stopWaiting])
 
   const headingText = heading ?? DEFAULT_HEADING
   const buttonText = buttonLabel ?? DEFAULT_BUTTON_LABEL
@@ -133,38 +174,6 @@ export const NewsletterSignupForm: React.FC<
   const disabled = busy || status === "success"
   const arm = (): void => {
     if (turnstileSiteKey && !armed) setArmed(true)
-  }
-
-  const resetWidget = (): void => {
-    const id = widgetIdRef.current
-    if (id && window.turnstile) window.turnstile.reset(id)
-    setToken(null)
-  }
-
-  const send = async (turnstileToken: string | null): Promise<void> => {
-    setStatus("submitting")
-    setMessage(null)
-    try {
-      const res = await fetch("/api/newsletter/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, turnstileToken }),
-      })
-      const body = (await res.json().catch(() => ({}))) as { error?: string }
-      if (!res.ok) {
-        setStatus("error")
-        setMessage(body.error ?? "Something went wrong. Please try again.")
-        resetWidget()
-        return
-      }
-      setStatus("success")
-      setMessage("Check your inbox to confirm your subscription.")
-      setEmail("")
-    } catch {
-      setStatus("error")
-      setMessage("Network error. Please try again.")
-      resetWidget()
-    }
   }
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
@@ -176,19 +185,19 @@ export const NewsletterSignupForm: React.FC<
         setMessage(SCRIPT_FAILED)
         return
       }
-      // The challenge is still running (or hasn't started): send once it hands over a token.
-      waitingRef.current = true
+      // The challenge is still running (or hasn't started): send once it hands over a token,
+      // or give up if it never answers (a stalled network, a widget stuck loading).
+      pendingRef.current = {
+        email,
+        timer: setTimeout(() => stopWaiting(CHALLENGE_FAILED), VERIFY_TIMEOUT_MS),
+      }
       arm()
       setMessage(null)
       setStatus("verifying")
       return
     }
-    void send(token)
+    void send(email, token)
   }
-
-  React.useEffect(() => {
-    sendRef.current = send
-  })
 
   const currentId = blockId || "newsletter-email"
 

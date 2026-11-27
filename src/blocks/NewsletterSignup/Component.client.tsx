@@ -22,6 +22,7 @@ interface TurnstileRenderOptions {
   "expired-callback"?: () => void
   theme?: "light" | "dark" | "auto"
   size?: "normal" | "flexible" | "compact"
+  appearance?: "always" | "execute" | "interaction-only"
 }
 
 interface TurnstileApi {
@@ -36,7 +37,15 @@ declare global {
   }
 }
 
-type Status = "idle" | "submitting" | "success" | "error"
+type Status = "idle" | "verifying" | "submitting" | "success" | "error"
+
+const TURNSTILE_SCRIPT = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+
+const CHALLENGE_FAILED = "We couldn't check that you're human. Please try again."
+const SCRIPT_FAILED =
+  "We couldn't load our spam check. Allow challenges.cloudflare.com or reload the page, then try again."
+/** How long a submit waits on the challenge before it gives up and lets the reader retry. */
+export const VERIFY_TIMEOUT_MS = 30_000
 
 export type NewsletterSignupBlockProps = NewsletterSignupTypes & {
   /**
@@ -46,9 +55,38 @@ export type NewsletterSignupBlockProps = NewsletterSignupTypes & {
   turnstileSiteKey?: string
 }
 
+type SubscribeResult = { ok: true } | { ok: false; error: string }
+
+/**
+ * Posts the signup. Outside the component so its `try` doesn't keep the React Compiler
+ * from compiling the form.
+ */
+async function subscribe(email: string, turnstileToken: string | null): Promise<SubscribeResult> {
+  try {
+    const res = await fetch("/api/newsletter/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, turnstileToken }),
+    })
+    if (res.ok) return { ok: true }
+    const body = (await res.json().catch(() => ({}))) as { error?: string }
+    return { ok: false, error: body.error ?? "Something went wrong. Please try again." }
+  } catch {
+    return { ok: false, error: "Network error. Please try again." }
+  }
+}
+
 /**
  * The form. `notice` arrives already rendered: Component.tsx turns its rich text into
  * elements on the server, so the Lexical converters don't ship to the browser.
+ *
+ * Turnstile waits until a reader shows interest: the script loads and the challenge runs
+ * the first time anything in the form takes focus (anyone signing up focuses the email
+ * field, and typing an address gives the challenge time to finish), so the footer on every
+ * page doesn't run one. Hover isn't a signal: pointers cross the footer on the way elsewhere.
+ * The widget renders `interaction-only`, so it stays out of sight (and out of the layout)
+ * unless Cloudflare wants the reader to click it. A submit that beats the token waits for
+ * it ("Verifying…") and then sends, or gives up after `VERIFY_TIMEOUT_MS`.
  */
 export const NewsletterSignupForm: React.FC<
   Omit<NewsletterSignupBlockProps, "notice"> & { notice?: React.ReactNode }
@@ -57,10 +95,68 @@ export const NewsletterSignupForm: React.FC<
   const [status, setStatus] = React.useState<Status>("idle")
   const [message, setMessage] = React.useState<string | null>(null)
   const [token, setToken] = React.useState<string | null>(null)
+  const [armed, setArmed] = React.useState(false)
   const [scriptReady, setScriptReady] = React.useState(false)
   const widgetContainerRef = React.useRef<HTMLDivElement>(null)
   const widgetIdRef = React.useRef<string | null>(null)
+  const scriptFailedRef = React.useRef(false)
+  // A submit waiting on the challenge: the address it was made with, and its give-up timer.
+  const pendingRef = React.useRef<{
+    email: string
+    timer: ReturnType<typeof setTimeout>
+  } | null>(null)
 
+  /** Takes the waiting submit, if there is one, and stops its timer. */
+  const takePending = (): { email: string } | null => {
+    const pending = pendingRef.current
+    if (!pending) return null
+    clearTimeout(pending.timer)
+    pendingRef.current = null
+    return pending
+  }
+
+  // Ends a submit that was waiting on the challenge with an error, so the reader can retry.
+  const stopWaiting = (reason: string): void => {
+    if (!takePending()) return
+    setStatus("error")
+    setMessage(reason)
+  }
+
+  const resetWidget = (): void => {
+    const id = widgetIdRef.current
+    if (id && window.turnstile) window.turnstile.reset(id)
+    setToken(null)
+  }
+
+  const send = async (address: string, turnstileToken: string | null): Promise<void> => {
+    setStatus("submitting")
+    setMessage(null)
+    const result = await subscribe(address, turnstileToken)
+    if (result.ok) {
+      setStatus("success")
+      setMessage("Check your inbox to confirm your subscription.")
+      setEmail("")
+      return
+    }
+    setStatus("error")
+    setMessage(result.error)
+    resetWidget()
+  }
+
+  // The widget's callbacks, read through effect events so a new render doesn't re-create
+  // the widget.
+  const onToken = React.useEffectEvent((t: string): void => {
+    setToken(t)
+    const pending = takePending()
+    if (pending) void send(pending.email, t)
+  })
+  const onChallengeError = React.useEffectEvent((): void => {
+    setToken(null)
+    stopWaiting(CHALLENGE_FAILED)
+  })
+
+  // The one effect: Turnstile is outside React, so the widget is rendered into its container
+  // once the script is ready, and removed on unmount.
   React.useEffect(() => {
     if (!scriptReady || !turnstileSiteKey) return
     const container = widgetContainerRef.current
@@ -69,9 +165,10 @@ export const NewsletterSignupForm: React.FC<
     widgetIdRef.current = turnstile.render(container, {
       sitekey: turnstileSiteKey,
       theme: "auto",
-      callback: (t) => setToken(t),
+      appearance: "interaction-only",
+      callback: (t) => onToken(t),
       "expired-callback": () => setToken(null),
-      "error-callback": () => setToken(null),
+      "error-callback": () => onChallengeError(),
     })
     return () => {
       const id = widgetIdRef.current
@@ -82,51 +179,51 @@ export const NewsletterSignupForm: React.FC<
 
   const headingText = heading ?? DEFAULT_HEADING
   const buttonText = buttonLabel ?? DEFAULT_BUTTON_LABEL
-  const disabled = status === "submitting" || status === "success" || (!!turnstileSiteKey && !token)
-
-  const resetWidget = (): void => {
-    const id = widgetIdRef.current
-    if (id && window.turnstile) window.turnstile.reset(id)
-    setToken(null)
+  const busy = status === "verifying" || status === "submitting"
+  const disabled = busy || status === "success"
+  const arm = (): void => {
+    if (turnstileSiteKey && !armed) setArmed(true)
   }
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
     e.preventDefault()
-    if (status === "submitting" || (turnstileSiteKey && !token)) return
-    setStatus("submitting")
-    setMessage(null)
-    try {
-      const res = await fetch("/api/newsletter/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, turnstileToken: token }),
-      })
-      const body = (await res.json().catch(() => ({}))) as { error?: string }
-      if (!res.ok) {
+    if (busy) return
+    if (turnstileSiteKey && !token) {
+      if (scriptFailedRef.current) {
         setStatus("error")
-        setMessage(body.error ?? "Something went wrong. Please try again.")
-        resetWidget()
+        setMessage(SCRIPT_FAILED)
         return
       }
-      setStatus("success")
-      setMessage("Check your inbox to confirm your subscription.")
-      setEmail("")
-    } catch {
-      setStatus("error")
-      setMessage("Network error. Please try again.")
-      resetWidget()
+      // The challenge is still running (or hasn't started): send once it hands over a token,
+      // or give up if it never answers (a stalled network, a widget stuck loading).
+      pendingRef.current = {
+        email,
+        timer: setTimeout(() => stopWaiting(CHALLENGE_FAILED), VERIFY_TIMEOUT_MS),
+      }
+      arm()
+      setMessage(null)
+      setStatus("verifying")
+      return
     }
+    void send(email, token)
   }
 
   const currentId = blockId || "newsletter-email"
 
   return (
-    <div className="space-y-3 font-sans">
-      <Script
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
-        strategy="lazyOnload"
-        onReady={() => setScriptReady(true)}
-      />
+    <div className="space-y-3 font-sans" onFocus={arm}>
+      {armed && (
+        <Script
+          src={TURNSTILE_SCRIPT}
+          strategy="afterInteractive"
+          onReady={() => setScriptReady(true)}
+          onError={() => {
+            // Blocked by an extension or the network: nothing will ever call back.
+            scriptFailedRef.current = true
+            stopWaiting(SCRIPT_FAILED)
+          }}
+        />
+      )}
       <h3 className="mt-0!">{headingText}</h3>
       {description && <p className="font-serif">{description}</p>}
       <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -143,11 +240,15 @@ export const NewsletterSignupForm: React.FC<
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             maxLength={254}
-            disabled={status === "submitting" || status === "success"}
+            disabled={disabled}
           />
         </Field>
         <Button type="submit" disabled={disabled}>
-          {status === "submitting" ? "Subscribing…" : buttonText}
+          {status === "verifying"
+            ? "Verifying…"
+            : status === "submitting"
+              ? "Subscribing…"
+              : buttonText}
         </Button>
       </form>
       {status === "error" && message ? (

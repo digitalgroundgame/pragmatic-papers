@@ -1,8 +1,7 @@
-import { Media, isMedia } from "@/components/Media"
+import { Tile, TileList } from "@/components/Tile"
 import { PageRange } from "@/components/PageRange"
 import { Pagination } from "@/components/Pagination"
 import type { Media as MediaType } from "@/payload-types"
-import { formatList } from "@/utilities/formatList"
 import { sql } from "@payloadcms/db-postgres"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
@@ -11,10 +10,15 @@ import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
+import { PageHeader, PageShell } from "@/components/PageShell"
+import { MostReadPanel, SearchTipsPanel, TopicsPanel, WithAside } from "@/components/Aside"
 import { docPath } from "@/utilities/routes"
 import { getPayloadClient } from "@/data/payload"
 import { firstParam } from "./firstParam"
+import { Byline } from "@/components/Authors/Byline"
+import { toBylineAuthor, type BylineAuthor } from "@/components/Authors/BylineAuthor"
+import type { User } from "@/payload-types"
+import { isResolved, relationshipId } from "@/utilities/relationships"
 
 interface SearchResult {
   id: number
@@ -104,6 +108,38 @@ const querySearch = cache(async (rawQuery: string, page: number) => {
   return { ...emptyPage, docs: sorted }
 })
 
+const KIND_LABELS: Record<string, string> = { volumes: "Volume", topics: "Topic", pages: "Page" }
+
+/** Topic slugs by name: a search row stores its topics' names only. */
+const queryTopicSlugs = cache(async (): Promise<Map<string, string>> => {
+  const payload = await getPayloadClient()
+  const { docs } = await payload.find({
+    collection: "topics",
+    pagination: false,
+    depth: 0,
+    select: { name: true, slug: true },
+  })
+  return new Map(docs.flatMap((t) => (t.slug ? [[t.name, t.slug] as const] : [])))
+})
+
+/** Each result article's authors, for the byline's faces and names, by article id. */
+const queryResultAuthors = cache(
+  async (articleIds: number[]): Promise<Map<number, BylineAuthor[]>> => {
+    if (!articleIds.length) return new Map()
+    const payload = await getPayloadClient()
+    const { docs } = await payload.find({
+      collection: "articles",
+      where: { id: { in: articleIds } },
+      pagination: false,
+      depth: 2,
+      select: { authors: true },
+    })
+    return new Map(
+      docs.map((a) => [a.id, (a.authors ?? []).filter(isResolved<User>).map(toBylineAuthor)]),
+    )
+  },
+)
+
 // Results pages are endless variations of pages that are already indexed, and Google asks sites
 // not to let them into its index. Links on them are still followed.
 export const metadata: Metadata = {
@@ -122,105 +158,97 @@ export default async function SearchPage({ searchParams }: Args): Promise<React.
   let page = Number(p) || 1
   if (!Number.isInteger(page) || page < 1) page = 1
 
-  const { docs, totalDocs, totalPages, page: currentPage } = await querySearch(q, page)
+  const [{ docs, totalDocs, totalPages, page: currentPage }, topicSlugs] = await Promise.all([
+    querySearch(q, page),
+    queryTopicSlugs(),
+  ])
+  const articleIdOf = (r: SearchResult): number | null =>
+    r.doc?.relationTo === "articles" ? relationshipId(r.doc.value as number | { id: number }) : null
+  const authorsByArticle = await queryResultAuthors(
+    docs.map(articleIdOf).filter((id): id is number => id != null),
+  )
 
   return (
     <>
-      <Breadcrumbs items={[{ name: "Search", path: "/search" }]} />
-      <main className="mx-auto max-w-3xl space-y-6 px-4">
-        <h1>Search</h1>
+      <Breadcrumbs shell items={[{ name: "Search", path: "/search" }]} />
+      <PageShell as="div">
+        <PageHeader title="Search" />
+        <WithAside
+          aside={
+            <>
+              <SearchTipsPanel />
+              <TopicsPanel />
+              <MostReadPanel />
+            </>
+          }
+        >
+          <form action="/search" method="get" className="flex gap-2">
+            <Input
+              type="search"
+              name="q"
+              defaultValue={q}
+              placeholder="Search…"
+              aria-label="Search the site"
+            />
+            <Button type="submit">Search</Button>
+          </form>
 
-        <form action="/search" method="get" className="flex gap-2">
-          <Input
-            type="search"
-            name="q"
-            defaultValue={q}
-            placeholder="Search…"
-            aria-label="Search the site"
-          />
-          <Button type="submit">Search</Button>
-        </form>
+          {q && (
+            <div className="flex items-center justify-between">
+              <PageRange
+                collectionLabels={{ plural: "Results", singular: "Result" }}
+                currentPage={currentPage}
+                limit={RESULTS_PER_PAGE}
+                totalDocs={totalDocs}
+              />
+            </div>
+          )}
 
-        {q && (
-          <div className="flex items-center justify-between">
+          {docs.length > 0 ? (
+            <>
+              <TileList>
+                {docs.map((result: SearchResult) => {
+                  const relationTo = result.doc?.relationTo ?? ""
+                  const topicNames = result.topics ? result.topics.split(", ") : []
+                  return (
+                    <Tile
+                      key={result.id}
+                      href={docPath(relationTo, result.slug ?? "")}
+                      title={result.title}
+                      summary={result.excerpt}
+                      image={result.image}
+                      byline={(() => {
+                        const id = articleIdOf(result)
+                        const authors = id != null ? authorsByArticle.get(id) : undefined
+                        return authors?.length ? <Byline size="sm" authors={authors} /> : null
+                      })()}
+                      // Articles are most results; only say what kind the others are.
+                      meta={relationTo === "articles" ? null : KIND_LABELS[relationTo]}
+                      badges={topicNames.flatMap((name) => {
+                        const slug = topicSlugs.get(name)
+                        return slug ? [{ label: name, href: `/topics/${slug}` }] : []
+                      })}
+                    />
+                  )
+                })}
+              </TileList>
+
+              <Pagination
+                page={currentPage}
+                totalPages={totalPages}
+                buildHref={(pageNum) => `/search?q=${encodeURIComponent(q)}&p=${pageNum}`}
+              />
+            </>
+          ) : q ? (
             <PageRange
               collectionLabels={{ plural: "Results", singular: "Result" }}
               currentPage={currentPage}
               limit={RESULTS_PER_PAGE}
-              totalDocs={totalDocs}
+              totalDocs={0}
             />
-          </div>
-        )}
-
-        {docs.length > 0 ? (
-          <>
-            <ul className="space-y-4">
-              {docs.map((result: SearchResult) => {
-                const relationTo = result.doc?.relationTo ?? ""
-                const href = docPath(relationTo, result.slug ?? "")
-
-                const image = isMedia(result.image) ? result.image : null
-                return (
-                  <li key={result.id} className="border-b pb-4 last:border-0">
-                    <div className="flex gap-4">
-                      {image && (
-                        <div className="bg-muted shrink-0 overflow-hidden rounded-sm border md:h-20 md:w-28">
-                          <HoverPrefetchLink href={href} tabIndex={-1} aria-hidden>
-                            <Media
-                              media={image}
-                              variant="thumbnail"
-                              sizes="112px"
-                              className="aspect-3/2 h-full w-full object-cover"
-                            />
-                          </HoverPrefetchLink>
-                        </div>
-                      )}
-                      <div className="flex flex-col gap-1">
-                        <HoverPrefetchLink href={href} className="hover:underline">
-                          <h2 className="text-lg font-semibold">{result.title}</h2>
-                        </HoverPrefetchLink>
-                        {result.excerpt && (
-                          <p className="text-muted-foreground line-clamp-2 text-sm">
-                            {result.excerpt}
-                          </p>
-                        )}
-                        <div className="text-muted-foreground mt-auto flex items-center gap-2 text-xs">
-                          <span className="capitalize">{relationTo}</span>
-                          {result.topics && (
-                            <>
-                              <span>{"•"}</span>
-                              <span>{`${formatList(result.topics.split(", "), { conjunction: "&" })}`}</span>
-                            </>
-                          )}
-                          {result.authors && (
-                            <>
-                              <span>{"•"}</span>
-                              <span>{`by ${formatList(result.authors.split(", "), { conjunction: "&" })}`}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-
-            <Pagination
-              page={currentPage}
-              totalPages={totalPages}
-              buildHref={(pageNum) => `/search?q=${encodeURIComponent(q)}&p=${pageNum}`}
-            />
-          </>
-        ) : q ? (
-          <PageRange
-            collectionLabels={{ plural: "Results", singular: "Result" }}
-            currentPage={currentPage}
-            limit={RESULTS_PER_PAGE}
-            totalDocs={0}
-          />
-        ) : null}
-      </main>
+          ) : null}
+        </WithAside>
+      </PageShell>
     </>
   )
 }

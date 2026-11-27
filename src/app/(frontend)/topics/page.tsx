@@ -1,6 +1,6 @@
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
-import { TopicsList } from "@/components/Topics/TopicsList"
+import { Tile, TileList } from "@/components/Tile"
 import { paginatedPath } from "@/utilities/generateMeta"
 import { getSiteURL } from "@/utilities/getURL"
 import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
@@ -9,6 +9,15 @@ import { draftMode } from "next/headers"
 import { notFound } from "next/navigation"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { PageHeader, PageShell } from "@/components/PageShell"
+import {
+  articleCountsByTopic,
+  topicCovers,
+  LatestVolumePanel,
+  MostReadPanel,
+  NewsletterPanel,
+  WithAside,
+} from "@/components/Aside"
 import { getPayloadClient } from "@/data/payload"
 
 export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
@@ -55,37 +64,58 @@ export default async function TopicsPage({ searchParams }: Args): Promise<React.
   if (!Number.isInteger(page) || page < 1) page = 1
 
   const { docs: topics, totalPages, page: currentPage } = await queryTopics(page)
+  const [counts, covers] = await Promise.all([articleCountsByTopic(), topicCovers()])
   // A page past the last one would be an empty listing that names itself as canonical.
   if (page > 1 && page > totalPages) notFound()
 
   return (
     <>
-      <Breadcrumbs items={[{ name: "Topics", path: "/topics" }]} />
-      <article className="mx-auto max-w-3xl space-y-6 px-4">
+      <Breadcrumbs shell items={[{ name: "Topics", path: "/topics" }]} />
+      <PageShell>
         {draft && <LivePreviewListener />}
 
-        <header className="space-y-3">
-          <h1>Topics</h1>
-          <p className="text-muted-foreground text-sm">Browse all topics</p>
-        </header>
+        <PageHeader title="Topics" description="Browse all topics" />
 
-        <section aria-label="All topics" className="mt-6">
-          {topics.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No topics found.</p>
-          ) : (
+        <WithAside
+          aside={
             <>
-              <div className="mt-6 flex justify-center">
-                <TopicsList topics={topics} />
-              </div>
-              <Pagination
-                className="mt-18 flex justify-center"
-                page={currentPage}
-                totalPages={totalPages}
-              />
+              <MostReadPanel />
+              <LatestVolumePanel />
+              <NewsletterPanel />
             </>
-          )}
-        </section>
-      </article>
+          }
+        >
+          <section aria-label="All topics">
+            {topics.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No topics found.</p>
+            ) : (
+              <>
+                <TileList>
+                  {topics.map((topic) => {
+                    const count = counts.get(topic.id) ?? 0
+                    return (
+                      <Tile
+                        key={topic.id}
+                        titleSize="lg"
+                        href={`/topics/${topic.slug}`}
+                        title={topic.name}
+                        summary={topic.description}
+                        image={topic.meta?.image ?? covers.get(topic.id)}
+                        meta={`${count} ${count === 1 ? "article" : "articles"}`}
+                      />
+                    )
+                  })}
+                </TileList>
+                <Pagination
+                  className="mt-18 flex justify-center"
+                  page={currentPage}
+                  totalPages={totalPages}
+                />
+              </>
+            )}
+          </section>
+        </WithAside>
+      </PageShell>
     </>
   )
 }

@@ -23,7 +23,11 @@ name: Claude Code Review
 # that changes it gets no review until it's merged.
 #
 # The job fails when the review reports a blocker, which marks the reviewed
-# commit with a ✗. It never approves.
+# commit with a ✗. It never approves with a GitHub review. When the review finds
+# no blocker or should-fix and every file the PR changes is one dev's
+# `.claude/approvals.yml` lets Claude approve (docs, tests, stories, nothing
+# sensitive), a script, not Claude, gives the commit "Review acknowledged" itself
+# (scripts/approval-policy.ts), so no `/reviewed` is needed.
 on:
   pull_request:
     types: [ready_for_review, labeled]
@@ -54,6 +58,8 @@ jobs:
       pull-requests: write
       issues: write
       id-token: write
+      # The approval policy's "Review acknowledged" status.
+      statuses: write
 
     env:
       PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -118,12 +124,13 @@ jobs:
             ${{ github.repository }}/pull/${{ env.PR_NUMBER }} at ${{ env.HEAD_SHA }}, in its progress-comment mode:
             the summary is the final body of your progress comment, ending with a blank line and then
             `[claude-review]: #sha=${{ env.HEAD_SHA }}&verdict=<pass|blocker>` as its last line, and you
-            post no other top-level comment. Return the same verdict as your structured output.
+            post no other top-level comment. Return the same verdict as your structured output, with the
+            number of findings at each severity (blocker, should_fix, worth_noting) in `findings`.
           claude_args: |
             --model opus
             ${{ steps.effort.outputs.effort && format('--effort {0}', steps.effort.outputs.effort) || '' }}
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*),Bash(git blame:*)"
-            --json-schema '{"type":"object","properties":{"verdict":{"type":"string","enum":["pass","blocker"]}},"required":["verdict"]}'
+            --json-schema '{"type":"object","properties":{"verdict":{"type":"string","enum":["pass","blocker"]},"findings":{"type":"object","properties":{"blocker":{"type":"integer","minimum":0},"should_fix":{"type":"integer","minimum":0},"worth_noting":{"type":"integer","minimum":0}},"required":["blocker","should_fix","worth_noting"]}},"required":["verdict","findings"]}'
 
       # The action logs only how many tool calls were denied. Its execution
       # file holds the result message, whose permission_denials name each
@@ -162,6 +169,42 @@ jobs:
             exit 1
           fi
           echo "No blockers on $HEAD_SHA."
+
+      # Low-risk PRs need no `/reviewed`: when dev's approval policy lets Claude
+      # approve every file the PR changes and the review found nothing to fix,
+      # this records "Review acknowledged" on the reviewed commit, as review-ack.yml
+      # does for a reply. Like the effort step, it runs dev's copies of the script
+      # and the policy, never the PR's, and a PR that changes the policy always
+      # needs a person. The runner's yq turns the policy into JSON, so the script
+      # needs no install. A push after the review needs a new one, as with `/reviewed`.
+      - name: Apply the approval policy
+        id: policy
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+          REVIEW: ${{ steps.review.outputs.structured_output }}
+        run: |
+          script="$RUNNER_TEMP/approval-policy.ts"
+          if ! git show "$BASE_SHA:scripts/approval-policy.ts" > "$script" 2>/dev/null ||
+            ! git show "$BASE_SHA:.claude/approvals.yml" | yq -o=json '.' > "$RUNNER_TEMP/approvals.json"; then
+            echo "dev has no approval policy yet; /reviewed or an approval is needed."
+            exit 0
+          fi
+          git diff --raw --no-renames "$BASE_SHA...$HEAD_SHA" > "$RUNNER_TEMP/diff.txt"
+          printf '%s' "$REVIEW" > "$RUNNER_TEMP/review.json"
+          node "$script" "$RUNNER_TEMP/approvals.json" "$RUNNER_TEMP/diff.txt" "$RUNNER_TEMP/review.json" "$AUTHOR_TYPE"
+
+      - name: Record "Review acknowledged"
+        if: steps.policy.outputs.approve == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api -X POST "repos/$REPO/statuses/$HEAD_SHA" \
+            -f state=success \
+            -f context="Review acknowledged" \
+            -f description="Approved by policy after Claude's review" >/dev/null
+          echo "::notice::Review acknowledged by .claude/approvals.yml: no /reviewed needed."
 
       # Done with the label: adding it again asks for another review, and later
       # pushes skip Lighthouse. A cancelled run leaves it for the run that replaced

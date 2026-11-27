@@ -243,7 +243,7 @@ export function AppointmentsChart({
 }): React.ReactElement {
   const [hover, setHover] = useState<number | null>(null)
 
-  const model = useMemo(() => {
+  const model = (() => {
     const months = Math.max(1, ...appointments.bursts.map((b) => b.month + 1))
     const tallest = Math.max(
       1,
@@ -303,11 +303,11 @@ export function AppointmentsChart({
       columns.set(b.month, stack)
     }
     return { months, x, columns, terms, plotH }
-  }, [appointments])
+  })()
 
   // Legend order follows the profile's own category order, with "Other" last, so it reads the
   // same here as on the map and in the bench.
-  const parties = useMemo(() => {
+  const parties = (() => {
     const order = display.category.values.map((v) => v.value)
     const seen: SeatParty[] = []
     for (const p of appointments.presidents) if (!seen.includes(p.party)) seen.push(p.party)
@@ -316,7 +316,7 @@ export function AppointmentsChart({
       if (b === null) return -1
       return order.indexOf(a) - order.indexOf(b)
     })
-  }, [appointments])
+  })()
 
   const hovered = hover === null ? null : model.columns.get(hover)
   const hoveredPresident =

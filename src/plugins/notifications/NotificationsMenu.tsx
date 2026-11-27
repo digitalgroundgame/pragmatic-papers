@@ -67,7 +67,7 @@ export function NotificationsMenu({
           <Button
             variant="ghost"
             size="icon"
-            className="relative rounded-lg border-(--theme-elevation-200) bg-transparent hover:border-(--theme-elevation-400) hover:bg-transparent aria-expanded:border-(--theme-elevation-400) aria-expanded:bg-transparent dark:hover:bg-transparent"
+            className="relative rounded-sm border-(--theme-elevation-200) bg-transparent hover:border-(--theme-elevation-400) hover:bg-transparent aria-expanded:border-(--theme-elevation-400) aria-expanded:bg-transparent dark:hover:bg-transparent"
             aria-label={count ? `Notifications, ${count} unread` : "Notifications"}
             title="Notifications"
           />
@@ -78,7 +78,7 @@ export function NotificationsMenu({
           // Not the brand orange: white text on it is too faint at this size.
           <Badge
             aria-hidden
-            className="absolute -top-0.5 -right-1 h-4.5 min-w-4.5 bg-[#b3261e] px-1 text-[11px] text-white"
+            className="absolute -top-0.5 -right-1 h-4.5 min-w-4.5 bg-(--notifications-badge) px-1 text-[11px] text-white"
           >
             {count > 9 ? "9+" : count}
           </Badge>
@@ -155,7 +155,7 @@ export function NotificationsMenu({
                   loading="lazy"
                   width={80}
                   height={42}
-                  className="bg-muted border-border mt-0.5 h-[42px] w-20 shrink-0 rounded-md border object-cover"
+                  className="bg-muted border-border mt-0.5 h-[42px] w-20 shrink-0 rounded-sm border object-cover"
                 />
               )
               const heading = (

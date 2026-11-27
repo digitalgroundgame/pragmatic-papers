@@ -251,18 +251,35 @@ export const Sorted: Story = {
   },
 }
 
-/** The line beside a comment's replies folds it, and them, into one row. */
+/**
+ * The line beside a comment's replies folds it, and them, into one row. The expand button takes
+ * the avatar's place, so the author's name and the time stay where they were.
+ */
 export const Collapsed: Story = {
   beforeEach: serve(commentThread()),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await canvas.findByText(/zoning reform/)
-    const comment = within(canvasElement.querySelector<HTMLElement>("#comment-1")!)
+    const item = canvasElement.querySelector<HTMLElement>("#comment-1")!
+    const comment = within(item)
+    const box = (el: Element) => {
+      const { x, y, width, height } = el.getBoundingClientRect()
+      return { x, y, width, height }
+    }
+    const avatar = box(item.querySelector('[data-slot="avatar"]')!)
+    const name = () => box(comment.getAllByText("Ada Reader").find((el) => el.checkVisibility())!)
+    const before = name()
+
     const [line] = comment.getAllByRole("button", { name: "Collapse Ada Reader's comment" })
     await userEvent.click(line!)
     const expand = comment.getByRole("button", { name: "Expand Ada Reader's comment" })
     await expect(expand).toHaveAttribute("aria-expanded", "false")
     await expect(expand).toHaveFocus()
+    await expect(box(expand)).toEqual(avatar)
+    await expect(name()).toEqual(before)
+    await expect(item.querySelectorAll('[data-slot="avatar"]')).toSatisfy(
+      (avatars: NodeListOf<HTMLElement>) => [...avatars].every((el) => !el.checkVisibility()),
+    )
     await expect(canvas.getByText("(1 reply)")).toBeVisible()
     await expect(canvas.getByText(/second chart's source/)).not.toBeVisible()
   },

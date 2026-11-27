@@ -27,7 +27,7 @@ export const ReferenceNotice: React.FC = () => {
         style={{
           margin: 0,
           padding: "2rem",
-          border: "1px solid #e0e0e0",
+          border: "1px solid var(--theme-elevation-150)",
           borderRadius: "0.5rem",
         }}
       >

@@ -83,6 +83,13 @@ describe("/feeds", () => {
     expect(screen.queryByRole("navigation", { name: "breadcrumb" })).not.toBeInTheDocument()
   })
 
+  it("titles the home page with the site's name, hidden", async () => {
+    render((await HomePage()) as React.ReactElement)
+    const h1 = screen.getByRole("heading", { level: 1 })
+    expect(h1).toHaveTextContent("Pragmatic Papers")
+    expect(h1).toHaveClass("sr-only")
+  })
+
   it("renders the layout of a page slugged feeds", async () => {
     const layout = [{ blockType: "feedsList", list: "sitemaps", title: "Just sitemaps" }]
     queryPageBySlug.mockResolvedValue({

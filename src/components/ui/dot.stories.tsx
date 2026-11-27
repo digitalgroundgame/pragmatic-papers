@@ -44,7 +44,7 @@ export const Variants: Story = {
 export const Ring: Story = {
   args: { ring: true },
   render: (args) => (
-    <div className="bg-muted relative size-10 rounded-md">
+    <div className="bg-muted relative size-10 rounded-sm">
       <Dot {...args} className="absolute top-0.5 right-0.5" />
     </div>
   ),

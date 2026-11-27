@@ -25,9 +25,17 @@ export const URLField: TextFieldClientComponent = ({ path, ...props }) => {
       {isValid !== null && (
         <div className="url-field-icon">
           {isValid ? (
-            <CheckCircle2 size={18} style={{ color: "#22c55e" }} aria-label="Valid URL" />
+            <CheckCircle2
+              size={18}
+              style={{ color: "var(--theme-success-500)" }}
+              aria-label="Valid URL"
+            />
           ) : (
-            <XCircle size={18} style={{ color: "#ef4444" }} aria-label="Invalid URL" />
+            <XCircle
+              size={18}
+              style={{ color: "var(--theme-error-500)" }}
+              aria-label="Invalid URL"
+            />
           )}
         </div>
       )}

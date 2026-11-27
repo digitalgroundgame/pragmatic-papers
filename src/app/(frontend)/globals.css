@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* Plugins' own color tokens */
+@import "../../plugins/sso/components/providerColors.css";
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
@@ -127,11 +129,6 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -150,23 +147,27 @@
   --error: oklch(0.58 0.22 27);
   --success: oklch(0.55 0.18 150);
   --warning: oklch(0.7 0.18 80);
+  /* Substack's orange (#ff6719), for its logo only */
+  --substack: oklch(0.698 0.201 42.2);
   /* py-3 (0.75rem × 2) + size-8 button (2rem) + border-b (1px) */
   --header-height: 3.5625rem;
 
-  /* Diverging Red/Blue map palette — override to retheme election maps. Read through
-     `var()` by the choropleth block's colour scale and by the drilldown engine alike, so it
-     is a site token rather than either feature's own. */
-  --map-positive-1: #ffb8bc;
-  --map-positive-2: #f48088;
-  --map-positive-3: #e54858;
-  --map-positive-4: #d81334;
+  /* The site's one data palette: a diverging red/blue scale, read through `var()` by the
+     choropleth block's colour scale, the drilldown engine, the Federal Courts charts and the
+     whip count alike, so it is a site token rather than any one feature's own. The hex beside
+     each step is the copy rasterizers use (they can't read oklch);
+     src/design/__tests__/oklch.test.ts keeps the two in step. */
+  --chart-red-1: oklch(0.85 0.083 15.2); /* #ffb8bc */
+  --chart-red-2: oklch(0.732 0.142 16.9); /* #f48088 */
+  --chart-red-3: oklch(0.627 0.193 19); /* #e54858 */
+  --chart-red-4: oklch(0.562 0.219 22); /* #d81334 */
 
-  --map-negative-1: #b4d4f8;
-  --map-negative-2: #72aef3;
-  --map-negative-3: #2c86ed;
-  --map-negative-4: #126ace;
+  --chart-blue-1: oklch(0.859 0.061 251.6); /* #b4d4f8 */
+  --chart-blue-2: oklch(0.738 0.119 252.8); /* #72aef3 */
+  --chart-blue-3: oklch(0.621 0.176 254.8); /* #2c86ed */
+  --chart-blue-4: oklch(0.534 0.173 256.1); /* #126ace */
 
-  --map-neutral: oklch(0.9528 0.0086 84.57);
+  --chart-neutral: oklch(0.9528 0.0086 84.57);
 }
 
 .dark {
@@ -188,11 +189,6 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.809 0.105 251.813);
-  --chart-2: oklch(0.623 0.214 259.815);
-  --chart-3: oklch(0.546 0.245 262.881);
-  --chart-4: oklch(0.488 0.243 264.376);
-  --chart-5: oklch(0.424 0.199 265.638);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -220,11 +216,6 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -256,6 +247,7 @@
   --color-error: var(--error);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-substack: var(--substack);
   /* FK Screamer ligatures render incorrectly at 30px and below, so bumping 3xl to 32px. Overriding this core utilty to prevent us from accidently using it at 30px. */
   --text-3xl: 2rem;
   --text-3xl--line-height: calc(2.25 / 2);
@@ -340,9 +332,9 @@
   --tw-prose-quotes: var(--color-muted-foreground);
   --tw-prose-quote-borders: var(--color-brand);
   --tw-prose-captions: var(--color-muted-foreground);
-  --tw-prose-kbd: var(--color-primary);
+  --tw-prose-kbd: var(--color-foreground);
   --tw-prose-kbd-shadows: var(--color-border);
-  --tw-prose-code: var(--color-primary);
+  --tw-prose-code: var(--color-foreground);
   --tw-prose-pre-code: var(--color-muted-foreground);
   --tw-prose-pre-bg: var(--color-muted);
   --tw-prose-th-borders: var(--color-ring);

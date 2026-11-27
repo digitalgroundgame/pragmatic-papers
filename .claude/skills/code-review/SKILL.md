@@ -316,7 +316,9 @@ full hash of the commit you were given, else of the PR's head):
 
 The action puts its own header above your body, which `review-ack.yml`
 allows. When the run asks for structured output, return the same verdict
-there.
+there, and the number of findings at each severity when it asks for them: a
+review with no `blocker` or `should-fix` is what lets `.claude/approvals.yml`
+mark a docs-and-tests PR reviewed without a person.
 
 ## Leaving a pending review (`--pending` mode)
 

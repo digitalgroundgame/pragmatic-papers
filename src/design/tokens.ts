@@ -68,7 +68,7 @@ export const COLOR_GROUPS: ColorGroup[] = [
       {
         name: "primary",
         utility: "bg-primary",
-        use: "The default button's fill. Not for text (use foreground).",
+        use: "Solid neutral fills: the default button, a checked checkbox or switch. Never text.",
       },
       {
         name: "primary-foreground",
@@ -110,32 +110,28 @@ export const COLOR_GROUPS: ColorGroup[] = [
     ],
   },
   {
-    title: "Maps",
+    title: "Third parties",
     description:
-      "The election maps' diverging scale, read through var() by the choropleth block and the drilldown pages. The same in both themes.",
+      "Another company's color, for its own logo. A plugin's tokens live in a CSS file in the plugin's folder instead (the SSO plugin's providerColors.css, which globals.css imports).",
+    tokens: [{ name: "substack", utility: "text-substack", use: "Substack's logo (#ff6719)." }],
+  },
+  {
+    title: "Data",
+    description:
+      "The site's one data palette, a diverging red/blue scale: the choropleth block, the drilldown pages, the Federal Courts charts and the whip count all read it through var(). The same in both themes. Brand orange never stands for data.",
     tokens: [
       ...[1, 2, 3, 4].map((step) => ({
-        name: `map-positive-${step}`,
-        utility: `var(--map-positive-${step})`,
+        name: `chart-red-${step}`,
+        utility: `var(--chart-red-${step})`,
         use: step === 1 ? "R+, lightest to strongest." : "",
       })),
       ...[1, 2, 3, 4].map((step) => ({
-        name: `map-negative-${step}`,
-        utility: `var(--map-negative-${step})`,
+        name: `chart-blue-${step}`,
+        utility: `var(--chart-blue-${step})`,
         use: step === 1 ? "D+, lightest to strongest." : "",
       })),
-      { name: "map-neutral", utility: "var(--map-neutral)", use: "Regions with no value." },
+      { name: "chart-neutral", utility: "var(--chart-neutral)", use: "Regions with no value." },
     ],
-  },
-  {
-    title: "Charts",
-    description:
-      "shadcn's chart blues. Nothing uses them today: the Federal Courts charts color by party.",
-    tokens: [1, 2, 3, 4, 5].map((step) => ({
-      name: `chart-${step}`,
-      utility: `fill-chart-${step}`,
-      use: "",
-    })),
   },
   {
     title: "Sidebar",
@@ -278,15 +274,17 @@ export const RADII: RadiusStep[] = [
   {
     utility: "rounded-sm",
     value: "6px",
-    use: "The site's default: buttons, inputs, popovers, thumbnails, and every card (the Card component's own rounded-xl is overridden to it)",
+    use: "Every corner: buttons, inputs, menus, tooltips, popovers, dialogs, cards, thumbnails",
   },
-  { utility: "rounded-md", value: "8px", use: "Menu items and tooltips" },
-  { utility: "rounded-lg", value: "10px", use: "The interactive page's empty state" },
-  { utility: "rounded-xl", value: "14px", use: "Dialogs, and Card before a page overrides it" },
+  {
+    utility: "rounded-xs",
+    value: "2px",
+    use: "Marks of 16px or less, where 6px would make a circle: legend swatches, a whip count's voter ticks, the checkbox",
+  },
   {
     utility: "rounded-full",
     value: "9999px",
-    use: "Avatars, dots, the topic badges (rounded-4xl)",
+    use: "Circles and pills: avatars, dots, switches, badges",
   },
 ]
 

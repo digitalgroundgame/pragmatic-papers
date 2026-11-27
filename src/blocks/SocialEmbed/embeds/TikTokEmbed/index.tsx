@@ -55,7 +55,7 @@ export async function TikTokEmbedBlock({
             View on {TIKTOK_DISPLAY_NAME}
           </a>
         </div>
-        <div className="relative aspect-9/16 overflow-hidden rounded-lg shadow-xl">
+        <div className="relative aspect-9/16 overflow-hidden rounded-sm shadow-xl">
           <iframe
             className="absolute inset-0 h-full w-full"
             src={buildTikTokSrc(postId, { autoplay: 1, loop: 1 })}

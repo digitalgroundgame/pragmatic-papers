@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useRef } from "react"
+import React, { useEffect, useRef } from "react"
 import type { PinnedTooltip } from "./Tooltip"
 import type { ResolvedMap, ResolvedPath, ResolvedRegion } from "./types"
 
@@ -172,9 +172,8 @@ function Region({
   onLeave,
   onClick,
 }: RegionProps): React.ReactElement {
-  const pathByRegionId = useMemo(
-    () => new Map(map.paths.filter((p) => p.region).map((p) => [p.region!.regionId, p])),
-    [map.paths],
+  const pathByRegionId = new Map(
+    map.paths.filter((p) => p.region).map((p) => [p.region!.regionId, p]),
   )
 
   const activeRegion = activeRegionKey ? pathByRegionId.get(activeRegionKey) : null

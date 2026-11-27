@@ -63,6 +63,15 @@ html[data-theme] {
   --brand: oklch(0.6567 0.2311 32.7);
 }
 
+/*
+ * The unread count's red (#b3261e): darker than the brand, so white text reads at 11px. On
+ * :root rather than above: it maps no Payload variable, and Storybook's <html> has no
+ * data-theme.
+ */
+:root {
+  --notifications-badge: oklch(0.501 0.178 28.7);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

@@ -15,8 +15,8 @@ import {
 describe("colorScale", () => {
   describe("staticColor — a color for a rendering with no stylesheet", () => {
     it("takes the fallback of a theme variable", () => {
-      expect(staticColor("var(--map-positive-1, #ffb8bc)")).toBe("#ffb8bc")
-      expect(staticColor(" var( --map-negative-4 ,rgb(18, 106, 206)) ")).toBe("rgb(18, 106, 206)")
+      expect(staticColor("var(--chart-red-1, #ffb8bc)")).toBe("#ffb8bc")
+      expect(staticColor(" var( --chart-blue-4 ,rgb(18, 106, 206)) ")).toBe("rgb(18, 106, 206)")
     })
 
     it("gives every legend entry a plain color", () => {
@@ -37,27 +37,27 @@ describe("colorScale", () => {
   describe("pickDivergingColor — neutral below first breakpoint, palette tiers above", () => {
     it.each([
       { value: 0.5, color: null },
-      { value: 3, color: "var(--map-positive-1, #ffb8bc)" },
-      { value: 10, color: "var(--map-positive-2, #f48088)" },
-      { value: 25, color: "var(--map-positive-3, #e54858)" },
-      { value: 50, color: "var(--map-positive-4, #d81334)" },
+      { value: 3, color: "var(--chart-red-1, #ffb8bc)" },
+      { value: 10, color: "var(--chart-red-2, #f48088)" },
+      { value: 25, color: "var(--chart-red-3, #e54858)" },
+      { value: 50, color: "var(--chart-red-4, #d81334)" },
       { value: -0.5, color: null },
-      { value: -3, color: "var(--map-negative-1, #b4d4f8)" },
-      { value: -10, color: "var(--map-negative-2, #72aef3)" },
-      { value: -25, color: "var(--map-negative-3, #2c86ed)" },
-      { value: -50, color: "var(--map-negative-4, #126ace)" },
+      { value: -3, color: "var(--chart-blue-1, #b4d4f8)" },
+      { value: -10, color: "var(--chart-blue-2, #72aef3)" },
+      { value: -25, color: "var(--chart-blue-3, #2c86ed)" },
+      { value: -50, color: "var(--chart-blue-4, #126ace)" },
     ])("value=$value → $color", ({ value, color }) => {
       expect(pickDivergingColor(value)).toBe(color)
     })
 
     it.each([
       { value: 0, color: null },
-      { value: 1, color: "var(--map-positive-1, #ffb8bc)" },
-      { value: 5, color: "var(--map-positive-2, #f48088)" },
-      { value: 15, color: "var(--map-positive-3, #e54858)" },
-      { value: 30, color: "var(--map-positive-4, #d81334)" },
-      { value: -1, color: "var(--map-negative-1, #b4d4f8)" },
-      { value: -15, color: "var(--map-negative-3, #2c86ed)" },
+      { value: 1, color: "var(--chart-red-1, #ffb8bc)" },
+      { value: 5, color: "var(--chart-red-2, #f48088)" },
+      { value: 15, color: "var(--chart-red-3, #e54858)" },
+      { value: 30, color: "var(--chart-red-4, #d81334)" },
+      { value: -1, color: "var(--chart-blue-1, #b4d4f8)" },
+      { value: -15, color: "var(--chart-blue-3, #2c86ed)" },
     ])("breakpoint boundary value=$value (≥ threshold gets that tier)", ({ value, color }) => {
       expect(pickDivergingColor(value)).toBe(color)
     })

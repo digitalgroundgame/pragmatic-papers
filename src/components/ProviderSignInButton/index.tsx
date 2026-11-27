@@ -7,17 +7,18 @@ import { ProviderLogo } from "@/plugins/sso/components/ProviderLogo"
 import { cn } from "@/utilities/utils"
 
 /**
- * Each provider's button as its branding guidelines draw it (the admin's login page uses the
- * same colors, in `SignInButtons.css`): Google white with a grey outline, or its dark variant;
- * Discord's blurple; Destiny.gg's near-black with its blue on hover.
+ * Each provider's button as its branding guidelines draw it: Google white with a grey outline,
+ * or its dark variant; Discord's blurple; Destiny.gg's near-black with its blue on hover. The
+ * colors are the SSO plugin's tokens (`providerColors.css`), shared with the admin's login page. The tokens switch with the theme themselves; the `dark:`
+ * copies are there to outrank the outline Button's own dark fills.
  */
 const BRANDS = {
   google:
-    "border-[#747775] bg-white text-[#1f1f1f] hover:bg-[#f8f9fa] hover:text-[#1f1f1f] dark:border-[#8e918f] dark:bg-[#131314] dark:text-[#e3e3e3] dark:hover:bg-[#1f1f20] dark:hover:text-[#e3e3e3]",
+    "border-(--sso-google-border) bg-(--sso-google-bg) text-(--sso-google-text) hover:bg-(--sso-google-hover) hover:text-(--sso-google-text) dark:border-(--sso-google-border) dark:bg-(--sso-google-bg) dark:hover:bg-(--sso-google-hover)",
   discord:
-    "border-[#5865f2] bg-[#5865f2] text-white hover:bg-[#4752c4] hover:text-white dark:border-[#5865f2] dark:bg-[#5865f2] dark:hover:bg-[#4752c4]",
+    "border-(--sso-discord-bg) bg-(--sso-discord-bg) text-(--sso-discord-text) hover:bg-(--sso-discord-hover) hover:text-(--sso-discord-text) dark:border-(--sso-discord-bg) dark:bg-(--sso-discord-bg) dark:hover:bg-(--sso-discord-hover)",
   destiny:
-    "border-[#1a1a1a] bg-[#1a1a1a] text-white hover:border-[#59aeea] hover:bg-[#262626] hover:text-white dark:border-[#3a3a3a] dark:bg-[#1a1a1a] dark:hover:bg-[#262626]",
+    "border-(--sso-destiny-border) bg-(--sso-destiny-bg) text-(--sso-destiny-text) hover:border-(--sso-destiny-hover-border) hover:bg-(--sso-destiny-hover) hover:text-(--sso-destiny-text) dark:border-(--sso-destiny-border) dark:bg-(--sso-destiny-bg) dark:hover:bg-(--sso-destiny-hover)",
 } as const
 
 type Brand = keyof typeof BRANDS

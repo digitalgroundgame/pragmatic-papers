@@ -378,6 +378,7 @@ ESLint enforces the import rules for every folder under `src/plugins/` (`eslint.
 - **Content rendering**: Blocks system with Lexical rich text editor; each block has a config and a React component
 - **Pre-push hooks**: Husky runs full checks on all files (`lint:fix`, `format:fix`, `check-types`) before pushing
 - **Pre-commit hooks**: lint-staged runs ESLint + Prettier on staged files only (fast, ~1-2 seconds)
+- **React Compiler**: `reactCompiler` in `next.config.ts` memoizes client components and hooks, so don't write `useMemo`, `useCallback` or `memo()`. An effect that shouldn't re-run when a function changes calls it through `useEffectEvent` instead. The compiler skips a component it can't handle (most often a `try`/`finally`, or `throw` inside `try`) and runs it as written; `src/__tests__/reactCompiler.test.ts` lists the ones it skips and fails on a new one, or on hand memoization in a compiled component. Move the `try` into a plain function outside the component, as `openRegion` in `DrilldownMapClient.tsx` does. Vitest and Storybook compile client code too (`react-compiler.config.mts`). shadcn's files in `components/ui/` keep their memoization, to match upstream
 - **Colocation**: Prefer colocating logic near where it's used. A helper only one feature uses lives with that feature; `src/utilities/` is for what several features share (see [Utilities](#utilities)).
 - **Commit trailers**: don't add a `Claude-Session:` trailer (or any other link to an agent session) to commit messages. A `Co-Authored-By:` trailer is fine.
 - **Issue and PR numbers in comments**: comments and docs describe the code as it is now; why and when it changed is what `git log` and `git blame` are for. Don't write "added in #970", "before #672" or "see #883" — the sentence should stand on its own. Two exceptions, each a pointer with an exit: an upstream bug a workaround depends on (full URL; remove the workaround when it's fixed), and an **open** issue tracking a known gap or a skipped check (say what to remove when it closes, as `knownContrastIssue` does for #998). When that issue closes, delete the comment and what it guards; never append to it.
@@ -888,7 +889,13 @@ it again asks for another; or a comment mentioning `@claude` asking for a review
 `claude.yml`) or one they posted with a local `/code-review --comment <pr>` (they
 need write access).
 Fixes pushed after a review need a new approval or reply, not a new
-review. **Never post `/reviewed` or `LGTM` (or anything starting with either),
+review. A third way needs no person: when CI's review finds no blocker or
+should-fix and every file the PR changes is one `.claude/approvals.yml` lets
+Claude approve (docs, tests, stories, nothing sensitive), `claude-review.yml`
+records the check itself (`scripts/approval-policy.ts`, always run from dev's
+copies). The policy is a subset of Claude Ship's Claude Approvals format, so
+it carries over if we move to Ship; a PR a bot opened, or one that changes the
+policy, always needs a person. **Never post `/reviewed` or `LGTM` (or anything starting with either),
 and never submit an approving review** — not even when asked to get a PR mergeable. Both
 record that a person read the change; say it's waiting on them instead.
 

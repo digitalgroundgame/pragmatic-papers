@@ -40,7 +40,7 @@ export async function WhipCountPage({
       ) : (
         <p
           data-whip-count-empty=""
-          className="border-border text-muted-foreground my-8 rounded-lg border border-dashed p-8 text-center text-sm"
+          className="border-border text-muted-foreground my-8 rounded-sm border border-dashed p-8 text-center text-sm"
         >
           {draft
             ? `This count's data can't be read: ${parsed.error}`

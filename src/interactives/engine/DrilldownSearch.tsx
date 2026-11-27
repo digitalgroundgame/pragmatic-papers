@@ -1,6 +1,6 @@
 "use client"
 
-import { Loader2, Search, X } from "lucide-react"
+import { Search, X } from "lucide-react"
 import React, { useCallback, useEffect, useId, useRef, useState } from "react"
 
 import {
@@ -9,6 +9,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group"
+import { Spinner } from "@/components/ui/spinner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/utilities/utils"
 
@@ -135,11 +136,7 @@ export function DrilldownSearch({
     <div data-drilldown-search="" className={cn("relative", className)}>
       <InputGroup>
         <InputGroupAddon>
-          {state === "loading" ? (
-            <Loader2 aria-hidden="true" className="animate-spin" />
-          ) : (
-            <Search aria-hidden="true" />
-          )}
+          {state === "loading" ? <Spinner aria-hidden="true" /> : <Search aria-hidden="true" />}
         </InputGroupAddon>
         <InputGroupInput
           ref={inputRef}
@@ -191,7 +188,7 @@ export function DrilldownSearch({
       {showList && (
         <div
           className={cn(
-            "border-border bg-card absolute z-20 mt-1 w-full overflow-hidden rounded-md border shadow-lg",
+            "border-border bg-card absolute z-20 mt-1 w-full overflow-hidden rounded-sm border shadow-lg",
           )}
         >
           {state === "loading" && results.length === 0 && (

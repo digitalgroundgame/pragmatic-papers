@@ -18,7 +18,7 @@ import {
   MenuOption,
   type TriggerFn,
 } from "@payloadcms/richtext-lexical/lexical/react/LexicalTypeaheadMenuPlugin"
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 
 import type { FootnoteBlock } from "@/payload-types"
@@ -101,14 +101,14 @@ const FootnoteShortcutPlugin: React.FC = () => {
     })
   }, [editor])
 
-  const options = useMemo(() => {
+  const options = (() => {
     if (queryString === null) return []
     const q = queryString.toLowerCase().trim()
     return sources
       .filter((s) => (q ? s.note.toLowerCase().includes(q) : true))
       .slice(0, MAX_SUGGESTIONS)
       .map((s) => new FootnoteMenuOption(s))
-  }, [queryString, sources])
+  })()
 
   useEffect(() => {
     return editor.registerNodeTransform(TextNode, (textNode) => {
@@ -141,41 +141,38 @@ const FootnoteShortcutPlugin: React.FC = () => {
     })
   }, [editor])
 
-  const onSelectOption = useCallback(
-    (
-      option: FootnoteMenuOption,
-      textNodeContainingQuery: TextNode | null,
-      closeMenu: () => void,
-      matchingString: string,
-    ) => {
-      editor.update(() => {
-        const node = textNodeContainingQuery
-        if (!node) {
-          closeMenu()
-          return
-        }
-        const triggerLength = 2 + matchingString.length // [^ + typed
-        const text = node.getTextContent()
-        const splitOffset = text.length - triggerLength
-        let triggerNode = node
-        if (splitOffset > 0) {
-          const parts = node.splitText(splitOffset)
-          triggerNode = parts[parts.length - 1]!
-        }
-        const footnote = createFootnoteNode({
-          blockName: "",
-          blockType: "footnote",
-          sourceId: option.source.id,
-          note: option.source.note,
-          attributionEnabled: option.source.attributionEnabled,
-          link: option.source.link,
-        })
-        triggerNode.replace(footnote)
+  const onSelectOption = (
+    option: FootnoteMenuOption,
+    textNodeContainingQuery: TextNode | null,
+    closeMenu: () => void,
+    matchingString: string,
+  ) => {
+    editor.update(() => {
+      const node = textNodeContainingQuery
+      if (!node) {
         closeMenu()
+        return
+      }
+      const triggerLength = 2 + matchingString.length // [^ + typed
+      const text = node.getTextContent()
+      const splitOffset = text.length - triggerLength
+      let triggerNode = node
+      if (splitOffset > 0) {
+        const parts = node.splitText(splitOffset)
+        triggerNode = parts[parts.length - 1]!
+      }
+      const footnote = createFootnoteNode({
+        blockName: "",
+        blockType: "footnote",
+        sourceId: option.source.id,
+        note: option.source.note,
+        attributionEnabled: option.source.attributionEnabled,
+        link: option.source.link,
       })
-    },
-    [editor],
-  )
+      triggerNode.replace(footnote)
+      closeMenu()
+    })
+  }
 
   return (
     <LexicalTypeaheadMenuPlugin<FootnoteMenuOption>

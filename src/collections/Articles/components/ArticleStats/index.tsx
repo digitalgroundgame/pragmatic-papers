@@ -1,7 +1,7 @@
 "use client"
 
 import { useConfig, useDocumentInfo } from "@payloadcms/ui"
-import React, { useCallback } from "react"
+import React from "react"
 
 import type { ArticleStats as Stats } from "@/collections/Articles/stats/endpoint"
 
@@ -16,18 +16,15 @@ export function ArticleStats(): React.ReactNode {
     },
   } = useConfig()
 
-  const load = useCallback(
-    async (refresh: boolean): Promise<Stats> => {
-      const url = `${api}/articles/${id}/stats${refresh ? "/refresh" : ""}`
-      const response = await fetch(url, {
-        method: refresh ? "POST" : "GET",
-        credentials: "include",
-      })
-      if (!response.ok) throw new Error(`Stats request failed: ${response.status}`)
-      return (await response.json()) as Stats
-    },
-    [api, id],
-  )
+  const load = async (refresh: boolean): Promise<Stats> => {
+    const url = `${api}/articles/${id}/stats${refresh ? "/refresh" : ""}`
+    const response = await fetch(url, {
+      method: refresh ? "POST" : "GET",
+      credentials: "include",
+    })
+    if (!response.ok) throw new Error(`Stats request failed: ${response.status}`)
+    return (await response.json()) as Stats
+  }
 
   if (id == null) return null
   return <ArticleStatsView load={load} />

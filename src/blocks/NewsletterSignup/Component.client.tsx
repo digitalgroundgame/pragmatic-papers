@@ -55,6 +55,27 @@ export type NewsletterSignupBlockProps = NewsletterSignupTypes & {
   turnstileSiteKey?: string
 }
 
+type SubscribeResult = { ok: true } | { ok: false; error: string }
+
+/**
+ * Posts the signup. Outside the component so its `try` doesn't keep the React Compiler
+ * from compiling the form.
+ */
+async function subscribe(email: string, turnstileToken: string | null): Promise<SubscribeResult> {
+  try {
+    const res = await fetch("/api/newsletter/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, turnstileToken }),
+    })
+    if (res.ok) return { ok: true }
+    const body = (await res.json().catch(() => ({}))) as { error?: string }
+    return { ok: false, error: body.error ?? "Something went wrong. Please try again." }
+  } catch {
+    return { ok: false, error: "Network error. Please try again." }
+  }
+}
+
 /**
  * The form. `notice` arrives already rendered: Component.tsx turns its rich text into
  * elements on the server, so the Lexical converters don't ship to the browser.
@@ -86,58 +107,53 @@ export const NewsletterSignupForm: React.FC<
   } | null>(null)
 
   /** Takes the waiting submit, if there is one, and stops its timer. */
-  const takePending = React.useCallback((): { email: string } | null => {
+  const takePending = (): { email: string } | null => {
     const pending = pendingRef.current
     if (!pending) return null
     clearTimeout(pending.timer)
     pendingRef.current = null
     return pending
-  }, [])
+  }
 
   // Ends a submit that was waiting on the challenge with an error, so the reader can retry.
-  const stopWaiting = React.useCallback(
-    (reason: string): void => {
-      if (!takePending()) return
-      setStatus("error")
-      setMessage(reason)
-    },
-    [takePending],
-  )
+  const stopWaiting = (reason: string): void => {
+    if (!takePending()) return
+    setStatus("error")
+    setMessage(reason)
+  }
 
-  const resetWidget = React.useCallback((): void => {
+  const resetWidget = (): void => {
     const id = widgetIdRef.current
     if (id && window.turnstile) window.turnstile.reset(id)
     setToken(null)
-  }, [])
+  }
 
-  const send = React.useCallback(
-    async (address: string, turnstileToken: string | null): Promise<void> => {
-      setStatus("submitting")
-      setMessage(null)
-      try {
-        const res = await fetch("/api/newsletter/subscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: address, turnstileToken }),
-        })
-        const body = (await res.json().catch(() => ({}))) as { error?: string }
-        if (!res.ok) {
-          setStatus("error")
-          setMessage(body.error ?? "Something went wrong. Please try again.")
-          resetWidget()
-          return
-        }
-        setStatus("success")
-        setMessage("Check your inbox to confirm your subscription.")
-        setEmail("")
-      } catch {
-        setStatus("error")
-        setMessage("Network error. Please try again.")
-        resetWidget()
-      }
-    },
-    [resetWidget],
-  )
+  const send = async (address: string, turnstileToken: string | null): Promise<void> => {
+    setStatus("submitting")
+    setMessage(null)
+    const result = await subscribe(address, turnstileToken)
+    if (result.ok) {
+      setStatus("success")
+      setMessage("Check your inbox to confirm your subscription.")
+      setEmail("")
+      return
+    }
+    setStatus("error")
+    setMessage(result.error)
+    resetWidget()
+  }
+
+  // The widget's callbacks, read through effect events so a new render doesn't re-create
+  // the widget.
+  const onToken = React.useEffectEvent((t: string): void => {
+    setToken(t)
+    const pending = takePending()
+    if (pending) void send(pending.email, t)
+  })
+  const onChallengeError = React.useEffectEvent((): void => {
+    setToken(null)
+    stopWaiting(CHALLENGE_FAILED)
+  })
 
   // The one effect: Turnstile is outside React, so the widget is rendered into its container
   // once the script is ready, and removed on unmount.
@@ -150,23 +166,16 @@ export const NewsletterSignupForm: React.FC<
       sitekey: turnstileSiteKey,
       theme: "auto",
       appearance: "interaction-only",
-      callback: (t) => {
-        setToken(t)
-        const pending = takePending()
-        if (pending) void send(pending.email, t)
-      },
+      callback: (t) => onToken(t),
       "expired-callback": () => setToken(null),
-      "error-callback": () => {
-        setToken(null)
-        stopWaiting(CHALLENGE_FAILED)
-      },
+      "error-callback": () => onChallengeError(),
     })
     return () => {
       const id = widgetIdRef.current
       if (id && window.turnstile) window.turnstile.remove(id)
       widgetIdRef.current = null
     }
-  }, [scriptReady, turnstileSiteKey, takePending, send, stopWaiting])
+  }, [scriptReady, turnstileSiteKey])
 
   const headingText = heading ?? DEFAULT_HEADING
   const buttonText = buttonLabel ?? DEFAULT_BUTTON_LABEL

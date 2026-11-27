@@ -3,7 +3,7 @@
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/utilities/utils"
 import { ArrowUpRight, Pause, Play } from "lucide-react"
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { INTERACTIVE_SEL } from "./constants"
 import { FeedSettingsMenu } from "./FeedSettingsMenu"
 import type { AdSlot } from "./types"
@@ -94,10 +94,10 @@ export function AdSlotView({
   }, [showTapIndicator])
 
   const swipeStartRef = useRef<{ x: number; y: number; t: number } | null>(null)
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
+  const onPointerDown = (e: React.PointerEvent) => {
     swipeStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() }
-  }, [])
-  const onPointerUp = useCallback((e: React.PointerEvent) => {
+  }
+  const onPointerUp = (e: React.PointerEvent) => {
     const start = swipeStartRef.current
     swipeStartRef.current = null
     if (!start) return
@@ -110,7 +110,7 @@ export function AdSlotView({
       onAutoPlayToggleRef.current()
       setShowTapIndicator(true)
     }
-  }, [])
+  }
 
   const isExternal = ad.ctaHref.startsWith("http")
 

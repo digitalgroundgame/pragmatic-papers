@@ -1,5 +1,5 @@
 "use client"
-import React, { useCallback, useEffect } from "react"
+import React, { useEffect } from "react"
 import type { TextFieldClientProps } from "payload"
 
 import { useField, Button, TextInput, FieldLabel, useFormFields, useForm } from "@payloadcms/ui"
@@ -51,18 +51,15 @@ export const NumberSlugComponent: React.FC<NumberSlugComponentProps> = ({
     }
   }, [targetFieldValue, checkboxValue, setValue, value])
 
-  const handleLock = useCallback(
-    (e: React.MouseEvent<Element>) => {
-      e.preventDefault()
+  const handleLock = (e: React.MouseEvent<Element>) => {
+    e.preventDefault()
 
-      dispatchFields({
-        type: "UPDATE",
-        path: checkboxFieldPath,
-        value: !checkboxValue,
-      })
-    },
-    [checkboxValue, checkboxFieldPath, dispatchFields],
-  )
+    dispatchFields({
+      type: "UPDATE",
+      path: checkboxFieldPath,
+      value: !checkboxValue,
+    })
+  }
 
   const readOnly = readOnlyFromProps || checkboxValue
 

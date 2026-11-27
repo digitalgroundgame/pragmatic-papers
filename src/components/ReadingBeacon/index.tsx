@@ -127,8 +127,9 @@ export const ReadingBeacon: React.FC<ReadingBeaconProps> = ({
       if (shown !== null && spent + (Date.now() - shown) >= READ_AFTER_MS) read()
     }, 5000)
     const onVisibility = (): void => {
-      if (document.visibilityState === "visible") shown ??= Date.now()
-      else if (shown !== null) {
+      if (document.visibilityState === "visible") {
+        if (shown === null) shown = Date.now()
+      } else if (shown !== null) {
         spent += Date.now() - shown
         shown = null
       }

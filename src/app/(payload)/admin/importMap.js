@@ -69,6 +69,7 @@ import { NewsletterView as NewsletterView_bb918406547ab798cea1ede5dc83eb82 } fro
 import { PluginsField as PluginsField_db2d2f585e60eb9bedffbd7fa7993815 } from '@/globals/Plugins/components/PluginsField'
 import { NoField as NoField_6b183700acd4c34045544bc38d059ef4 } from '@/globals/Plugins/components/NoField'
 import { RunNowField as RunNowField_a9d86fb0496ebd76a3dd880c805864b5 } from '@/globals/ArticleRecommendations/components/RunNowField'
+import { PanelBlockLabel as PanelBlockLabel_cf30a2526c277c400e61b99ba89a81d8 } from '@/blocks/Panel/BlockLabel'
 import { AdminAvatar as AdminAvatar_7be6553aa96e662e742b516022263c1c } from '@/collections/Users/components/AdminAvatar'
 import { PaperIconAdmin as PaperIconAdmin_de5f3b464da8d97ce80441fdb9ee9751 } from '@/components/Logo/icons/PaperIcon'
 import { LogomarkIcon as LogomarkIcon_715cf00332be8c15b8f2b121ec0215b0 } from '@/components/Logo/icons/LogomarkIcon'
@@ -156,6 +157,7 @@ export const importMap = {
   "@/globals/Plugins/components/PluginsField#PluginsField": PluginsField_db2d2f585e60eb9bedffbd7fa7993815,
   "@/globals/Plugins/components/NoField#NoField": NoField_6b183700acd4c34045544bc38d059ef4,
   "@/globals/ArticleRecommendations/components/RunNowField#RunNowField": RunNowField_a9d86fb0496ebd76a3dd880c805864b5,
+  "@/blocks/Panel/BlockLabel#PanelBlockLabel": PanelBlockLabel_cf30a2526c277c400e61b99ba89a81d8,
   "@/collections/Users/components/AdminAvatar#AdminAvatar": AdminAvatar_7be6553aa96e662e742b516022263c1c,
   "@/components/Logo/icons/PaperIcon#PaperIconAdmin": PaperIconAdmin_de5f3b464da8d97ce80441fdb9ee9751,
   "@/components/Logo/icons/LogomarkIcon#LogomarkIcon": LogomarkIcon_715cf00332be8c15b8f2b121ec0215b0,

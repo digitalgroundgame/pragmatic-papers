@@ -12,6 +12,7 @@ import { MediaBlock } from "@/blocks/MediaBlock/Component"
 import { NewsletterSignupBlock } from "@/blocks/NewsletterSignup/Component"
 import { MerchBlock } from "@/blocks/Merch/Component"
 import { TimelineBlock } from "@/blocks/Timeline/Component"
+import { TopicsListBlock } from "@/blocks/TopicsList/Component"
 import { VolumeViewBlock } from "@/blocks/VolumeViewBlock/component"
 import { isResolved } from "@/utilities/relationships"
 import { getTurnstileSiteKey } from "@/integrations/cloudflare/turnstile"
@@ -50,6 +51,7 @@ const LAYOUT_RENDERERS: {
     <NewsletterSignupBlock {...block} turnstileSiteKey={getTurnstileSiteKey()} />
   ),
   timeline: (block) => <TimelineBlock {...block} />,
+  topicsList: (block, { pageNumber }) => <TopicsListBlock {...block} pageNumber={pageNumber} />,
   volumeView: (block, { pageNumber, paginated }) => (
     <VolumeViewBlock {...block} pageNumber={pageNumber} paginated={paginated} />
   ),

@@ -28,6 +28,8 @@ interface ResolvedField {
   fields?: ResolvedField[]
   flattenedFields?: ResolvedField[]
   blocks?: ResolvedBlock[]
+  /** Blocks defined once in the config's `blocks` and referenced here by slug. */
+  blockReferences?: (ResolvedBlock | string)[]
   tabs?: { fields?: ResolvedField[] }[]
   editor?: {
     editorConfig?: {
@@ -44,9 +46,18 @@ interface ResolvedField {
 const fieldsOf = (item: { fields?: ResolvedField[]; flattenedFields?: ResolvedField[] }) =>
   item.flattenedFields ?? item.fields ?? []
 
+/** The config's shared blocks (`blocks`), which a field's `blockReferences` name by slug. */
+let sharedBlocks = new Map<string, ResolvedBlock>()
+
 /** The blocks a rich text or `blocks` field offers directly, not those nested in them. */
 function blocksIn(field: ResolvedField): { blocks: ResolvedBlock[]; inline: ResolvedBlock[] } {
-  if (field.type === "blocks") return { blocks: field.blocks ?? [], inline: [] }
+  if (field.type === "blocks") {
+    const referenced = (field.blockReferences ?? []).flatMap((ref) => {
+      const block = typeof ref === "string" ? sharedBlocks.get(ref) : ref
+      return block ? [block] : []
+    })
+    return { blocks: [...(field.blocks ?? []), ...referenced], inline: [] }
+  }
   if (field.type !== "richText") return { blocks: [], inline: [] }
   const props =
     field.editor?.editorConfig?.resolvedFeatureMap?.get("blocks")?.sanitizedServerFeatureProps
@@ -114,6 +125,9 @@ const RICH_TEXT_EDITORS = [
   ["volumes", "editorsNote"],
   ["docs", "content"],
   ["pages", "layout"],
+  // Asides: Panel blocks, shared through `blockReferences`.
+  ["pages", "aside"],
+  ["topics", "aside"],
 ] as const
 
 const slugs = (blocks: ResolvedBlock[]) => [...new Set(blocks.map(({ slug }) => slug))].sort()
@@ -124,6 +138,9 @@ const editor = (collection: string, path: string) => editors.get(`${collection}.
 
 beforeAll(async () => {
   config = await configPromise
+  sharedBlocks = new Map(
+    ((config.blocks ?? []) as unknown as ResolvedBlock[]).map((block) => [block.slug, block]),
+  )
   for (const [collection, path] of RICH_TEXT_EDITORS) {
     editors.set(`${collection}.${path}`, editorAt(config, collection, path))
   }
@@ -135,6 +152,9 @@ describe("the block registry", () => {
     expect(editor("articles", "content").blocks.length).toBeGreaterThan(5)
     expect(editor("articles", "content").inline.length).toBeGreaterThan(0)
     expect(editor("pages", "layout").blocks.length).toBeGreaterThan(5)
+    // Shared blocks are found through `blockReferences`.
+    expect(slugs(editor("pages", "aside").blocks)).toEqual(["panel"])
+    expect(slugs(editor("topics", "aside").blocks)).toEqual(["panel"])
   })
 
   it("has a descriptor for every block an editor offers", () => {
@@ -201,8 +221,8 @@ describe("the renderers", () => {
 
   it("RichText renders every block a rich-text editor offers", () => {
     const missing = [...editors.values()].flatMap((e) =>
-      e.name === "pages.layout"
-        ? [] // a layout's own blocks go through RenderBlocks; its rich text is below
+      e.name === "pages.layout" || e.name.endsWith(".aside")
+        ? [] // a layout's own blocks go through RenderBlocks, an aside's RenderPanels; rich text below
         : [
             ...slugs(e.blocks).filter((slug) => !richText.blocks[slug]),
             ...slugs(e.inline).filter((slug) => !richText.inlineBlocks[slug]),

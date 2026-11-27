@@ -11,6 +11,7 @@ import { MediaBlock } from "@/blocks/MediaBlock/config"
 import { Merch } from "@/blocks/Merch/config"
 import { NewsletterSignup } from "@/blocks/NewsletterSignup/config"
 import { Timeline } from "@/blocks/Timeline/config"
+import { TopicsList } from "@/blocks/TopicsList/config"
 import { VolumeView } from "@/blocks/VolumeViewBlock/config"
 import { hero } from "@/heros/config"
 import { populatePublishedAt } from "@/hooks/populatePublishedAt"
@@ -19,6 +20,8 @@ import { generatePreviewPath } from "@/utilities/generatePreviewPath"
 import { rememberReadersCopy } from "@/utilities/readersCopy"
 import { slugField } from "payload"
 import { revalidateDelete, revalidatePage } from "./hooks/revalidatePage"
+import { deletePageAccess, lockSitePageSlug, sitePageKeyField } from "./sitePages"
+import { asideField } from "@/globals/Layouts/config"
 
 import { admin } from "@/access/collections"
 import {
@@ -29,11 +32,25 @@ import {
   PreviewField,
 } from "@payloadcms/plugin-seo/fields"
 
+const LAYOUT_BLOCKS = [
+  CollectionGrid,
+  CallToAction,
+  Content,
+  Contributors,
+  MediaBlock,
+  NewsletterSignup,
+  Merch,
+  Timeline,
+  VolumeView,
+  FormBlock,
+  FeedsList,
+].map((block) => block.slug)
+
 export const Pages: CollectionConfig<"pages"> = {
   slug: "pages",
   access: {
     create: admin,
-    delete: admin,
+    delete: deletePageAccess,
     read: isPublishedOrStaff,
     update: admin,
   },
@@ -95,7 +112,13 @@ export const Pages: CollectionConfig<"pages"> = {
                 VolumeView,
                 FormBlock,
                 FeedsList,
+                TopicsList,
               ],
+              // A list only a site page's route can page through goes on that page alone.
+              filterOptions: ({ data }) =>
+                data?.key === "topics"
+                  ? true
+                  : LAYOUT_BLOCKS.filter((slug) => slug !== "topicsList"),
               required: true,
               admin: {
                 initCollapsed: true,
@@ -103,6 +126,14 @@ export const Pages: CollectionConfig<"pages"> = {
             },
           ],
           label: "Content",
+        },
+        {
+          label: "Aside",
+          admin: {
+            description: "The panels beside the page's content, below it on phones.",
+            condition: (data) => Boolean(data?.key),
+          },
+          fields: [asideField({})],
         },
         {
           name: "meta",
@@ -142,7 +173,8 @@ export const Pages: CollectionConfig<"pages"> = {
         position: "sidebar",
       },
     },
-    slugField(),
+    sitePageKeyField,
+    slugField({ overrides: lockSitePageSlug }),
   ],
   hooks: {
     afterChange: [revalidatePage, revalidateNavLinks],

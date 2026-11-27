@@ -20,6 +20,8 @@ vi.mock("next/headers", () => ({ draftMode: async () => ({ isEnabled: false }) }
 vi.mock("@payload-config", () => ({ default: {} }))
 vi.mock("payload", () => ({ getPayload: async () => ({ find }) }))
 vi.mock("@/data/queries", () => queries)
+// A topic page reads its aside from the Layouts global; an empty one renders no panels.
+vi.mock("@/data/globals", () => ({ getGlobal: async () => ({ topic: { aside: [] } }) }))
 vi.mock("@/components/PayloadRedirects", () => ({ PayloadRedirects: () => null }))
 vi.mock("@/components/LivePreviewListener", () => ({ LivePreviewListener: () => null }))
 vi.mock("@/components/JsonLd", () => ({

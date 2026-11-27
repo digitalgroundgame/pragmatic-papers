@@ -1,3 +1,4 @@
+import { cva, type VariantProps } from "class-variance-authority"
 import React from "react"
 
 import type { BylineAuthor } from "@/components/Authors/BylineAuthor"
@@ -6,7 +7,23 @@ import { Avatar, AvatarFallback, AvatarGroup, AvatarImage } from "@/components/u
 import { getInitials } from "@/utilities/getInitials"
 import { getSeparator } from "./getSeparator"
 
-interface BylineProps extends React.HTMLAttributes<HTMLDivElement> {
+const bylineVariants = cva("text-brand-text font-serif font-bold underline-offset-4", {
+  variants: {
+    size: {
+      /** The article page's: 36px faces beside body-size names. */
+      default: "",
+      /** For lists of results: 24px faces beside small names. */
+      sm: "text-sm",
+    },
+  },
+  defaultVariants: { size: "default" },
+})
+
+/** The avatar size each byline size draws its faces at. */
+const AVATAR_SIZE = { default: "md", sm: "sm" } as const
+
+interface BylineProps
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof bylineVariants> {
   authors: BylineAuthor[]
 }
 
@@ -20,16 +37,20 @@ interface BylineProps extends React.HTMLAttributes<HTMLDivElement> {
  * whichever face you are on. At rest that peak sits on the first face, which
  * is just the plain left-over-right order.
  */
-export function Byline({ authors }: BylineProps): React.ReactNode {
+export function Byline({ authors, size, className }: BylineProps): React.ReactNode {
   if (!authors.length) return null
 
   return (
-    <div data-slot="byline" className="text-brand-text font-serif font-bold underline-offset-4">
+    <div
+      data-slot="byline"
+      data-size={size ?? "default"}
+      className={bylineVariants({ size, className })}
+    >
       <AvatarGroup className="mr-2 inline-flex align-middle">
         {authors.map(({ id, slug, name, avatarUrl }, index) => (
           <Avatar
             key={id}
-            size="md"
+            size={AVATAR_SIZE[size ?? "default"]}
             // Stack order lives in custom properties so the hover rules can win:
             // an inline z-index would outrank any class.
             //

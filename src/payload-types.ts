@@ -165,7 +165,9 @@ export interface Config {
   auth: {
     users: UserAuthOperations;
   };
-  blocks: {};
+  blocks: {
+    panel: PanelBlock;
+  };
   collections: {
     articles: Article;
     volumes: Volume;
@@ -241,6 +243,7 @@ export interface Config {
     newsletter: Newsletter;
     plugins: Plugin;
     'article-recommendations': ArticleRecommendation;
+    layouts: Layout;
     'comment-settings': CommentSetting;
     'payload-jobs-stats': PayloadJobsStat;
   };
@@ -252,6 +255,7 @@ export interface Config {
     newsletter: NewsletterSelect<false> | NewsletterSelect<true>;
     plugins: PluginsSelect<false> | PluginsSelect<true>;
     'article-recommendations': ArticleRecommendationsSelect<false> | ArticleRecommendationsSelect<true>;
+    layouts: LayoutsSelect<false> | LayoutsSelect<true>;
     'comment-settings': CommentSettingsSelect<false> | CommentSettingsSelect<true>;
     'payload-jobs-stats': PayloadJobsStatsSelect<false> | PayloadJobsStatsSelect<true>;
   };
@@ -291,6 +295,23 @@ export interface UserAuthOperations {
     email: string;
     password: string;
   };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "PanelBlock".
+ */
+export interface PanelBlock {
+  /**
+   * What the panel lists. The site keeps it current. A panel with nothing to show (no views this week, a topic with no other topics) is left out.
+   */
+  source: 'mostRead' | 'latestVolume' | 'topics' | 'relatedTopics' | 'contributors' | 'searchTips' | 'newsletter';
+  /**
+   * Leave empty for the panel's usual heading.
+   */
+  title?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'panel';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -427,7 +448,9 @@ export interface Page {
     | VolumeView
     | FormBlock
     | FeedsListBlock
+    | TopicsListBlock
   )[];
+  aside?: PanelBlock[] | null;
   meta?: {
     title?: string | null;
     /**
@@ -437,6 +460,10 @@ export interface Page {
     description?: string | null;
   };
   publishedAt?: string | null;
+  /**
+   * A page of the site's own: its route lists what the site keeps (here, every topic) under this page's hero, and beside it this page's aside. Its address is fixed, and it can't be deleted.
+   */
+  key?: 'topics' | null;
   /**
    * When enabled, the slug will auto-generate from the title field on save and autosave.
    */
@@ -1226,6 +1253,19 @@ export interface FeedsListBlock {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TopicsListBlock".
+ */
+export interface TopicsListBlock {
+  /**
+   * Shown in place of the list while there are no topics.
+   */
+  emptyMessage?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'topicsList';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "topics".
  */
 export interface Topic {
@@ -1235,6 +1275,10 @@ export interface Topic {
    * Optional description for this topic
    */
   description?: string | null;
+  /**
+   * Panels for this topic's page alone. Leave empty to use the ones in Site → Layouts → Topic.
+   */
+  aside?: PanelBlock[] | null;
   meta?: {
     title?: string | null;
     /**
@@ -2007,6 +2051,7 @@ export interface VolumesSelect<T extends boolean = true> {
 export interface TopicsSelect<T extends boolean = true> {
   name?: T;
   description?: T;
+  aside?: T | {};
   meta?:
     | T
     | {
@@ -2146,7 +2191,9 @@ export interface PagesSelect<T extends boolean = true> {
         volumeView?: T | VolumeViewSelect<T>;
         formBlock?: T | FormBlockSelect<T>;
         feedsList?: T | FeedsListBlockSelect<T>;
+        topicsList?: T | TopicsListBlockSelect<T>;
       };
+  aside?: T | {};
   meta?:
     | T
     | {
@@ -2155,6 +2202,7 @@ export interface PagesSelect<T extends boolean = true> {
         description?: T;
       };
   publishedAt?: T;
+  key?: T;
   generateSlug?: T;
   slug?: T;
   updatedAt?: T;
@@ -2320,6 +2368,15 @@ export interface FeedsListBlockSelect<T extends boolean = true> {
   list?: T;
   title?: T;
   description?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "TopicsListBlock_select".
+ */
+export interface TopicsListBlockSelect<T extends boolean = true> {
+  emptyMessage?: T;
   id?: T;
   blockName?: T;
 }
@@ -3095,6 +3152,35 @@ export interface ArticleRecommendation {
   createdAt?: string | null;
 }
 /**
+ * The parts of each template that aren't any one document's.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "layouts".
+ */
+export interface Layout {
+  id: number;
+  /**
+   * Every topic page: /topics/<topic>.
+   */
+  topic?: {
+    /**
+     * Beside the topic's articles, below them on phones. A topic can replace these with its own.
+     */
+    aside?: PanelBlock[] | null;
+  };
+  /**
+   * Every article page.
+   */
+  article?: {
+    /**
+     * At the end of the article, beside the recommended articles.
+     */
+    aside?: PanelBlock[] | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "comment-settings".
  */
@@ -3292,6 +3378,25 @@ export interface ArticleRecommendationsSelect<T extends boolean = true> {
         article?: T;
         engagementScore?: T;
         id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "layouts_select".
+ */
+export interface LayoutsSelect<T extends boolean = true> {
+  topic?:
+    | T
+    | {
+        aside?: T | {};
+      };
+  article?:
+    | T
+    | {
+        aside?: T | {};
       };
   updatedAt?: T;
   createdAt?: T;

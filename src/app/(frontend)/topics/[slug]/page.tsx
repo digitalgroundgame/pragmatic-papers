@@ -1,16 +1,22 @@
-import { AuthorArticleCard } from "@/components/Articles/AuthorArticleCard"
+import { Tile, TileList } from "@/components/Tile"
 import { LivePreviewListener } from "@/components/LivePreviewListener"
 import { Pagination } from "@/components/Pagination"
 import { PayloadRedirects } from "@/components/PayloadRedirects"
-import type { Volume } from "@/payload-types"
+import type { Topic, User } from "@/payload-types"
 import { generateMeta, paginatedPath } from "@/utilities/generateMeta"
-import { queryTopicBySlug, queryVolumesForArticles } from "@/data/queries"
+import { queryTopicBySlug } from "@/data/queries"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
 import { notFound } from "next/navigation"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
-import { relationshipId } from "@/utilities/relationships"
+import { PageHeader, PageShell } from "@/components/PageShell"
+import { WithAside } from "@/components/Aside"
+import { hasPanels, RenderPanels } from "@/blocks/Panel/Component"
+import { getGlobal } from "@/data/globals"
+import { isResolved } from "@/utilities/relationships"
+import { Byline } from "@/components/Authors/Byline"
+import { toBylineAuthor } from "@/components/Authors/BylineAuthor"
 import { getPayloadClient } from "@/data/payload"
 
 interface Args {
@@ -78,59 +84,69 @@ export default async function TopicPage({
   } = await queryArticlesByTopic(topic.id, page)
   // A page past the last one would be an empty listing that names itself as canonical.
   if (page > 1 && page > totalPages) notFound()
-  const articleIds = articles.map((article) => article.id).filter(Boolean)
-  const volumes = await queryVolumesForArticles(articleIds)
-
-  const volumeByArticleId = new Map<number, Volume>()
-
-  for (const volume of volumes) {
-    const volumeArticles = volume.articles || []
-    for (const articleRef of volumeArticles) {
-      const articleId = relationshipId(articleRef)
-
-      if (articleId != null && !volumeByArticleId.has(articleId)) {
-        volumeByArticleId.set(articleId, volume)
-      }
-    }
-  }
-
+  // The topic's own panels, else the Topic layout's.
+  const aside = hasPanels(topic.aside) ? topic.aside : (await getGlobal("layouts")).topic?.aside
   return (
     <>
       <Breadcrumbs
+        shell
         items={[
           { name: "Topics", path: "/topics" },
           { name: topic.name, path: url },
         ]}
       />
-      <article className="mx-auto max-w-3xl space-y-6 px-4">
+      <PageShell>
         <PayloadRedirects disableNotFound url={url} />
 
         {draft && <LivePreviewListener />}
 
-        <header className="space-y-3">
-          <h1>{topic.name}</h1>
-          {topic.description && (
-            <p className="text-muted-foreground text-sm">{topic.description}</p>
-          )}
-        </header>
+        <PageHeader title={topic.name} description={topic.description} />
 
-        <section aria-label="Articles for this topic">
-          <h2 className="mb-3">Articles</h2>
-          {totalDocs === 0 ? (
-            <p className="text-muted-foreground text-sm">No articles found for this topic yet.</p>
-          ) : (
-            <>
-              <div className="flex flex-col gap-4">
-                {articles.map((article) => {
-                  const volume = volumeByArticleId.get(article.id)
-                  return <AuthorArticleCard key={article.id} article={article} volume={volume} />
-                })}
-              </div>
-              <Pagination page={currentPage} totalPages={totalPages} />
-            </>
-          )}
-        </section>
-      </article>
+        <WithAside
+          aside={
+            hasPanels(aside) ? (
+              <RenderPanels panels={aside} context={{ topicId: topic.id }} />
+            ) : null
+          }
+        >
+          <section aria-label="Articles for this topic">
+            <h2 className="sr-only">Articles</h2>
+            {totalDocs === 0 ? (
+              <p className="text-muted-foreground text-sm">No articles found for this topic yet.</p>
+            ) : (
+              <>
+                <TileList>
+                  {articles.map((article) => {
+                    return (
+                      <Tile
+                        key={article.id}
+                        href={`/articles/${article.slug}`}
+                        title={article.title}
+                        summary={article.meta?.description}
+                        image={article.meta?.image}
+                        // The article's other topics; this one is the page.
+                        badges={(article.topics ?? [])
+                          .filter(isResolved<Topic>)
+                          .filter((t) => t.id !== topic.id && t.slug)
+                          .map((t) => ({ label: t.name, href: `/topics/${t.slug}` }))}
+                        byline={
+                          <Byline
+                            size="sm"
+                            authors={(article.authors ?? [])
+                              .filter(isResolved<User>)
+                              .map(toBylineAuthor)}
+                          />
+                        }
+                      />
+                    )
+                  })}
+                </TileList>
+                <Pagination page={currentPage} totalPages={totalPages} />
+              </>
+            )}
+          </section>
+        </WithAside>
+      </PageShell>
     </>
   )
 }

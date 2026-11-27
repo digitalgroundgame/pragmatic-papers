@@ -26,6 +26,9 @@ import { ArticleHero } from "@/heros/ArticleHero"
 import { MathJaxProvider } from "@/providers/MathJaxProvider"
 import { generateMeta } from "@/utilities/generateMeta"
 import { getPayloadClient } from "@/data/payload"
+import { getGlobal } from "@/data/globals"
+import { hasPanels, RenderPanels } from "@/blocks/Panel/Component"
+import { WithAside } from "@/components/Aside"
 import { PRERENDER_LIMIT } from "@/utilities/prerender"
 import { queryArticleBySlug, queryVolumesForArticles } from "@/data/queries"
 import { commentingOf } from "@/plugins/comments"
@@ -85,7 +88,7 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
 
   const populatedAuthors = (authors || []).filter(isResolved<User>)
 
-  const [[volume], tableOfContentsEnabled, commentsSwitch, ssoSwitch, published] =
+  const [[volume], tableOfContentsEnabled, commentsSwitch, ssoSwitch, published, layouts] =
     await Promise.all([
       queryVolumesForArticles([article.id]),
       isExperimentEnabled("tableOfContents"),
@@ -94,7 +97,9 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
       isPluginEnabled("sso"),
       // Preview stays on across pages, so it keeps comments wherever readers have them.
       draft ? isArticlePublished(article.id) : true,
+      getGlobal("layouts"),
     ])
+  const endAside = layouts.article?.aside
   // Editors switch an article's comments off in its sidebar; locked ones still show, closed.
   const commentsEnabled = commentsSwitch && ssoSwitch && commentingOf(article) !== "off"
   const showTableOfContents = tableOfContentsEnabled && article.showTableOfContents === true
@@ -156,7 +161,16 @@ export default async function Article({ params: paramsPromise }: Args): Promise<
           </TableOfContentsProvider>
         </article>
       </div>
-      <RecommendedArticles currentArticleSlug={slug} />
+      {hasPanels(endAside) ? (
+        // The article's end: what to read next, with the Article layout's panels beside it.
+        <div className="container mt-12 max-w-6xl border-t pt-8">
+          <WithAside aside={<RenderPanels panels={endAside} />}>
+            <RecommendedArticles currentArticleSlug={slug} className="" />
+          </WithAside>
+        </div>
+      ) : (
+        <RecommendedArticles currentArticleSlug={slug} />
+      )}
     </>
   )
 }

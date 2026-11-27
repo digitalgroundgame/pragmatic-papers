@@ -69,4 +69,16 @@ describe("createMissingStarterPages", () => {
       "sitemaps",
     ])
   })
+
+  it("ships /topics as the Topics site page: its key, a fixed slug, the list and the panels", () => {
+    const topics = STARTER_PAGES.find((p) => p.slug === "topics")
+    expect(topics).toMatchObject({ key: "topics", generateSlug: false })
+    expect(topics?._status).toBeUndefined()
+    expect(topics?.layout.map((block) => block.blockType)).toEqual(["topicsList"])
+    expect(topics?.aside?.map((panel) => panel.source)).toEqual([
+      "mostRead",
+      "latestVolume",
+      "newsletter",
+    ])
+  })
 })

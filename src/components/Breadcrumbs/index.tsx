@@ -24,6 +24,8 @@ interface BreadcrumbsProps {
    * does everywhere else.
    */
   fullWidth?: boolean
+  /** Sits over a `PageShell`, lined up with its header. */
+  shell?: boolean
   /** Widens the column to match what the trail sits over, e.g. `max-w-5xl` for an article-width hero. */
   className?: string
 }
@@ -36,12 +38,25 @@ interface BreadcrumbsProps {
 export function Breadcrumbs({
   items,
   fullWidth = false,
+  shell = false,
   className,
 }: BreadcrumbsProps): ReactElement | null {
   if (items.length === 0) return null
 
   return (
-    <Breadcrumb className={cn("mb-4", fullWidth ? "container" : "container max-w-3xl", className)}>
+    <Breadcrumb
+      className={cn(
+        "mb-4",
+        shell
+          ? process.env.NEXT_PUBLIC_SHELL_ALIGN === "center"
+            ? "container max-w-[calc(42rem+2rem)]"
+            : "container"
+          : fullWidth
+            ? "container"
+            : "container max-w-3xl",
+        className,
+      )}
+    >
       <BreadcrumbList className="flex-nowrap">
         <BreadcrumbItem>
           <BreadcrumbLink href="/">

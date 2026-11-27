@@ -1,46 +1,22 @@
-import { LivePreviewListener } from "@/components/LivePreviewListener"
-import { Pagination } from "@/components/Pagination"
-import { TopicsList } from "@/components/Topics/TopicsList"
-import { paginatedPath } from "@/utilities/generateMeta"
-import { getSiteURL } from "@/utilities/getURL"
-import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
-import { notFound } from "next/navigation"
-import React, { cache } from "react"
+import React from "react"
+
+import { hasPanels, RenderPanels } from "@/blocks/Panel/Component"
+import { RenderBlocks } from "@/blocks/RenderBlocks"
+import { WithAside } from "@/components/Aside"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
-import { getPayloadClient } from "@/data/payload"
-
-export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
-  const { p } = await searchParams
-  const canonicalUrl = `${getSiteURL()}${paginatedPath("/topics", p)}`
-
-  return {
-    title: "Topics | The Pragmatic Papers",
-    description: "Browse all topics on Pragmatic Papers.",
-    alternates: { canonical: canonicalUrl },
-    openGraph: mergeOpenGraph({
-      title: "Topics | The Pragmatic Papers",
-      description: "Browse all topics on Pragmatic Papers.",
-      url: canonicalUrl,
-    }),
-  }
-}
-
-const TOPICS_PER_PAGE = 50
-
-const queryTopics = cache(async (page: number = 1) => {
-  const { isEnabled: draft } = await draftMode()
-  const payload = await getPayloadClient()
-
-  return await payload.find({
-    collection: "topics",
-    draft,
-    limit: TOPICS_PER_PAGE,
-    page,
-    pagination: true,
-  })
-})
+import { LivePreviewListener } from "@/components/LivePreviewListener"
+import { PageShell } from "@/components/PageShell"
+import { SitePageHeader } from "@/components/PageShell/SitePageHeader"
+import {
+  TOPICS_ASIDE,
+  TOPICS_DESCRIPTION,
+  TOPICS_TITLE,
+  topicsPage,
+} from "@/collections/Pages/starterPages/topics"
+import { querySitePage } from "@/data/queries"
+import { generateMeta, paginatedPath } from "@/utilities/generateMeta"
 
 interface Args {
   searchParams: Promise<{
@@ -48,44 +24,43 @@ interface Args {
   }>
 }
 
+export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
+  const { p } = await searchParams
+  const page = await querySitePage("topics")
+  return generateMeta({ doc: page ?? topicsPage, canonicalPath: paginatedPath("/topics", p) })
+}
+
+/**
+ * Every topic. The list is the site's (the Topics list block); the title, introduction and
+ * aside are the Topics site page's, which editors own. Until that page is published, the
+ * route shows what it did as code, so a deploy that creates the draft changes nothing.
+ */
 export default async function TopicsPage({ searchParams }: Args): Promise<React.ReactNode> {
   const { isEnabled: draft } = await draftMode()
   const { p } = await searchParams
-  let page = Number(p) || 1
-  if (!Number.isInteger(page) || page < 1) page = 1
+  let pageNumber = Number(p) || 1
+  if (!Number.isInteger(pageNumber) || pageNumber < 1) pageNumber = 1
 
-  const { docs: topics, totalPages, page: currentPage } = await queryTopics(page)
-  // A page past the last one would be an empty listing that names itself as canonical.
-  if (page > 1 && page > totalPages) notFound()
+  const page = await querySitePage("topics")
+  const layout = page?.layout?.length ? page.layout : topicsPage.layout
+  const aside = page ? page.aside : TOPICS_ASIDE
 
   return (
     <>
-      <Breadcrumbs items={[{ name: "Topics", path: "/topics" }]} />
-      <article className="mx-auto max-w-3xl space-y-6 px-4">
+      <Breadcrumbs shell items={[{ name: page?.title ?? TOPICS_TITLE, path: "/topics" }]} />
+      <PageShell as="div">
         {draft && <LivePreviewListener />}
 
-        <header className="space-y-3">
-          <h1>Topics</h1>
-          <p className="text-muted-foreground text-sm">Browse all topics</p>
-        </header>
+        <SitePageHeader
+          hero={page?.hero}
+          title={page?.title ?? TOPICS_TITLE}
+          description={TOPICS_DESCRIPTION}
+        />
 
-        <section aria-label="All topics" className="mt-6">
-          {topics.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No topics found.</p>
-          ) : (
-            <>
-              <div className="mt-6 flex justify-center">
-                <TopicsList topics={topics} />
-              </div>
-              <Pagination
-                className="mt-18 flex justify-center"
-                page={currentPage}
-                totalPages={totalPages}
-              />
-            </>
-          )}
-        </section>
-      </article>
+        <WithAside aside={hasPanels(aside) ? <RenderPanels panels={aside} /> : null}>
+          <RenderBlocks blocks={layout} pageNumber={pageNumber} paginated />
+        </WithAside>
+      </PageShell>
     </>
   )
 }

@@ -15,6 +15,8 @@ import { defaultLexical } from "@/fields/defaultLexical"
 import { Footer } from "@/Footer/config"
 import { ArticleRecommendations } from "@/globals/ArticleRecommendations/config"
 import { Integrations } from "@/globals/Integrations/config"
+import { Layouts } from "@/globals/Layouts/config"
+import { Panel } from "@/blocks/Panel/config"
 import { Newsletter } from "@/globals/Newsletter/config"
 import { Plugins } from "@/globals/Plugins/config"
 import { pluginSwitches } from "@/globals/Plugins/pluginSwitches"
@@ -191,7 +193,11 @@ export default buildConfig({
     Newsletter,
     Plugins,
     ArticleRecommendations,
+    Layouts,
   ],
+  // Blocks used in more than one place, defined once and referenced by slug
+  // (`blockReferences`): the panels of every aside.
+  blocks: [Panel],
   // Nothing here reads Payload's GraphQL API (the site and admin use the Local and REST
   // APIs), and its errors reach `afterError` with their status nested on `originalError`,
   // which the Sentry plugin reads as a 500: anyone could fill Sentry from /api/graphql.

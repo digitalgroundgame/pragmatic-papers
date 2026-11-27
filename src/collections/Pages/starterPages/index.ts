@@ -3,13 +3,17 @@ import type { Payload, RequiredDataFromCollectionSlug } from "payload"
 import { markSeeded, wasSeeded } from "@/utilities/seedOnce"
 
 import { feedsPage } from "./feeds"
+import { topicsPage } from "./topics"
 
 /**
  * Pages a release ships a first version of. A deploy creates each one once per site, as a
  * draft, and never touches it again: an editor reviews and publishes the page, and it's theirs
  * to change, or delete, from then on.
  */
-export const STARTER_PAGES: readonly RequiredDataFromCollectionSlug<"pages">[] = [feedsPage]
+export const STARTER_PAGES: readonly RequiredDataFromCollectionSlug<"pages">[] = [
+  feedsPage,
+  topicsPage,
+]
 
 /**
  * Creates each starter page this site has never had, as an unpublished draft. A site that

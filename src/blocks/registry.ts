@@ -13,9 +13,11 @@ import { mediaBlock } from "@/blocks/MediaBlock"
 import { mediaCollageBlock } from "@/blocks/MediaCollageBlock"
 import { merchBlock } from "@/blocks/Merch"
 import { newsletterSignupBlock } from "@/blocks/NewsletterSignup"
+import { panelBlock } from "@/blocks/Panel"
 import { legacyEmbedBlocks, socialEmbedBlock } from "@/blocks/SocialEmbed"
 import { squiggleRuleBlock } from "@/blocks/SquiggleRule"
 import { timelineBlock } from "@/blocks/Timeline"
+import { topicsListBlock } from "@/blocks/TopicsList"
 import { volumeViewBlock } from "@/blocks/VolumeViewBlock"
 import { fromBlock, type FeedContext } from "@/utilities/feedHTML"
 
@@ -44,10 +46,12 @@ export const BLOCKS: readonly AnyBlockDescriptor[] = [
   mediaCollageBlock,
   merchBlock,
   newsletterSignupBlock,
+  panelBlock,
   socialEmbedBlock,
   ...legacyEmbedBlocks,
   squiggleRuleBlock,
   timelineBlock,
+  topicsListBlock,
   volumeViewBlock,
 ]
 

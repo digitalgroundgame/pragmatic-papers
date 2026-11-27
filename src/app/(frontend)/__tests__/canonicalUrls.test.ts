@@ -10,6 +10,8 @@ const { queries, find } = vi.hoisted(() => ({
     queryUserBySlug: vi.fn(),
     queryTopicBySlug: vi.fn(),
     queryVolumesForArticles: vi.fn(async () => []),
+    // /topics reads its site page; with none it shows its coded defaults.
+    querySitePage: vi.fn(async () => null),
   },
 }))
 
@@ -19,6 +21,10 @@ vi.mock("@payload-config", () => ({ default: {} }))
 vi.mock("payload", () => ({ getPayload: async () => ({ find }) }))
 vi.mock("@payloadcms/db-postgres", () => ({ sql: vi.fn() }))
 vi.mock("@/data/queries", () => queries)
+vi.mock("@/data/topics", () => ({
+  articleCountsByTopic: async () => new Map(),
+  topicCovers: async () => new Map(),
+}))
 vi.mock("@/data/globals", () => ({ getGlobal: async () => ({ socials: [] }) }))
 vi.mock("@/endpoints/seed/home-static", () => ({ homeStatic: null }))
 
@@ -117,10 +123,11 @@ describe("pages past the last one", () => {
   const is404 = { digest: expect.stringContaining("404") }
 
   it("are not found on the topics index", async () => {
-    const { default: TopicsPage } = await import("../topics/page")
+    // The index's list is the Topics list block, which knows how many pages there are.
+    const { TopicsListBlock } = await import("@/blocks/TopicsList/Component")
 
-    await expect(TopicsPage(listing("3"))).rejects.toMatchObject(is404)
-    await expect(TopicsPage(listing("2"))).resolves.toBeDefined()
+    await expect(TopicsListBlock({ pageNumber: 3 })).rejects.toMatchObject(is404)
+    await expect(TopicsListBlock({ pageNumber: 2 })).resolves.toBeDefined()
   })
 
   it("are not found on a topic's article list", async () => {

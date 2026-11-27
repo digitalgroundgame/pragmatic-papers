@@ -11,6 +11,8 @@ import React, { useEffect, useState } from "react"
 
 interface RecommendedArticlesProps {
   currentArticleSlug: string
+  /** Replaces the section's own frame (a centered container), for a frame around it. */
+  className?: string
 }
 
 const DISPLAY_COUNT = 4
@@ -33,6 +35,7 @@ function weightedSampleWithoutReplacement<T extends { engagementScore: number }>
 
 export function RecommendedArticles({
   currentArticleSlug,
+  className = "container mt-12 max-w-3xl border-t pt-8",
 }: RecommendedArticlesProps): React.ReactNode {
   // Defer fetch until the section approaches the viewport so we don't compete
   // with LCP resources during initial page load.
@@ -70,11 +73,7 @@ export function RecommendedArticles({
   if (sampled && sampled.length === 0) return null
 
   return (
-    <section
-      ref={sectionRef}
-      className="container mt-12 max-w-3xl border-t pt-8"
-      aria-label="Recommended articles"
-    >
+    <section ref={sectionRef} className={className} aria-label="Recommended articles">
       <h2 className="mb-4">Recommended</h2>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         {sampled === null

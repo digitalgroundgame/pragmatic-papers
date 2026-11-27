@@ -9,6 +9,7 @@ import {
 import type { CollectionConfig } from "payload"
 import { slugField } from "payload"
 import { revalidateNavLinks, revalidateNavLinksDelete } from "@/hooks/revalidateNavLinks"
+import { asideField } from "@/globals/Layouts/config"
 import {
   rememberTopicArticles,
   revalidateTopicChange,
@@ -48,6 +49,15 @@ export const Topics: CollectionConfig = {
                 description: "Optional description for this topic",
               },
             },
+          ],
+        },
+        {
+          label: "Aside",
+          fields: [
+            asideField({
+              description:
+                "Panels for this topic's page alone. Leave empty to use the ones in Site → Layouts → Topic.",
+            }),
           ],
         },
         {

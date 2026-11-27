@@ -8,6 +8,13 @@ vi.mock("next/headers", () => ({ draftMode: async () => ({ isEnabled: false }) }
 vi.mock("@payload-config", () => ({ default: {} }))
 vi.mock("@/data/payload", () => ({ getPayloadClient: async () => ({ find }) }))
 vi.mock("@payloadcms/db-postgres", () => ({ sql: () => "" }))
+// The aside's panels query Postgres and have their own tests; this one is about the form.
+vi.mock("@/components/Aside", () => ({
+  WithAside: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SearchTipsPanel: () => null,
+  TopicsPanel: () => null,
+  MostReadPanel: () => null,
+}))
 
 import SearchPage from "../page"
 

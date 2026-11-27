@@ -1,4 +1,4 @@
-import type { Topic, User, Volume } from "@/payload-types"
+import type { Page, Topic, User, Volume } from "@/payload-types"
 import { draftMode } from "next/headers"
 import { cache } from "react"
 import { getPayloadClient } from "@/data/payload"
@@ -139,4 +139,24 @@ export const queryPageBySlug = cache(async (slug: string) => {
   })
 
   return docs[0] || null
+})
+
+/**
+ * The site page a route of the site's own reads (`SITE_PAGES`), by its key: the published
+ * version, or the latest draft in draft mode. Null until a deploy has created it, and outside
+ * draft mode until an editor has published it.
+ */
+export const querySitePage = cache(async (key: NonNullable<Page["key"]>) => {
+  const { isEnabled: draft } = await draftMode()
+  const payload = await getPayloadClient()
+  const { docs } = await payload.find({
+    collection: "pages",
+    draft,
+    limit: 1,
+    pagination: false,
+    overrideAccess: draft,
+    where: { key: { equals: key } },
+    depth: 1,
+  })
+  return docs[0] ?? null
 })

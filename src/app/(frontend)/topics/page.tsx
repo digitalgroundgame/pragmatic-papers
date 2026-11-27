@@ -1,55 +1,22 @@
-import { LivePreviewListener } from "@/components/LivePreviewListener"
-import { Pagination } from "@/components/Pagination"
-import { Tile, TileList } from "@/components/Tile"
-import { paginatedPath } from "@/utilities/generateMeta"
-import { getSiteURL } from "@/utilities/getURL"
-import { mergeOpenGraph } from "@/utilities/mergeOpenGraph"
 import type { Metadata } from "next"
 import { draftMode } from "next/headers"
-import { notFound } from "next/navigation"
-import React, { cache } from "react"
+import React from "react"
+
+import { hasPanels, RenderPanels } from "@/blocks/Panel/Component"
+import { RenderBlocks } from "@/blocks/RenderBlocks"
+import { WithAside } from "@/components/Aside"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
-import { PageHeader, PageShell } from "@/components/PageShell"
+import { LivePreviewListener } from "@/components/LivePreviewListener"
+import { PageShell } from "@/components/PageShell"
+import { SitePageHeader } from "@/components/PageShell/SitePageHeader"
 import {
-  articleCountsByTopic,
-  topicCovers,
-  LatestVolumePanel,
-  MostReadPanel,
-  NewsletterPanel,
-  WithAside,
-} from "@/components/Aside"
-import { getPayloadClient } from "@/data/payload"
-
-export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
-  const { p } = await searchParams
-  const canonicalUrl = `${getSiteURL()}${paginatedPath("/topics", p)}`
-
-  return {
-    title: "Topics | The Pragmatic Papers",
-    description: "Browse all topics on Pragmatic Papers.",
-    alternates: { canonical: canonicalUrl },
-    openGraph: mergeOpenGraph({
-      title: "Topics | The Pragmatic Papers",
-      description: "Browse all topics on Pragmatic Papers.",
-      url: canonicalUrl,
-    }),
-  }
-}
-
-const TOPICS_PER_PAGE = 50
-
-const queryTopics = cache(async (page: number = 1) => {
-  const { isEnabled: draft } = await draftMode()
-  const payload = await getPayloadClient()
-
-  return await payload.find({
-    collection: "topics",
-    draft,
-    limit: TOPICS_PER_PAGE,
-    page,
-    pagination: true,
-  })
-})
+  TOPICS_ASIDE,
+  TOPICS_DESCRIPTION,
+  TOPICS_TITLE,
+  topicsPage,
+} from "@/collections/Pages/starterPages/topics"
+import { querySitePage } from "@/data/queries"
+import { generateMeta, paginatedPath } from "@/utilities/generateMeta"
 
 interface Args {
   searchParams: Promise<{
@@ -57,63 +24,41 @@ interface Args {
   }>
 }
 
+export async function generateMetadata({ searchParams }: Args): Promise<Metadata> {
+  const { p } = await searchParams
+  const page = await querySitePage("topics")
+  return generateMeta({ doc: page ?? topicsPage, canonicalPath: paginatedPath("/topics", p) })
+}
+
+/**
+ * Every topic. The list is the site's (the Topics list block); the title, introduction and
+ * aside are the Topics site page's, which editors own. Until that page is published, the
+ * route shows what it did as code, so a deploy that creates the draft changes nothing.
+ */
 export default async function TopicsPage({ searchParams }: Args): Promise<React.ReactNode> {
   const { isEnabled: draft } = await draftMode()
   const { p } = await searchParams
-  let page = Number(p) || 1
-  if (!Number.isInteger(page) || page < 1) page = 1
+  let pageNumber = Number(p) || 1
+  if (!Number.isInteger(pageNumber) || pageNumber < 1) pageNumber = 1
 
-  const { docs: topics, totalPages, page: currentPage } = await queryTopics(page)
-  const [counts, covers] = await Promise.all([articleCountsByTopic(), topicCovers()])
-  // A page past the last one would be an empty listing that names itself as canonical.
-  if (page > 1 && page > totalPages) notFound()
+  const page = await querySitePage("topics")
+  const layout = page?.layout?.length ? page.layout : topicsPage.layout
+  const aside = page ? page.aside : TOPICS_ASIDE
 
   return (
     <>
-      <Breadcrumbs shell items={[{ name: "Topics", path: "/topics" }]} />
-      <PageShell>
+      <Breadcrumbs shell items={[{ name: page?.title ?? TOPICS_TITLE, path: "/topics" }]} />
+      <PageShell as="div">
         {draft && <LivePreviewListener />}
 
-        <PageHeader title="Topics" description="Browse all topics" />
+        <SitePageHeader
+          hero={page?.hero}
+          title={page?.title ?? TOPICS_TITLE}
+          description={TOPICS_DESCRIPTION}
+        />
 
-        <WithAside
-          aside={
-            <>
-              <MostReadPanel />
-              <LatestVolumePanel />
-              <NewsletterPanel />
-            </>
-          }
-        >
-          <section aria-label="All topics">
-            {topics.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No topics found.</p>
-            ) : (
-              <>
-                <TileList>
-                  {topics.map((topic) => {
-                    const count = counts.get(topic.id) ?? 0
-                    return (
-                      <Tile
-                        key={topic.id}
-                        titleSize="lg"
-                        href={`/topics/${topic.slug}`}
-                        title={topic.name}
-                        summary={topic.description}
-                        image={topic.meta?.image ?? covers.get(topic.id)}
-                        meta={`${count} ${count === 1 ? "article" : "articles"}`}
-                      />
-                    )
-                  })}
-                </TileList>
-                <Pagination
-                  className="mt-18 flex justify-center"
-                  page={currentPage}
-                  totalPages={totalPages}
-                />
-              </>
-            )}
-          </section>
+        <WithAside aside={hasPanels(aside) ? <RenderPanels panels={aside} /> : null}>
+          <RenderBlocks blocks={layout} pageNumber={pageNumber} paginated />
         </WithAside>
       </PageShell>
     </>

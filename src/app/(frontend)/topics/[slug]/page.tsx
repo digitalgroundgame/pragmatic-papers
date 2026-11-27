@@ -11,13 +11,9 @@ import { notFound } from "next/navigation"
 import React, { cache } from "react"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { PageHeader, PageShell } from "@/components/PageShell"
-import {
-  ContributorsPanel,
-  MostReadPanel,
-  NewsletterPanel,
-  RelatedTopicsPanel,
-  WithAside,
-} from "@/components/Aside"
+import { WithAside } from "@/components/Aside"
+import { hasPanels, RenderPanels } from "@/blocks/Panel/Component"
+import { getGlobal } from "@/data/globals"
 import { isResolved } from "@/utilities/relationships"
 import { Byline } from "@/components/Authors/Byline"
 import { toBylineAuthor } from "@/components/Authors/BylineAuthor"
@@ -88,6 +84,8 @@ export default async function TopicPage({
   } = await queryArticlesByTopic(topic.id, page)
   // A page past the last one would be an empty listing that names itself as canonical.
   if (page > 1 && page > totalPages) notFound()
+  // The topic's own panels, else the Topic layout's.
+  const aside = hasPanels(topic.aside) ? topic.aside : (await getGlobal("layouts")).topic?.aside
   return (
     <>
       <Breadcrumbs
@@ -106,12 +104,9 @@ export default async function TopicPage({
 
         <WithAside
           aside={
-            <>
-              <MostReadPanel topicId={topic.id} />
-              <ContributorsPanel topicId={topic.id} />
-              <RelatedTopicsPanel topicId={topic.id} />
-              <NewsletterPanel />
-            </>
+            hasPanels(aside) ? (
+              <RenderPanels panels={aside} context={{ topicId: topic.id }} />
+            ) : null
           }
         >
           <section aria-label="Articles for this topic">

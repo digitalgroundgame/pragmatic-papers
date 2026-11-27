@@ -29,20 +29,22 @@ export interface PageLayout {
 }
 
 /**
- * The pattern most pages follow, which the deviations are measured against: breadcrumbs, then
- * a `mx-auto max-w-3xl space-y-6 px-4` column (text from x=272 to 1008 at 1280px) with a 36 /
- * 48px h1, a muted text-sm description under it, and sections split by Separators.
+ * The pattern pages move to, which the deviations are measured against: breadcrumbs, then the
+ * page shell (`PageShell`, the full container: x=16 to 1264 at 1280px) with a 36 / 48px h1 and
+ * a muted line under it (`PageHeader`), a listing beside its aside (`WithAside`) and running
+ * text in a `ReadingColumn`. Pages still on the older `mx-auto max-w-3xl space-y-6 px-4`
+ * column (272 to 1008) differ from it until they move.
  */
-export const COMMON_PATTERN = "mx-auto max-w-3xl space-y-6 px-4"
+export const COMMON_PATTERN = "<PageShell"
 
 export const PAGE_LAYOUTS: PageLayout[] = [
   {
     route: "/topics",
     name: "Topics",
     source: "src/app/(frontend)/topics/page.tsx",
-    wrapper: "mx-auto max-w-3xl space-y-6 px-4",
-    column: "max-w-3xl",
-    desktop: { left: 272, width: 736 },
+    wrapper: "<PageShell",
+    column: "container",
+    desktop: { left: 16, width: 1248 },
     breadcrumbs: "column",
     h1: "36 / 48px",
     bottomGap: 92,
@@ -52,9 +54,9 @@ export const PAGE_LAYOUTS: PageLayout[] = [
     route: "/topics/[slug]",
     name: "Topic",
     source: "src/app/(frontend)/topics/[slug]/page.tsx",
-    wrapper: "mx-auto max-w-3xl space-y-6 px-4",
-    column: "max-w-3xl",
-    desktop: { left: 272, width: 736 },
+    wrapper: "<PageShell",
+    column: "container",
+    desktop: { left: 16, width: 1248 },
     breadcrumbs: "column",
     h1: "36 / 48px",
     bottomGap: 55,
@@ -95,9 +97,9 @@ export const PAGE_LAYOUTS: PageLayout[] = [
     route: "/search",
     name: "Search",
     source: "src/app/(frontend)/search/page.tsx",
-    wrapper: "mx-auto max-w-3xl space-y-6 px-4",
-    column: "max-w-3xl",
-    desktop: { left: 272, width: 736 },
+    wrapper: "<PageShell",
+    column: "container",
+    desktop: { left: 16, width: 1248 },
     breadcrumbs: "column",
     h1: "36 / 48px",
     bottomGap: 43,
@@ -166,7 +168,7 @@ export const PAGE_LAYOUTS: PageLayout[] = [
     // width is independent of the body's, so other hero templates can be added.
     deviations: [
       "No visible breadcrumbs (the trail is only in the JSON-LD), unlike every other content page.",
-      "Recommended articles sit in container max-w-3xl, a little wider than the body above them (max-w-2xl), so neither their edges nor their top rule line up with it. Planned: the full container, with more kinds of recommendation.",
+      "Recommended articles sit in container max-w-6xl beside the Article layout's aside (Site → Layouts), wider than the body above them (max-w-2xl), so neither their edges nor their top rule line up with it. With the aside emptied they fall back to container max-w-3xl.",
     ],
   },
   {

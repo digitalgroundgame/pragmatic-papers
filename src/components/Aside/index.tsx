@@ -5,14 +5,15 @@ import { HoverPrefetchLink } from "@/components/Link/HoverPrefetchLink"
 import { Tile, TileList } from "@/components/Tile"
 import { NewsletterSignupForm } from "@/blocks/NewsletterSignup/Component.client"
 import { getPayloadClient } from "@/data/payload"
-import type { Media as MediaType, User } from "@/payload-types"
+import type { User } from "@/payload-types"
 import { Byline } from "@/components/Authors/Byline"
 import { toBylineAuthor, type BylineAuthor } from "@/components/Authors/BylineAuthor"
 import { cn } from "@/utilities/utils"
 
 /**
- * PROTOTYPE: the aside panels for listing pages, for screenshots. Each panel is meant to
- * become a block editors pick and order in an "Asides" global.
+ * The aside beside a listing or a template's main column, and the panels it holds. Editors
+ * choose and order the panels with Panel blocks (`src/blocks/Panel`), on a site page or in
+ * the Layouts global; each panel here takes the heading they give it.
  */
 
 /** Main column plus a sticky aside, side by side from lg up; the aside drops below on mobile. */
@@ -20,9 +21,11 @@ export function WithAside({
   aside,
   children,
 }: {
+  /** Null when there are no panels: the main column then takes the page's width. */
   aside: React.ReactNode
   children: React.ReactNode
 }): React.ReactNode {
+  if (aside == null) return <div className="space-y-6">{children}</div>
   return (
     <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="min-w-0 space-y-6">{children}</div>
@@ -81,11 +84,17 @@ const mostRead = cache(async (topicId?: number) => {
   return top.map((a) => ({ ...a, image: a.media ? (byId.get(a.media) ?? null) : null }))
 })
 
-export async function MostReadPanel({ topicId }: { topicId?: number }): Promise<React.ReactNode> {
+export async function MostReadPanel({
+  topicId,
+  title,
+}: {
+  topicId?: number
+  title?: string | null
+}): Promise<React.ReactNode> {
   const articles = await mostRead(topicId)
   if (!articles.length) return null
   return (
-    <AsidePanel title={topicId ? "Most read in this topic" : "Most read this week"}>
+    <AsidePanel title={title || (topicId ? "Most read in this topic" : "Most read this week")}>
       <TileList as="ol" className="space-y-3!">
         {articles.map((a, i) => (
           <li key={a.slug}>
@@ -113,11 +122,13 @@ const latestVolume = cache(() =>
   `),
 )
 
-export async function LatestVolumePanel(): Promise<React.ReactNode> {
+export async function LatestVolumePanel({
+  title,
+}: { title?: string | null } = {}): Promise<React.ReactNode> {
   const [volume] = await latestVolume()
   if (!volume) return null
   return (
-    <AsidePanel title="Latest volume">
+    <AsidePanel title={title || "Latest volume"}>
       <HoverPrefetchLink href={`/volumes/${volume.slug}`} className="group block space-y-1">
         <p className="text-muted-foreground text-xs">Volume {volume.volume_number}</p>
         <p className="font-serif text-lg leading-snug font-semibold group-hover:underline">
@@ -130,41 +141,6 @@ export async function LatestVolumePanel(): Promise<React.ReactNode> {
     </AsidePanel>
   )
 }
-
-/** Published articles per topic, by topic id. */
-export const articleCountsByTopic = cache(async (): Promise<Map<number, number>> => {
-  const counts = await rows<{ id: number; count: number }>(sql`
-    SELECT r.topics_id AS id, COUNT(*)::int AS count
-      FROM articles_rels r JOIN articles a ON a.id = r.parent_id AND a._status = 'published'
-     WHERE r.path = 'topics' GROUP BY r.topics_id
-  `)
-  return new Map(counts.map((c) => [c.id, c.count]))
-})
-
-/** Each topic's cover until it has its own: the picture of its newest published article. */
-export const topicCovers = cache(async (): Promise<Map<number, MediaType>> => {
-  const picks = await rows<{ topic: number; media: number }>(sql`
-    SELECT DISTINCT ON (r.topics_id) r.topics_id AS topic, a.meta_image_id AS media
-      FROM articles_rels r JOIN articles a ON a.id = r.parent_id AND a._status = 'published'
-     WHERE r.path = 'topics' AND a.meta_image_id IS NOT NULL
-     ORDER BY r.topics_id, a.published_at DESC NULLS LAST
-  `)
-  if (!picks.length) return new Map()
-  const payload = await getPayloadClient()
-  const { docs } = await payload.find({
-    collection: "media",
-    where: { id: { in: picks.map((p) => p.media) } },
-    pagination: false,
-    depth: 0,
-  })
-  const byId = new Map(docs.map((d) => [d.id, d]))
-  return new Map(
-    picks.flatMap((p) => {
-      const media = byId.get(p.media)
-      return media ? [[p.topic, media] as const] : []
-    }),
-  )
-})
 
 const topicCounts = cache(() =>
   rows<{ slug: string; name: string; count: number }>(sql`
@@ -195,11 +171,13 @@ function TopicCountList({
   )
 }
 
-export async function TopicsPanel(): Promise<React.ReactNode> {
+export async function TopicsPanel({
+  title,
+}: { title?: string | null } = {}): Promise<React.ReactNode> {
   const topics = await topicCounts()
   if (!topics.length) return null
   return (
-    <AsidePanel title="Browse topics">
+    <AsidePanel title={title || "Browse topics"}>
       <TopicCountList topics={topics} />
       <HoverPrefetchLink href="/topics" className="text-sm underline underline-offset-4">
         All topics
@@ -223,13 +201,15 @@ const relatedTopics = cache((topicId: number) =>
 
 export async function RelatedTopicsPanel({
   topicId,
+  title,
 }: {
   topicId: number
+  title?: string | null
 }): Promise<React.ReactNode> {
   const topics = await relatedTopics(topicId)
   if (!topics.length) return null
   return (
-    <AsidePanel title="Often paired with">
+    <AsidePanel title={title || "Often paired with"}>
       <TopicCountList topics={topics} />
     </AsidePanel>
   )
@@ -265,13 +245,15 @@ const topicContributors = cache(
 
 export async function ContributorsPanel({
   topicId,
+  title,
 }: {
   topicId: number
+  title?: string | null
 }): Promise<React.ReactNode> {
   const people = await topicContributors(topicId)
   if (!people.length) return null
   return (
-    <AsidePanel title="Who writes on this">
+    <AsidePanel title={title || "Who writes on this"}>
       <ul className="space-y-2">
         {people.map(({ author, count }) => (
           <li key={author.id} className="flex items-center justify-between gap-3">
@@ -286,9 +268,9 @@ export async function ContributorsPanel({
   )
 }
 
-export function SearchTipsPanel(): React.ReactNode {
+export function SearchTipsPanel({ title }: { title?: string | null } = {}): React.ReactNode {
   return (
-    <AsidePanel title="Search tips">
+    <AsidePanel title={title || "Search tips"}>
       <ul className="text-muted-foreground space-y-2 text-sm">
         <li>
           <code className="text-foreground">&quot;exact phrase&quot;</code> matches words in order
@@ -304,13 +286,13 @@ export function SearchTipsPanel(): React.ReactNode {
   )
 }
 
-export function NewsletterPanel(): React.ReactNode {
+export function NewsletterPanel({ title }: { title?: string | null } = {}): React.ReactNode {
   return (
     <AsidePanel>
       <NewsletterSignupForm
         id="aside-newsletter"
         blockType="newsletterSignup"
-        heading="Get Daily Pragmatic Papers"
+        heading={title || "Get Daily Pragmatic Papers"}
         description="One email a day with the newest articles."
         buttonLabel="Sign up"
       />
